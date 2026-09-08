@@ -10,6 +10,7 @@ const addColumnSchema = z.object({
   classId: z.string().uuid(),
   title: z.string().trim().max(120),
   points: z.number().min(0).max(1000).nullable(),
+  subjectId: z.string().uuid().nullable().optional(),
 });
 
 const saveGradeSchema = z.object({
@@ -50,6 +51,7 @@ export async function addExamColumn(input: {
   classId: string;
   title: string;
   points: number | null;
+  subjectId?: string | null;
 }): Promise<ExamActionResult> {
   const parsed = addColumnSchema.safeParse(input);
   if (!parsed.success) {
@@ -71,6 +73,7 @@ export async function addExamColumn(input: {
     .insert({
       tenant_id,
       class_id: parsed.data.classId,
+      subject_id: parsed.data.subjectId ?? null,
       title: parsed.data.title,
       points: parsed.data.points,
     })

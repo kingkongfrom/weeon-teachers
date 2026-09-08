@@ -45,23 +45,26 @@ export async function loadTeacherGrupos(): Promise<TeacherGrupo[]> {
     section: string | null;
   }>;
 
-  const counts = await Promise.all(
-    groups.map(async (grupo) => {
-      const { count } = await supabase
-        .from("enrollments")
-        .select("id", { count: "exact", head: true })
-        .eq("class_id", grupo.id)
-        .is("dropped_at", null);
-      return count ?? 0;
-    }),
-  );
+  // Single grouped count query instead of N+1 per group.
+  const classIds = groups.map((g) => g.id);
+  const countsById = new Map<string, number>();
+  if (classIds.length > 0) {
+    const { data: enrollCounts } = await supabase
+      .from("enrollments")
+      .select("class_id, id")
+      .in("class_id", classIds)
+      .is("dropped_at", null);
+    for (const row of enrollCounts ?? []) {
+      countsById.set(row.class_id, (countsById.get(row.class_id) ?? 0) + 1);
+    }
+  }
 
-  return groups.map((grupo, index) => ({
+  return groups.map((grupo) => ({
     id: grupo.id,
     name: displayGrupoName(grupo),
     grade: grupo.grade,
     section: grupo.section,
-    studentCount: counts[index] ?? 0,
+    studentCount: countsById.get(grupo.id) ?? 0,
   }));
 }
 

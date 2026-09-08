@@ -15,18 +15,29 @@ export type ExamColumn = {
 };
 
 /**
- * Loads the grade columns (assignments) for a class, with each student's score
- * keyed by student id. Resilient: if the `assignment_id` link has not been
- * migrated yet, it returns an empty list instead of breaking the page.
+ * Loads the grade columns (assignments) for a class + subject, with each
+ * student's score keyed by student id. Resilient: if the `assignment_id` link
+ * has not been migrated yet, it returns an empty list instead of breaking.
+ *
+ * `subjectId` selects the subject. Pass `null` to show exam columns not tied to
+ * any subject (legacy rows), so pre-classification data is still reachable.
  */
-export async function loadClassExams(classId: string): Promise<ExamColumn[]> {
+export async function loadClassExams(
+  classId: string,
+  subjectId?: string | null,
+): Promise<ExamColumn[]> {
   const supabase = await createSessionClient();
 
-  const { data: assignments } = await supabase
+  let query = supabase
     .from("assignments")
     .select("id, title, points")
-    .eq("class_id", classId)
-    .order("created_at");
+    .eq("class_id", classId);
+  if (subjectId === null) {
+    query = query.is("subject_id", null);
+  } else if (subjectId) {
+    query = query.eq("subject_id", subjectId);
+  }
+  const { data: assignments } = await query.order("created_at");
 
   const columns: ExamColumn[] = (assignments ?? []).map((row) => ({
     id: row.id,

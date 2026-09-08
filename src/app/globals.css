@@ -387,6 +387,46 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Row-average summary column: right-aligned, bold percent, with a separator
+   from the grade cells so it reads as a computed total. */
+.rdg-gradebook .rdg-average-cell {
+  padding-inline: 0.5rem;
+  text-align: right;
+  background-color: color-mix(in srgb, var(--surface-muted) 35%, transparent);
+  border-inline-start: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.rdg-gradebook .rdg-average-value {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Very mild cell fill for the row average — only the background is tinted,
+   matching the status-badge intensity. Text stays neutral. The base cell adds
+   the separator; the tone variants paint a soft wash over it. */
+.rdg-gradebook .rdg-average-cell-good {
+  background-color: rgba(16, 185, 129, 0.06); /* emerald-500/6 */
+}
+.rdg-gradebook .rdg-average-cell-warn {
+  background-color: rgba(245, 158, 11, 0.06); /* amber-500/6 */
+}
+.rdg-gradebook .rdg-average-cell-low {
+  background-color: rgba(139, 92, 246, 0.06); /* violet-500/6 */
+}
+
+@media (prefers-color-scheme: dark) {
+  .rdg-gradebook .rdg-average-cell-good {
+    background-color: rgba(16, 185, 129, 0.08); /* emerald-500/8 */
+  }
+  .rdg-gradebook .rdg-average-cell-warn {
+    background-color: rgba(245, 158, 11, 0.08); /* amber-500/8 */
+  }
+  .rdg-gradebook .rdg-average-cell-low {
+    background-color: rgba(139, 92, 246, 0.08); /* violet-500/8 */
+  }
+}
+
 /* Mild neutral highlight on the working (selected/editing) grade cell, so the
    teacher can see which cell they are in. Overrides RDG's default full-row
    selection paint with a subtle tone that is a touch darker than the zebra

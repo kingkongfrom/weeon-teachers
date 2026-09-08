@@ -37,6 +37,7 @@ type GridRow = {
 
 type GradesTableProps = {
   classId: string;
+  subjectId?: string | null;
   students: StudentRow[];
   initialExams: ExamColumn[];
 };
@@ -49,6 +50,7 @@ const ROW_HEIGHT = 36;
 const MIN_NAME_WIDTH = 170;
 const MAX_NAME_WIDTH = 340;
 const MIN_EXAM_WIDTH = 88;
+const AVERAGE_WIDTH = 96;
 // Horizontal chrome around the text: cell padding + caret slack so the last
 // character is never clipped while typing.
 const NAME_CHROME = 56;
@@ -131,7 +133,7 @@ function parseGrade(
   return { ok: true, value: Math.min(parsed, max) };
 }
 
-export function GradesTable({ classId, students, initialExams }: GradesTableProps) {
+export function GradesTable({ classId, subjectId = null, students, initialExams }: GradesTableProps) {
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [adding, setAdding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -239,7 +241,7 @@ export function GradesTable({ classId, students, initialExams }: GradesTableProp
     if (adding) return;
     setAdding(true);
     setActionError(null);
-    const result = await addExamColumn({ classId, title: "", points: null });
+    const result = await addExamColumn({ classId, subjectId, title: "", points: null });
     setAdding(false);
     if (!result.ok || !result.id) {
       setActionError(result.ok ? "No se pudo agregar la columna." : result.error);
@@ -369,9 +371,27 @@ export function GradesTable({ classId, students, initialExams }: GradesTableProp
       ),
     },
     ...examColumns,
+    {
+      key: "__average",
+      name: "Promedio",
+      width: 96,
+      editable: false,
+      cellClass: (row) => {
+        const pct = computeRowAverage(exams, row);
+        if (pct === null) return "rdg-average-cell";
+        const tone = pct >= 70 ? "good" : pct >= 50 ? "warn" : "low";
+        return `rdg-average-cell rdg-average-cell-${tone}`;
+      },
+      renderHeaderCell: () => (
+        <div className="flex h-full items-center px-2 text-xs font-medium uppercase tracking-wide text-foreground/50">
+          Promedio
+        </div>
+      ),
+      renderCell: ({ row }) => <AverageCell row={row} exams={exams} />,
+    },
   ];
 
-  const gridWidth = nameWidth + widths.reduce((total, width) => total + width, 0);
+  const gridWidth = nameWidth + widths.reduce((total, width) => total + width, 0) + AVERAGE_WIDTH;
   const gridHeight = HEADER_HEIGHT + students.length * ROW_HEIGHT;
 
   // Floating delete button: sits above the hovered exam column, in the outer
@@ -509,7 +529,7 @@ export function GradesTable({ classId, students, initialExams }: GradesTableProp
       </div>
         </div>
 
-        <aside className="flex w-full shrink-0 flex-col gap-2 pl-[30px] lg:w-[400px]">
+        <aside className="flex w-full shrink-0 flex-col gap-2 lg:w-[400px] lg:pl-[30px]">
           {hasGradeData ? (
             <>
               <label
@@ -685,4 +705,33 @@ function GradeEditor({
       />
     </div>
   );
+}
+
+/**
+ * Row-average cell: the student's mean across their graded exams, expressed as
+ * a percentage. Each graded exam is normalized to its own max before averaging,
+ * so exam columns with different point values contribute equally. The value is
+ * tinted with a very mild stoplight color (green/amber/red) so it's easy to
+ * spot at a glance.
+ */
+function AverageCell({ row, exams }: { row: GridRow; exams: ExamColumn[] }) {
+  const pct = computeRowAverage(exams, row);
+  if (pct === null) return <span className="text-xs text-foreground/40">—</span>;
+  return <span className="rdg-average-value">{Math.round(pct)}%</span>;
+}
+
+/** Builds a normalized-marks average (0..100) for a row; null when ungraded. */
+function computeRowAverage(exams: ExamColumn[], row: GridRow): number | null {
+  let sum = 0;
+  let count = 0;
+  for (const exam of exams) {
+    const mark = row[exam.id];
+    if (typeof mark !== "number") continue;
+    const max = exam.points || 100;
+    if (max <= 0) continue;
+    sum += (mark / max) * 100;
+    count += 1;
+  }
+  if (count === 0) return null;
+  return sum / count;
 }
