@@ -107,31 +107,32 @@ export async function loadStudentList(options?: {
 
   const limit = options?.limit ?? 100;
   const offset = options?.offset ?? 0;
-
-  const { count: total } = await supabase
-    .from("students")
-    .select("id", { count: "exact", head: true })
-    .is("deleted_at", null);
-
   const from = offset;
   const to = offset + limit - 1;
 
-  const { data: studentRows } = await supabase
-    .from("students")
-    .select("id, first_name, last_name, second_last_name, grade")
-    .is("deleted_at", null)
-    .order("last_name")
-    .order("first_name")
-    .range(from, to);
+  // The total count and the page window are independent — run concurrently.
+  const [countRes, pageRes] = await Promise.all([
+    supabase.from("students").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase
+      .from("students")
+      .select("id, first_name, last_name, second_last_name, grade")
+      .is("deleted_at", null)
+      .order("last_name")
+      .order("first_name")
+      .range(from, to),
+  ]);
 
-  const students = (studentRows ?? []).map((row) => ({
+  const total = countRes.count ?? 0;
+  const studentRows = pageRes.data ?? [];
+
+  const students = studentRows.map((row) => ({
     id: row.id,
     firstName: row.first_name,
     lastName: row.last_name,
     secondLastName: row.second_last_name,
     grade: row.grade,
   }));
-  if (students.length === 0) return { students: [], total: total ?? 0 };
+  if (students.length === 0) return { students: [], total };
 
   const studentIds = students.map((s) => s.id);
 
@@ -158,36 +159,31 @@ export async function loadStudentList(options?: {
     if (!classByName.has(klass.id)) classByName.set(klass.id, name);
   }
 
-  // Assignment id -> max points (for the divisor fallback).
+  // Assignment id -> max points (for the divisor fallback) and student grades,
+  // fetched concurrently (both depend only on classIds).
   const pointsByClass = new Map<string, Map<string, number | null>>();
   let assignments: Array<{ id: string; class_id: string; points: number | null }> = [];
+  let grades: Array<{ assignment_id: string; class_id: string; student_id: string; mark: number; max_marks: number }> = [];
   if (classIds.length > 0) {
-    const { data } = await supabase
-      .from("assignments")
-      .select("id, class_id, points")
-      .in("class_id", classIds);
-    assignments = (data ?? []) as typeof assignments;
+    const [assignRes, gradeRes] = await Promise.all([
+      supabase.from("assignments").select("id, class_id, points").in("class_id", classIds),
+      supabase
+        .from("grades")
+        .select("assignment_id, class_id, student_id, mark, max_marks")
+        .in("class_id", classIds)
+        .in("student_id", studentIds)
+        .not("assignment_id", "is", null),
+    ]);
+    assignments = (assignRes.data ?? []) as typeof assignments;
+    grades = (gradeRes.data ?? []) as typeof grades;
     for (const a of assignments) {
       if (!pointsByClass.has(a.class_id)) pointsByClass.set(a.class_id, new Map());
       pointsByClass.get(a.class_id)!.set(a.id, a.points);
     }
   }
 
-  // student_id -> class_id -> list of percentage scores.
+  // Build a lookup: student_id -> class_id -> list of percentage scores.
   const scoresByStudent = new Map<string, Map<string, number[]>>();
-  let grades: Array<{ assignment_id: string; class_id: string; student_id: string; mark: number; max_marks: number }> = [];
-  if (classIds.length > 0) {
-    const { data } = await supabase
-      .from("grades")
-      .select("assignment_id, class_id, student_id, mark, max_marks")
-      .in("class_id", classIds)
-      .in("student_id", studentIds)
-      .not("assignment_id", "is", null);
-    grades = (data ?? []) as typeof grades;
-  }
-
-  // Build a lookup: class_id -> count of distinct graded exams for a student is
-  // derived from the same assignment set, so precompute per-student per-class maps.
   for (const grade of grades) {
     const maxFallback = pointsByClass.get(grade.class_id)?.get(grade.assignment_id) ?? null;
     const divisor = grade.max_marks ?? maxFallback ?? 100;

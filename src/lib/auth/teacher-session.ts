@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 
 export type TeacherSession = {
@@ -11,7 +12,8 @@ export type TeacherSession = {
   accountStatus: string;
 };
 
-export async function getTeacherSession(): Promise<TeacherSession | null> {
+export const getTeacherSession = cache(
+  async (): Promise<TeacherSession | null> => {
   const supabase = await createSessionClient();
   const {
     data: { user },
@@ -37,4 +39,5 @@ export async function getTeacherSession(): Promise<TeacherSession | null> {
     role,
     accountStatus: (profile.account_status as string) || "active",
   };
-}
+  },
+);

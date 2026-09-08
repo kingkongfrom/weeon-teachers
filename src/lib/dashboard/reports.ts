@@ -41,20 +41,21 @@ export const loadMyReports = cache(
 
   if (error || !reports) return [];
 
-  // Resolve assignment titles + subject names in bulk.
+  // Resolve assignment titles + subject names concurrently (both depend only on
+  // the loaded reports).
   const reportClassIds = [...new Set(reports.map((r) => r.class_id))];
-  const { data: assignments } = await supabase
-    .from("assignments")
-    .select("id, title")
-    .in("class_id", reportClassIds);
-  const titleById = new Map((assignments ?? []).map((a) => [a.id, a.title]));
-
   const subjectIds = [...new Set(reports.map((r) => r.subject_id).filter(Boolean) as string[])];
+
+  const [assignRes, subjectRes] = await Promise.all([
+    supabase.from("assignments").select("id, title").in("class_id", reportClassIds),
+    subjectIds.length > 0
+      ? supabase.from("subjects").select("id, name").in("id", subjectIds)
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const titleById = new Map((assignRes.data ?? []).map((a) => [a.id, a.title]));
   const subjectNames = new Map<string, string>();
-  if (subjectIds.length > 0) {
-    const { data: subjects } = await supabase.from("subjects").select("id, name").in("id", subjectIds);
-    for (const s of subjects ?? []) subjectNames.set(s.id, s.name);
-  }
+  for (const s of subjectRes.data ?? []) subjectNames.set(s.id, s.name);
 
   const out: SubmittedReport[] = [];
   for (const row of reports) {

@@ -37,9 +37,18 @@ export async function loadClassExams(
   } else if (subjectId) {
     query = query.eq("subject_id", subjectId);
   }
-  const { data: assignments } = await query.order("created_at");
 
-  const columns: ExamColumn[] = (assignments ?? []).map((row) => ({
+  // Run the two independent queries concurrently to halve round-trips.
+  const [assignmentsRes, gradesRes] = await Promise.all([
+    query.order("created_at"),
+    supabase
+      .from("grades")
+      .select("assignment_id, student_id, mark, max_marks")
+      .eq("class_id", classId)
+      .not("assignment_id", "is", null),
+  ]);
+
+  const columns: ExamColumn[] = (assignmentsRes.data ?? []).map((row) => ({
     id: row.id,
     title: row.title,
     points: row.points,
@@ -48,23 +57,15 @@ export async function loadClassExams(
 
   if (columns.length === 0) return columns;
 
-  let grades: Array<{ assignment_id: string; student_id: string; mark: number; max_marks: number }> = [];
   try {
-    const { data } = await supabase
-      .from("grades")
-      .select("assignment_id, student_id, mark, max_marks")
-      .eq("class_id", classId)
-      .not("assignment_id", "is", null);
-    grades = (data ?? []) as typeof grades;
+    const byId = new Map(columns.map((column) => [column.id, column]));
+    for (const grade of gradesRes.data ?? []) {
+      const column = byId.get(grade.assignment_id);
+      if (!column) continue;
+      column.grades[grade.student_id] = { mark: grade.mark, maxMarks: grade.max_marks };
+    }
   } catch {
     return columns; // assignment_id column not present yet
-  }
-
-  const byId = new Map(columns.map((column) => [column.id, column]));
-  for (const grade of grades) {
-    const column = byId.get(grade.assignment_id);
-    if (!column) continue;
-    column.grades[grade.student_id] = { mark: grade.mark, maxMarks: grade.max_marks };
   }
 
   return columns;

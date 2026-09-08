@@ -54,23 +54,40 @@ export const loadGradebookContext = cache(
 
   const sessionClient = await createSessionClient();
 
-  const { data: teacherRows } = await sessionClient
-    .from("teachers")
-    .select("id")
-    .eq("profile_id", session.userId)
-    .is("deleted_at", null);
-  const teacherIds = (teacherRows ?? []).map((row) => row.id);
+  // A school admin teaches no specific class but can see the whole institution,
+  // so gradebook context for an admin lists every class (tenant-wide) with its
+  // lessons. Teachers are scoped to the classes/subjects they actually own.
+  const isAdmin = session.role === "admin";
+
+  // Kick off the independent lookups in parallel to cut round-trips: the
+  // teacher's roster rows (for homeroom/subject ownership), the lessons, and
+  // (for admins) the full class list.
+  const [teacherRes, allLessonsRes, allClassesRes] = await Promise.all([
+    sessionClient
+      .from("teachers")
+      .select("id")
+      .eq("profile_id", session.userId)
+      .is("deleted_at", null),
+    sessionClient
+      .from("class_lessons")
+      .select(
+        "id, class_id, title, color, subject_id, teacher_id, classes(id, name, grade, section, teacher_id, teacher_profile_id)",
+      ),
+    isAdmin
+      ? sessionClient
+          .from("classes")
+          .select("id, name, grade, section, teacher_id, teacher_profile_id")
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const teacherRows = teacherRes.data ?? [];
+  const teacherIds = teacherRows.map((row) => row.id);
   // Primaria homeroom: the admin portal assigns a class to a teacher via
   // `classes.teacher_id` (roster id); the login backfill also sets
   // `classes.teacher_profile_id`. Accept either so the gradebook resolves.
   const isHomeroom = (klass: { teacher_id: string | null; teacher_profile_id: string | null }) =>
     (klass.teacher_profile_id !== null && klass.teacher_profile_id === session.userId) ||
     (klass.teacher_id !== null && teacherIds.includes(klass.teacher_id));
-
-  // A school admin teaches no specific class but can see the whole institution,
-  // so gradebook context for an admin lists every class (tenant-wide) with its
-  // lessons. Teachers are scoped to the classes/subjects they actually own.
-  const isAdmin = session.role === "admin";
 
   // Collect every class we want to present, with its <id, name, grade, section>.
   const classesById = new Map<string, { id: string; name: string; grade: string | null; section: string | null }>();
@@ -98,48 +115,28 @@ export const loadGradebookContext = cache(
     if (!byClass.has(subject.id)) byClass.set(subject.id, subject);
   };
 
+  const lessonRows = allLessonsRes.data ?? [];
+  const allClasses = allClassesRes.data ?? [];
+
+  // Admins see every class; teachers are scoped to the classes they own.
   if (isAdmin) {
-    const { data: allClasses } = await sessionClient
-      .from("classes")
-      .select("id, name, grade, section, teacher_id, teacher_profile_id");
-    const { data: allLessons } = await sessionClient
-      .from("class_lessons")
-      .select("id, class_id, title, color, subject_id, teacher_id, classes(id, name, grade, section, teacher_id, teacher_profile_id)");
+    for (const row of allClasses) ensureClass(row);
+  }
 
-    for (const row of allClasses ?? []) ensureClass(row);
-    for (const row of allLessons ?? []) {
-      const klass = Array.isArray(row.classes) ? row.classes[0] : row.classes;
-      if (!klass) continue;
-      ensureClass(klass);
-      if (row.subject_id) {
-        upsertSubject(row.class_id, { id: row.subject_id, name: "Materia", color: row.color, isSubject: true });
-      } else {
-        upsertSubject(row.class_id, { id: `lesson:${row.id}`, name: row.title || "Materia", color: row.color, isSubject: false });
-      }
-    }
-  } else {
-    // All lessons the teacher can reach, with class + subject (or lesson title).
-    const { data: lessonRows } = await sessionClient
-      .from("class_lessons")
-      .select(
-        "id, class_id, title, color, subject_id, teacher_id, classes(id, name, grade, section, teacher_id, teacher_profile_id)",
-      );
+  for (const row of lessonRows) {
+    const klass = Array.isArray(row.classes) ? row.classes[0] : row.classes;
+    if (!klass) continue;
 
-    for (const row of lessonRows ?? []) {
-      const klass = Array.isArray(row.classes) ? row.classes[0] : row.classes;
-      if (!klass) continue;
+    const homeroom = isHomeroom(klass);
+    const ownsLesson = isAdmin || homeroom || (row.teacher_id !== null && teacherIds.includes(row.teacher_id));
+    if (!ownsLesson) continue;
 
-      const homeroom = isHomeroom(klass);
-      const ownsLesson = homeroom || (row.teacher_id !== null && teacherIds.includes(row.teacher_id));
-      if (!ownsLesson) continue;
+    ensureClass(klass);
 
-      ensureClass(klass);
-
-      if (row.subject_id) {
-        upsertSubject(row.class_id, { id: row.subject_id, name: "Materia", color: row.color, isSubject: true });
-      } else {
-        upsertSubject(row.class_id, { id: `lesson:${row.id}`, name: row.title || "Materia", color: row.color, isSubject: false });
-      }
+    if (row.subject_id) {
+      upsertSubject(row.class_id, { id: row.subject_id, name: "Materia", color: row.color, isSubject: true });
+    } else {
+      upsertSubject(row.class_id, { id: `lesson:${row.id}`, name: row.title || "Materia", color: row.color, isSubject: false });
     }
   }
 

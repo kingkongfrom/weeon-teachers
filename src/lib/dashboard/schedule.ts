@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 
@@ -47,29 +48,32 @@ function displayGroupName(
  *  - primaria:   homeroom `classes.teacher_profile_id = auth.uid()` (lesson may
  *                carry no specific teacher_id)
  */
-export async function loadTeacherSchedule(): Promise<TeacherLesson[]> {
+export const loadTeacherSchedule = cache(
+  async (): Promise<TeacherLesson[]> => {
   const session = await getTeacherSession();
   if (!session) return [];
 
   const supabase = await createSessionClient();
 
-  // Teacher roster rows linked to this profile (to match lesson teacher_id).
-  const { data: teacherRows } = await supabase
-    .from("teachers")
-    .select("id")
-    .eq("profile_id", session.userId)
-    .is("deleted_at", null);
-  const teacherIds = (teacherRows ?? []).map((row) => row.id);
+  // Teacher roster rows (to match lesson teacher_id) + lessons, in parallel.
+  const [teacherRes, lessonRes] = await Promise.all([
+    supabase
+      .from("teachers")
+      .select("id")
+      .eq("profile_id", session.userId)
+      .is("deleted_at", null),
+    supabase
+      .from("class_lessons")
+      .select(
+        "id, class_id, title, weekday, start_time, end_time, room, color, teacher_id, classes(id, name, grade, section, teacher_profile_id)",
+      )
+      .order("weekday")
+      .order("start_time"),
+  ]);
 
-  const { data: lessonRows, error } = await supabase
-    .from("class_lessons")
-    .select(
-      "id, class_id, title, weekday, start_time, end_time, room, color, teacher_id, classes(id, name, grade, section, teacher_profile_id)",
-    )
-    .order("weekday")
-    .order("start_time");
-
-  if (error || !lessonRows) return [];
+  const teacherIds = (teacherRes.data ?? []).map((row) => row.id);
+  const lessonRows = lessonRes.data ?? [];
+  if (lessonRes.error) return [];
 
   const lessons: TeacherLesson[] = [];
   for (const row of lessonRows) {
@@ -120,7 +124,8 @@ export async function loadTeacherSchedule(): Promise<TeacherLesson[]> {
   return lessons.sort(
     (a, b) => a.startTime.localeCompare(b.startTime) || a.title.localeCompare(b.title, "es"),
   );
-}
+  },
+);
 
 function classroomTeacherOwns(profileId: string | null, userId: string): boolean {
   return profileId !== null && profileId === userId;

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 
 export type TeacherGrupo = {
@@ -68,27 +69,34 @@ export async function loadTeacherGrupos(): Promise<TeacherGrupo[]> {
   }));
 }
 
-export async function loadTeacherGrupo(classId: string): Promise<{
-  grupo: TeacherGrupo;
-  students: TeacherStudent[];
-} | null> {
+export const loadTeacherGrupo = cache(
+  async (classId: string): Promise<{
+    grupo: TeacherGrupo;
+    students: TeacherStudent[];
+  } | null> => {
   const supabase = await createSessionClient();
-  const { data: grupo, error } = await supabase
-    .from("classes")
-    .select("id, name, grade, section, active")
-    .eq("id", classId)
-    .maybeSingle();
 
-  if (error || !grupo) return null;
+  // Run the class + enrollment queries concurrently to halve round-trips.
+  const [grupoRes, enrollmentRes] = await Promise.all([
+    supabase
+      .from("classes")
+      .select("id, name, grade, section, active")
+      .eq("id", classId)
+      .maybeSingle(),
+    supabase
+      .from("enrollments")
+      .select("student_id, students(id, first_name, last_name, second_last_name, grade)")
+      .eq("class_id", classId)
+      .is("dropped_at", null),
+  ]);
 
-  const { data: enrollmentRows } = await supabase
-    .from("enrollments")
-    .select("student_id, students(id, first_name, last_name, second_last_name, grade)")
-    .eq("class_id", classId)
-    .is("dropped_at", null);
+  const grupo = grupoRes.data;
+  if (grupoRes.error || !grupo) return null;
+
+  const enrollmentRows = enrollmentRes.data ?? [];
 
   const students: TeacherStudent[] = [];
-  for (const row of enrollmentRows ?? []) {
+  for (const row of enrollmentRows) {
     const raw = row as {
       students:
         | {
@@ -132,4 +140,5 @@ export async function loadTeacherGrupo(classId: string): Promise<{
     },
     students,
   };
-}
+  },
+);

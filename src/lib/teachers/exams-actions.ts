@@ -3,8 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/session";
+import { loadClassExams, type ExamColumn } from "@/lib/dashboard/exams";
 
 export type ExamActionResult = { ok: true; id?: string } | { ok: false; error: string };
+
+/** Loads the exam columns for a class+subject over a server action, so the
+ * gradebook can switch subjects client-side without a full page reload. */
+export async function fetchSubjectExams(input: {
+  classId: string;
+  subjectId: string | null;
+}): Promise<{ ok: true; exams: ExamColumn[] } | { ok: false; error: string }> {
+  const parsed = z
+    .object({ classId: z.string().uuid(), subjectId: z.string().nullable() })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Parámetros inválidos." };
+  const exams = await loadClassExams(parsed.data.classId, parsed.data.subjectId);
+  return { ok: true, exams };
+}
 
 const addColumnSchema = z.object({
   classId: z.string().uuid(),

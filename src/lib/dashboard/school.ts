@@ -1,8 +1,10 @@
 import "server-only";
 
+import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 
-export async function loadSchoolName(tenantId: string): Promise<string | null> {
+export const loadSchoolName = cache(
+  async (tenantId: string): Promise<string | null> => {
   const supabase = await createSessionClient();
   const { data } = await supabase
     .from("tenants")
@@ -11,4 +13,5 @@ export async function loadSchoolName(tenantId: string): Promise<string | null> {
     .maybeSingle();
   if (!data?.name) return null;
   return String(data.name);
-}
+  },
+);
