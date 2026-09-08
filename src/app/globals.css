@@ -1,25 +1,457 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --background: #fafafa;
-  --foreground: #18181b;
+  color-scheme: light;
+  /* Light palette — Brand paper (matches the marketing site) */
+  --background: #f7f7f9;
+  --foreground: #1b2433;
+
+  /* Brand palette: refined indigo with teal accent */
   --brand-50: #eef2ff;
+  --brand-100: #e0e7ff;
+  --brand-200: #c7d2fe;
+  --brand-300: #a5b4fc;
+  --brand-400: #818cf8;
+  --brand-500: #6366f1;
   --brand-600: #4f46e5;
   --brand-700: #4338ca;
+  --brand-800: #3730a3;
+  --brand-900: #312e81;
+  --brand-950: #1e1b4b;
+
+  /* Brand gradient stops — matches the marketing brand exactly */
+  --brand-start: #5e25cc;
+  --brand-mid: #4f46e5;
+  --brand-end: #2b59ff;
+
+  --accent: #0891b2;
+  --accent-light: #cffafe;
+
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-muted: #eef1f6;
+  --border: #e4e7ee;
+  --border-strong: #cdd3de;
+  --ring: #6366f1;
+
+  --success: #10b981;
+  --success-subtle: #ecfdf5;
+  --error: #ef4444;
+  --error-subtle: #fef2f2;
+  --warning: #f59e0b;
+}
+
+.dark {
+  color-scheme: dark;
+  /* Dark palette — Dusk slate */
+  --background: #1c2230;
+  --foreground: #e8edf5;
+  --surface: #262d3c;
+  --surface-elevated: #333c4f;
+  --surface-muted: #222838;
+  --border: #3a4356;
+  --border-strong: #505a73;
+  --ring: #8b9cff;
+  --accent: #22d3ee;
+  --accent-light: #164e63;
+  --success: #34d399;
+  --success-subtle: #14532d;
+  --error: #f87171;
+  --error-subtle: #7f1d1d;
+  --warning: #fbbf24;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
   --color-brand-600: var(--brand-600);
   --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-error: var(--error);
+  --color-error-subtle: var(--error-subtle);
+  --color-warning: var(--warning);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.brand-gradient {
+  background-image: linear-gradient(
+    90deg,
+    var(--brand-start) 0%,
+    var(--brand-mid) 42%,
+    var(--brand-end) 100%
+  );
+}
+
+.brand-text {
+  background-image: linear-gradient(
+    90deg,
+    var(--brand-start) 0%,
+    var(--brand-mid) 42%,
+    var(--brand-end) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Display type for the brand lockup — Bricolage Grotesque, medium weight. */
+.brand-display {
+  font-family: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* Display type for page/screen headings — Bricolage Grotesque, bold. */
+.brand-page-title {
+  font-family: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+/* Dashboard canvas: brand paper with a soft radial wash (light theme only). */
+.dashboard-shell {
+  background-image:
+    radial-gradient(58% 42% at 100% 0%, rgb(79 70 229 / 0.05), transparent 58%),
+    radial-gradient(50% 40% at 0% 100%, rgb(8 145 178 / 0.04), transparent 60%);
+}
+
+.dark .dashboard-shell {
+  background-image:
+    radial-gradient(58% 42% at 100% 0%, rgb(79 70 229 / 0.07), transparent 58%),
+    radial-gradient(50% 40% at 0% 100%, rgb(8 145 178 / 0.05), transparent 60%);
+}
+
+/* Quiet tint for clickable cards/tiles — no lift or shadow, just a color change. */
+.card-lift {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card-lift:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 404 — navy ambient field with blurred brand blobs (matches the admin). */
+.not-found-bg {
+  isolation: isolate;
+  overflow: hidden;
+  color-scheme: light;
+  background-color: #f7f8fc;
+  background-image:
+    radial-gradient(ellipse 75% 55% at 12% -8%, rgb(99 102 241 / 0.16), rgb(99 102 241 / 0) 62%),
+    radial-gradient(ellipse 65% 50% at 100% 108%, rgb(34 211 238 / 0.14), rgb(34 211 238 / 0) 58%),
+    radial-gradient(ellipse 42% 34% at 74% 16%, rgb(139 92 246 / 0.1), rgb(139 92 246 / 0) 64%);
+}
+
+.not-found-bg-blobs {
+  display: none;
+}
+
+.not-found-blob {
+  position: absolute;
+  border-radius: 9999px;
+}
+
+.not-found-blob-purple {
+  top: -12%;
+  left: -14%;
+  width: min(62vw, 44rem);
+  height: min(62vw, 44rem);
+  background: #5e25cc;
+  opacity: 0.85;
+}
+
+.not-found-blob-cyan {
+  right: -12%;
+  bottom: -20%;
+  width: min(54vw, 38rem);
+  height: min(54vw, 38rem);
+  background: #22d3ee;
+  opacity: 0.28;
+}
+
+.not-found-blob-blue {
+  top: 32%;
+  left: 36%;
+  width: min(50vw, 34rem);
+  height: min(50vw, 34rem);
+  background: #2b59ff;
+  opacity: 0.55;
+}
+
+.not-found-content {
+  position: relative;
+  z-index: 3;
+}
+
+.not-found-content .not-found-title {
+  color: #1e1b4b;
+}
+
+.not-found-content .not-found-body {
+  color: #46456a;
+}
+
+.not-found-content .not-found-eyebrow {
+  color: rgb(30 27 75 / 0.7);
+  border-color: rgb(30 27 75 / 0.12);
+  background: rgb(255 255 255 / 0.5);
+}
+
+.not-found-bg .brand-gradient {
+  box-shadow: 0 10px 30px rgb(79 70 229 / 0.28);
+}
+
+.dark .not-found-bg {
+  color-scheme: dark;
+  background-color: #0a1840;
+  background-image: none;
+}
+
+.dark .not-found-bg-blobs {
+  display: block;
+  pointer-events: none;
+  position: absolute;
+  inset: -25%;
+  z-index: 0;
+  filter: blur(140px) saturate(1.2);
+}
+
+.dark .not-found-bg-frost {
+  display: block;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgb(10 24 64 / 0.22);
+  backdrop-filter: blur(56px);
+  -webkit-backdrop-filter: blur(56px);
+}
+
+.dark .not-found-content .not-found-title {
+  color: #fff;
+}
+
+.dark .not-found-content .not-found-body {
+  color: rgb(255 255 255 / 0.68);
+}
+
+.dark .not-found-content .not-found-eyebrow {
+  color: rgb(255 255 255 / 0.7);
+  border-color: rgba(255 255 255 / 0.15);
+  background: rgba(255 255 255 / 0.05);
+}
+
+.dark .not-found-bg .brand-gradient {
+  box-shadow: 0 10px 30px rgb(7 20 51 / 0.45);
+}
+
+/* Ambient auth screens (login, create-password): gentle navy field with soft
+   radial brand glows — same night-sky language as the marketing site. */
+.login-bg {
+  isolation: isolate;
+  overflow: hidden;
+  color-scheme: dark;
+  background:
+    radial-gradient(46% 40% at 14% -8%, rgb(94 37 204 / 0.34), transparent 64%),
+    radial-gradient(42% 40% at 100% 112%, rgb(8 145 178 / 0.26), transparent 60%),
+    radial-gradient(50% 44% at 72% 4%, rgb(43 89 255 / 0.28), transparent 66%),
+    linear-gradient(180deg, #202c60 0%, #131f50 100%);
+}
+
+.login-bg-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(38% 30% at 12% -8%, rgb(94 37 204 / 0.28), transparent 62%),
+    radial-gradient(34% 32% at 100% 108%, rgb(8 145 178 / 0.22), transparent 58%),
+    radial-gradient(46% 38% at 72% 6%, rgb(43 89 255 / 0.22), transparent 66%);
+  filter: blur(80px) saturate(1.05);
+}
+
+.login-bg > main {
+  position: relative;
+  z-index: 3;
+}
+
+.login-bg .login-lockup {
+  color: #fff;
+  filter: drop-shadow(0 1px 10px rgb(7 20 51 / 0.4));
+}
+
+.login-bg .login-lockup .brand-display {
+  color: #fff;
+}
+
+.login-bg .login-lockup .login-school {
+  color: rgb(255 255 255 / 0.72);
+}
+
+.login-card {
+  background: rgb(255 255 255 / 0.07);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow: 0 24px 60px rgb(7 20 51 / 0.3);
+}
+
+.login-card label,
+.login-card h1 {
+  color: #fff;
+}
+
+.login-card p {
+  color: rgb(255 255 255 / 0.62);
+}
+
+.login-field {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.22);
+  color: #fff;
+}
+
+.login-field::placeholder {
+  color: rgb(255 255 255 / 0.4);
+}
+
+.login-field:focus {
+  border-color: rgb(255 255 255 / 0.55);
+  box-shadow: 0 0 0 3px rgb(43 89 255 / 0.25);
+}
+
+.login-field:-webkit-autofill,
+.login-field:-webkit-autofill:hover,
+.login-field:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  box-shadow: 0 0 0 1000px rgb(11 32 72 / 0.85) inset;
+  transition: background-color 9999s ease-out;
+}
+
+/* ---------------------------------------------------------------------------
+ * react-data-grid — gradebook (grupos/[id]). Plain Excel look: flat white
+ * grid, thin borders, no hover/focus highlights. Follows light/dark via tokens.
+ * ------------------------------------------------------------------------ */
+.rdg.rdg-gradebook {
+  --rdg-color: var(--foreground);
+  --rdg-border-color: var(--border);
+  --rdg-background-color: var(--surface);
+  --rdg-header-background-color: var(--surface);
+  --rdg-row-hover-background-color: var(--surface);
+  --rdg-selection-color: transparent;
+  --rdg-selection-width: 0px;
+  --rdg-font-size: 0.875rem;
+  border: none;
+  font-family: inherit;
+}
+
+/* Grade cells: right-aligned marks like a spreadsheet. */
+.rdg-gradebook .rdg-grade-cell {
+  padding-inline: 0.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mild neutral highlight on the working (selected/editing) grade cell, so the
+   teacher can see which cell they are in. Overrides RDG's default full-row
+   selection paint with a subtle tone that is a touch darker than the zebra
+   striping, so the active cell still stands out on striped rows. */
+.rdg-gradebook .rdg-cell[aria-selected="true"] {
+  background-color: color-mix(in srgb, var(--surface-muted) 70%, var(--border-strong));
+}
+
+/* Very subtle bi-color striping on body rows, to help the eye follow a row
+   across a wide gradebook. Deliberately faint so the selected/editing cell and
+   the flat Excel look still read clearly. */
+.rdg-gradebook [role="row"]:nth-child(even) {
+  background-color: color-mix(in srgb, var(--surface-muted) 28%, transparent);
+}
+
+/* The editing cell keeps the same mild tone (RDG paints it via the editor
+   container), and we also mute the row-level selection background so only the
+   active cell stands out. */
+.rdg-gradebook [role="row"][aria-selected="true"] {
+  background-color: transparent;
+}
+
+/* In-cell grade editor: flex box centers the input vertically in the cell. */
+.rdg-gradebook .rdg-grade-editor {
+  display: flex;
+  align-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  padding-inline: 0.5rem;
+}
+
+.rdg-gradebook .rdg-grade-input {
+  inline-size: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: normal;
+  text-align: right;
+  caret-color: transparent;
+  outline: none;
+}
+
+/* Hide the text caret on every editable input inside the gradebook (header
+   title + body grade editor), even while a cell is focused. The inline style
+   can be overridden by RDG's editor, so we chase it on the container and all
+   inputs with !important. */
+.rdg-gradebook,
+.rdg-gradebook * {
+  caret-color: transparent !important;
+}
+
+.rdg-gradebook input,
+.rdg-gradebook .rdg-editor-container input,
+.rdg-gradebook .rdg-text-editor {
+  caret-color: transparent !important;
+}
+
+/* Hide RDG's frozen-column scroll shadows: dark gradient strips pinned to the
+   frozen column's inner edge. RDG only hides them via scroll-state() container
+   queries (Chrome 133+); elsewhere they render as a permanent dark vertical
+   line that flickers on interaction. We want a flat Excel look instead.
+   Class hash matches react-data-grid 7.0.0-beta.61 — re-check on upgrade. */
+.rdg-gradebook .rdg-7-0-0-beta-60-2e639f12 {
+  display: none;
 }

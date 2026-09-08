@@ -5,7 +5,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-zinc-200 bg-white shadow-sm",
+        "card-lift rounded-2xl border border-border bg-surface hover:border-brand-200 hover:bg-brand-50/40",
         className,
       )}
       {...props}
@@ -17,7 +17,7 @@ export function CardHeader({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("border-b border-zinc-100 px-6 py-4", className)} {...props} />;
+  return <div className={cn("border-b border-border px-6 py-4", className)} {...props} />;
 }
 
 export function CardTitle({
@@ -26,7 +26,7 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-base font-semibold text-zinc-900", className)}
+      className={cn("text-base font-semibold text-foreground", className)}
       {...props}
     />
   );
@@ -37,7 +37,7 @@ export function CardDescription({
   ...props
 }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("mt-1 text-sm text-zinc-500", className)} {...props} />
+    <p className={cn("mt-1 text-sm text-foreground/55", className)} {...props} />
   );
 }
 

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { ReactNode } from "react";
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,21 +14,38 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/* Brand display type — Bricolage Grotesque (shared with the marketing site). */
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+});
+
 export const metadata: Metadata = {
   title: {
-    default: "Weeon Teachers",
-    template: "%s | Weeon Teachers",
+    default: "Weeon Docentes",
+    template: "%s | Weeon Docentes",
   },
-  description: "Create and manage student reports for your classroom.",
+  description: "Portal de docentes de Weeon School.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="es"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <script
+          id="weeon-theme"
+          async
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
