@@ -402,6 +402,17 @@ body {
   color: var(--foreground);
 }
 
+/* Round the top-right corner of the Promedio (average) column so it flows into
+   the corner add (+) chip. The header and the first data cell both carry it for
+   a clean radius at the grid's top-right. */
+.rdg-gradebook .rdg-average-header-round {
+  border-start-end-radius: 0.75rem;
+}
+
+.rdg-gradebook .rdg-average-cell:first-child {
+  border-start-end-radius: 0.75rem;
+}
+
 /* Very mild cell fill for the row average — only the background is tinted,
    matching the status-badge intensity. Text stays neutral. The base cell adds
    the separator; the tone variants paint a soft wash over it. */

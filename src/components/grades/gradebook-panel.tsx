@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { GradesTable } from "@/components/grades/grades-table";
 import { SubmitReport } from "@/components/grades/submit-report";
@@ -27,6 +27,36 @@ type GradebookPanelProps = {
   initialExams: ExamColumn[];
 };
 
+/**
+ * Client-side cache of exams per (classId, subjectId). A subject the teacher
+ * already viewed is served instantly on switch-back — no network round-trip —
+ * which makes bouncing between subjects feel immediate. A short TTL lets edits
+ * self-heal: within the TTL the cached snapshot is shown (instant), after it
+ * the view refetches fresh data.
+ */
+const examsCache = new Map<string, { exams: ExamColumn[]; at: number }>();
+const cacheKey = (classId: string, subjectId: string | null) =>
+  `${classId}::${subjectId ?? "__legacy"}`;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function cacheGet(key: string): ExamColumn[] | undefined {
+  const entry = examsCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() - entry.at > CACHE_TTL_MS) {
+    examsCache.delete(key);
+    return undefined;
+  }
+  return entry.exams;
+}
+
+function cacheSet(key: string, exams: ExamColumn[]) {
+  examsCache.set(key, { exams, at: Date.now() });
+}
+
+function cacheDelete(key: string) {
+  examsCache.delete(key);
+}
+
 export function GradebookPanel({
   classId,
   students,
@@ -39,17 +69,38 @@ export function GradebookPanel({
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [loading, setLoading] = useState(false);
 
+  // Seed the cache for the initially-rendered subject (from the server render,
+  // which is always fresh) when the mounted class+subject pair changes.
+  const initialKey = cacheKey(classId, initialSubjectId);
+  useEffect(() => {
+    cacheSet(initialKey, initialExams);
+  }, [initialKey, initialExams]);
+
   const subjects = classContext.subjects;
   const hasLegacy = classContext.hasLegacyExams;
 
   async function switchSubject(next: string | null) {
     if (next === subjectId || loading) return;
+
+    const key = cacheKey(classId, next);
+    const cached = cacheGet(key);
+    // Serve from cache instantly when fresh; otherwise show a loading state
+    // while fetching (and store the result for next time).
+    if (cached) {
+      setSubjectId(next);
+      setExams(cached);
+      return;
+    }
+
     setSubjectId(next);
     setLoading(true);
     setExams([]);
     const result = await fetchSubjectExams({ classId, subjectId: next });
     setLoading(false);
-    if (result.ok) setExams(result.exams);
+    if (result.ok) {
+      cacheSet(key, result.exams);
+      setExams(result.exams);
+    }
   }
 
   return (
@@ -86,6 +137,7 @@ export function GradebookPanel({
           subjectId={subjectId}
           students={students}
           initialExams={loading ? [] : exams}
+          onGradeEdit={() => cacheDelete(cacheKey(classId, subjectId))}
         />
       )}
 

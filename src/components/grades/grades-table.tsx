@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -9,7 +9,7 @@ import {
   type RenderEditCellProps,
   type RowsChangeData,
 } from "react-data-grid";
-import { Loader2, Plus, Trash2, Undo2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChartPie, ChartSpline, Loader2, Plus, Trash2, Undo2 } from "lucide-react";
 import type { ExamColumn } from "@/lib/dashboard/exams";
 import {
   addExamColumn,
@@ -18,8 +18,6 @@ import {
   saveGrade,
   updateExamColumn,
 } from "@/lib/teachers/exams-actions";
-import { GradesHistogram } from "./grades-histogram";
-import { Switch } from "@/components/ui/switch";
 import "react-data-grid/lib/styles.css";
 
 type StudentRow = {
@@ -40,6 +38,9 @@ type GradesTableProps = {
   subjectId?: string | null;
   students: StudentRow[];
   initialExams: ExamColumn[];
+  /** Fired after a grade edit is committed, so the parent can invalidate any
+   * client-side cache for this subject and avoid stale snapshots. */
+  onGradeEdit?: () => void;
 };
 
 const HEADER_HEIGHT = 40;
@@ -97,7 +98,11 @@ function computeColumnWidths(
   for (const student of students) {
     widestName = Math.max(widestName, measureText(studentName(student), 500));
   }
-  const nameWidth = clampWidth(widestName + NAME_CHROME, MIN_NAME_WIDTH, MAX_NAME_WIDTH);
+  const nameWidth = clampWidth(
+    widestName + NAME_CHROME,
+    MIN_NAME_WIDTH,
+    MAX_NAME_WIDTH,
+  );
 
   const examWidths = exams.map((exam) => {
     const title = draftTitles[exam.id] ?? exam.title;
@@ -133,7 +138,13 @@ function parseGrade(
   return { ok: true, value: Math.min(parsed, max) };
 }
 
-export function GradesTable({ classId, subjectId = null, students, initialExams }: GradesTableProps) {
+export function GradesTable({
+  classId,
+  subjectId = null,
+  students,
+  initialExams,
+  onGradeEdit,
+}: GradesTableProps) {
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [adding, setAdding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -158,13 +169,6 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
   // not linger. Reset whenever a new column is deleted.
   const [toastOpen, setToastOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Toggle the per-exam summary / distribution graphics on the right.
-  const [showHistogram, setShowHistogram] = useState(true);
-
-  // There is nothing to chart until at least one grade exists across any exam.
-  const hasGradeData = exams.some((exam) =>
-    students.some((s) => exam.grades[s.id]?.mark != null),
-  );
 
   function showDelete(columnId: string) {
     if (hideTimer.current) {
@@ -204,7 +208,8 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
   }));
 
   useEffect(() => {
-    const update = () => setWidths(computeColumnWidths(exams, students, draftTitles));
+    const update = () =>
+      setWidths(computeColumnWidths(exams, students, draftTitles));
     update();
     // Re-measure once the real webfont is ready so widths are not based on
     // fallback-font metrics.
@@ -233,7 +238,9 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
 
   function patchColumn(id: string, patch: Partial<Pick<ExamColumn, "title">>) {
     setExams((current) =>
-      current.map((column) => (column.id === id ? { ...column, ...patch } : column)),
+      current.map((column) =>
+        column.id === id ? { ...column, ...patch } : column,
+      ),
     );
   }
 
@@ -241,25 +248,43 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
     if (adding) return;
     setAdding(true);
     setActionError(null);
-    const result = await addExamColumn({ classId, subjectId, title: "", points: null });
+    const result = await addExamColumn({
+      classId,
+      subjectId,
+      title: "",
+      points: null,
+    });
     setAdding(false);
     if (!result.ok || !result.id) {
-      setActionError(result.ok ? "No se pudo agregar la columna." : result.error);
+      setActionError(
+        result.ok ? "No se pudo agregar la columna." : result.error,
+      );
       return;
     }
     const id = result.id;
-    setExams((current) => [...current, { id, title: "", points: null, grades: {} }]);
+    setExams((current) => [
+      ...current,
+      { id, title: "", points: null, grades: {} },
+    ]);
   }
 
-  function handleRowsChange(updatedRows: GridRow[], data: RowsChangeData<GridRow>) {
+  function handleRowsChange(
+    updatedRows: GridRow[],
+    data: RowsChangeData<GridRow>,
+  ) {
     const columnId = data.column.key;
     if (columnId === "name") return;
+
     const exam = exams.find((column) => column.id === columnId);
     if (!exam) return;
     const max = exam.points ?? 100;
 
     let invalid = false;
-    const pending: Array<{ studentId: string; prev: number | null; value: number | null }> = [];
+    const pending: Array<{
+      studentId: string;
+      prev: number | null;
+      value: number | null;
+    }> = [];
     for (const index of data.indexes) {
       const row = updatedRows[index];
       const parsed = parseGrade(row[columnId], max);
@@ -273,7 +298,9 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
     }
 
     if (invalid) {
-      setActionError("La nota debe ser un número entre 0 y el máximo de la columna.");
+      setActionError(
+        "La nota debe ser un número entre 0 y el máximo de la columna.",
+      );
     }
     if (pending.length === 0) return;
     setActionError(null);
@@ -317,6 +344,7 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
           setActionError(result.error);
         }
       }
+      onGradeEdit?.();
     })();
   }
 
@@ -341,7 +369,9 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
         onHoverEnd={hideDelete}
       />
     ),
-    renderEditCell: (props) => <GradeEditor {...props} max={exam.points ?? 100} />,
+    renderEditCell: (props) => (
+      <GradeEditor {...props} max={exam.points ?? 100} />
+    ),
   }));
 
   const columns: Column<GridRow>[] = [
@@ -383,7 +413,7 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
         return `rdg-average-cell rdg-average-cell-${tone}`;
       },
       renderHeaderCell: () => (
-        <div className="flex h-full items-center px-2 text-xs font-medium uppercase tracking-wide text-foreground/50">
+        <div className="flex h-full items-center px-2 text-xs font-medium uppercase tracking-wide text-foreground/50 rdg-average-header-round">
           Promedio
         </div>
       ),
@@ -391,7 +421,10 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
     },
   ];
 
-  const gridWidth = nameWidth + widths.reduce((total, width) => total + width, 0) + AVERAGE_WIDTH;
+  const gridWidth =
+    nameWidth +
+    widths.reduce((total, width) => total + width, 0) +
+    AVERAGE_WIDTH;
   const gridHeight = HEADER_HEIGHT + students.length * ROW_HEIGHT;
 
   // Floating delete button: sits above the hovered exam column, in the outer
@@ -411,13 +444,18 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
     if (!removedColumn) return;
     setHoverColumnRemoving(true);
     setActionError(null);
-    const result = await removeExamColumn({ classId, assignmentId: hoverColumn });
+    const result = await removeExamColumn({
+      classId,
+      assignmentId: hoverColumn,
+    });
     setHoverColumnRemoving(false);
     if (!result.ok) {
       setActionError(result.error);
       return;
     }
-    setExams((current) => current.filter((column) => column.id !== hoverColumn));
+    setExams((current) =>
+      current.filter((column) => column.id !== hoverColumn),
+    );
     setHoverColumn(null);
     setDeletedSnapshot({ column: removedColumn, index: removedIndex });
     setToastOpen(true);
@@ -456,113 +494,89 @@ export function GradesTable({ classId, subjectId = null, students, initialExams 
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-start">
-        <div className="min-w-0 w-fit max-w-full">
-          <div className="relative w-fit max-w-full">
-            <button
-              type="button"
-              onClick={() => void addColumn()}
-              disabled={adding}
-              aria-label="Agregar columna"
-              title="Agregar columna"
-              style={{ insetInlineStart: gridWidth, insetBlockStart: 0, blockSize: HEADER_HEIGHT }}
-              className="absolute inline-flex w-[30px] cursor-pointer items-center justify-center rounded-r-full border border-l-0 border-success/40 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60"
-            >
-              {adding ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
-            </button>
-
-        {showHoverDelete && hoverIndex >= 0 ? (
-          <div
-            className="absolute z-20 flex justify-center"
+      <div className="min-w-0 w-fit max-w-full">
+        <div className="relative w-fit max-w-full">
+          <button
+            type="button"
+            onClick={() => void addColumn()}
+            disabled={adding}
+            aria-label="Agregar columna"
+            title="Agregar columna"
             style={{
-              insetInlineStart: hoverLeft - scrollLeft,
-              inlineSize: widths[hoverIndex] + 1,
-              insetBlockStart: -25,
+              insetInlineStart: gridWidth - 15,
+              insetBlockStart: -15,
+              blockSize: 32,
+              inlineSize: 32,
             }}
+            className="absolute inline-flex rotate-45 cursor-pointer items-center justify-center rounded-full border border-success/40 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60"
           >
-            <button
-              type="button"
-              onClick={() => void handleRemoveHovered()}
-              disabled={hoverColumnRemoving}
-              aria-label="Eliminar columna"
-              title="Eliminar columna"
-              onMouseEnter={() => showDelete(hoverColumn!)}
-              onMouseLeave={hideDelete}
-              className="flex w-full cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-t-md border border-error/40 bg-error/10 px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-60"
+            {adding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 -rotate-45" strokeWidth={3} />
+            )}
+          </button>
+
+          {showHoverDelete && hoverIndex >= 0 ? (
+            <div
+              className="absolute z-20 flex justify-center"
+              style={{
+                insetInlineStart: hoverLeft - scrollLeft,
+                inlineSize: widths[hoverIndex] + 1,
+                insetBlockStart: -25,
+              }}
             >
-              {hoverColumnRemoving ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Trash2 className="h-3 w-3" />
-              )}
-              Eliminar
-            </button>
-          </div>
-        ) : null}
-
-        <div
-          className="max-w-full overflow-x-auto rounded-2xl rounded-tr-none border border-border"
-          onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
-        >
-          <div className="bg-surface" style={{ inlineSize: gridWidth }}>
-            <DataGrid<GridRow>
-              columns={columns}
-              rows={rows}
-              rowKeyGetter={(row) => row.id}
-              onRowsChange={handleRowsChange}
-              onCellPaste={({ row, column }, event) => ({
-                ...row,
-                [column.key]: event.clipboardData.getData("text/plain"),
-              })}
-              headerRowHeight={HEADER_HEIGHT}
-              rowHeight={ROW_HEIGHT}
-              className="rdg-gradebook"
-              style={{ inlineSize: gridWidth, blockSize: gridHeight }}
-              aria-label="Tabla de calificaciones"
-            />
-          </div>
-        </div>
-      </div>
-        </div>
-
-        <aside className="flex w-full shrink-0 flex-col gap-2 lg:w-[400px] lg:pl-[30px]">
-          {hasGradeData ? (
-            <>
-              <label
-                htmlFor="histogram-toggle"
-                className="inline-flex cursor-pointer items-center justify-end gap-2 text-sm font-medium text-foreground/70"
+              <button
+                type="button"
+                onClick={() => void handleRemoveHovered()}
+                disabled={hoverColumnRemoving}
+                aria-label="Eliminar columna"
+                title="Eliminar columna"
+                onMouseEnter={() => showDelete(hoverColumn!)}
+                onMouseLeave={hideDelete}
+                className="flex w-full cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-t-md border border-error/40 bg-error/10 px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-60"
               >
-                <span>Resumen gráfico</span>
-                <Switch
-                  id="histogram-toggle"
-                  checked={showHistogram}
-                  onChange={setShowHistogram}
-                  label="Mostrar u ocultar resumen gráfico"
-                />
-              </label>
-              <AnimatePresence initial={false}>
-                {showHistogram ? (
-                  <motion.div
-                    initial={{ opacity: 0, x: 12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 12 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                  >
-                    <GradesHistogram
-                      exams={exams}
-                      students={students.map((s) => ({ id: s.id, name: studentName(s) }))}
-                    />
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </>
+                {hoverColumnRemoving ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+                Eliminar
+              </button>
+            </div>
           ) : null}
-        </aside>
+
+          <div
+            className="max-w-full overflow-x-auto rounded-2xl border border-border"
+            onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
+          >
+            <div className="bg-surface" style={{ inlineSize: gridWidth }}>
+              <DataGrid<GridRow>
+                columns={columns}
+                rows={rows}
+                rowKeyGetter={(row) => row.id}
+                onRowsChange={handleRowsChange}
+                onCellPaste={({ row, column }, event) => ({
+                  ...row,
+                  [column.key]: event.clipboardData.getData("text/plain"),
+                })}
+                headerRowHeight={HEADER_HEIGHT}
+                rowHeight={ROW_HEIGHT}
+                className="rdg-gradebook"
+                style={{ inlineSize: gridWidth, blockSize: gridHeight }}
+                aria-label="Tabla de calificaciones"
+              />
+            </div>
+          </div>
+        </div>
       </div>
+
+      <GradeSummary
+        classId={classId}
+        exams={exams}
+        students={students}
+        gridWidth={gridWidth}
+      />
 
       {actionError ? (
         <p className="text-xs font-medium text-error">{actionError}</p>
@@ -631,7 +645,11 @@ function ExamHeaderCell({
     }
     setBusy(true);
     try {
-      const result = await updateExamColumn({ classId, assignmentId: column.id, title: value });
+      const result = await updateExamColumn({
+        classId,
+        assignmentId: column.id,
+        title: value,
+      });
       if (result.ok) {
         onPatch(column.id, { title: value });
       } else {
@@ -716,7 +734,8 @@ function GradeEditor({
  */
 function AverageCell({ row, exams }: { row: GridRow; exams: ExamColumn[] }) {
   const pct = computeRowAverage(exams, row);
-  if (pct === null) return <span className="text-xs text-foreground/40">—</span>;
+  if (pct === null)
+    return <span className="text-xs text-foreground/40">—</span>;
   return <span className="rdg-average-value">{Math.round(pct)}%</span>;
 }
 
@@ -734,4 +753,112 @@ function computeRowAverage(exams: ExamColumn[], row: GridRow): number | null {
   }
   if (count === 0) return null;
   return sum / count;
+}
+
+/**
+ * Bottom-of-table summary strip: the group's average, pass rate (>= 70%),
+ * highest and lowest student average, expressed as percentages. Mirrors the
+ * per-subject summary cards placed under the student list.
+ */
+function GradeSummary({
+  exams,
+  students,
+  gridWidth,
+}: {
+  classId: string;
+  exams: ExamColumn[];
+  students: StudentRow[];
+  gridWidth: number;
+}) {
+  const summary = useMemo(() => {
+    const avgs: number[] = [];
+    for (const student of students) {
+      const row: GridRow = {
+        id: student.id,
+        name: studentName(student),
+        student: studentName(student),
+      };
+      for (const exam of exams)
+        row[exam.id] = exam.grades[student.id]?.mark ?? null;
+      const pct = computeRowAverage(exams, row);
+      if (pct !== null) avgs.push(pct);
+    }
+
+    if (avgs.length === 0) return null;
+
+    const sum = avgs.reduce((acc, v) => acc + v, 0);
+    const mean = sum / avgs.length;
+    const pass = avgs.filter((v) => Math.round(v) >= 70).length;
+    return {
+      avg: mean,
+      passRate: (pass / avgs.length) * 100,
+      max: Math.max(...avgs),
+      min: Math.min(...avgs),
+      passCount: pass,
+      gradedCount: avgs.length,
+    };
+  }, [exams, students]);
+
+  if (!summary) return null;
+
+  return (
+    <div
+      className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+      style={{ inlineSize: gridWidth }}
+    >
+      <SummaryCard
+        icon={<ChartSpline className="h-3 w-3" />}
+        label="Promedio"
+        value={summary.avg}
+        sub={`${summary.gradedCount} estudiante${summary.gradedCount === 1 ? "" : "s"}`}
+      />
+      <SummaryCard
+        icon={<ChartPie className="h-3 w-3" />}
+        label="Aprobación"
+        value={summary.passRate}
+        suffix="%"
+        sub={`${summary.passCount} de ${summary.gradedCount}`}
+      />
+      <SummaryCard
+        icon={<ArrowUpRight className="h-3 w-3" />}
+        label="Máx"
+        value={summary.max}
+        sub="Mejor promedio"
+      />
+      <SummaryCard
+        icon={<ArrowDownRight className="h-3 w-3" />}
+        label="Mín"
+        value={summary.min}
+        sub="Promedio más bajo"
+      />
+    </div>
+  );
+}
+
+function SummaryCard({
+  icon,
+  label,
+  value,
+  suffix = "%",
+  sub,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number;
+  suffix?: string;
+  sub: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-surface px-3.5 py-2.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground/50">
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
+      <div className="mt-0.5 text-lg leading-tight font-bold tabular-nums tracking-tight text-foreground">
+        {Math.round(value)}
+        {suffix}
+      </div>
+      <div className="truncate text-[11px] font-medium text-foreground/45">{sub}</div>
+    </div>
+  );
 }
