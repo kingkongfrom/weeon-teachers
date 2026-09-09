@@ -378,10 +378,19 @@ body {
   --rdg-font-size: 0.875rem;
   border: none;
   font-family: inherit;
+  overflow: visible;
+  block-size: auto !important;
 }
 
 .rdg-gradebook .rdg-header-row .rdg-cell {
   overflow: visible;
+  padding: 0;
+}
+
+.rdg-gradebook .rdg-exam-header-cell,
+.rdg-gradebook .rdg-average-header-cell,
+.rdg-gradebook .rdg-name-header-cell {
+  padding: 0;
 }
 
 /* Grade cells: right-aligned marks like a spreadsheet. */

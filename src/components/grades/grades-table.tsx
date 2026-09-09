@@ -174,8 +174,6 @@ export function GradesTable({
   const [hoverColumn, setHoverColumn] = useState<string | null>(null);
   const [hoverColumnRemoving, setHoverColumnRemoving] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Grid's horizontal scroll offset keeps the button aligned to its column.
-  const [scrollLeft, setScrollLeft] = useState(0);
   // Snapshot of the last removed column so the teacher can undo the delete.
   // `index` restores the column to its original position in the grid.
   const [deletedSnapshot, setDeletedSnapshot] = useState<{
@@ -376,6 +374,7 @@ export function GradesTable({
     name: exam.title,
     width: widths[index],
     editable: true,
+    headerCellClass: "rdg-exam-header-cell",
     cellClass: "rdg-grade-cell",
     renderHeaderCell: () => (
       <ExamHeaderCell
@@ -400,8 +399,9 @@ export function GradesTable({
       frozen: true,
       width: nameWidth,
       editable: false,
+      headerCellClass: "rdg-name-header-cell",
       renderHeaderCell: () => (
-        <div className="flex h-full items-center px-2 text-xs font-medium uppercase tracking-wide text-foreground/50">
+        <div className="flex h-full w-full items-center px-2 text-xs font-medium uppercase tracking-wide text-foreground/50">
           Estudiante
         </div>
       ),
@@ -425,6 +425,7 @@ export function GradesTable({
       name: "Promedio",
       width: averageWidth,
       editable: false,
+      headerCellClass: "rdg-average-header-cell",
       cellClass: (row) => {
         const pct = computeRowAverage(exams, row);
         if (pct === null) return "rdg-average-cell";
@@ -432,7 +433,7 @@ export function GradesTable({
         return `rdg-average-cell rdg-average-cell-${tone}`;
       },
       renderHeaderCell: () => (
-        <div className="flex h-full min-w-0 items-center overflow-visible px-2 text-xs font-medium uppercase tracking-wide text-foreground/50 rdg-average-header-round">
+        <div className="flex h-full w-full items-center justify-center px-2 text-center text-xs font-medium uppercase tracking-wide text-foreground/50 rdg-average-header-round">
           Promedio
         </div>
       ),
@@ -513,10 +514,7 @@ export function GradesTable({
 
   return (
     <div className={`flex w-full flex-col gap-4 ${loading ? "opacity-50" : ""}`}>
-      <div
-        className="min-w-0 max-w-full"
-        style={{ width: gridWidth }}
-      >
+      <div className="w-fit" style={{ width: gridWidth }}>
         <div className="relative pe-10">
           <button
             type="button"
@@ -543,7 +541,7 @@ export function GradesTable({
             <div
               className="absolute z-20 flex justify-center"
               style={{
-                insetInlineStart: hoverLeft - scrollLeft,
+                insetInlineStart: hoverLeft,
                 inlineSize: widths[hoverIndex] + 1,
                 insetBlockStart: -25,
               }}
@@ -568,10 +566,7 @@ export function GradesTable({
             </div>
           ) : null}
 
-          <div
-            className="overflow-x-auto rounded-2xl border border-border"
-            onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
-          >
+          <div className="overflow-visible rounded-2xl border border-border">
             <div className="bg-surface" style={{ inlineSize: gridWidth }}>
               <DataGrid<GridRow>
                 columns={columns}
@@ -688,7 +683,7 @@ function ExamHeaderCell({
 
   return (
     <div
-      className="flex h-full min-w-0 items-center overflow-visible px-1.5"
+      className="rdg-exam-header flex h-full w-full items-center justify-center px-2"
       onKeyDown={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onMouseEnter={onHoverStart}
@@ -711,7 +706,7 @@ function ExamHeaderCell({
           }
         }}
         aria-label="Nombre de la columna"
-        className="h-7 w-full min-w-0 bg-transparent px-0.5 text-xs font-medium uppercase tracking-wide text-foreground/50 outline-none disabled:opacity-60"
+        className="h-7 w-full min-w-0 bg-transparent text-center text-xs font-medium uppercase tracking-wide text-foreground/50 outline-none disabled:opacity-60"
         style={{ caretColor: "transparent" }}
       />
     </div>
