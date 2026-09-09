@@ -12,15 +12,16 @@ Workspace map: `../AGENTS.md`.
 
 ## Status
 
-Phase 1 (login + grupos) is implemented. Phase 2 (evaluations / submit
-grades) is not started.
+Phase 1 (login + grupos) is implemented. Phase 2 is partial: per-materia
+gradebook, submit report, and a reportes list — not a full reports composer.
 
 | Route | Purpose |
 | ----- | ------- |
 | `/` | School + username login |
 | `/crear-contrasena` | First password (also used by the mobile app) |
 | `/grupos` | Grupos this teacher is assigned to (`teaches_class`) |
-| `/grupos/[id]` | Roster for one grupo |
+| `/grupos/[id]` | Gradebook — materia tabs, evaluations, grades, submit report |
+| `/reportes` | Submitted grade snapshots for this teacher |
 
 Admin assigns a username in Comunidad. This app creates the Auth user on
 first login, links `teachers.profile_id`, and backfills

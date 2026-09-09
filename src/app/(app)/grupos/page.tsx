@@ -27,7 +27,7 @@ export default async function GruposPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {grupos.map((grupo) => (
             <Link key={grupo.id} href={`/grupos/${grupo.id}`} className="group">
-              <Card className="card-lift h-full p-5 hover:border-brand-200 hover:bg-brand-50/40">
+              <Card className="h-full p-5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300 dark:group-hover:bg-brand-900/50">
                   <Users className="h-6 w-6" strokeWidth={2.2} />
                 </div>

@@ -22,7 +22,10 @@ and `../docs/`.*
 
 Phase 1 is wired: username or email login, first password (same Auth user as
 mobile), lazy Auth provision, and grupos isolated by RLS (`teaches_class`).
-Phase 2 (evaluations / submit grades) is **not** started.
+Phase 2 is **partial**: per-materia gradebook on `/grupos/[id]` (add
+evaluations, edit grades, summary strip), submit report scoped to the active
+subject, and `/reportes` to list submitted snapshots. Not built: full reports
+composer or parity with mobile daily classroom.
 
 ## The five repos
 
@@ -64,7 +67,7 @@ Phase 2 (evaluations / submit grades) is **not** started.
 - Next.js **16.3.4**, React **19**, Tailwind **v4**, `motion`, `lucide-react`,
   `@supabase/ssr`, Zod.
 - App Router under `src/app/`. Routes: `/` (login), `/crear-contrasena`,
-  `/grupos`, `/grupos/[id]`.
+  `/grupos`, `/grupos/[id]` (gradebook), `/reportes`.
 - Auth: `src/lib/auth/`, `src/lib/supabase/`, `proxy.ts`.
 - Session gate: cookie client for reads; service-role only to resolve
   username / email and create/link Auth.

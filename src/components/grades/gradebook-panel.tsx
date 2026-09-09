@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { AddColumnButton } from "@/components/grades/add-column-button";
 import { GradesTable } from "@/components/grades/grades-table";
-import { SubmitReport } from "@/components/grades/submit-report";
 import { SchoolCycleBadge } from "@/components/grupos/school-cycle-badge";
 import { fetchSubjectExams } from "@/lib/teachers/exams-actions";
 import { subjectChipClass, subjectDotClass } from "@/lib/dashboard/lesson-colors";
@@ -46,10 +46,6 @@ function cacheSet(key: string, exams: ExamColumn[]) {
   examsCache.set(key, { exams, at: Date.now() });
 }
 
-function cacheDelete(key: string) {
-  examsCache.delete(key);
-}
-
 export function GradebookPanel({
   classId,
   students,
@@ -61,6 +57,26 @@ export function GradebookPanel({
   const [subjectId, setSubjectId] = useState<string | null>(initialSubjectId);
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [loading, setLoading] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  const fetchGenerationRef = useRef(0);
+  const [addControl, setAddControl] = useState<{
+    addColumn: () => void;
+    adding: boolean;
+  } | null>(null);
+
+  const handleAddControlReady = useCallback(
+    (control: { addColumn: () => void; adding: boolean }) => {
+      setAddControl(control);
+    },
+    [],
+  );
+
+  const persistExamsCache = useCallback(
+    (next: ExamColumn[]) => {
+      cacheSet(cacheKey(classId, subjectId), next);
+    },
+    [classId, subjectId],
+  );
 
   const initialKey = cacheKey(classId, initialSubjectId);
   useEffect(() => {
@@ -69,27 +85,52 @@ export function GradebookPanel({
 
   const subjects = classContext.subjects;
   const hasLegacy = classContext.hasLegacyExams;
+  const subjectName =
+    subjectId === null
+      ? hasLegacy
+        ? "General"
+        : null
+      : (subjects.find((subject) => subject.id === subjectId)?.name ?? null);
 
   async function switchSubject(next: string | null) {
-    if (next === subjectId || loading) return;
+    if (next === subjectId) return;
 
+    const previousSubjectId = subjectId;
+    const previousExams = exams;
     const key = cacheKey(classId, next);
     const cached = cacheGet(key);
-    if (cached) {
+
+    setSwitchError(null);
+
+    // Drop any in-flight fetch so a stale response cannot overwrite the UI.
+    fetchGenerationRef.current += 1;
+
+    if (cached !== undefined) {
       setSubjectId(next);
       setExams(cached);
+      setLoading(false);
       return;
     }
 
     setSubjectId(next);
     setLoading(true);
     setExams([]);
+
+    const generation = fetchGenerationRef.current;
     const result = await fetchSubjectExams({ classId, subjectId: next });
+    if (generation !== fetchGenerationRef.current) return;
+
     setLoading(false);
     if (result.ok) {
       cacheSet(key, result.exams);
       setExams(result.exams);
+      return;
     }
+
+    const previousCached = cacheGet(cacheKey(classId, previousSubjectId));
+    setSubjectId(previousSubjectId);
+    setExams(previousCached ?? previousExams);
+    setSwitchError(result.error);
   }
 
   return (
@@ -131,14 +172,29 @@ export function GradebookPanel({
           {students.length} estudiante{students.length === 1 ? "" : "s"}
         </p>
 
-        {subjects.length > 0 || hasLegacy ? (
-          <SubjectTabs
-            subjects={subjects}
-            hasLegacy={hasLegacy}
-            selectedSubjectId={subjectId}
-            onSelectSubject={switchSubject}
-            disabled={loading}
-          />
+        {subjects.length > 0 || hasLegacy || students.length > 0 ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            {subjects.length > 0 || hasLegacy ? (
+              <SubjectTabs
+                subjects={subjects}
+                hasLegacy={hasLegacy}
+                selectedSubjectId={subjectId}
+                onSelectSubject={switchSubject}
+                disabled={loading}
+              />
+            ) : null}
+            {students.length > 0 ? (
+              <AddColumnButton
+                variant="labeled"
+                adding={addControl?.adding ?? false}
+                onClick={() => addControl?.addColumn()}
+                className="shrink-0 self-start sm:self-auto"
+              />
+            ) : null}
+          </div>
+        ) : null}
+        {switchError ? (
+          <p className="text-xs font-medium text-error">{switchError}</p>
         ) : null}
       </header>
 
@@ -153,18 +209,15 @@ export function GradebookPanel({
           key={subjectId ?? "__legacy"}
           classId={classId}
           subjectId={subjectId}
+          subjectName={subjectName}
           students={students}
-          initialExams={loading ? [] : exams}
+          initialExams={exams}
           loading={loading}
-          onGradeEdit={() => cacheDelete(cacheKey(classId, subjectId))}
+          onAddControlReady={handleAddControlReady}
+          onExamsPersisted={persistExamsCache}
         />
       )}
 
-      {students.length > 0 && (loading || exams.length > 0) ? (
-        <div className="flex justify-end">
-          <SubmitReport classId={classId} subjectId={subjectId} disabled={loading} />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -183,43 +236,43 @@ function SubjectTabs({
   disabled?: boolean;
 }) {
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
+    <div className="flex min-w-0 flex-1 flex-wrap gap-2">
       {subjects.map((subj) => {
-          const active = selectedSubjectId === subj.id;
-          return (
-            <button
-              key={subj.id}
-              type="button"
-              disabled={disabled}
-              onClick={() => onSelectSubject(subj.id)}
-              className={`inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
-                active
-                  ? subjectChipClass(subj.color)
-                  : "border-border bg-surface text-foreground/65 hover:bg-surface-muted"
-              }`}
-            >
-              <span
-                className={`h-2 w-2 shrink-0 rounded-full ${subjectDotClass(subj.color)}`}
-                aria-hidden
-              />
-              {subj.name}
-            </button>
-          );
-        })}
-        {hasLegacy ? (
+        const active = selectedSubjectId === subj.id;
+        return (
           <button
+            key={subj.id}
             type="button"
             disabled={disabled}
-            onClick={() => onSelectSubject(null)}
-            className={`inline-flex shrink-0 cursor-pointer items-center rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
-              selectedSubjectId === null
-                ? "border-brand-300 bg-brand-50 text-brand-800 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-200"
+            onClick={() => onSelectSubject(subj.id)}
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
+              active
+                ? subjectChipClass(subj.color)
                 : "border-border bg-surface text-foreground/65 hover:bg-surface-muted"
             }`}
           >
-            General
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${subjectDotClass(subj.color)}`}
+              aria-hidden
+            />
+            {subj.name}
           </button>
-        ) : null}
+        );
+      })}
+      {hasLegacy ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onSelectSubject(null)}
+          className={`inline-flex cursor-pointer items-center rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
+            selectedSubjectId === null
+              ? "border-brand-300 bg-brand-50 text-brand-800 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-200"
+              : "border-border bg-surface text-foreground/65 hover:bg-surface-muted"
+          }`}
+        >
+          General
+        </button>
+      ) : null}
     </div>
   );
 }

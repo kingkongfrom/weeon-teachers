@@ -382,6 +382,21 @@ body {
   block-size: auto !important;
 }
 
+/* Footer row — same height as the header; action fills the full row. */
+.rdg-gradebook-footer {
+  block-size: var(--rdg-header-height, 40px);
+  min-block-size: var(--rdg-header-height, 40px);
+  border-block-start: 1px solid var(--border);
+  padding: 0;
+  overflow: hidden;
+}
+
+.rdg-gradebook-footer > button,
+.rdg-gradebook-footer > div {
+  block-size: 100%;
+  inline-size: 100%;
+}
+
 .rdg-gradebook .rdg-header-row .rdg-cell {
   overflow: visible;
   padding: 0;
@@ -398,6 +413,7 @@ body {
   padding-inline: 0.5rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  cursor: text;
 }
 
 /* Row-average summary column: right-aligned, bold percent, with a separator
@@ -473,42 +489,59 @@ body {
   background-color: transparent;
 }
 
-/* In-cell grade editor: flex box centers the input vertically in the cell. */
-.rdg-gradebook .rdg-grade-editor {
+/* In-cell grade editor: short input vertically centered in the row. Full-height
+   inputs pad typed text but leave an empty caret stuck to the top border. */
+.rdg-gradebook .rdg-editor-container.rdg-grade-cell {
+  align-content: unset;
+  align-self: stretch;
+  block-size: var(--rdg-row-height, 36px);
+  min-block-size: var(--rdg-row-height, 36px);
+  padding: 0;
+  overflow: visible;
+}
+
+.rdg-gradebook .rdg-grade-input-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   inline-size: 100%;
   block-size: 100%;
+  min-block-size: var(--rdg-row-height, 36px);
   padding-inline: 0.5rem;
 }
 
-.rdg-gradebook .rdg-grade-input {
+.rdg-gradebook .rdg-grade-input-wrap .rdg-grade-input {
+  display: block;
+  flex: 0 0 auto;
   inline-size: 100%;
+  block-size: var(--rdg-input-line-height, 18px);
+  margin: 0;
   padding: 0;
   border: none;
   background: transparent;
   color: var(--foreground);
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
-  line-height: normal;
+  line-height: var(--rdg-input-line-height, 18px);
   text-align: right;
-  caret-color: transparent;
+  caret-color: var(--brand-600);
+  cursor: text;
   outline: none;
+  appearance: none;
 }
 
-/* Hide the text caret on every editable input inside the gradebook (header
-   title + body grade editor), even while a cell is focused. The inline style
-   can be overridden by RDG's editor, so we chase it on the container and all
-   inputs with !important. */
-.rdg-gradebook,
-.rdg-gradebook * {
-  caret-color: transparent !important;
+.rdg-gradebook .rdg-exam-header input {
+  box-sizing: border-box;
+  padding-block: 6px;
+  line-height: 1.75rem;
+  caret-color: var(--brand-600);
+  cursor: text;
 }
 
-.rdg-gradebook input,
-.rdg-gradebook .rdg-editor-container input,
-.rdg-gradebook .rdg-text-editor {
-  caret-color: transparent !important;
+.rdg-gradebook input:focus-visible,
+.rdg-gradebook .rdg-editor-container input:focus-visible,
+.rdg-gradebook .rdg-text-editor:focus-visible {
+  outline: none;
 }
 
 /* Hide RDG's frozen-column scroll shadows: dark gradient strips pinned to the

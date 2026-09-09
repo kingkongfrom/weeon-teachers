@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -9,8 +16,9 @@ import {
   type RenderEditCellProps,
   type RowsChangeData,
 } from "react-data-grid";
-import { ArrowDownRight, ArrowUpRight, ChartPie, ChartSpline, Loader2, Plus, Trash2, Undo2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChartPie, ChartSpline, Loader2, Trash2, Undo2 } from "lucide-react";
 import type { ExamColumn } from "@/lib/dashboard/exams";
+import { SubmitReport } from "@/components/grades/submit-report";
 import {
   addExamColumn,
   removeExamColumn,
@@ -33,19 +41,28 @@ type GridRow = {
   [assignmentId: string]: number | string | null;
 };
 
+type AddControlHandle = {
+  addColumn: () => void;
+  adding: boolean;
+};
+
 type GradesTableProps = {
   classId: string;
   subjectId?: string | null;
+  subjectName?: string | null;
   students: StudentRow[];
   initialExams: ExamColumn[];
   loading?: boolean;
-  /** Fired after a grade edit is committed, so the parent can invalidate any
-   * client-side cache for this subject and avoid stale snapshots. */
-  onGradeEdit?: () => void;
+  /** Exposes add-column for the toolbar button in the panel header. */
+  onAddControlReady?: (control: AddControlHandle) => void;
+  /** Fired after local exams change is persisted — parent updates subject cache
+   * in place (no refetch) so switching materias stays fast and accurate. */
+  onExamsPersisted?: (exams: ExamColumn[]) => void;
 };
 
 const HEADER_HEIGHT = 40;
 const ROW_HEIGHT = 36;
+const GRADE_INPUT_LINE_PX = 18;
 
 // Auto-fit bounds: columns shrink/grow with their widest content (Excel-like).
 // Exam columns have no max width — a header title is never cut off.
@@ -158,10 +175,12 @@ function parseGrade(
 export function GradesTable({
   classId,
   subjectId = null,
+  subjectName = null,
   students,
   initialExams,
   loading = false,
-  onGradeEdit,
+  onAddControlReady,
+  onExamsPersisted,
 }: GradesTableProps) {
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [adding, setAdding] = useState(false);
@@ -185,6 +204,12 @@ export function GradesTable({
   // not linger. Reset whenever a new column is deleted.
   const [toastOpen, setToastOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Parent loads exams asynchronously when the teacher switches materia; the
+  // table keeps the same React key for that subject, so sync props into state.
+  useEffect(() => {
+    setExams(initialExams);
+  }, [initialExams]);
 
   function showDelete(columnId: string) {
     if (hideTimer.current) {
@@ -254,14 +279,16 @@ export function GradesTable({
   });
 
   function patchColumn(id: string, patch: Partial<Pick<ExamColumn, "title">>) {
-    setExams((current) =>
-      current.map((column) =>
+    setExams((current) => {
+      const next = current.map((column) =>
         column.id === id ? { ...column, ...patch } : column,
-      ),
-    );
+      );
+      onExamsPersisted?.(next);
+      return next;
+    });
   }
 
-  async function addColumn() {
+  const addColumn = useCallback(async () => {
     if (adding) return;
     setAdding(true);
     setActionError(null);
@@ -279,11 +306,22 @@ export function GradesTable({
       return;
     }
     const id = result.id;
-    setExams((current) => [
-      ...current,
-      { id, title: "", points: null, grades: {} },
-    ]);
-  }
+    setExams((current) => {
+      const next: ExamColumn[] = [
+        ...current,
+        { id, title: "", points: null, grades: {} },
+      ];
+      onExamsPersisted?.(next);
+      return next;
+    });
+  }, [adding, classId, onExamsPersisted, subjectId]);
+
+  useEffect(() => {
+    onAddControlReady?.({
+      addColumn: () => void addColumn(),
+      adding,
+    });
+  }, [addColumn, adding, onAddControlReady]);
 
   function handleRowsChange(
     updatedRows: GridRow[],
@@ -322,20 +360,20 @@ export function GradesTable({
     if (pending.length === 0) return;
     setActionError(null);
 
-    setExams((current) =>
-      current.map((column) => {
-        if (column.id !== columnId) return column;
-        const grades = { ...column.grades };
-        for (const change of pending) {
-          if (change.value === null) {
-            delete grades[change.studentId];
-          } else {
-            grades[change.studentId] = { mark: change.value, maxMarks: max };
-          }
+    const nextExams = exams.map((column) => {
+      if (column.id !== columnId) return column;
+      const grades = { ...column.grades };
+      for (const change of pending) {
+        if (change.value === null) {
+          delete grades[change.studentId];
+        } else {
+          grades[change.studentId] = { mark: change.value, maxMarks: max };
         }
-        return { ...column, grades };
-      }),
-    );
+      }
+      return { ...column, grades };
+    });
+    setExams(nextExams);
+    onExamsPersisted?.(nextExams);
 
     void (async () => {
       for (const change of pending) {
@@ -346,8 +384,8 @@ export function GradesTable({
           mark: change.value,
         });
         if (!result.ok) {
-          setExams((current) =>
-            current.map((column) => {
+          setExams((current) => {
+            const reverted = current.map((column) => {
               if (column.id !== columnId) return column;
               const grades = { ...column.grades };
               if (change.prev === null) {
@@ -356,12 +394,13 @@ export function GradesTable({
                 grades[change.studentId] = { mark: change.prev, maxMarks: max };
               }
               return { ...column, grades };
-            }),
-          );
+            });
+            onExamsPersisted?.(reverted);
+            return reverted;
+          });
           setActionError(result.error);
         }
       }
-      onGradeEdit?.();
     })();
   }
 
@@ -473,9 +512,11 @@ export function GradesTable({
       setActionError(result.error);
       return;
     }
-    setExams((current) =>
-      current.filter((column) => column.id !== hoverColumn),
-    );
+    setExams((current) => {
+      const next = current.filter((column) => column.id !== hoverColumn);
+      onExamsPersisted?.(next);
+      return next;
+    });
     setHoverColumn(null);
     setDeletedSnapshot({ column: removedColumn, index: removedIndex });
     setToastOpen(true);
@@ -508,6 +549,7 @@ export function GradesTable({
     setExams((current) => {
       const next = [...current];
       next.splice(Math.min(snapshot.index, next.length), 0, snapshot.column);
+      onExamsPersisted?.(next);
       return next;
     });
   }
@@ -515,28 +557,7 @@ export function GradesTable({
   return (
     <div className={`flex w-full flex-col gap-4 ${loading ? "opacity-50" : ""}`}>
       <div className="w-fit" style={{ width: gridWidth }}>
-        <div className="relative pe-10">
-          <button
-            type="button"
-            onClick={() => void addColumn()}
-            disabled={adding}
-            aria-label="Agregar evaluación"
-            title="Agregar evaluación"
-            style={{
-              insetInlineStart: gridWidth + 6,
-              insetBlockStart: 6,
-              blockSize: 32,
-              inlineSize: 32,
-            }}
-            className="absolute z-10 inline-flex rotate-45 cursor-pointer items-center justify-center rounded-full border border-success/40 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60"
-          >
-            {adding ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4 -rotate-45" strokeWidth={3} />
-            )}
-          </button>
-
+        <div className="relative">
           {showHoverDelete && hoverIndex >= 0 ? (
             <div
               className="absolute z-20 flex justify-center"
@@ -566,8 +587,10 @@ export function GradesTable({
             </div>
           ) : null}
 
-          <div className="overflow-visible rounded-2xl border border-border">
-            <div className="bg-surface" style={{ inlineSize: gridWidth }}>
+          <div
+            className="mt-[10px] box-content w-fit overflow-hidden rounded-2xl border border-border bg-surface"
+            style={{ ["--rdg-header-height" as string]: `${HEADER_HEIGHT}px` }}
+          >
               <DataGrid<GridRow>
                 columns={columns}
                 rows={rows}
@@ -580,10 +603,33 @@ export function GradesTable({
                 headerRowHeight={HEADER_HEIGHT}
                 rowHeight={ROW_HEIGHT}
                 className="rdg-gradebook"
-                style={{ inlineSize: gridWidth, blockSize: gridHeight }}
+                style={{
+                  inlineSize: gridWidth,
+                  blockSize: gridHeight,
+                  ["--rdg-row-height" as string]: `${ROW_HEIGHT}px`,
+                  ["--rdg-input-line-height" as string]: `${GRADE_INPUT_LINE_PX}px`,
+                }}
                 aria-label="Tabla de calificaciones"
               />
-            </div>
+              <div className="rdg-gradebook-footer">
+                {loading ? (
+                  <p className="flex h-full w-full items-center justify-center text-xs font-medium text-foreground/45">
+                    Cargando calificaciones…
+                  </p>
+                ) : exams.length === 0 ? (
+                  <p className="flex h-full w-full items-center justify-center px-3 text-center text-xs font-medium text-foreground/45">
+                    Agregue al menos una evaluación para subir el reporte
+                  </p>
+                ) : (
+                  <SubmitReport
+                    classId={classId}
+                    subjectId={subjectId}
+                    subjectName={subjectName}
+                    disabled={false}
+                    variant="footer"
+                  />
+                )}
+              </div>
           </div>
         </div>
 
@@ -706,8 +752,7 @@ function ExamHeaderCell({
           }
         }}
         aria-label="Nombre de la columna"
-        className="h-7 w-full min-w-0 bg-transparent text-center text-xs font-medium uppercase tracking-wide text-foreground/50 outline-none disabled:opacity-60"
-        style={{ caretColor: "transparent" }}
+        className="h-7 w-full min-w-0 cursor-text bg-transparent text-center text-xs font-medium uppercase tracking-wide text-foreground/50 outline-none disabled:opacity-60"
       />
     </div>
   );
@@ -725,7 +770,7 @@ function GradeEditor({
 }: RenderEditCellProps<GridRow> & { max: number }) {
   const raw = row[column.key];
   return (
-    <div className="rdg-grade-editor">
+    <div className="rdg-grade-input-wrap">
       <input
         type="text"
         inputMode="decimal"
@@ -735,7 +780,6 @@ function GradeEditor({
         onFocus={(e) => e.currentTarget.select()}
         aria-label={`Nota de ${max} puntos`}
         className="rdg-grade-input"
-        style={{ caretColor: "transparent" }}
       />
     </div>
   );

@@ -37,7 +37,10 @@ export async function submitClassReport(input: {
   // Server-side snapshot of the class grades (RLS-scoped to this teacher).
   const exams = await loadClassExams(parsed.data.classId, parsed.data.subjectId);
   if (exams.length === 0) {
-    return { ok: false, error: "El grupo no tiene exámenes con calificaciones." };
+    return {
+      ok: false,
+      error: "Agregue al menos una evaluación antes de subir el reporte.",
+    };
   }
 
   const gradesSnapshot: Record<string, Record<string, { mark: number; maxMarks: number }>> = {};
