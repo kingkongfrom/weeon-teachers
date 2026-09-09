@@ -380,6 +380,10 @@ body {
   font-family: inherit;
 }
 
+.rdg-gradebook .rdg-header-row .rdg-cell {
+  overflow: visible;
+}
+
 /* Grade cells: right-aligned marks like a spreadsheet. */
 .rdg-gradebook .rdg-grade-cell {
   padding-inline: 0.5rem;

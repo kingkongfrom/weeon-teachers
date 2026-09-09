@@ -53,11 +53,18 @@ const NAME_WIDTH_FACTOR = 1.2;
 const MIN_NAME_WIDTH = 170;
 const MAX_NAME_WIDTH = 340;
 const MIN_EXAM_WIDTH = 88;
-const AVERAGE_WIDTH = 96;
-// Horizontal chrome around the text: cell padding + caret slack so the last
-// character is never clipped while typing.
+const MIN_AVERAGE_WIDTH = 108;
+const EXAM_CHROME = 44;
+const HEADER_TRACKING_PER_CHAR = 0.4;
+
 const NAME_CHROME = 56;
-const EXAM_CHROME = 32;
+
+function measureHeaderLabel(text: string): number {
+  const upper = text.toUpperCase();
+  return (
+    measureText(upper, 500, 12) + upper.length * HEADER_TRACKING_PER_CHAR
+  );
+}
 
 function studentName(student: StudentRow): string {
   return `${student.firstName} ${student.lastName}${
@@ -69,7 +76,7 @@ let measureCtx: CanvasRenderingContext2D | null = null;
 let measureFontFamily: string | null = null;
 
 /** Measures rendered text width. `size` defaults to the grid's 14px font. */
-function measureText(text: string, weight: 400 | 500 = 400, size = 14): number {
+function measureText(text: string, weight: 400 | 500 | 600 = 400, size = 14): number {
   if (typeof document === "undefined") return text.length * 7;
   if (!measureCtx) {
     measureCtx = document.createElement("canvas").getContext("2d");
@@ -95,7 +102,7 @@ function computeColumnWidths(
   exams: ExamColumn[],
   students: StudentRow[],
   draftTitles: Record<string, string>,
-): { nameWidth: number; examWidths: number[] } {
+): { nameWidth: number; examWidths: number[]; averageWidth: number } {
   let widestName = 0;
   for (const student of students) {
     widestName = Math.max(widestName, measureText(studentName(student), 500));
@@ -108,10 +115,7 @@ function computeColumnWidths(
 
   const examWidths = exams.map((exam) => {
     const title = draftTitles[exam.id] ?? exam.title;
-    // The header title renders uppercase in a 12px medium face with tracking
-    // (letter-spacing 0.025em). Measure it exactly as displayed — uppercase
-    // widens the text — so the last character never clips.
-    let widest = measureText(title.toUpperCase(), 500, 12) + title.length * 0.3;
+    let widest = measureHeaderLabel(title || " ");
     for (const student of students) {
       const mark = exam.grades[student.id]?.mark;
       if (mark != null) {
@@ -121,7 +125,18 @@ function computeColumnWidths(
     return Math.ceil(Math.max(widest + EXAM_CHROME, MIN_EXAM_WIDTH));
   });
 
-  return { nameWidth, examWidths };
+  const averageWidth = clampWidth(
+    Math.ceil(
+      Math.max(
+        measureHeaderLabel("Promedio"),
+        measureText("100%", 600, 14),
+      ) + EXAM_CHROME,
+    ),
+    MIN_AVERAGE_WIDTH,
+    140,
+  );
+
+  return { nameWidth, examWidths, averageWidth };
 }
 
 /**
@@ -205,9 +220,10 @@ export function GradesTable({
 
   // Deterministic min widths on first render (SSR-safe); the effect below
   // swaps in canvas-measured content widths once mounted.
-  const [{ nameWidth, examWidths }, setWidths] = useState(() => ({
-    nameWidth: MIN_NAME_WIDTH,
+  const [{ nameWidth, examWidths, averageWidth }, setWidths] = useState(() => ({
+    nameWidth: Math.ceil(MIN_NAME_WIDTH * NAME_WIDTH_FACTOR),
     examWidths: initialExams.map(() => MIN_EXAM_WIDTH),
+    averageWidth: MIN_AVERAGE_WIDTH,
   }));
 
   useEffect(() => {
@@ -407,7 +423,7 @@ export function GradesTable({
     {
       key: "__average",
       name: "Promedio",
-      width: 96,
+      width: averageWidth,
       editable: false,
       cellClass: (row) => {
         const pct = computeRowAverage(exams, row);
@@ -416,7 +432,7 @@ export function GradesTable({
         return `rdg-average-cell rdg-average-cell-${tone}`;
       },
       renderHeaderCell: () => (
-        <div className="flex h-full items-center px-2 text-xs font-medium uppercase tracking-wide text-foreground/50 rdg-average-header-round">
+        <div className="flex h-full min-w-0 items-center overflow-visible px-2 text-xs font-medium uppercase tracking-wide text-foreground/50 rdg-average-header-round">
           Promedio
         </div>
       ),
@@ -427,7 +443,7 @@ export function GradesTable({
   const gridWidth =
     nameWidth +
     widths.reduce((total, width) => total + width, 0) +
-    AVERAGE_WIDTH;
+    averageWidth;
   const gridHeight = HEADER_HEIGHT + students.length * ROW_HEIGHT;
 
   // Floating delete button: sits above the hovered exam column, in the outer
@@ -498,7 +514,7 @@ export function GradesTable({
   return (
     <div className={`flex w-full flex-col gap-4 ${loading ? "opacity-50" : ""}`}>
       <div className="min-w-0 w-full">
-        <div className="relative w-fit max-w-full">
+        <div className="relative w-fit max-w-full pe-10">
           <button
             type="button"
             onClick={() => void addColumn()}
@@ -506,12 +522,12 @@ export function GradesTable({
             aria-label="Agregar evaluación"
             title="Agregar evaluación"
             style={{
-              insetInlineStart: gridWidth - 15,
-              insetBlockStart: -15,
+              insetInlineStart: gridWidth + 6,
+              insetBlockStart: 6,
               blockSize: 32,
               inlineSize: 32,
             }}
-            className="absolute inline-flex rotate-45 cursor-pointer items-center justify-center rounded-full border border-success/40 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60"
+            className="absolute z-10 inline-flex rotate-45 cursor-pointer items-center justify-center rounded-full border border-success/40 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60"
           >
             {adding ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -670,7 +686,7 @@ function ExamHeaderCell({
 
   return (
     <div
-      className="flex h-full items-center px-1"
+      className="flex h-full min-w-0 items-center overflow-visible px-1.5"
       onKeyDown={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onMouseEnter={onHoverStart}
@@ -693,7 +709,7 @@ function ExamHeaderCell({
           }
         }}
         aria-label="Nombre de la columna"
-        className="h-7 w-full min-w-0 bg-transparent px-1 text-xs font-medium uppercase tracking-wide text-foreground/50 outline-none disabled:opacity-60"
+        className="h-7 w-full min-w-0 bg-transparent px-0.5 text-xs font-medium uppercase tracking-wide text-foreground/50 outline-none disabled:opacity-60"
         style={{ caretColor: "transparent" }}
       />
     </div>
