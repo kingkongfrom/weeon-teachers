@@ -577,6 +577,7 @@ export function GradesTable({
         classId={classId}
         exams={exams}
         students={students}
+        gridWidth={gridWidth}
       />
 
       {actionError ? (
@@ -757,17 +758,17 @@ function computeRowAverage(exams: ExamColumn[], row: GridRow): number | null {
 }
 
 /**
- * Bottom-of-table summary strip: the group's average, pass rate (>= 70%),
- * highest and lowest student average, expressed as percentages. Mirrors the
- * per-subject summary cards placed under the student list.
+ * Compact stats under the grid — width follows the table, not the page.
  */
 function GradeSummary({
   exams,
   students,
+  gridWidth,
 }: {
   classId: string;
   exams: ExamColumn[];
   students: StudentRow[];
+  gridWidth: number;
 }) {
   const summary = useMemo(() => {
     const avgs: number[] = [];
@@ -800,61 +801,75 @@ function GradeSummary({
 
   if (!summary) return null;
 
+  const studentHint =
+    summary.gradedCount === 1
+      ? "1 con nota"
+      : `${summary.gradedCount} con nota`;
+
   return (
-    <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
-      <SummaryCard
-        icon={<ChartSpline className="h-3 w-3" />}
-        label="Promedio"
-        value={summary.avg}
-        sub={`${summary.gradedCount} estudiante${summary.gradedCount === 1 ? "" : "s"}`}
-      />
-      <SummaryCard
-        icon={<ChartPie className="h-3 w-3" />}
-        label="Aprobación"
-        value={summary.passRate}
-        suffix="%"
-        sub={`${summary.passCount} de ${summary.gradedCount}`}
-      />
-      <SummaryCard
-        icon={<ArrowUpRight className="h-3 w-3" />}
-        label="Máx"
-        value={summary.max}
-        sub="Mejor promedio"
-      />
-      <SummaryCard
-        icon={<ArrowDownRight className="h-3 w-3" />}
-        label="Mín"
-        value={summary.min}
-        sub="Promedio más bajo"
-      />
+    <div className="w-fit max-w-full" style={{ maxWidth: gridWidth }}>
+      <div className="inline-flex max-w-full flex-wrap overflow-hidden rounded-xl border border-border/80 bg-surface-muted/30 shadow-sm sm:flex-nowrap sm:divide-x sm:divide-border">
+        <SummaryStat
+          label="Promedio"
+          value={summary.avg}
+          hint={studentHint}
+          icon={<ChartSpline className="h-3.5 w-3.5" aria-hidden />}
+        />
+        <SummaryStat
+          label="Aprobación"
+          value={summary.passRate}
+          hint={`${summary.passCount} de ${summary.gradedCount}`}
+          icon={<ChartPie className="h-3.5 w-3.5" aria-hidden />}
+        />
+        <SummaryStat
+          label="Máximo"
+          value={summary.max}
+          hint="Mejor promedio"
+          icon={<ArrowUpRight className="h-3.5 w-3.5" aria-hidden />}
+          tone="good"
+        />
+        <SummaryStat
+          label="Mínimo"
+          value={summary.min}
+          hint="Más bajo"
+          icon={<ArrowDownRight className="h-3.5 w-3.5" aria-hidden />}
+          tone={summary.min >= 70 ? "neutral" : "low"}
+        />
+      </div>
     </div>
   );
 }
 
-function SummaryCard({
+function SummaryStat({
   icon,
   label,
   value,
-  suffix = "%",
-  sub,
+  hint,
+  tone = "neutral",
 }: {
   icon: ReactNode;
   label: string;
   value: number;
-  suffix?: string;
-  sub: string;
+  hint: string;
+  tone?: "neutral" | "good" | "low";
 }) {
+  const valueTone =
+    tone === "good"
+      ? "text-emerald-700 dark:text-emerald-300"
+      : tone === "low"
+        ? "text-violet-700 dark:text-violet-300"
+        : "text-foreground";
+
   return (
-    <div className="rounded-xl border border-border bg-surface px-3.5 py-2.5">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground/50">
-        {icon}
-        <span className="truncate">{label}</span>
+    <div className="flex min-w-[6.75rem] flex-1 flex-col gap-1 border-b border-border/80 px-4 py-3 last:border-b-0 sm:min-w-[7.25rem] sm:flex-none sm:border-b-0">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground/50">
+        <span className="text-foreground/35">{icon}</span>
+        <span>{label}</span>
       </div>
-      <div className="mt-0.5 text-lg leading-tight font-bold tabular-nums tracking-tight text-foreground">
-        {Math.round(value)}
-        {suffix}
-      </div>
-      <div className="truncate text-[11px] font-medium text-foreground/45">{sub}</div>
+      <p className={`text-xl font-bold tabular-nums leading-none tracking-tight ${valueTone}`}>
+        {Math.round(value)}%
+      </p>
+      <p className="text-[11px] font-medium leading-snug text-foreground/42">{hint}</p>
     </div>
   );
 }
