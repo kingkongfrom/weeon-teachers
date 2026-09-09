@@ -9,10 +9,8 @@ import {
   type RenderEditCellProps,
   type RowsChangeData,
 } from "react-data-grid";
-import { ArrowDownRight, ArrowUpRight, ChartPie, ChartSpline, ClipboardList, Loader2, Plus, Trash2, Undo2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChartPie, ChartSpline, Loader2, Plus, Trash2, Undo2 } from "lucide-react";
 import type { ExamColumn } from "@/lib/dashboard/exams";
-import { subjectDotClass } from "@/lib/dashboard/lesson-colors";
-import { Button } from "@/components/ui/button";
 import {
   addExamColumn,
   removeExamColumn,
@@ -38,8 +36,6 @@ type GridRow = {
 type GradesTableProps = {
   classId: string;
   subjectId?: string | null;
-  subjectName?: string;
-  subjectColor?: string | null;
   students: StudentRow[];
   initialExams: ExamColumn[];
   loading?: boolean;
@@ -146,8 +142,6 @@ function parseGrade(
 export function GradesTable({
   classId,
   subjectId = null,
-  subjectName = "Materia",
-  subjectColor = null,
   students,
   initialExams,
   loading = false,
@@ -501,66 +495,30 @@ export function GradesTable({
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            className={`h-2.5 w-2.5 shrink-0 rounded-full ${subjectDotClass(subjectColor)}`}
-            aria-hidden
-          />
-          <p className="truncate text-sm font-semibold text-foreground">
-            Calificaciones · {subjectName}
-          </p>
-          {loading ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-foreground/45" aria-hidden />
-          ) : null}
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => void addColumn()}
-          disabled={adding || loading}
-          className="w-full shrink-0 sm:w-auto"
-        >
-          {adding ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4" strokeWidth={2.5} />
-          )}
-          Agregar evaluación
-        </Button>
-      </div>
-
-      {!loading && exams.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-surface-muted/40 px-5 py-8 text-center">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-            <ClipboardList className="h-5 w-5" strokeWidth={2.2} />
-          </div>
-          <p className="mt-3 text-sm font-semibold text-foreground">
-            Sin evaluaciones en {subjectName}
-          </p>
-          <p className="mx-auto mt-1 max-w-md text-sm font-medium text-foreground/55">
-            Agregue la primera columna para registrar notas. La lista de estudiantes queda abajo como referencia.
-          </p>
-          <Button
+    <div className={`flex w-full flex-col gap-4 ${loading ? "opacity-50" : ""}`}>
+      <div className="min-w-0 w-full">
+        <div className="relative w-fit max-w-full">
+          <button
             type="button"
-            size="sm"
-            className="mt-4"
             onClick={() => void addColumn()}
             disabled={adding}
+            aria-label="Agregar evaluación"
+            title="Agregar evaluación"
+            style={{
+              insetInlineStart: gridWidth - 15,
+              insetBlockStart: -15,
+              blockSize: 32,
+              inlineSize: 32,
+            }}
+            className="absolute inline-flex rotate-45 cursor-pointer items-center justify-center rounded-full border border-success/40 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60"
           >
             {adding ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Plus className="h-4 w-4" strokeWidth={2.5} />
+              <Plus className="h-4 w-4 -rotate-45" strokeWidth={3} />
             )}
-            Agregar evaluación
-          </Button>
-        </div>
-      ) : null}
+          </button>
 
-      <div className="min-w-0 w-full">
-        <div className="relative w-full">
           {showHoverDelete && hoverIndex >= 0 ? (
             <div
               className="absolute z-20 flex justify-center"
@@ -591,7 +549,7 @@ export function GradesTable({
           ) : null}
 
           <div
-            className="max-w-full overflow-x-auto rounded-xl border border-border"
+            className="max-w-full overflow-x-auto rounded-2xl border border-border"
             onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
           >
             <div className="bg-surface" style={{ inlineSize: gridWidth, minInlineSize: "100%" }}>

@@ -50,15 +50,6 @@ function cacheDelete(key: string) {
   examsCache.delete(key);
 }
 
-function selectedSubjectLabel(
-  subjects: SubjectOption[],
-  subjectId: string | null,
-  hasLegacy: boolean,
-): string {
-  if (subjectId === null) return hasLegacy ? "General" : "Materia";
-  return subjects.find((item) => item.id === subjectId)?.name ?? "Materia";
-}
-
 export function GradebookPanel({
   classId,
   students,
@@ -78,9 +69,6 @@ export function GradebookPanel({
 
   const subjects = classContext.subjects;
   const hasLegacy = classContext.hasLegacyExams;
-  const activeSubject =
-    subjects.find((item) => item.id === subjectId) ?? null;
-  const subjectLabel = selectedSubjectLabel(subjects, subjectId, hasLegacy);
 
   async function switchSubject(next: string | null) {
     if (next === subjectId || loading) return;
@@ -130,7 +118,7 @@ export function GradebookPanel({
         </div>
       ) : null}
 
-      <header className="flex flex-col gap-4 border-b border-border pb-5">
+      <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">
             {classContext.name}
@@ -141,12 +129,6 @@ export function GradebookPanel({
         </div>
         <p className="text-sm font-medium text-foreground/55">
           {students.length} estudiante{students.length === 1 ? "" : "s"}
-          {subjects.length > 0 || hasLegacy ? (
-            <>
-              {" · "}
-              <span className="text-foreground/75">{subjectLabel}</span>
-            </>
-          ) : null}
         </p>
 
         {subjects.length > 0 || hasLegacy ? (
@@ -167,19 +149,15 @@ export function GradebookPanel({
           </p>
         </div>
       ) : (
-        <section className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
-          <GradesTable
-            key={subjectId ?? "__legacy"}
-            classId={classId}
-            subjectId={subjectId}
-            subjectName={subjectLabel}
-            subjectColor={activeSubject?.color ?? null}
-            students={students}
-            initialExams={loading ? [] : exams}
-            loading={loading}
-            onGradeEdit={() => cacheDelete(cacheKey(classId, subjectId))}
-          />
-        </section>
+        <GradesTable
+          key={subjectId ?? "__legacy"}
+          classId={classId}
+          subjectId={subjectId}
+          students={students}
+          initialExams={loading ? [] : exams}
+          loading={loading}
+          onGradeEdit={() => cacheDelete(cacheKey(classId, subjectId))}
+        />
       )}
 
       {students.length > 0 && (loading || exams.length > 0) ? (
@@ -205,12 +183,8 @@ function SubjectTabs({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-foreground/45">
-        Materia
-      </span>
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
-        {subjects.map((subj) => {
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
+      {subjects.map((subj) => {
           const active = selectedSubjectId === subj.id;
           return (
             <button
@@ -246,7 +220,6 @@ function SubjectTabs({
             General
           </button>
         ) : null}
-      </div>
     </div>
   );
 }
