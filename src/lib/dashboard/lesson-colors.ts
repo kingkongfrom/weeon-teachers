@@ -1,5 +1,26 @@
 /** Calendar color chips — aligned with weeon-tenants LESSON_COLORS. */
 
+const SUBJECT_DOT: Record<string, string> = {
+  red: "bg-red-500",
+  green: "bg-emerald-500",
+  orange: "bg-orange-500",
+  purple: "bg-brand-600",
+  cyan: "bg-cyan-500",
+  rose: "bg-rose-500",
+  amber: "bg-amber-500",
+  lime: "bg-lime-500",
+  teal: "bg-teal-500",
+  indigo: "bg-indigo-500",
+  pink: "bg-pink-500",
+  sky: "bg-sky-500",
+  fuchsia: "bg-fuchsia-500",
+  blue: "bg-blue-500",
+};
+
+export function subjectDotClass(color: string | null | undefined): string {
+  return SUBJECT_DOT[color ?? "blue"] ?? SUBJECT_DOT.blue;
+}
+
 export function subjectChipClass(color: string | null | undefined): string {
   switch (color) {
     case "red":

@@ -41,10 +41,10 @@ export default async function GrupoDetailPage({
   const exams = await loadClassExams(id, selectedSubject);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <Link
         href="/grupos"
-        className="inline-flex w-fit items-center gap-1 text-sm font-medium text-brand-700 transition-colors hover:text-brand-800 hover:underline"
+        className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-foreground/55 transition-colors hover:text-brand-700 hover:underline dark:hover:text-brand-300"
       >
         <ArrowLeft className="h-4 w-4" />
         Todos los grupos

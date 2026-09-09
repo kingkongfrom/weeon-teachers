@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { GradesTable } from "@/components/grades/grades-table";
 import { SubmitReport } from "@/components/grades/submit-report";
+import { SchoolCycleBadge } from "@/components/grupos/school-cycle-badge";
 import { fetchSubjectExams } from "@/lib/teachers/exams-actions";
+import { subjectChipClass, subjectDotClass } from "@/lib/dashboard/lesson-colors";
 import type { ClassOption, SubjectOption } from "@/lib/dashboard/gradebook";
 import type { ExamColumn } from "@/lib/dashboard/exams";
 
@@ -19,21 +21,12 @@ type GradebookStudent = {
 type GradebookPanelProps = {
   classId: string;
   students: GradebookStudent[];
-  // The class the teacher is viewing, with its subject pills.
   classContext: ClassOption;
-  // All classes (for the class pills) — switching class is a server nav.
   allClasses: Array<{ id: string; name: string }>;
   initialSubjectId: string | null;
   initialExams: ExamColumn[];
 };
 
-/**
- * Client-side cache of exams per (classId, subjectId). A subject the teacher
- * already viewed is served instantly on switch-back — no network round-trip —
- * which makes bouncing between subjects feel immediate. A short TTL lets edits
- * self-heal: within the TTL the cached snapshot is shown (instant), after it
- * the view refetches fresh data.
- */
 const examsCache = new Map<string, { exams: ExamColumn[]; at: number }>();
 const cacheKey = (classId: string, subjectId: string | null) =>
   `${classId}::${subjectId ?? "__legacy"}`;
@@ -57,6 +50,15 @@ function cacheDelete(key: string) {
   examsCache.delete(key);
 }
 
+function selectedSubjectLabel(
+  subjects: SubjectOption[],
+  subjectId: string | null,
+  hasLegacy: boolean,
+): string {
+  if (subjectId === null) return hasLegacy ? "General" : "Materia";
+  return subjects.find((item) => item.id === subjectId)?.name ?? "Materia";
+}
+
 export function GradebookPanel({
   classId,
   students,
@@ -69,8 +71,6 @@ export function GradebookPanel({
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [loading, setLoading] = useState(false);
 
-  // Seed the cache for the initially-rendered subject (from the server render,
-  // which is always fresh) when the mounted class+subject pair changes.
   const initialKey = cacheKey(classId, initialSubjectId);
   useEffect(() => {
     cacheSet(initialKey, initialExams);
@@ -78,14 +78,15 @@ export function GradebookPanel({
 
   const subjects = classContext.subjects;
   const hasLegacy = classContext.hasLegacyExams;
+  const activeSubject =
+    subjects.find((item) => item.id === subjectId) ?? null;
+  const subjectLabel = selectedSubjectLabel(subjects, subjectId, hasLegacy);
 
   async function switchSubject(next: string | null) {
     if (next === subjectId || loading) return;
 
     const key = cacheKey(classId, next);
     const cached = cacheGet(key);
-    // Serve from cache instantly when fresh; otherwise show a loading state
-    // while fetching (and store the result for next time).
     if (cached) {
       setSubjectId(next);
       setExams(cached);
@@ -104,25 +105,60 @@ export function GradebookPanel({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Context: class pills (server nav) + subject pills (client-side). */}
-      <ContextPills
-        classId={classId}
-        allClasses={allClasses}
-        subjects={subjects}
-        hasLegacy={hasLegacy}
-        selectedSubjectId={subjectId}
-        onSelectSubject={switchSubject}
-      />
+    <div className="flex flex-col gap-6">
+      {allClasses.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-foreground/45">
+            Grupo
+          </span>
+          {allClasses.map((cls) => {
+            const active = cls.id === classId;
+            return (
+              <Link
+                key={cls.id}
+                href={`/grupos/${cls.id}`}
+                className={`inline-flex h-9 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
+                  active
+                    ? "border-brand-600 bg-brand-600 text-white"
+                    : "border-border bg-surface text-foreground/70 hover:bg-surface-muted"
+                }`}
+              >
+                {cls.name}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
 
-      <div className="flex items-baseline gap-3">
-        <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">
-          {classContext.name}
-        </h1>
-        <span className="text-sm font-medium text-foreground/55">
+      <header className="flex flex-col gap-4 border-b border-border pb-5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">
+            {classContext.name}
+          </h1>
+          {classContext.grade ? (
+            <SchoolCycleBadge grade={classContext.grade} />
+          ) : null}
+        </div>
+        <p className="text-sm font-medium text-foreground/55">
           {students.length} estudiante{students.length === 1 ? "" : "s"}
-        </span>
-      </div>
+          {subjects.length > 0 || hasLegacy ? (
+            <>
+              {" · "}
+              <span className="text-foreground/75">{subjectLabel}</span>
+            </>
+          ) : null}
+        </p>
+
+        {subjects.length > 0 || hasLegacy ? (
+          <SubjectTabs
+            subjects={subjects}
+            hasLegacy={hasLegacy}
+            selectedSubjectId={subjectId}
+            onSelectSubject={switchSubject}
+            disabled={loading}
+          />
+        ) : null}
+      </header>
 
       {students.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">
@@ -131,14 +167,19 @@ export function GradebookPanel({
           </p>
         </div>
       ) : (
-        <GradesTable
-          key={subjectId ?? "__legacy"}
-          classId={classId}
-          subjectId={subjectId}
-          students={students}
-          initialExams={loading ? [] : exams}
-          onGradeEdit={() => cacheDelete(cacheKey(classId, subjectId))}
-        />
+        <section className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
+          <GradesTable
+            key={subjectId ?? "__legacy"}
+            classId={classId}
+            subjectId={subjectId}
+            subjectName={subjectLabel}
+            subjectColor={activeSubject?.color ?? null}
+            students={students}
+            initialExams={loading ? [] : exams}
+            loading={loading}
+            onGradeEdit={() => cacheDelete(cacheKey(classId, subjectId))}
+          />
+        </section>
       )}
 
       {students.length > 0 && (loading || exams.length > 0) ? (
@@ -150,75 +191,62 @@ export function GradebookPanel({
   );
 }
 
-function ContextPills({
-  classId,
-  allClasses,
+function SubjectTabs({
   subjects,
   hasLegacy,
   selectedSubjectId,
   onSelectSubject,
+  disabled,
 }: {
-  classId: string;
-  allClasses: Array<{ id: string; name: string }>;
   subjects: SubjectOption[];
   hasLegacy: boolean;
   selectedSubjectId: string | null;
   onSelectSubject: (id: string | null) => void;
+  disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      {/* Class pills — full navigation since the class context changes. */}
-      <div className="flex flex-wrap items-center gap-2">
-        {allClasses.map((cls) => {
-          const active = cls.id === classId;
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-semibold uppercase tracking-wide text-foreground/45">
+        Materia
+      </span>
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
+        {subjects.map((subj) => {
+          const active = selectedSubjectId === subj.id;
           return (
-            <Link
-              key={cls.id}
-              href={`/grupos/${cls.id}`}
-              className={`inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors ${
-                active
-                  ? "border-brand-600 bg-brand-600 text-white"
-                  : "border-border bg-surface text-foreground/70 hover:bg-surface-muted"
-              }`}
-            >
-              {cls.name}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Subject pills — client-side swap, no reload. */}
-      {subjects.length > 0 || hasLegacy ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {subjects.map((subj) => (
             <button
               key={subj.id}
               type="button"
+              disabled={disabled}
               onClick={() => onSelectSubject(subj.id)}
-              className={`inline-flex h-8 cursor-pointer items-center rounded-full px-3.5 text-sm font-medium transition-colors ${
-                selectedSubjectId === subj.id
-                  ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
-                  : "text-foreground/60 hover:bg-surface-muted"
+              className={`inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
+                active
+                  ? subjectChipClass(subj.color)
+                  : "border-border bg-surface text-foreground/65 hover:bg-surface-muted"
               }`}
             >
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${subjectDotClass(subj.color)}`}
+                aria-hidden
+              />
               {subj.name}
             </button>
-          ))}
-          {hasLegacy ? (
-            <button
-              type="button"
-              onClick={() => onSelectSubject(null)}
-              className={`inline-flex h-8 cursor-pointer items-center rounded-full px-3.5 text-sm font-medium transition-colors ${
-                selectedSubjectId === null
-                  ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
-                  : "text-foreground/60 hover:bg-surface-muted"
-              }`}
-            >
-              General
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+          );
+        })}
+        {hasLegacy ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onSelectSubject(null)}
+            className={`inline-flex shrink-0 cursor-pointer items-center rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
+              selectedSubjectId === null
+                ? "border-brand-300 bg-brand-50 text-brand-800 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-200"
+                : "border-border bg-surface text-foreground/65 hover:bg-surface-muted"
+            }`}
+          >
+            General
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
