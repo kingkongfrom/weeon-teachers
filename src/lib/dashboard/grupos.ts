@@ -1,7 +1,16 @@
 import "server-only";
 
 import { cache } from "react";
+import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
+import { loadTeacherSubjectsByClass } from "@/lib/dashboard/teacher-assignments";
+import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
+
+export type GrupoSubject = {
+  id: string;
+  name: string;
+  color: string | null;
+};
 
 export type TeacherGrupo = {
   id: string;
@@ -9,6 +18,7 @@ export type TeacherGrupo = {
   grade: string | null;
   section: string | null;
   studentCount: number;
+  subjects: GrupoSubject[];
 };
 
 export type TeacherStudent = {
@@ -29,10 +39,17 @@ function displayGrupoName(row: {
 }
 
 export async function loadTeacherGrupos(): Promise<TeacherGrupo[]> {
+  const session = await getTeacherSession();
+  if (!session) return [];
+
   const supabase = await createSessionClient();
+  const { teacherIds, classIds } = await loadTeacherTeachingScope(supabase, session);
+  if (classIds.length === 0) return [];
+
   const { data, error } = await supabase
     .from("classes")
     .select("id, name, grade, section, active")
+    .in("id", classIds)
     .eq("active", true)
     .order("grade")
     .order("section");
@@ -46,27 +63,34 @@ export async function loadTeacherGrupos(): Promise<TeacherGrupo[]> {
     section: string | null;
   }>;
 
-  // Single grouped count query instead of N+1 per group.
-  const classIds = groups.map((g) => g.id);
+  const visibleClassIds = groups.map((group) => group.id);
   const countsById = new Map<string, number>();
-  if (classIds.length > 0) {
-    const { data: enrollCounts } = await supabase
-      .from("enrollments")
-      .select("class_id, id")
-      .in("class_id", classIds)
-      .is("dropped_at", null);
-    for (const row of enrollCounts ?? []) {
+  let subjectsByClass = new Map<string, GrupoSubject[]>();
+
+  if (visibleClassIds.length > 0) {
+    const [enrollRes, subjectsRes] = await Promise.all([
+      supabase
+        .from("enrollments")
+        .select("class_id, id")
+        .in("class_id", visibleClassIds)
+        .is("dropped_at", null),
+      loadTeacherSubjectsByClass(supabase, teacherIds, visibleClassIds),
+    ]);
+
+    for (const row of enrollRes.data ?? []) {
       countsById.set(row.class_id, (countsById.get(row.class_id) ?? 0) + 1);
     }
+    subjectsByClass = subjectsRes;
   }
 
   return groups.map((grupo) => ({
-    id: grupo.id,
-    name: displayGrupoName(grupo),
-    grade: grupo.grade,
-    section: grupo.section,
-    studentCount: countsById.get(grupo.id) ?? 0,
-  }));
+      id: grupo.id,
+      name: displayGrupoName(grupo),
+      grade: grupo.grade,
+      section: grupo.section,
+      studentCount: countsById.get(grupo.id) ?? 0,
+      subjects: subjectsByClass.get(grupo.id) ?? [],
+    }));
 }
 
 export const loadTeacherGrupo = cache(
@@ -74,9 +98,16 @@ export const loadTeacherGrupo = cache(
     grupo: TeacherGrupo;
     students: TeacherStudent[];
   } | null> => {
-  const supabase = await createSessionClient();
+  const session = await getTeacherSession();
+  if (!session) return null;
 
-  // Run the class + enrollment queries concurrently to halve round-trips.
+  const supabase = await createSessionClient();
+  const { teacherIds, classIds } = await loadTeacherTeachingScope(supabase, session);
+  if (!classIds.includes(classId)) return null;
+
+  const subjects =
+    (await loadTeacherSubjectsByClass(supabase, teacherIds, [classId])).get(classId) ?? [];
+
   const [grupoRes, enrollmentRes] = await Promise.all([
     supabase
       .from("classes")
@@ -137,6 +168,7 @@ export const loadTeacherGrupo = cache(
       grade: grupo.grade,
       section: grupo.section,
       studentCount: students.length,
+      subjects,
     },
     students,
   };

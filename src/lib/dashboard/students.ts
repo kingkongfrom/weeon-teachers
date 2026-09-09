@@ -1,6 +1,8 @@
 import "server-only";
 
 import { createSessionClient } from "@/lib/supabase/session";
+import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
 import {
   fullName,
   finalScoreStatus,
@@ -103,19 +105,37 @@ export async function loadStudentList(options?: {
   }>;
   total: number;
 }> {
+  const session = await getTeacherSession();
+  if (!session) return { students: [], total: 0 };
+
   const supabase = await createSessionClient();
+  const { classIds: assignedClassIds } = await loadTeacherTeachingScope(supabase, session);
+  if (assignedClassIds.length === 0) return { students: [], total: 0 };
+
+  const { data: allowedEnrollments } = await supabase
+    .from("enrollments")
+    .select("student_id")
+    .in("class_id", assignedClassIds)
+    .is("dropped_at", null);
+
+  const allowedStudentIds = [...new Set((allowedEnrollments ?? []).map((row) => row.student_id))];
+  if (allowedStudentIds.length === 0) return { students: [], total: 0 };
 
   const limit = options?.limit ?? 100;
   const offset = options?.offset ?? 0;
   const from = offset;
   const to = offset + limit - 1;
 
-  // The total count and the page window are independent — run concurrently.
   const [countRes, pageRes] = await Promise.all([
-    supabase.from("students").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase
+      .from("students")
+      .select("id", { count: "exact", head: true })
+      .in("id", allowedStudentIds)
+      .is("deleted_at", null),
     supabase
       .from("students")
       .select("id, first_name, last_name, second_last_name, grade")
+      .in("id", allowedStudentIds)
       .is("deleted_at", null)
       .order("last_name")
       .order("first_name")
@@ -142,7 +162,8 @@ export async function loadStudentList(options?: {
     .in("student_id", studentIds)
     .is("dropped_at", null);
 
-  const classIds = [...new Set((enrollmentRows ?? []).map((row) => row.class_id))];
+  const classIds = [...new Set((enrollmentRows ?? []).map((row) => row.class_id))]
+    .filter((classId) => assignedClassIds.includes(classId));
 
   // Map: class_id -> { id, name } and class_id -> assignment max points.
   const classByName = new Map<string, string>();
@@ -204,7 +225,9 @@ export async function loadStudentList(options?: {
 
   return {
     students: students.map((student) => {
-      const enrolled = enrolledByStudent.get(student.id) ?? [];
+      const enrolled = (enrolledByStudent.get(student.id) ?? []).filter((classId) =>
+        assignedClassIds.includes(classId),
+      );
       const byClass = scoresByStudent.get(student.id) ?? new Map<string, number[]>();
       const groups = enrolled
         .map((classId) => {

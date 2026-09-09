@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { authCookieOptions } from "@/lib/supabase/auth-cookie";
 import { requireSupabasePublicEnv } from "@/lib/supabase/env";
 
 /** Cookie-backed Supabase client for server actions and RSC. */
@@ -10,6 +11,7 @@ export async function createSessionClient() {
   const { url, anonKey } = requireSupabasePublicEnv();
 
   return createServerClient(url, anonKey, {
+    cookieOptions: authCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();

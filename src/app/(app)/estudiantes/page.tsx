@@ -1,10 +1,8 @@
 import { Users } from "lucide-react";
-import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadStudentList } from "@/lib/dashboard/students";
 import { StudentsTable } from "@/components/students/students-table";
 
 export default async function EstudiantesPage() {
-  const session = await getTeacherSession();
   const { students, total } = await loadStudentList({ limit: PAGE_SIZE, offset: 0 });
 
   return (
@@ -12,9 +10,7 @@ export default async function EstudiantesPage() {
       <header className="flex flex-col gap-1">
         <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">Estudiantes</h1>
         <p className="text-sm font-medium text-foreground/55">
-          {session?.role === "admin"
-            ? "Estudiantes de la institución."
-            : "Solo se muestran los estudiantes que puede ver."}
+          Solo se muestran los estudiantes de sus grupos asignados.
         </p>
       </header>
 

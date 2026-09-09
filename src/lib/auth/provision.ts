@@ -166,6 +166,38 @@ export async function prepareTeacherLogin(
   let userId = roster.auth_user_id;
   let signInPassword: string | undefined;
 
+  async function resolveLinkedProfileRole(
+    authUserId: string,
+    tenantId: string,
+  ): Promise<"admin" | "teacher"> {
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("id", authUserId)
+      .maybeSingle();
+    if (existingProfile?.role === "admin") return "admin";
+
+    const { data: auditRow } = await admin
+      .from("tenant_admin_log")
+      .select("admin_user_id")
+      .eq("admin_user_id", authUserId)
+      .eq("tenant_id", tenantId)
+      .limit(1)
+      .maybeSingle();
+    if (auditRow) return "admin";
+
+    const { data: inviteRow } = await admin
+      .from("admin_invites")
+      .select("accepted_user_id")
+      .eq("accepted_user_id", authUserId)
+      .eq("tenant_id", tenantId)
+      .limit(1)
+      .maybeSingle();
+    if (inviteRow) return "admin";
+
+    return "teacher";
+  }
+
   if (!userId) {
     const tempPassword = randomTempPassword();
     const created = await admin.auth.admin.createUser({
@@ -205,12 +237,14 @@ export async function prepareTeacherLogin(
     }
   }
 
+  const linkedRole = await resolveLinkedProfileRole(userId, tenant.id);
+
   if (needsPassword && !signInPassword) {
     const tempPassword = randomTempPassword();
     const { error: resetError } = await admin.auth.admin.updateUserById(userId, {
       password: tempPassword,
       app_metadata: {
-        role: "teacher",
+        role: linkedRole,
         tenant_id: tenant.id,
         account_status: "pending_first_login",
       },
@@ -229,7 +263,7 @@ export async function prepareTeacherLogin(
       email,
       auth_email: email,
       name: displayName,
-      role: "teacher",
+      role: linkedRole,
       username: roster.username,
       active: true,
       account_status: needsPassword ? "pending_first_login" : "active",

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { authCookieOptions } from "@/lib/supabase/auth-cookie";
 
 function redirectWithSession(url: URL, sessionResponse: NextResponse) {
   const redirectResponse = NextResponse.redirect(url);
@@ -22,6 +23,7 @@ export async function proxy(request: NextRequest) {
 
   let supabaseResponse = NextResponse.next({ request });
   const supabase = createServerClient(url, anonKey, {
+    cookieOptions: authCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -64,5 +66,14 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/grupos", "/grupos/:path*", "/crear-contrasena"],
+  matcher: [
+    "/",
+    "/crear-contrasena",
+    "/grupos",
+    "/grupos/:path*",
+    "/estudiantes",
+    "/estudiantes/:path*",
+    "/horarios",
+    "/reportes",
+  ],
 };

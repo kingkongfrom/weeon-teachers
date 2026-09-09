@@ -13,7 +13,12 @@ export default function GruposLoading() {
           <div key={i} className="rounded-2xl border border-border bg-surface p-5">
             <Skeleton className="h-12 w-12 rounded-xl" />
             <Skeleton className="mt-4 h-5 w-24" />
-            <Skeleton className="mt-2 h-4 w-16" />
+            <Skeleton className="mt-2 h-5 w-20 rounded-full" />
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-14 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
             <Skeleton className="mt-4 h-4 w-20" />
           </div>
         ))}

@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
 
 export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri";
 
@@ -39,44 +40,30 @@ function displayGroupName(
   return [grade, section].filter(Boolean).join("") || "Grupo";
 }
 
-/**
- * Weekly schedule for the signed-in teacher. RLS already scopes class_lessons
- * to classes the teacher teaches (homeroom `classes.teacher_profile_id` or a
- * subject `class_lessons.teacher_id`). We additionally filter to lessons the
- * teacher owns:
- *  - secundaria: `class_lessons.teacher_id` → `teachers.profile_id = auth.uid()`
- *  - primaria:   homeroom `classes.teacher_profile_id = auth.uid()` (lesson may
- *                carry no specific teacher_id)
- */
+/** Weekly timetable slots assigned to the signed-in teacher. */
 export const loadTeacherSchedule = cache(
   async (): Promise<TeacherLesson[]> => {
   const session = await getTeacherSession();
   if (!session) return [];
 
   const supabase = await createSessionClient();
+  const { teacherIds, classIds } = await loadTeacherTeachingScope(supabase, session);
+  if (teacherIds.length === 0 || classIds.length === 0) return [];
 
-  // Teacher roster rows (to match lesson teacher_id) + lessons, in parallel.
-  const [teacherRes, lessonRes] = await Promise.all([
-    supabase
-      .from("teachers")
-      .select("id")
-      .eq("profile_id", session.userId)
-      .is("deleted_at", null),
-    supabase
-      .from("class_lessons")
-      .select(
-        "id, class_id, title, weekday, start_time, end_time, room, color, teacher_id, classes(id, name, grade, section, teacher_profile_id)",
-      )
-      .order("weekday")
-      .order("start_time"),
-  ]);
+  const { data: lessonRows, error: lessonError } = await supabase
+    .from("class_lessons")
+    .select(
+      "id, class_id, title, weekday, start_time, end_time, room, color, teacher_id, classes(id, name, grade, section)",
+    )
+    .in("class_id", classIds)
+    .in("teacher_id", teacherIds)
+    .order("weekday")
+    .order("start_time");
 
-  const teacherIds = (teacherRes.data ?? []).map((row) => row.id);
-  const lessonRows = lessonRes.data ?? [];
-  if (lessonRes.error) return [];
+  if (lessonError) return [];
 
   const lessons: TeacherLesson[] = [];
-  for (const row of lessonRows) {
+  for (const row of lessonRows ?? []) {
     const weekday = normalizeWeekday(row.weekday);
     if (!weekday) continue;
 
@@ -86,27 +73,16 @@ export const loadTeacherSchedule = cache(
           name: string | null;
           grade: string | null;
           section: string | null;
-          teacher_profile_id: string | null;
         }
       | Array<{
           id: string;
           name: string | null;
           grade: string | null;
           section: string | null;
-          teacher_profile_id: string | null;
         }>
       | null;
     const klassRow = Array.isArray(klass) ? klass[0] : klass;
     if (!klassRow) continue;
-
-    // This lesson belongs to the teacher if:
-    //  - it carries their teacher_id (secundaria subject teacher), or
-    //  - they are the homeroom teacher (primaria, lesson has no subject teacher).
-    const ownsLesson =
-      (row.teacher_id !== null && teacherIds.includes(row.teacher_id)) ||
-      classroomTeacherOwns(klassRow.teacher_profile_id, session.userId);
-
-    if (!ownsLesson) continue;
 
     lessons.push({
       id: row.id,
@@ -126,7 +102,3 @@ export const loadTeacherSchedule = cache(
   );
   },
 );
-
-function classroomTeacherOwns(profileId: string | null, userId: string): boolean {
-  return profileId !== null && profileId === userId;
-}

@@ -79,7 +79,7 @@ export async function completeTeacherPasswordLogin(
     return { ok: false, error: "Usuario o contraseña incorrectos." };
   }
 
-  return { ok: true };
+  redirect("/grupos");
 }
 
 export async function setTeacherPassword(
@@ -131,7 +131,7 @@ export async function setTeacherPassword(
     return { ok: false, error: "No se pudo activar la cuenta." };
   }
 
-  return { ok: true };
+  redirect("/grupos");
 }
 
 export async function signOutTeacher() {

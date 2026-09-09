@@ -45,8 +45,6 @@ export function LoginForm() {
         setError(result.error);
         return;
       }
-      router.replace("/grupos");
-      router.refresh();
     } finally {
       setPending(false);
     }

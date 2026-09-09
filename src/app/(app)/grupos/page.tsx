@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
+import { SchoolCycleBadge } from "@/components/grupos/school-cycle-badge";
+import { SubjectChips } from "@/components/grupos/subject-chips";
 
 export default async function GruposPage() {
-  const session = await getTeacherSession();
   const grupos = await loadTeacherGrupos();
 
   return (
@@ -13,9 +13,7 @@ export default async function GruposPage() {
       <header className="flex flex-col gap-1">
         <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">Mis grupos</h1>
         <p className="text-sm font-medium text-foreground/55">
-          {session?.role === "admin"
-            ? "Vista de administración: se muestran los grupos de la institución."
-            : "Solo se muestran los grupos que tiene asignados."}
+          Solo se muestran los grupos y materias asignados en el horario.
         </p>
       </header>
 
@@ -34,9 +32,10 @@ export default async function GruposPage() {
                   <Users className="h-6 w-6" strokeWidth={2.2} />
                 </div>
                 <p className="mt-4 text-base font-bold text-foreground">{grupo.name}</p>
-                <p className="mt-1 text-sm text-foreground/55">
-                  {[grupo.grade, grupo.section].filter(Boolean).join(" · ") || "Grupo"}
-                </p>
+                <div className="mt-2">
+                  {grupo.grade ? <SchoolCycleBadge grade={grupo.grade} /> : null}
+                </div>
+                <SubjectChips subjects={grupo.subjects} className="mt-3" />
                 <p className="mt-4 text-xs font-medium text-foreground/50">
                   {grupo.studentCount === 1
                     ? "1 estudiante"

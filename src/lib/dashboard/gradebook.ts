@@ -3,9 +3,10 @@ import "server-only";
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
 
 export type SubjectOption = {
-  id: string; // subject_id, or a synthetic "lesson:<id>" when a lesson has no subject_id
+  id: string;
   name: string;
   color: string | null;
   isSubject: boolean;
@@ -36,60 +37,26 @@ function displayClass(row: {
   return `${row.grade ?? ""}${row.section ?? ""}`.trim() || "Grupo";
 }
 
-/**
- * Derives the signed-in teacher's gradebook context from their assignments:
- *  - Secundaria: a subject teacher owns the classes_lessons where
- *    `teacher_id` matches their teacher roster id.
- *  - Primaria: a homeroom teacher (`classes.teacher_profile_id`) owns every
- *    subject of their class, including lessons with no specific teacher.
- *
- * Each class carries the subjects the teacher actually teaches, so the UI can
- * render (class, subject) gradebooks with a single uniform model — no manual
- * role toggle. `mode` is inferred from the data for a sensible default order.
- */
+/** Gradebook classes/subjects scoped to `class_lessons.teacher_id` assignments. */
 export const loadGradebookContext = cache(
   async (): Promise<GradebookContext> => {
   const session = await getTeacherSession();
   if (!session) return { classes: [], mode: "mixed" };
 
   const sessionClient = await createSessionClient();
+  const { teacherIds, classIds } = await loadTeacherTeachingScope(sessionClient, session);
+  if (teacherIds.length === 0 || classIds.length === 0) {
+    return { classes: [], mode: "mixed" };
+  }
 
-  // A school admin teaches no specific class but can see the whole institution,
-  // so gradebook context for an admin lists every class (tenant-wide) with its
-  // lessons. Teachers are scoped to the classes/subjects they actually own.
-  const isAdmin = session.role === "admin";
+  const { data: allLessonsRes } = await sessionClient
+    .from("class_lessons")
+    .select(
+      "id, class_id, title, color, subject_id, teacher_id, classes(id, name, grade, section)",
+    )
+    .in("class_id", classIds)
+    .in("teacher_id", teacherIds);
 
-  // Kick off the independent lookups in parallel to cut round-trips: the
-  // teacher's roster rows (for homeroom/subject ownership), the lessons, and
-  // (for admins) the full class list.
-  const [teacherRes, allLessonsRes, allClassesRes] = await Promise.all([
-    sessionClient
-      .from("teachers")
-      .select("id")
-      .eq("profile_id", session.userId)
-      .is("deleted_at", null),
-    sessionClient
-      .from("class_lessons")
-      .select(
-        "id, class_id, title, color, subject_id, teacher_id, classes(id, name, grade, section, teacher_id, teacher_profile_id)",
-      ),
-    isAdmin
-      ? sessionClient
-          .from("classes")
-          .select("id, name, grade, section, teacher_id, teacher_profile_id")
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-
-  const teacherRows = teacherRes.data ?? [];
-  const teacherIds = teacherRows.map((row) => row.id);
-  // Primaria homeroom: the admin portal assigns a class to a teacher via
-  // `classes.teacher_id` (roster id); the login backfill also sets
-  // `classes.teacher_profile_id`. Accept either so the gradebook resolves.
-  const isHomeroom = (klass: { teacher_id: string | null; teacher_profile_id: string | null }) =>
-    (klass.teacher_profile_id !== null && klass.teacher_profile_id === session.userId) ||
-    (klass.teacher_id !== null && teacherIds.includes(klass.teacher_id));
-
-  // Collect every class we want to present, with its <id, name, grade, section>.
   const classesById = new Map<string, { id: string; name: string; grade: string | null; section: string | null }>();
   const subjectsByClass = new Map<string, Map<string, SubjectOption>>();
 
@@ -115,21 +82,9 @@ export const loadGradebookContext = cache(
     if (!byClass.has(subject.id)) byClass.set(subject.id, subject);
   };
 
-  const lessonRows = allLessonsRes.data ?? [];
-  const allClasses = allClassesRes.data ?? [];
-
-  // Admins see every class; teachers are scoped to the classes they own.
-  if (isAdmin) {
-    for (const row of allClasses) ensureClass(row);
-  }
-
-  for (const row of lessonRows) {
+  for (const row of allLessonsRes ?? []) {
     const klass = Array.isArray(row.classes) ? row.classes[0] : row.classes;
     if (!klass) continue;
-
-    const homeroom = isHomeroom(klass);
-    const ownsLesson = isAdmin || homeroom || (row.teacher_id !== null && teacherIds.includes(row.teacher_id));
-    if (!ownsLesson) continue;
 
     ensureClass(klass);
 
@@ -140,7 +95,6 @@ export const loadGradebookContext = cache(
     }
   }
 
-  // Resolve real subject ids -> names/colors from the subjects table (one query).
   const allSubjectIds = [...new Set(
     Array.from(subjectsByClass.values())
       .flatMap((m) => Array.from(m.values()))
@@ -172,11 +126,9 @@ export const loadGradebookContext = cache(
         a.name.localeCompare(b.name, "es"),
       ),
     }))
+    .filter((cls) => cls.subjects.length > 0)
     .sort((a, b) => a.name.localeCompare(b.name, "es"));
 
-  // Flag classes that still have exam columns not tied to a subject (legacy
-  // rows created before subject scoping), so the UI can offer a "General" view
-  // and the teacher is never missing pre-classification grades.
   const legacyById = await detectLegacyExams(sessionClient, classes.map((c) => c.id));
 
   const enriched: ClassOption[] = classes.map((cls) => ({
@@ -201,18 +153,9 @@ async function detectLegacyExams(
   return new Set((data ?? []).map((row) => row.class_id));
 }
 
-/**
- * Infers the teaching mode. Since administrators assign every group together
- * with its subject(s) per teacher, the class grade is the authoritative signal:
- * grades 1–6 are primaria (one teacher, many subjects in one class) and grades
- * 7–11/12 are secundaria (one subject across several classes). We fall back to
- * counting heuristics only when the grade is missing or ambiguous.
- */
 function inferMode(classes: ClassOption[]): TeachingMode {
   if (classes.length === 0) return "mixed";
 
-  // Primary is authoritative if it appears in the class grade. Secondary is
-  // authoritative if a secondary grade is present and no primary grade is.
   let hasPrimary = false;
   let hasSecondary = false;
   for (const cls of classes) {
@@ -225,7 +168,6 @@ function inferMode(classes: ClassOption[]): TeachingMode {
   if (hasPrimary && !hasSecondary) return "primary";
   if (hasSecondary && !hasPrimary) return "secondary";
 
-  // Ambiguous or missing grades → reflect the shape of the data.
   const subjectCount = new Set(classes.flatMap((cls) => cls.subjects.map((s) => s.id))).size;
   if (classes.length === 1 && classes[0].subjects.length > 1) return "primary";
   if (classes.length > 1 && subjectCount === 1) return "secondary";
