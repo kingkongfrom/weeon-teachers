@@ -513,8 +513,11 @@ export function GradesTable({
 
   return (
     <div className={`flex w-full flex-col gap-4 ${loading ? "opacity-50" : ""}`}>
-      <div className="min-w-0 w-full">
-        <div className="relative w-fit max-w-full pe-10">
+      <div
+        className="min-w-0 max-w-full"
+        style={{ width: gridWidth }}
+      >
+        <div className="relative pe-10">
           <button
             type="button"
             onClick={() => void addColumn()}
@@ -566,10 +569,10 @@ export function GradesTable({
           ) : null}
 
           <div
-            className="max-w-full overflow-x-auto rounded-2xl border border-border"
+            className="overflow-x-auto rounded-2xl border border-border"
             onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
           >
-            <div className="bg-surface" style={{ inlineSize: gridWidth, minInlineSize: "100%" }}>
+            <div className="bg-surface" style={{ inlineSize: gridWidth }}>
               <DataGrid<GridRow>
                 columns={columns}
                 rows={rows}
@@ -588,14 +591,13 @@ export function GradesTable({
             </div>
           </div>
         </div>
-      </div>
 
-      <GradeSummary
-        classId={classId}
-        exams={exams}
-        students={students}
-        gridWidth={gridWidth}
-      />
+        <GradeSummary
+          classId={classId}
+          exams={exams}
+          students={students}
+        />
+      </div>
 
       {actionError ? (
         <p className="text-xs font-medium text-error">{actionError}</p>
@@ -780,12 +782,10 @@ function computeRowAverage(exams: ExamColumn[], row: GridRow): number | null {
 function GradeSummary({
   exams,
   students,
-  gridWidth,
 }: {
   classId: string;
   exams: ExamColumn[];
   students: StudentRow[];
-  gridWidth: number;
 }) {
   const summary = useMemo(() => {
     const avgs: number[] = [];
@@ -824,35 +824,33 @@ function GradeSummary({
       : `${summary.gradedCount} con nota`;
 
   return (
-    <div className="w-fit max-w-full" style={{ maxWidth: gridWidth }}>
-      <div className="inline-flex max-w-full flex-wrap overflow-hidden rounded-xl border border-border/80 bg-surface-muted/30 shadow-sm sm:flex-nowrap sm:divide-x sm:divide-border">
-        <SummaryStat
-          label="Promedio"
-          value={summary.avg}
-          hint={studentHint}
-          icon={<ChartSpline className="h-3.5 w-3.5" aria-hidden />}
-        />
-        <SummaryStat
-          label="Aprobación"
-          value={summary.passRate}
-          hint={`${summary.passCount} de ${summary.gradedCount}`}
-          icon={<ChartPie className="h-3.5 w-3.5" aria-hidden />}
-        />
-        <SummaryStat
-          label="Máximo"
-          value={summary.max}
-          hint="Mejor promedio"
-          icon={<ArrowUpRight className="h-3.5 w-3.5" aria-hidden />}
-          tone="good"
-        />
-        <SummaryStat
-          label="Mínimo"
-          value={summary.min}
-          hint="Más bajo"
-          icon={<ArrowDownRight className="h-3.5 w-3.5" aria-hidden />}
-          tone={summary.min >= 70 ? "neutral" : "low"}
-        />
-      </div>
+    <div className="mt-3 flex w-full divide-x divide-border overflow-hidden rounded-xl border border-border/80 bg-surface-muted/30 shadow-sm">
+      <SummaryStat
+        label="Promedio"
+        value={summary.avg}
+        hint={studentHint}
+        icon={<ChartSpline className="h-3.5 w-3.5" aria-hidden />}
+      />
+      <SummaryStat
+        label="Aprobación"
+        value={summary.passRate}
+        hint={`${summary.passCount} de ${summary.gradedCount}`}
+        icon={<ChartPie className="h-3.5 w-3.5" aria-hidden />}
+      />
+      <SummaryStat
+        label="Máximo"
+        value={summary.max}
+        hint="Mejor promedio"
+        icon={<ArrowUpRight className="h-3.5 w-3.5" aria-hidden />}
+        tone="good"
+      />
+      <SummaryStat
+        label="Mínimo"
+        value={summary.min}
+        hint="Más bajo"
+        icon={<ArrowDownRight className="h-3.5 w-3.5" aria-hidden />}
+        tone={summary.min >= 70 ? "neutral" : "low"}
+      />
     </div>
   );
 }
@@ -878,7 +876,7 @@ function SummaryStat({
         : "text-foreground";
 
   return (
-    <div className="flex min-w-[6.75rem] flex-1 flex-col gap-1 border-b border-border/80 px-4 py-3 last:border-b-0 sm:min-w-[7.25rem] sm:flex-none sm:border-b-0">
+    <div className="flex min-w-0 flex-1 flex-col gap-1 px-3 py-2.5 sm:px-4 sm:py-3">
       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground/50">
         <span className="text-foreground/35">{icon}</span>
         <span>{label}</span>
