@@ -49,6 +49,7 @@ const ROW_HEIGHT = 36;
 
 // Auto-fit bounds: columns shrink/grow with their widest content (Excel-like).
 // Exam columns have no max width — a header title is never cut off.
+const NAME_WIDTH_FACTOR = 1.2;
 const MIN_NAME_WIDTH = 170;
 const MAX_NAME_WIDTH = 340;
 const MIN_EXAM_WIDTH = 88;
@@ -100,9 +101,9 @@ function computeColumnWidths(
     widestName = Math.max(widestName, measureText(studentName(student), 500));
   }
   const nameWidth = clampWidth(
-    widestName + NAME_CHROME,
-    MIN_NAME_WIDTH,
-    MAX_NAME_WIDTH,
+    Math.ceil((widestName + NAME_CHROME) * NAME_WIDTH_FACTOR),
+    Math.ceil(MIN_NAME_WIDTH * NAME_WIDTH_FACTOR),
+    Math.ceil(MAX_NAME_WIDTH * NAME_WIDTH_FACTOR),
   );
 
   const examWidths = exams.map((exam) => {
