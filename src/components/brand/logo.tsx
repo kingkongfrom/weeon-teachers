@@ -35,7 +35,8 @@ function EeSmileArc({ className = "" }: { className?: string }) {
   );
 }
 
-/** Compact gradient wordmark: "Weeon" with the smile arc + "School". */
+/** Compact gradient wordmark: "Weeon" with the smile arc + "School" and,
+ * teacher-portal only, a smaller "Teachers" label beneath "School". */
 export function LogoCompact({ className = "", ...props }: LogoProps) {
   return (
     <span
@@ -46,7 +47,14 @@ export function LogoCompact({ className = "", ...props }: LogoProps) {
         <span className="brand-text">Weeon</span>
         <EeSmileArc className="left-[27%] right-[35%] -bottom-[0.12em] h-[0.22em]" />
       </span>
-      <span className="ml-1 font-bold tracking-tight text-foreground">School</span>
+      <span className="ml-1 inline-flex flex-col items-start">
+        <span className="font-bold leading-none tracking-tight text-foreground">
+          School
+        </span>
+        <span className="mt-[0.18em] text-[0.5em] font-semibold uppercase leading-none tracking-[0.16em] text-foreground/55">
+          Teachers
+        </span>
+      </span>
     </span>
   );
 }
