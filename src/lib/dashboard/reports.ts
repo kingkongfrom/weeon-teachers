@@ -11,6 +11,7 @@ export type SubmittedReport = {
   subjectName: string | null;
   period: string;
   submittedAt: string;
+  updatedAt: string;
   grades: Record<string, Record<string, { mark: number; maxMarks: number }>>;
   studentNames: Record<string, string>;
   assignmentTitles: Record<string, string>;
@@ -35,9 +36,9 @@ export const loadMyReports = cache(
   const { data: reports, error } = await supabase
     .from("class_reports")
     .select(
-      "class_id, subject_id, period, submitted_at, grades_snapshot, student_names, summary, classes(id, name, grade, section)",
+      "class_id, subject_id, period, submitted_at, updated_at, grades_snapshot, student_names, summary, classes(id, name, grade, section)",
     )
-    .order("submitted_at", { ascending: false });
+    .order("updated_at", { ascending: false });
 
   if (error || !reports) return [];
 
@@ -84,6 +85,7 @@ export const loadMyReports = cache(
       subjectName: row.subject_id ? (subjectNames.get(row.subject_id) ?? null) : null,
       period: row.period ?? "",
       submittedAt: row.submitted_at,
+      updatedAt: row.updated_at,
       grades,
       studentNames: (row.student_names ?? {}) as SubmittedReport["studentNames"],
       assignmentTitles,

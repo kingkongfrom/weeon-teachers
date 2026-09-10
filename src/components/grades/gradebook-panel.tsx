@@ -88,7 +88,7 @@ export function GradebookPanel({
   const subjectName =
     subjectId === null
       ? hasLegacy
-        ? "General"
+        ? "Sin materia"
         : null
       : (subjects.find((subject) => subject.id === subjectId)?.name ?? null);
 
@@ -259,7 +259,7 @@ function SubjectTabs({
           </button>
         );
       })}
-      {hasLegacy ? (
+      {hasLegacy && subjects.length === 0 ? (
         <button
           type="button"
           disabled={disabled}
@@ -270,7 +270,7 @@ function SubjectTabs({
               : "border-border bg-surface text-foreground/65 hover:bg-surface-muted"
           }`}
         >
-          General
+          Sin materia
         </button>
       ) : null}
     </div>

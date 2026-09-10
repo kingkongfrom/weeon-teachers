@@ -83,6 +83,20 @@ export async function addExamColumn(input: {
     return { ok: false, error: "Sesión inválida. Inicie sesión de nuevo." };
   }
 
+  if (parsed.data.subjectId == null) {
+    const { count } = await supabase
+      .from("class_lessons")
+      .select("id", { count: "exact", head: true })
+      .eq("class_id", parsed.data.classId)
+      .not("subject_id", "is", null);
+    if ((count ?? 0) > 0) {
+      return {
+        ok: false,
+        error: "Seleccione una materia antes de agregar una columna de calificación.",
+      };
+    }
+  }
+
   const { data, error } = await supabase
     .from("assignments")
     .insert({

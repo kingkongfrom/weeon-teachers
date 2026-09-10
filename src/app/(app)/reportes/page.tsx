@@ -59,6 +59,14 @@ function ReportCard({ report }: { report: SubmittedReport }) {
         <span className="text-xs font-medium text-foreground/50">
           {report.period || schoolPeriodLabel(report.submittedAt)}
         </span>
+        {wasResubmitted(report) ? (
+          <span
+            className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+            title={new Date(report.updatedAt).toLocaleString("es-CR")}
+          >
+            Actualizado
+          </span>
+        ) : null}
       </div>
 
       {assignmentIds.length === 0 || studentIds.length === 0 ? (
@@ -108,6 +116,14 @@ function ReportCard({ report }: { report: SubmittedReport }) {
       )}
     </section>
   );
+}
+
+/** True when the report was edited after its first submission. */
+function wasResubmitted(report: SubmittedReport): boolean {
+  const updated = new Date(report.updatedAt).getTime();
+  const submitted = new Date(report.submittedAt).getTime();
+  if (Number.isNaN(updated) || Number.isNaN(submitted)) return false;
+  return updated - submitted > 1000;
 }
 
 /** Student's mean percentage across their graded exams in this report. */
