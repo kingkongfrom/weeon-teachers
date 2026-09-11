@@ -23,9 +23,12 @@ and `../docs/`.*
 Phase 1 is wired: username or email login, first password (same Auth user as
 mobile), lazy Auth provision, and grupos isolated by RLS (`teaches_class`).
 Post-login lands on the **`/inicio` landing** (card hub), from which every
-section is opened. Phase 2 is **partial**: per-materia gradebook on
-`/grupos/[id]` (add evaluations, edit grades, summary strip), submit report
-scoped to the active subject, and `/reportes` to list submitted snapshots.
+section is opened. Phase 2 is **partial**: `/grupos/[id]` was rebuilt as a
+**gradebook spreadsheet** — sticky student column, typed columns
+(Trabajo / Tarea / Examen / Prueba / Proyecto) with auto labels (`CW 1`,
+`EXAM 1`…), inline keyboard editing + autosave, per-student FINAL and
+per-column averages, density toggle and CSV export — plus submit report and
+`/reportes` to list submitted snapshots.
 **Aula virtual** is a Google Classroom-style hub (`/aula-virtual` +
 `/aula-virtual/[classId]`): classes grid, stream/classwork tabs, people, and a
 gradebook link. Built: **P1 documents** (`class_materials` + private

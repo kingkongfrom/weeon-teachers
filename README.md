@@ -12,8 +12,9 @@ Workspace map: `../AGENTS.md`.
 
 ## Status
 
-Phase 1 (login + grupos) is implemented. Phase 2 is partial: per-materia
-gradebook, submit report, and a reportes list — not a full reports composer.
+Phase 1 (login + grupos) is implemented. Phase 2 is partial: a rebuilt
+**gradebook spreadsheet** on `/grupos/[id]`, submit report, and a reportes
+list — not a full reports composer.
 The **Aula virtual** is a Google Classroom-style hub. *Trabajo de clase* now has
 an **assessment builder** (TipTap WYSIWYG homeworks/exams) and **document
 sharing**; the stream is still an empty state. Needs the `weeon-tenants`
@@ -28,7 +29,7 @@ migrations — see [`docs/aula-virtual.md`](docs/aula-virtual.md).
 | `/aula-virtual` | Classes grid (Classroom-style home) |
 | `/aula-virtual/[classId]` | Class page — Novedades / Trabajo de clase / Personas / Calificaciones |
 | `/grupos` | Grupos this teacher is assigned to (`teaches_class`) |
-| `/grupos/[id]` | Gradebook — materia tabs, evaluations, grades, submit report |
+| `/grupos/[id]` | Gradebook — sticky spreadsheet, typed columns (CW/HW/EXAM…), inline editing, CSV, submit report |
 | `/horarios` | Weekly timetable |
 | `/estudiantes` | Students in the teacher's groups |
 | `/reportes` | Submitted grade snapshots for this teacher |

@@ -8,7 +8,7 @@ export default function StudentDetailLoading() {
         <Skeleton className="h-4 w-16" />
       </div>
 
-      <Skeleton className="h-5 w-28" />
+      <Skeleton className="h-9 w-32 rounded-lg" />
 
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
         <div className="flex items-center gap-4 px-5 py-3">

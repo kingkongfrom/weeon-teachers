@@ -4,7 +4,8 @@ export default function EstudiantesLoading() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <Skeleton className="h-8 w-40 sm:h-9" />
+        <Skeleton className="h-9 w-28 rounded-lg" />
+        <Skeleton className="mt-1 h-9 w-44 sm:h-10" />
         <Skeleton className="h-4 w-56" />
       </header>
 

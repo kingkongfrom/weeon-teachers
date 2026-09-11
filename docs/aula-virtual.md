@@ -76,15 +76,20 @@ Honest snapshot — do not assume the rest exists.
     - *Materiales*: `MaterialsPanel` uploads/lists/downloads/removes documents.
   - **Personas** — teacher row + enrolled students.
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
-- **Gradebook** — `/grupos/[id]`: per-subject evaluations (rows in
-  `assignments`), marks in `grades`, summary strip, submit report
-  (`class_reports`).
+- **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over
+  `assignments` (columns) + `grades` (marks). Sticky student column, typed
+  columns (Trabajo/Tarea/Examen/Prueba/Proyecto) with auto labels (`CW 1`,
+  `EXAM 1`…), inline keyboard editing + autosave, color-coded cells, per-student
+  FINAL and per-column averages, density toggle, CSV export, and undo on delete.
+  `assignments.category` groups columns (classwork/evaluation) for weighting.
 - No stream; student fill/submit (P5b) and auto-grading (P5c) not built yet.
 
-> **Deploy note:** P1 needs `20260911130000_class_materials.sql` and P5a needs
-> `20260911150000_assessments.sql` applied in `weeon-tenants`, then the generated
-> Supabase types regenerated. The teacher repo is untyped, so it builds without
-> the type refresh, but both migrations are required at runtime.
+> **Deploy note:** P1 needs `20260911130000_class_materials.sql`, P5a needs
+> `20260911150000_assessments.sql`, and the typed gradebook needs
+> `20260911160000_assignments_assessment_link.sql` +
+> `20260911170000_assignments_kind.sql`, applied in `weeon-tenants`, then the
+> generated Supabase types regenerated. The teacher repo is untyped, so it builds
+> without the type refresh, but the migrations are required at runtime.
 
 ## Target architecture
 
