@@ -26,7 +26,17 @@ Post-login lands on the **`/inicio` landing** (card hub), from which every
 section is opened. Phase 2 is **partial**: per-materia gradebook on
 `/grupos/[id]` (add evaluations, edit grades, summary strip), submit report
 scoped to the active subject, and `/reportes` to list submitted snapshots.
-Not built: full reports composer or parity with mobile daily classroom.
+**Aula virtual** is a Google Classroom-style hub (`/aula-virtual` +
+`/aula-virtual/[classId]`): classes grid, stream/classwork tabs, people, and a
+gradebook link. Built: **P1 documents** (`class_materials` + private
+`class-materials` bucket, `MaterialsPanel`) and **P5a assessment builder**
+(`assessments`; TipTap WYSIWYG homework/exam editor at
+`/aula-virtual/[classId]/evaluaciones/[id]`). The stream is still an empty state;
+student fill/submit (P5b) and auto-grading (P5c) are pending. Read
+`docs/aula-virtual.md` before touching it — P1 needs
+`20260911130000_class_materials.sql` and P5a needs
+`20260911150000_assessments.sql` in `weeon-tenants`. Not built: full reports
+composer or parity with mobile daily classroom.
 
 ## The five repos
 
@@ -71,6 +81,9 @@ Not built: full reports composer or parity with mobile daily classroom.
   `/inicio` (landing / hub with cards), `/aula-virtual` (virtual classroom
   section), `/aula-virtual/[classId]` (class workspace), `/grupos`,
   `/grupos/[id]` (gradebook), `/horarios`, `/estudiantes`, `/reportes`.
+  **Aula virtual mirrors Google Classroom** (classes grid → Novedades /
+  Trabajo de clase / Personas / Calificaciones); the target design, schema, and
+  phases live in [`docs/aula-virtual.md`](docs/aula-virtual.md).
   **Navigation is a landing + cards, not a dashboard/sidebar.** `AppShell`
   renders a single top bar with only the brand lockup pinned upper-left (links
   back to `/inicio`) and the account controls; the per-screen back link lives
@@ -105,6 +118,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | Doc | Where |
 | --- | ----- |
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
+| **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |
 | Usernames / first login | `weeon-tenants/docs/user-provisioning.md` |

@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { AmbientPage } from "@/components/brand/ambient-page";
+import { useT } from "@/lib/i18n/client";
 import {
   completeTeacherPasswordLogin,
   startTeacherLogin,
 } from "@/lib/auth/actions";
 
 export function LoginForm() {
+  const t = useT();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -56,14 +58,13 @@ export function LoginForm() {
         onSubmit={onSubmit}
         className="login-card w-full rounded-2xl p-8"
       >
-        <h1 className="text-xl font-semibold tracking-tight">Ingreso docentes</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t.auth.login.title}</h1>
         <p className="mt-1 text-sm text-foreground/60">
-          Ingrese el usuario que le asignó la administración, o su correo si ya
-          tiene contraseña.
+          {t.auth.login.description}
         </p>
 
         <label className="mt-6 block text-xs font-medium text-foreground/70">
-          Usuario o correo
+          {t.auth.login.userLabel}
           <input
             className="login-field mt-1 h-10 w-full rounded-lg border px-3 text-sm outline-none"
             value={username}
@@ -80,7 +81,7 @@ export function LoginForm() {
         {askPassword ? (
           <div className="mt-4">
             <label htmlFor="password" className="block text-xs font-medium text-foreground/70">
-              Contraseña
+              {t.auth.login.passwordLabel}
             </label>
             <PasswordInput
               id="password"
@@ -97,12 +98,16 @@ export function LoginForm() {
         {error ? <p className="mt-4 text-sm text-error!">{error}</p> : null}
 
         <Button type="submit" className="brand-gradient mt-6 w-full border-0" disabled={pending}>
-          {pending ? "Ingresando…" : askPassword ? "Entrar" : "Continuar"}
+          {pending
+            ? t.auth.login.submitting
+            : askPassword
+              ? t.auth.login.submitEnter
+              : t.auth.login.submitContinue}
         </Button>
 
         <p className="mt-4 text-center text-sm text-white/55">
           <Link href="/forgot-password" className="transition-colors hover:text-white">
-            ¿Olvidó su contraseña?
+            {t.auth.login.forgot}
           </Link>
         </p>
       </form>

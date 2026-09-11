@@ -2,18 +2,16 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ClipboardList, GraduationCap, Megaphone, Users } from "lucide-react";
+import { ArrowUpRight, GraduationCap, Megaphone, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
+import { MaterialsPanel } from "@/components/classroom/materials-panel";
+import { AssessmentsPanel } from "@/components/assessments/assessments-panel";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
+import type { ClassMaterial } from "@/lib/dashboard/materials";
+import type { AssessmentSummary } from "@/lib/assessments/model";
 
 type TabId = "novedades" | "trabajo" | "personas" | "calificaciones";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "novedades", label: "Novedades" },
-  { id: "trabajo", label: "Trabajo de clase" },
-  { id: "personas", label: "Personas" },
-  { id: "calificaciones", label: "Calificaciones" },
-];
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -27,21 +25,32 @@ export function ClassTabs({
   classId,
   teacherName,
   students,
+  materials,
+  assessments,
 }: {
   classId: string;
   teacherName: string;
   students: TeacherStudent[];
+  materials: ClassMaterial[];
+  assessments: AssessmentSummary[];
 }) {
+  const t = useT();
   const [tab, setTab] = useState<TabId>("novedades");
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "novedades", label: t.classroom.tabs.novedades },
+    { id: "trabajo", label: t.classroom.tabs.trabajo },
+    { id: "personas", label: t.classroom.tabs.personas },
+    { id: "calificaciones", label: t.classroom.tabs.calificaciones },
+  ];
 
   return (
     <div className="flex flex-col">
       <div
         role="tablist"
-        aria-label="Secciones de la clase"
+        aria-label={t.classroom.tabs.aria}
         className="no-scrollbar flex gap-1 overflow-x-auto border-b border-border"
       >
-        {TABS.map(({ id, label }) => {
+        {tabs.map(({ id, label }) => {
           const active = tab === id;
           return (
             <button
@@ -73,35 +82,34 @@ export function ClassTabs({
         {tab === "novedades" ? (
           <EmptyState
             icon={<Megaphone className="h-6 w-6" />}
-            title="Aún no hay publicaciones"
-            body="Aquí verás los anuncios y las tareas que compartas con la clase."
+            title={t.classroom.novedadesEmptyTitle}
+            body={t.classroom.novedadesEmptyBody}
           />
         ) : null}
 
         {tab === "trabajo" ? (
-          <EmptyState
-            icon={<ClipboardList className="h-6 w-6" />}
-            title="Aún no hay tareas ni materiales"
-            body="Las tareas, materiales y temas de esta clase aparecerán aquí."
-          />
+          <div className="flex flex-col gap-8">
+            <AssessmentsPanel classId={classId} assessments={assessments} />
+            <MaterialsPanel classId={classId} materials={materials} />
+          </div>
         ) : null}
 
         {tab === "personas" ? (
           <div className="flex flex-col gap-6">
             <section>
               <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
-                Docentes
+                {t.classroom.teachers}
               </h3>
-              <PersonRow name={teacherName} subtitle="Docente" tone="brand" />
+              <PersonRow name={teacherName} subtitle={t.classroom.teacherFallback} tone="brand" />
             </section>
 
             <section>
               <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
-                Estudiantes · {students.length}
+                {t.classroom.studentsHeading(students.length)}
               </h3>
               {students.length === 0 ? (
                 <p className="mt-3 text-sm font-medium text-foreground/50">
-                  Esta clase no tiene estudiantes inscritos.
+                  {t.classroom.noStudents}
                 </p>
               ) : (
                 <ul className="mt-1 flex flex-col divide-y divide-border">
@@ -126,9 +134,9 @@ export function ClassTabs({
                 <GraduationCap className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-bold text-foreground">Libro de notas</p>
+                <p className="text-sm font-bold text-foreground">{t.classroom.gradebookTitle}</p>
                 <p className="mt-0.5 text-xs font-medium text-foreground/50">
-                  Agrega evaluaciones y registra las calificaciones de esta clase.
+                  {t.classroom.gradebookBody}
                 </p>
               </div>
             </div>
@@ -136,7 +144,7 @@ export function ClassTabs({
               href={`/grupos/${classId}`}
               className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-semibold text-brand-600 transition-colors hover:border-brand-200 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40"
             >
-              Abrir calificaciones
+              {t.classroom.openGrades}
               <ArrowUpRight className="h-4 w-4" />
             </Link>
           </section>

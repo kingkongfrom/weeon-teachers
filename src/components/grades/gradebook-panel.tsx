@@ -7,6 +7,7 @@ import { GradesTable } from "@/components/grades/grades-table";
 import { SchoolCycleBadge } from "@/components/grupos/school-cycle-badge";
 import { fetchSubjectExams } from "@/lib/teachers/exams-actions";
 import { subjectChipClass, subjectDotClass } from "@/lib/dashboard/lesson-colors";
+import { useLocale, useT } from "@/lib/i18n/client";
 import type { ClassOption, SubjectOption } from "@/lib/dashboard/gradebook";
 import type { ExamColumn } from "@/lib/dashboard/exams";
 
@@ -54,6 +55,8 @@ export function GradebookPanel({
   initialSubjectId,
   initialExams,
 }: GradebookPanelProps) {
+  const t = useT();
+  const locale = useLocale();
   const [subjectId, setSubjectId] = useState<string | null>(initialSubjectId);
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [loading, setLoading] = useState(false);
@@ -88,7 +91,7 @@ export function GradebookPanel({
   const subjectName =
     subjectId === null
       ? hasLegacy
-        ? "Sin materia"
+        ? t.gradebook.noSubject
         : null
       : (subjects.find((subject) => subject.id === subjectId)?.name ?? null);
 
@@ -138,7 +141,7 @@ export function GradebookPanel({
       {allClasses.length > 1 ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-foreground/45">
-            Grupo
+            {t.gradebook.group}
           </span>
           {allClasses.map((cls) => {
             const active = cls.id === classId;
@@ -161,15 +164,15 @@ export function GradebookPanel({
 
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">
+          <h1 className="brand-page-title text-3xl text-foreground sm:text-4xl">
             {classContext.name}
           </h1>
           {classContext.grade ? (
-            <SchoolCycleBadge grade={classContext.grade} />
+            <SchoolCycleBadge grade={classContext.grade} locale={locale} />
           ) : null}
         </div>
         <p className="text-sm font-medium text-foreground/55">
-          {students.length} estudiante{students.length === 1 ? "" : "s"}
+          {t.gradebook.studentsCount(students.length)}
         </p>
 
         {subjects.length > 0 || hasLegacy || students.length > 0 ? (
@@ -201,7 +204,7 @@ export function GradebookPanel({
       {students.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">
           <p className="text-sm font-medium text-foreground/60">
-            Este grupo aún no tiene estudiantes asignados.
+            {t.gradebook.empty}
           </p>
         </div>
       ) : (
@@ -235,6 +238,7 @@ function SubjectTabs({
   onSelectSubject: (id: string | null) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="flex min-w-0 flex-1 flex-wrap gap-2">
       {subjects.map((subj) => {
@@ -270,7 +274,7 @@ function SubjectTabs({
               : "border-border bg-surface text-foreground/65 hover:bg-surface-muted"
           }`}
         >
-          Sin materia
+          {t.gradebook.noSubject}
         </button>
       ) : null}
     </div>

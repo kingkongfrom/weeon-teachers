@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Home, ShieldAlert } from "lucide-react";
 import { LogoCompact } from "@/components/brand/logo";
+import { useLocale, useT } from "@/lib/i18n/client";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -13,6 +14,8 @@ const EASE = [0.22, 1, 0.36, 1] as const;
  * field with brand blobs.
  */
 export function NotFoundScreen() {
+  const t = useT();
+  const locale = useLocale();
   return (
     <main className="not-found-bg relative flex min-h-screen flex-1 flex-col">
       <div className="not-found-bg-blobs" aria-hidden>
@@ -39,7 +42,7 @@ export function NotFoundScreen() {
           className="not-found-eyebrow mt-[-2px] inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold backdrop-blur"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-          Error 404
+          {t.notFound.eyebrow}
         </motion.p>
 
         <motion.h1
@@ -48,7 +51,7 @@ export function NotFoundScreen() {
           transition={{ duration: 0.7, delay: 0.2, ease: EASE }}
           className="not-found-title brand-display text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl"
         >
-          Página no encontrada
+          {t.notFound.title}
         </motion.h1>
 
         <motion.p
@@ -57,8 +60,7 @@ export function NotFoundScreen() {
           transition={{ duration: 0.7, delay: 0.3, ease: EASE }}
           className="not-found-body mt-5 max-w-sm text-base leading-relaxed"
         >
-          No encontramos la página que buscaba. Puede que el enlace haya cambiado
-          o ya no esté disponible.
+          {t.notFound.body}
         </motion.p>
 
         <motion.div
@@ -72,14 +74,14 @@ export function NotFoundScreen() {
             className="brand-gradient group inline-flex h-12 items-center justify-center gap-2 rounded-full px-8 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-95"
           >
             <Home className="h-4 w-4" />
-            Ir al inicio
+            {t.notFound.goHome}
           </Link>
           <Link
             href="/"
             className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-foreground/25 px-8 text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/5"
           >
             <ShieldAlert className="h-4 w-4" />
-            Ver inicio
+            {t.notFound.viewHome}
           </Link>
         </motion.div>
 
@@ -89,7 +91,7 @@ export function NotFoundScreen() {
           transition={{ duration: 0.6, delay: 0.55 }}
           className="mt-10 text-sm text-foreground/40"
         >
-          Weeon School · ES
+          Weeon School · {locale.toUpperCase()}
         </motion.p>
       </div>
     </main>

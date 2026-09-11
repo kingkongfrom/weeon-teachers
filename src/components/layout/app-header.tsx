@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { AccountMenu } from "@/components/layout/account-menu";
-import { NotificationsMenu } from "@/components/layout/notifications-menu";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { SettingsDrawer } from "@/components/layout/settings-drawer";
 import { LogoCompact, LogoMark } from "@/components/brand/logo";
 import type { AppUser } from "@/components/layout/app-shell";
 
@@ -29,9 +27,7 @@ export function AppHeader({ user }: { user: AppUser | null }) {
       <div className="flex-1" />
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <NotificationsMenu />
-        <ThemeToggle />
-        <AccountMenu user={user} />
+        <SettingsDrawer user={user} />
       </div>
     </header>
   );

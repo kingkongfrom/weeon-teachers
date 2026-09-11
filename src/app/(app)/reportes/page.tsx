@@ -3,18 +3,20 @@ import { FileText } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { loadMyReports, type SubmittedReport } from "@/lib/dashboard/reports";
 import { schoolPeriodLabel } from "@/lib/dashboard/school-period";
+import { getLocale, getT } from "@/lib/i18n/server";
 
 export default async function ReportesPage() {
   const reports = await loadMyReports();
+  const t = await getT();
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Reportes"
+        title={t.reportes.title}
         description={
           reports.length === 0
-            ? "Los reportes que suba aparecerán aquí."
-            : "Reportes de calificaciones subidos."
+            ? t.reportes.descriptionEmpty
+            : t.reportes.description
         }
         backHref="/inicio"
       />
@@ -24,10 +26,7 @@ export default async function ReportesPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
             <FileText className="h-6 w-6" strokeWidth={2.2} />
           </div>
-          <p className="text-sm font-medium text-foreground/60">
-            Aún no ha subido reportes. Desde un grupo, use «Subir reporte» para
-            publicar las calificaciones aquí.
-          </p>
+          <p className="text-sm font-medium text-foreground/60">{t.reportes.empty}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-5">
@@ -40,7 +39,9 @@ export default async function ReportesPage() {
   );
 }
 
-function ReportCard({ report }: { report: SubmittedReport }) {
+async function ReportCard({ report }: { report: SubmittedReport }) {
+  const t = await getT();
+  const locale = await getLocale();
   const assignmentIds = Object.keys(report.grades);
   const studentIds = collectStudentIds(report);
 
@@ -59,35 +60,35 @@ function ReportCard({ report }: { report: SubmittedReport }) {
           </span>
         ) : null}
         <span className="text-xs font-medium text-foreground/50">
-          {report.period || schoolPeriodLabel(report.submittedAt)}
+          {report.period || schoolPeriodLabel(report.submittedAt, locale)}
         </span>
         {wasResubmitted(report) ? (
           <span
             className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
             title={new Date(report.updatedAt).toLocaleString("es-CR")}
           >
-            Actualizado
+            {t.reportes.updated}
           </span>
         ) : null}
       </div>
 
       {assignmentIds.length === 0 || studentIds.length === 0 ? (
         <p className="px-5 py-6 text-sm font-medium text-foreground/50">
-          Este reporte no tiene calificaciones.
+          {t.reportes.noGrades}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-fit border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-foreground/50">
-                <th className="px-4 py-2.5 font-medium">Estudiante</th>
+                <th className="px-4 py-2.5 font-medium">{t.reportes.student}</th>
                 {assignmentIds.map((assignmentId) => (
                   <th key={assignmentId} className="px-4 py-2.5 text-right font-medium">
-                    {report.assignmentTitles[assignmentId] ?? "Examen"}
+                    {report.assignmentTitles[assignmentId] ?? t.reportes.exam}
                   </th>
                 ))}
-                <th className="px-4 py-2.5 text-right font-medium">Promedio</th>
-                <th className="px-4 py-2.5 font-medium">Estado</th>
+                <th className="px-4 py-2.5 text-right font-medium">{t.reportes.average}</th>
+                <th className="px-4 py-2.5 font-medium">{t.reportes.status}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/70">
@@ -137,7 +138,8 @@ function AveragePct({ report, studentId }: { report: SubmittedReport; studentId:
 
 /** Aprobado (>=70% as displayed) / Reprobado (<70%). Uses the same rounded
  * value shown in the Promedio column so a displayed "70%" is Aprobado. */
-function StatusBadge({ report, studentId }: { report: SubmittedReport; studentId: string }) {
+async function StatusBadge({ report, studentId }: { report: SubmittedReport; studentId: string }) {
+  const t = await getT();
   const pct = computeAverage(report, studentId);
   if (pct === null) {
     return <span className="text-xs font-medium text-foreground/40">—</span>;
@@ -151,7 +153,7 @@ function StatusBadge({ report, studentId }: { report: SubmittedReport; studentId
           : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
       }`}
     >
-      {passed ? "Aprobado" : "Reprobado"}
+      {passed ? t.reportes.passed : t.reportes.failed}
     </span>
   );
 }

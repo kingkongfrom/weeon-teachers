@@ -4,6 +4,7 @@ import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassExams } from "@/lib/dashboard/exams";
 import { loadGradebookContext } from "@/lib/dashboard/gradebook";
+import { getT } from "@/lib/i18n/server";
 
 export default async function GrupoDetailPage({
   params,
@@ -38,10 +39,11 @@ export default async function GrupoDetailPage({
   // Only the selected subject's exams are loaded server-side; switching subjects
   // happens client-side via the panel (no full reload).
   const exams = await loadClassExams(id, selectedSubject);
+  const t = await getT();
 
   return (
     <div className="flex flex-col gap-5">
-      <BackLink href="/grupos" label="Todos los grupos" />
+      <BackLink href="/grupos" label={t.grupos.back} />
 
       <GradebookPanel
         classId={id}

@@ -4,10 +4,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { AmbientPage } from "@/components/brand/ambient-page";
-import { PASSWORD_REQUIREMENTS } from "@/lib/auth/password";
 import { setTeacherPassword } from "@/lib/auth/actions";
+import { useT } from "@/lib/i18n/client";
 
 export function CreatePasswordForm() {
+  const t = useT();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,14 +35,14 @@ export function CreatePasswordForm() {
         onSubmit={onSubmit}
         className="login-card w-full rounded-2xl p-8"
       >
-        <h1 className="text-xl font-semibold tracking-tight">Crear contraseña</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t.auth.createPassword.title}</h1>
         <p className="mt-1 text-sm text-foreground/60">
-          Es su primer ingreso. Esta contraseña también sirve para la aplicación móvil.
+          {t.auth.createPassword.description}
         </p>
 
         <div className="mt-6">
           <label htmlFor="password" className="block text-xs font-medium text-foreground/70">
-            Contraseña
+            {t.auth.createPassword.passwordLabel}
           </label>
           <PasswordInput
             id="password"
@@ -56,7 +57,7 @@ export function CreatePasswordForm() {
 
         <div className="mt-4">
           <label htmlFor="confirm" className="block text-xs font-medium text-foreground/70">
-            Confirmar
+            {t.auth.createPassword.confirmLabel}
           </label>
           <PasswordInput
             id="confirm"
@@ -70,7 +71,7 @@ export function CreatePasswordForm() {
         </div>
 
         <ul className="mt-4 space-y-1 text-xs text-white/60">
-          {PASSWORD_REQUIREMENTS.map((item) => (
+          {t.auth.createPassword.requirements.map((item) => (
             <li key={item}>· {item}</li>
           ))}
         </ul>
@@ -78,7 +79,7 @@ export function CreatePasswordForm() {
         {error ? <p className="mt-4 text-sm text-error!">{error}</p> : null}
 
         <Button type="submit" className="brand-gradient mt-6 w-full border-0" disabled={pending}>
-          {pending ? "Guardando…" : "Guardar e ingresar"}
+          {pending ? t.auth.createPassword.saving : t.auth.createPassword.save}
         </Button>
       </form>
     </AmbientPage>

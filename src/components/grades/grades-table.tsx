@@ -19,6 +19,7 @@ import {
 import { ArrowDownRight, ArrowUpRight, ChartPie, ChartSpline, Loader2, Trash2, Undo2 } from "lucide-react";
 import type { ExamColumn } from "@/lib/dashboard/exams";
 import { SubmitReport } from "@/components/grades/submit-report";
+import { useT } from "@/lib/i18n/client";
 import {
   addExamColumn,
   removeExamColumn,
@@ -182,6 +183,7 @@ export function GradesTable({
   onAddControlReady,
   onExamsPersisted,
 }: GradesTableProps) {
+  const t = useT();
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [adding, setAdding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -309,7 +311,7 @@ export function GradesTable({
     setAdding(false);
     if (!result.ok || !result.id) {
       setActionError(
-        result.ok ? "No se pudo agregar la columna." : result.error,
+        result.ok ? t.gradebook.addError : result.error,
       );
       return;
     }
@@ -322,7 +324,7 @@ export function GradesTable({
       onExamsPersisted?.(next);
       return next;
     });
-  }, [adding, classId, onExamsPersisted, subjectId]);
+  }, [adding, classId, onExamsPersisted, subjectId, t.gradebook.addError]);
 
   useEffect(() => {
     onAddControlReady?.({
@@ -361,9 +363,7 @@ export function GradesTable({
     }
 
     if (invalid) {
-      setActionError(
-        "La nota debe ser un número entre 0 y el máximo de la columna.",
-      );
+      setActionError(t.gradebook.gradeError);
     }
     if (pending.length === 0) return;
     setActionError(null);
@@ -442,14 +442,14 @@ export function GradesTable({
   const columns: Column<GridRow>[] = [
     {
       key: "name",
-      name: "Estudiante",
+      name: t.gradebook.headers.student,
       frozen: true,
       width: nameWidth,
       editable: false,
       headerCellClass: "rdg-name-header-cell",
       renderHeaderCell: () => (
         <div className="flex h-full w-full items-center px-2 text-xs font-medium uppercase tracking-wide text-foreground/50">
-          Estudiante
+          {t.gradebook.headers.student}
         </div>
       ),
       renderCell: ({ row, rowIdx }) => (
@@ -469,7 +469,7 @@ export function GradesTable({
     ...examColumns,
     {
       key: "__average",
-      name: "Promedio",
+      name: t.gradebook.headers.average,
       width: averageWidth,
       editable: false,
       headerCellClass: "rdg-average-header-cell",
@@ -481,7 +481,7 @@ export function GradesTable({
       },
       renderHeaderCell: () => (
         <div className="flex h-full w-full items-center justify-center px-2 text-center text-xs font-medium uppercase tracking-wide text-foreground/50 rdg-average-header-round">
-          Promedio
+          {t.gradebook.headers.average}
         </div>
       ),
       renderCell: ({ row }) => <AverageCell row={row} exams={exams} />,
@@ -582,7 +582,7 @@ export function GradesTable({
                   onMouseLeave={hideDelete}
                   className="flex items-center justify-between gap-2 whitespace-nowrap rounded-t-md border border-error/50 bg-error/15 px-2 py-1 text-xs font-medium text-error"
                 >
-                  <span>¿Eliminar la columna y sus notas?</span>
+                  <span>{t.gradebook.deleteConfirm}</span>
                   <span className="flex items-center gap-1">
                     <button
                       type="button"
@@ -590,14 +590,14 @@ export function GradesTable({
                       disabled={hoverColumnRemoving}
                       className="rounded bg-error px-1.5 py-0.5 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                     >
-                      Sí, eliminar
+                      {t.gradebook.confirmYes}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmRemove(false)}
                       className="rounded px-1.5 py-0.5 font-semibold text-error/80 transition-colors hover:bg-error/10"
                     >
-                      Cancelar
+                      {t.gradebook.cancel}
                     </button>
                   </span>
                 </div>
@@ -606,8 +606,8 @@ export function GradesTable({
                   type="button"
                   onClick={() => setConfirmRemove(true)}
                   disabled={hoverColumnRemoving}
-                  aria-label="Eliminar columna"
-                  title="Eliminar columna"
+                  aria-label={t.gradebook.deleteColumn}
+                  title={t.gradebook.deleteColumn}
                   onMouseEnter={() => showDelete(hoverColumn!)}
                   onMouseLeave={hideDelete}
                   className="flex w-full cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-t-md border border-error/40 bg-error/10 px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-60"
@@ -617,7 +617,7 @@ export function GradesTable({
                   ) : (
                     <Trash2 className="h-3 w-3" />
                   )}
-                  Eliminar
+                  {t.gradebook.delete}
                 </button>
               )}
             </div>
@@ -645,16 +645,16 @@ export function GradesTable({
                   ["--rdg-row-height" as string]: `${ROW_HEIGHT}px`,
                   ["--rdg-input-line-height" as string]: `${GRADE_INPUT_LINE_PX}px`,
                 }}
-                aria-label="Tabla de calificaciones"
+                aria-label={t.gradebook.headers.student}
               />
               <div className="rdg-gradebook-footer">
                 {loading ? (
                   <p className="flex h-full w-full items-center justify-center text-xs font-medium text-foreground/45">
-                    Cargando calificaciones…
+                    {t.gradebook.loading}
                   </p>
                 ) : exams.length === 0 ? (
                   <p className="flex h-full w-full items-center justify-center px-3 text-center text-xs font-medium text-foreground/45">
-                    Agregue al menos una evaluación para subir el reporte
+                    {t.gradebook.addExamHint}
                   </p>
                 ) : (
                   <SubmitReport
@@ -702,7 +702,7 @@ export function GradesTable({
               ) : (
                 <Undo2 className="h-3.5 w-3.5" />
               )}
-              Deshacer
+              {t.gradebook.undo}
             </button>
           </motion.div>
         ) : null}
@@ -730,6 +730,7 @@ function ExamHeaderCell({
   onHoverStart: () => void;
   onHoverEnd: () => void;
 }) {
+  const t = useT();
   const [title, setTitle] = useState(column.title);
   const [busy, setBusy] = useState(false);
 
@@ -756,7 +757,7 @@ function ExamHeaderCell({
       }
     } catch {
       setTitle(column.title);
-      onError("No se pudo actualizar la columna.");
+      onError(t.gradebook.updateError);
     } finally {
       setBusy(false);
       onDraftTitle(column.id, null);
@@ -787,7 +788,7 @@ function ExamHeaderCell({
             e.currentTarget.blur();
           }
         }}
-        aria-label="Nombre de la columna"
+        aria-label={t.gradebook.columnNameAria}
         className="h-7 w-full min-w-0 cursor-text bg-transparent text-center text-xs font-medium uppercase tracking-wide text-foreground/50 outline-none disabled:opacity-60"
       />
     </div>
@@ -804,6 +805,7 @@ function GradeEditor({
   onRowChange,
   max,
 }: RenderEditCellProps<GridRow> & { max: number }) {
+  const t = useT();
   const raw = row[column.key];
   return (
     <div className="rdg-grade-input-wrap">
@@ -814,7 +816,7 @@ function GradeEditor({
         defaultValue={raw == null ? "" : String(raw)}
         onChange={(e) => onRowChange({ ...row, [column.key]: e.target.value })}
         onFocus={(e) => e.currentTarget.select()}
-        aria-label={`Nota de ${max} puntos`}
+        aria-label={t.gradebook.gradeAria(max)}
         className="rdg-grade-input"
       />
     </div>
@@ -862,6 +864,7 @@ function GradeSummary({
   exams: ExamColumn[];
   students: StudentRow[];
 }) {
+  const t = useT();
   const summary = useMemo(() => {
     const avgs: number[] = [];
     for (const student of students) {
@@ -893,36 +896,33 @@ function GradeSummary({
 
   if (!summary) return null;
 
-  const studentHint =
-    summary.gradedCount === 1
-      ? "1 con nota"
-      : `${summary.gradedCount} con nota`;
+  const studentHint = t.gradebook.summary.graded(summary.gradedCount);
 
   return (
     <div className="mt-3 flex w-full divide-x divide-border overflow-hidden rounded-xl border border-border/80 bg-surface-muted/30 shadow-sm">
       <SummaryStat
-        label="Promedio"
+        label={t.gradebook.summary.average}
         value={summary.avg}
         hint={studentHint}
         icon={<ChartSpline className="h-3.5 w-3.5" aria-hidden />}
       />
       <SummaryStat
-        label="Aprobación"
+        label={t.gradebook.summary.passRate}
         value={summary.passRate}
-        hint={`${summary.passCount} de ${summary.gradedCount}`}
+        hint={t.gradebook.summary.passOf(summary.passCount, summary.gradedCount)}
         icon={<ChartPie className="h-3.5 w-3.5" aria-hidden />}
       />
       <SummaryStat
-        label="Máximo"
+        label={t.gradebook.summary.highest}
         value={summary.max}
-        hint="Mejor promedio"
+        hint={t.gradebook.summary.best}
         icon={<ArrowUpRight className="h-3.5 w-3.5" aria-hidden />}
         tone="good"
       />
       <SummaryStat
-        label="Mínimo"
+        label={t.gradebook.summary.lowest}
         value={summary.min}
-        hint="Más bajo"
+        hint={t.gradebook.summary.lowestHint}
         icon={<ArrowDownRight className="h-3.5 w-3.5" aria-hidden />}
         tone={summary.min >= 70 ? "neutral" : "low"}
       />

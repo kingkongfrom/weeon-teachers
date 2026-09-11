@@ -3,15 +3,10 @@ import { FolderOpen, Megaphone, MoreVertical, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SubjectChips } from "@/components/grupos/subject-chips";
 import { classBannerClass } from "@/lib/dashboard/class-banner";
+import { getT } from "@/lib/i18n/server";
 import type { TeacherGrupo } from "@/lib/dashboard/grupos";
 
-const ACTIONS = [
-  { label: "Publicar", icon: Megaphone },
-  { label: "Materiales", icon: FolderOpen },
-  { label: "Más opciones", icon: MoreVertical },
-] as const;
-
-export function ClassCard({
+export async function ClassCard({
   grupo,
   schoolName,
   year,
@@ -20,7 +15,13 @@ export function ClassCard({
   schoolName: string | null;
   year: number;
 }) {
+  const t = await getT();
   const banner = classBannerClass(grupo.subjects[0]?.color);
+  const actions = [
+    { label: t.classroom.publish, icon: Megaphone },
+    { label: t.classroom.materials, icon: FolderOpen },
+    { label: t.classroom.moreOptions, icon: MoreVertical },
+  ] as const;
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-brand-200 dark:hover:border-border-strong">
@@ -33,7 +34,7 @@ export function ClassCard({
         </div>
         <div className="px-4 pt-3">
           <p className="truncate text-xs font-medium text-foreground/50">
-            {schoolName ?? "Weeon School"}
+            {schoolName ?? t.common.fallbackSchool}
             {grupo.section ? ` · ${grupo.section}` : ""}
           </p>
         </div>
@@ -43,16 +44,16 @@ export function ClassCard({
         {grupo.subjects.length > 0 ? <SubjectChips subjects={grupo.subjects} /> : null}
         <p className="flex items-center gap-1.5 text-xs font-medium text-foreground/50">
           <Users className="h-3.5 w-3.5" />
-          {grupo.studentCount} {grupo.studentCount === 1 ? "estudiante" : "estudiantes"}
+          {t.grupos.studentsCount(grupo.studentCount)}
         </p>
       </div>
 
       <div className="flex items-center justify-end gap-0.5 border-t border-border px-2 py-1.5">
-        {ACTIONS.map(({ label, icon: Icon }) => (
+        {actions.map(({ label, icon: Icon }) => (
           <button
             key={label}
             type="button"
-            title="Próximamente"
+            title={t.panel.upcoming}
             aria-label={label}
             className="flex h-9 w-9 items-center justify-center rounded-full text-foreground/45 transition-colors hover:bg-surface-muted hover:text-foreground/70"
           >

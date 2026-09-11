@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { fullName, loadTeacherStudent } from "@/lib/dashboard/students";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Estudiante",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.student.title };
+}
 
 export default async function StudentPage({
   params,
@@ -16,11 +18,12 @@ export default async function StudentPage({
   const { id } = await params;
   const student = await loadTeacherStudent(id);
   if (!student) notFound();
+  const t = await getT();
 
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">
+        <h1 className="brand-page-title text-3xl text-foreground sm:text-4xl">
           {fullName(student)}
         </h1>
         {student.groups.length > 0 ? (
@@ -35,7 +38,7 @@ export default async function StudentPage({
         className="inline-flex w-fit items-center gap-1 text-sm font-medium text-brand-700 transition-colors hover:text-brand-800 hover:underline"
       >
         <ArrowLeft className="h-4 w-4" />
-        Estudiantes
+        {t.estudiantes.back}
       </Link>
     </div>
   );

@@ -97,3 +97,17 @@ export const loadMyReports = cache(
   return out;
   },
 );
+
+/** Number of reports the signed-in teacher has submitted. Head count only, so
+ * the panel footer stays cheap and does not deserialize grade snapshots. */
+export const loadMyReportCount = cache(async (): Promise<number> => {
+  const session = await getTeacherSession();
+  if (!session) return 0;
+
+  const supabase = await createSessionClient();
+  const { count } = await supabase
+    .from("class_reports")
+    .select("id", { count: "exact", head: true });
+
+  return count ?? 0;
+});

@@ -14,13 +14,23 @@ Workspace map: `../AGENTS.md`.
 
 Phase 1 (login + grupos) is implemented. Phase 2 is partial: per-materia
 gradebook, submit report, and a reportes list — not a full reports composer.
+The **Aula virtual** is a Google Classroom-style hub. *Trabajo de clase* now has
+an **assessment builder** (TipTap WYSIWYG homeworks/exams) and **document
+sharing**; the stream is still an empty state. Needs the `weeon-tenants`
+`20260911130000_class_materials.sql` and `20260911150000_assessments.sql`
+migrations — see [`docs/aula-virtual.md`](docs/aula-virtual.md).
 
 | Route | Purpose |
 | ----- | ------- |
 | `/` | School + username login |
 | `/crear-contrasena` | First password (also used by the mobile app) |
+| `/inicio` | Landing hub with the section cards + weekly schedule |
+| `/aula-virtual` | Classes grid (Classroom-style home) |
+| `/aula-virtual/[classId]` | Class page — Novedades / Trabajo de clase / Personas / Calificaciones |
 | `/grupos` | Grupos this teacher is assigned to (`teaches_class`) |
 | `/grupos/[id]` | Gradebook — materia tabs, evaluations, grades, submit report |
+| `/horarios` | Weekly timetable |
+| `/estudiantes` | Students in the teacher's groups |
 | `/reportes` | Submitted grade snapshots for this teacher |
 
 Admin assigns a username in Comunidad. This app creates the Auth user on

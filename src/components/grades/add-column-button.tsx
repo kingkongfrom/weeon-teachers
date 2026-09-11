@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Plus } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 type AddColumnButtonProps = {
   adding: boolean;
@@ -16,13 +17,14 @@ export function AddColumnButton({
   variant = "icon",
   className = "",
 }: AddColumnButtonProps) {
+  const t = useT();
   if (variant === "labeled") {
     return (
       <button
         type="button"
         onClick={onClick}
         disabled={adding}
-        aria-label="Agregar evaluación"
+        aria-label={t.gradebook.addExam}
         className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-success/40 bg-success/10 px-3.5 py-1.5 text-sm font-semibold text-success transition-colors hover:bg-success/20 disabled:opacity-60 ${className}`}
       >
         {adding ? (
@@ -30,7 +32,7 @@ export function AddColumnButton({
         ) : (
           <Plus className="h-4 w-4" strokeWidth={2.5} />
         )}
-        Agregar evaluación
+        {t.gradebook.addExam}
       </button>
     );
   }
@@ -40,8 +42,8 @@ export function AddColumnButton({
       type="button"
       onClick={onClick}
       disabled={adding}
-      aria-label="Agregar evaluación"
-      title="Agregar evaluación"
+      aria-label={t.gradebook.addExam}
+      title={t.gradebook.addExam}
       className={`inline-flex rotate-45 cursor-pointer items-center justify-center rounded-full border border-success/40 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60 ${className}`}
       style={{ blockSize: 32, inlineSize: 32 }}
     >

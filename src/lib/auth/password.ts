@@ -7,13 +7,6 @@ export const passwordSchema = z
   .regex(/[0-9]/, "La contraseña debe incluir al menos un número.")
   .regex(/[^A-Za-z0-9]/, "La contraseña debe incluir al menos un símbolo.");
 
-export const PASSWORD_REQUIREMENTS = [
-  "Mínimo de 8 caracteres",
-  "Una mayúscula",
-  "Un número",
-  "Un símbolo",
-] as const;
-
 export function meetsPasswordRequirements(password: string): boolean {
   return passwordSchema.safeParse(password).success;
 }

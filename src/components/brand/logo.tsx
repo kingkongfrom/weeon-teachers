@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type HTMLAttributes } from "react";
+import { useT } from "@/lib/i18n/client";
 
 type LogoProps = HTMLAttributes<HTMLSpanElement>;
 
@@ -38,6 +39,7 @@ function EeSmileArc({ className = "" }: { className?: string }) {
 /** Compact gradient wordmark: "Weeon" with the smile arc + "School" and,
  * teacher-portal only, a smaller "Teachers" label beneath "School". */
 export function LogoCompact({ className = "", ...props }: LogoProps) {
+  const t = useT();
   return (
     <span
       className={`inline-flex select-none items-baseline whitespace-nowrap text-xl font-black tracking-tight text-foreground ${className}`}
@@ -52,7 +54,7 @@ export function LogoCompact({ className = "", ...props }: LogoProps) {
           School
         </span>
         <span className="mt-[0.18em] text-[0.5em] font-semibold uppercase leading-none tracking-[0.16em] text-foreground/55">
-          Teachers
+          {t.logo.teachers}
         </span>
       </span>
     </span>

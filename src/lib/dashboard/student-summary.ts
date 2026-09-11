@@ -1,6 +1,8 @@
 /** Client-safe helpers shared by the server loaders and client components in
  * the students UI. No server-only imports here. */
 
+import type { Locale } from "@/lib/i18n/config";
+
 export type StudentGroupScore = {
   id: string;
   name: string;
@@ -20,12 +22,20 @@ export function fullName(student: {
 
 /** Status label + tone for a student's final score in a group. The pass
  * threshold mirrors the gradebook histogram (>= 70 is passing). */
-export function finalScoreStatus(score: number | null): {
+export function finalScoreStatus(
+  score: number | null,
+  locale: Locale = "es",
+): {
   label: string;
   tone: "excellent" | "passed" | "at-risk" | "none";
 } {
-  if (score === null) return { label: "Sin notas", tone: "none" };
-  if (score >= 90) return { label: "Excelente", tone: "excellent" };
-  if (score >= 70) return { label: "Aprobado", tone: "passed" };
-  return { label: "En riesgo", tone: "at-risk" };
+  const labels =
+    locale === "en"
+      ? { none: "No grades", excellent: "Excellent", passed: "Passed", atRisk: "At risk" }
+      : { none: "Sin notas", excellent: "Excelente", passed: "Aprobado", atRisk: "En riesgo" };
+
+  if (score === null) return { label: labels.none, tone: "none" };
+  if (score >= 90) return { label: labels.excellent, tone: "excellent" };
+  if (score >= 70) return { label: labels.passed, tone: "passed" };
+  return { label: labels.atRisk, tone: "at-risk" };
 }

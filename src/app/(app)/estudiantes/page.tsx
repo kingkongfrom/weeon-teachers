@@ -2,15 +2,17 @@ import { Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { loadStudentList } from "@/lib/dashboard/students";
 import { StudentsTable } from "@/components/students/students-table";
+import { getT } from "@/lib/i18n/server";
 
 export default async function EstudiantesPage() {
   const { students, total } = await loadStudentList({ limit: PAGE_SIZE, offset: 0 });
+  const t = await getT();
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Estudiantes"
-        description="Solo se muestran los estudiantes de sus grupos asignados."
+        title={t.estudiantes.title}
+        description={t.estudiantes.description}
         backHref="/inicio"
       />
 
@@ -20,7 +22,7 @@ export default async function EstudiantesPage() {
             <Users className="h-6 w-6" strokeWidth={2.2} />
           </div>
           <p className="text-sm font-medium text-foreground/60">
-            Se mostrarán aquí los estudiantes de sus grupos.
+            {t.estudiantes.empty}
           </p>
         </div>
       ) : (

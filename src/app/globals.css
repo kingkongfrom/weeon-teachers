@@ -565,3 +565,104 @@ body {
 .rdg-gradebook .rdg-7-0-0-beta-60-2e639f12 {
   display: none;
 }
+
+/* Rich text (TipTap) — shared by the WYSIWYG editor and the read-only renderer.
+   The editor emits ProseMirror JSON (never HTML), so these styles only cover the
+   node types we allow. */
+.rte-content {
+  line-height: 1.6;
+  color: var(--foreground);
+}
+.rte-content p {
+  margin: 0 0 0.5rem;
+}
+.rte-content > :last-child {
+  margin-bottom: 0;
+}
+.rte-content h1 {
+  margin: 0.9rem 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.rte-content h2 {
+  margin: 0.75rem 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.rte-content h3 {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.rte-content ul,
+.rte-content ol {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 1.35rem;
+}
+.rte-content ul {
+  list-style: disc;
+}
+.rte-content ol {
+  list-style: decimal;
+}
+.rte-content li {
+  margin: 0.1rem 0;
+}
+.rte-content blockquote {
+  margin: 0.4rem 0;
+  border-left: 3px solid var(--border-strong);
+  padding-left: 0.75rem;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+}
+.rte-content code {
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  padding: 0.05rem 0.3rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.85em;
+}
+.rte-content hr {
+  margin: 0.75rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.rte-content a {
+  color: var(--brand-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.rte-content mark {
+  border-radius: 0.15rem;
+  background: #fde68a;
+  color: inherit;
+  padding: 0 0.1rem;
+}
+.rte-content pre {
+  margin: 0.4rem 0;
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  padding: 0.6rem 0.75rem;
+}
+.rte-content pre code {
+  background: none;
+  padding: 0;
+}
+.rte-content:focus {
+  outline: none;
+}
+/* Placeholder (TipTap Placeholder extension) */
+.rte-content p.is-empty::before,
+.rte-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
+  pointer-events: none;
+}
+/* Grammar/spelling issue decoration (LanguageTool) */
+.rte-content .grammar-issue {
+  text-decoration: underline wavy #e11d48;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}

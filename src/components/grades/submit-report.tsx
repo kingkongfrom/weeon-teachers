@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowRight, Check, FileCheck2, Loader2, X } from "lucide-react";
 import { submitClassReport } from "@/lib/teachers/reports-actions";
+import { useT } from "@/lib/i18n/client";
 
 type SubmitReportProps = {
   classId: string;
@@ -15,10 +16,6 @@ type SubmitReportProps = {
   /** Full-width table footer row — matches the gradebook header height. */
   variant?: "default" | "footer";
 };
-
-function submitLabel(subjectName?: string | null): string {
-  return subjectName ? `Subir reporte — ${subjectName}` : "Subir reporte";
-}
 
 /**
  * "Subir reporte" button below a group. On click it opens a confirm dialog
@@ -32,8 +29,11 @@ export function SubmitReport({
   disabled,
   variant = "default",
 }: SubmitReportProps) {
+  const t = useT();
   const isFooter = variant === "footer";
-  const label = submitLabel(subjectName);
+  const label = subjectName
+    ? t.gradebook.submit.labelSubject(subjectName)
+    : t.gradebook.submit.label;
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -57,9 +57,9 @@ export function SubmitReport({
     const successBody = (
       <>
         <Check className="h-4 w-4 shrink-0" />
-        <span>Reporte subido</span>
+        <span>{t.gradebook.submit.done}</span>
         <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-        <span>Ver en Reportes</span>
+        <span>{t.gradebook.submit.viewInReports}</span>
       </>
     );
 
@@ -132,16 +132,9 @@ export function SubmitReport({
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-foreground/60">
                 {subjectName ? (
-                  <>
-                    Se publicará el listado de calificaciones de{" "}
-                    <span className="font-semibold text-foreground/80">{subjectName}</span>{" "}
-                    para este grupo. Aparecerá en la página Reportes. ¿Desea continuar?
-                  </>
+                  t.gradebook.submit.bodySubject(subjectName)
                 ) : (
-                  <>
-                    Se publicará el listado de calificaciones actual de este grupo en la
-                    página Reportes. ¿Desea continuar?
-                  </>
+                  t.gradebook.submit.body
                 )}
               </p>
 
@@ -157,7 +150,7 @@ export function SubmitReport({
                   className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-foreground/70 transition-colors hover:bg-surface-muted disabled:opacity-50"
                 >
                   <X className="h-4 w-4" />
-                  Cancelar
+                  {t.gradebook.cancel}
                 </button>
                 <button
                   type="button"
@@ -166,7 +159,7 @@ export function SubmitReport({
                   className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
                 >
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  {busy ? "Enviando…" : "Confirmar"}
+                  {busy ? t.gradebook.submit.sending : t.gradebook.submit.confirm}
                 </button>
               </div>
             </motion.div>
