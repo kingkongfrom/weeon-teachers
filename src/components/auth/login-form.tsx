@@ -106,7 +106,7 @@ export function LoginForm() {
         </Button>
 
         <p className="mt-4 text-center text-sm text-white/55">
-          <Link href="/forgot-password" className="transition-colors hover:text-white">
+          <Link href="/forgot-password" className="-mx-1 rounded-md px-1 py-0.5 transition-colors hover:bg-white/10 hover:text-white">
             {t.auth.login.forgot}
           </Link>
         </p>

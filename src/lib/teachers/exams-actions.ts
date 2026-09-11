@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/session";
-import { loadClassExams, type ExamColumn } from "@/lib/dashboard/exams";
+import {
+  categoryFor,
+  loadClassExams,
+  type ExamColumn,
+} from "@/lib/dashboard/exams";
 
 export type ExamActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -26,6 +30,7 @@ const addColumnSchema = z.object({
   title: z.string().trim().max(120),
   points: z.number().min(0).max(1000).nullable(),
   subjectId: z.string().uuid().nullable().optional(),
+  kind: z.enum(["classwork", "homework", "exam", "quiz", "project"]).optional(),
 });
 
 const saveGradeSchema = z.object({
@@ -67,6 +72,7 @@ export async function addExamColumn(input: {
   title: string;
   points: number | null;
   subjectId?: string | null;
+  kind?: "classwork" | "homework" | "exam" | "quiz" | "project";
 }): Promise<ExamActionResult> {
   const parsed = addColumnSchema.safeParse(input);
   if (!parsed.success) {
@@ -105,6 +111,8 @@ export async function addExamColumn(input: {
       subject_id: parsed.data.subjectId ?? null,
       title: parsed.data.title,
       points: parsed.data.points,
+      kind: parsed.data.kind ?? "classwork",
+      category: categoryFor(parsed.data.kind ?? "classwork"),
     })
     .select("id")
     .single();

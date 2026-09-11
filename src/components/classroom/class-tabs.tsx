@@ -60,10 +60,10 @@ export function ClassTabs({
               aria-selected={active}
               onClick={() => setTab(id)}
               className={cn(
-                "relative shrink-0 px-4 py-3 text-sm font-semibold transition-colors",
+                "relative shrink-0 rounded-t-lg px-4 py-3 text-sm font-semibold transition-colors",
                 active
                   ? "text-brand-700 dark:text-brand-300"
-                  : "text-foreground/55 hover:text-foreground",
+                  : "text-foreground/55 hover:bg-surface-muted hover:text-foreground",
               )}
             >
               {label}
@@ -117,7 +117,6 @@ export function ClassTabs({
                     <li key={student.id}>
                       <PersonRow
                         name={`${student.lastName} ${student.firstName}`.trim()}
-                        subtitle={student.grade}
                       />
                     </li>
                   ))}

@@ -35,9 +35,9 @@ export default async function StudentPage({
 
       <Link
         href="/estudiantes"
-        className="inline-flex w-fit items-center gap-1 text-sm font-medium text-brand-700 transition-colors hover:text-brand-800 hover:underline"
+        className="-ml-2.5 inline-flex w-fit items-center gap-2 rounded-lg px-2.5 py-1.5 text-base font-semibold text-foreground/70 transition-all hover:bg-surface-muted hover:text-foreground active:scale-[0.98]"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-5 w-5" />
         {t.estudiantes.back}
       </Link>
     </div>

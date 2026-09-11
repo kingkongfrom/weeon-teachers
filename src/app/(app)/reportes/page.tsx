@@ -50,7 +50,7 @@ async function ReportCard({ report }: { report: SubmittedReport }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-background px-5 py-3">
         <Link
           href={`/grupos/${report.classId}`}
-          className="text-sm font-semibold text-foreground transition-colors hover:text-brand-700 hover:underline dark:hover:text-brand-300"
+          className="-mx-1 rounded px-1 text-sm font-semibold text-foreground transition-colors hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950/40 dark:hover:text-brand-300"
         >
           {report.groupName}
         </Link>

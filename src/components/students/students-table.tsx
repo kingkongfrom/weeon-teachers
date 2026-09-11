@@ -176,7 +176,7 @@ export function StudentsTable({
                         <td rowSpan={rowSpan} className="px-4 py-3 align-top">
                           <Link
                             href={`/estudiantes/${student.id}`}
-                            className="font-medium text-foreground transition-colors hover:text-brand-700 hover:underline dark:hover:text-brand-300"
+                            className="-mx-1 rounded px-1 font-medium text-foreground transition-colors hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950/40 dark:hover:text-brand-300"
                           >
                             {fullName(student)}
                           </Link>

@@ -152,7 +152,7 @@ export function SettingsDrawer({ user }: { user: AppUser | null }) {
                           type="button"
                           onClick={() => setLangOpen((value) => !value)}
                           aria-expanded={langOpen}
-                          className="flex w-full items-center justify-between gap-4 rounded-lg px-1 py-3 text-sm font-medium text-foreground transition-colors hover:text-brand-700 dark:hover:text-brand-300"
+                          className="flex w-full items-center justify-between gap-4 rounded-lg px-3 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted"
                         >
                           <span className="flex items-center gap-3">
                             <Globe className="h-5 w-5 text-foreground/70" />

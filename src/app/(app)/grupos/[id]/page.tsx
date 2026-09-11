@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { GradebookPanel } from "@/components/grades/gradebook-panel";
+import { GradebookWorkspace } from "@/components/grades/gradebook-workspace";
 import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassExams } from "@/lib/dashboard/exams";
@@ -45,8 +45,9 @@ export default async function GrupoDetailPage({
     <div className="flex flex-col gap-5">
       <BackLink href="/grupos" label={t.grupos.back} />
 
-      <GradebookPanel
+      <GradebookWorkspace
         classId={id}
+        groupName={detail.grupo.name}
         students={detail.students}
         classContext={
           currentClass ?? {
@@ -58,7 +59,6 @@ export default async function GrupoDetailPage({
             hasLegacyExams: false,
           }
         }
-        allClasses={ctx.classes.map((c) => ({ id: c.id, name: c.name }))}
         initialSubjectId={selectedSubject}
         initialExams={exams}
       />

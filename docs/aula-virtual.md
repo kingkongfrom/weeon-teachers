@@ -292,6 +292,55 @@ every field (instructions + question prompts).
 - Scope: **teacher authoring only**, spelling/grammar only. No AI rewriting and
   no student data (that would raise minors'/Ley 8968 concerns — see P6 notes).
 
+## Grades & evaluation (P5b/P5c + the new gradebook)
+
+The rule: **an assessment is a grade column.** Evaluating once writes the grade —
+no second manual entry (the "Classwork = Gradebook" promise, made real).
+
+- **Link, don't duplicate.** `assignments.assessment_id` connects the classwork
+  item to its column. Publishing an assessment creates/updates that column.
+- **Submissions attach to the column** via the existing `submissions.assignment_id`.
+- **The number lives in `grades`** (`mark`, `max_marks`). `submissions` carries the
+  workflow (`state`, returned feedback). One source for the number.
+- **Grading writes `grades`** atomically (RPC), so the gradebook and `/reportes`
+  update with no retyping. Objective questions auto-score from the answer key;
+  open answers are manual; the total becomes the column's mark.
+- **Student turn-in** is mobile (P5b); the **grading queue** is here (P5c).
+
+### The new Grades interface (replaces the old grid)
+
+Two surfaces, one flow:
+
+1. **"Por evaluar" queue** — every submission across the teacher's groups, with a
+   pending count, filtered by group/assessment. Each row opens the grader.
+2. **Grader** — the student's answers in view, objective auto-scored, open answers
+   scored inline, feedback field, then **Guardar y devolver** → writes `grades`.
+   Bulk **Publicar calificaciones** for many at once.
+3. **Gradebook matrix** — the overview/adjust surface: students × columns with
+   sticky header + student column, inline editing with keyboard navigation
+   (Enter/Tab/arrows), live per-student average and per-column average, a
+   **FINAL** column, category grouping (Trabajo de clase / Evaluaciones), and CSV
+   export.
+
+**Why it beats the WOOT IT grid** (the reference screenshot): modern branded UI
+instead of an Excel clone; columns **auto-created from the assessments** the
+teacher already authored; the same columns are editable directly (no Excel
+round-trip); attendance/reading-time columns are dropped (mobile owns daily
+attendance); and grading happens in the context of the student's actual answers.
+
+### Schema additions (additive, `weeon-tenants`)
+
+| Change | Why |
+| --- | --- |
+| `assignments.assessment_id` (nullable) | Link the assessment to its grade column. |
+| `assignments.category` (`classwork` \| `evaluation`) | Group columns for the matrix. |
+| `submissions.state`, `returned_at` | Turn-in workflow (P5c). |
+| `submission_answers` | Per-question answers + auto-score + feedback. |
+
+Everything else (`grades`, `assignments.points`, `submissions`) already exists.
+Weighted category percentages and an `FINAL` policy beyond the column average are
+a follow-up (kept simple first: FINAL = mean of column percentages).
+
 ## Teacher flows (target)
 
 1. **Open a class** — grid card → class page. Groups and students already come

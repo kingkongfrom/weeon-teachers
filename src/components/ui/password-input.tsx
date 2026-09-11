@@ -39,7 +39,7 @@ export function PasswordInput({
         aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
         aria-pressed={show}
         tabIndex={-1}
-        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-white/50 transition-colors hover:text-white"
+        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
       >
         {show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
       </button>

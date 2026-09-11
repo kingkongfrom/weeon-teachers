@@ -195,9 +195,9 @@ export function AssessmentEditor({ initial }: { initial: Assessment }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={`/aula-virtual/${initial.classId}`}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 transition-colors hover:text-foreground"
+          className="-ml-2.5 inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-base font-semibold text-foreground/70 transition-all hover:bg-surface-muted hover:text-foreground active:scale-[0.98]"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-5 w-5" />
           {a.back}
         </Link>
 
@@ -404,7 +404,7 @@ export function AssessmentEditor({ initial }: { initial: Assessment }) {
                         type="button"
                         onClick={() => setPreviewOpen(false)}
                         aria-label={a.close}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-foreground/70 transition-colors hover:text-foreground dark:bg-surface"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-foreground/70 transition-colors hover:bg-white hover:text-foreground dark:bg-surface dark:hover:bg-surface-muted"
                       >
                         <X className="h-5 w-5" />
                       </button>

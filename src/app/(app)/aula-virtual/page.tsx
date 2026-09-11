@@ -41,7 +41,7 @@ export default async function AulaVirtualPage() {
           <button
             type="button"
             title={t.panel.upcoming}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-300"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-brand-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-[0.98] dark:text-brand-300 dark:hover:bg-brand-950/40"
           >
             <Plus className="h-4 w-4" />
             {t.aulaVirtual.addClass}

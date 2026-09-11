@@ -184,7 +184,7 @@ export function DatePicker({
                     onChange(null);
                     setOpen(false);
                   }}
-                  className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground/50 transition-colors hover:text-error"
+                  className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground/50 transition-colors hover:bg-error/10 hover:text-error"
                 >
                   {clearLabel ?? d.clear}
                 </button>

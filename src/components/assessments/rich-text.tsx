@@ -332,7 +332,7 @@ function GrammarPanel({
               <button
                 type="button"
                 onClick={() => onIgnore(issue)}
-                className="rounded-md px-2 py-0.5 text-xs font-semibold text-foreground/45 transition-colors hover:text-foreground"
+                className="rounded-md px-2 py-0.5 text-xs font-semibold text-foreground/45 transition-colors hover:bg-surface-muted hover:text-foreground"
               >
                 {t.editor.ignore}
               </button>

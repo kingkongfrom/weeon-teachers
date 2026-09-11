@@ -13,8 +13,9 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     "bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-500",
   secondary:
-    "border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50 focus-visible:ring-zinc-400",
-  ghost: "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-zinc-400",
+    "border border-border bg-surface text-foreground hover:bg-surface-muted focus-visible:ring-ring",
+  ghost:
+    "text-foreground/70 hover:bg-surface-muted hover:text-foreground focus-visible:ring-ring",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -34,7 +35,7 @@ export function Button({
     <button
       type={type}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
         variantStyles[variant],
         sizeStyles[size],
         className,
