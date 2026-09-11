@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
 import { SchoolCycleBadge } from "@/components/grupos/school-cycle-badge";
 import { SubjectChips } from "@/components/grupos/subject-chips";
@@ -10,12 +11,11 @@ export default async function GruposPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">Mis grupos</h1>
-        <p className="text-sm font-medium text-foreground/55">
-          Solo se muestran los grupos y materias asignados en el horario.
-        </p>
-      </header>
+      <PageHeader
+        title="Mis grupos"
+        description="Solo se muestran los grupos y materias asignados en el horario."
+        backHref="/inicio"
+      />
 
       {grupos.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">

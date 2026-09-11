@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { GradebookPanel } from "@/components/grades/gradebook-panel";
+import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassExams } from "@/lib/dashboard/exams";
 import { loadGradebookContext } from "@/lib/dashboard/gradebook";
@@ -42,13 +41,7 @@ export default async function GrupoDetailPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <Link
-        href="/grupos"
-        className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-foreground/55 transition-colors hover:text-brand-700 hover:underline dark:hover:text-brand-300"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Todos los grupos
-      </Link>
+      <BackLink href="/grupos" label="Todos los grupos" />
 
       <GradebookPanel
         classId={id}

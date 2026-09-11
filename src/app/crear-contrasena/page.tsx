@@ -8,7 +8,7 @@ export default async function CreatePasswordPage() {
     redirect("/");
   }
   if (session.accountStatus !== "pending_first_login") {
-    redirect("/grupos");
+    redirect("/inicio");
   }
 
   return <CreatePasswordForm />;

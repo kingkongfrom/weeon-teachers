@@ -98,7 +98,7 @@ export async function completePasswordResetTeacher(
     redirect("/?reset=done");
   }
 
-  redirect("/grupos");
+  redirect("/inicio");
 }
 
 async function currentOrigin(): Promise<string | null> {

@@ -22,10 +22,11 @@ and `../docs/`.*
 
 Phase 1 is wired: username or email login, first password (same Auth user as
 mobile), lazy Auth provision, and grupos isolated by RLS (`teaches_class`).
-Phase 2 is **partial**: per-materia gradebook on `/grupos/[id]` (add
-evaluations, edit grades, summary strip), submit report scoped to the active
-subject, and `/reportes` to list submitted snapshots. Not built: full reports
-composer or parity with mobile daily classroom.
+Post-login lands on the **`/inicio` landing** (card hub), from which every
+section is opened. Phase 2 is **partial**: per-materia gradebook on
+`/grupos/[id]` (add evaluations, edit grades, summary strip), submit report
+scoped to the active subject, and `/reportes` to list submitted snapshots.
+Not built: full reports composer or parity with mobile daily classroom.
 
 ## The five repos
 
@@ -67,7 +68,15 @@ composer or parity with mobile daily classroom.
 - Next.js **16.3.4**, React **19**, Tailwind **v4**, `motion`, `lucide-react`,
   `@supabase/ssr`, Zod.
 - App Router under `src/app/`. Routes: `/` (login), `/crear-contrasena`,
-  `/grupos`, `/grupos/[id]` (gradebook), `/reportes`.
+  `/inicio` (landing / hub with cards), `/aula-virtual` (virtual classroom
+  section), `/aula-virtual/[classId]` (class workspace), `/grupos`,
+  `/grupos/[id]` (gradebook), `/horarios`, `/estudiantes`, `/reportes`.
+  **Navigation is a landing + cards, not a dashboard/sidebar.** `AppShell`
+  renders a single top bar with only the brand lockup pinned upper-left (links
+  back to `/inicio`) and the account controls; the per-screen back link lives
+  with the page heading via `PageHeader` / `BackLink`
+  (`components/layout/page-header.tsx`), so the app navigates like a mobile app.
+  There is no sidebar anywhere.
 - Auth: `src/lib/auth/`, `src/lib/supabase/`, `proxy.ts`.
 - Session gate: cookie client for reads; service-role only to resolve
   username / email and create/link Auth.

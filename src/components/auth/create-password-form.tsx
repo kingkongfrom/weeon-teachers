@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { AmbientPage } from "@/components/brand/ambient-page";
@@ -9,7 +8,6 @@ import { PASSWORD_REQUIREMENTS } from "@/lib/auth/password";
 import { setTeacherPassword } from "@/lib/auth/actions";
 
 export function CreatePasswordForm() {
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);

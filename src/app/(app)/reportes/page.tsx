@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { loadMyReports, type SubmittedReport } from "@/lib/dashboard/reports";
 import { schoolPeriodLabel } from "@/lib/dashboard/school-period";
 
@@ -8,14 +9,15 @@ export default async function ReportesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">Reportes</h1>
-        <p className="text-sm font-medium text-foreground/55">
-          {reports.length === 0
+      <PageHeader
+        title="Reportes"
+        description={
+          reports.length === 0
             ? "Los reportes que suba aparecerán aquí."
-            : "Reportes de calificaciones subidos."}
-        </p>
-      </header>
+            : "Reportes de calificaciones subidos."
+        }
+        backHref="/inicio"
+      />
 
       {reports.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-16 text-center">

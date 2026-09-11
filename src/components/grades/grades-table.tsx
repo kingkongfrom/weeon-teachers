@@ -192,6 +192,9 @@ export function GradesTable({
   // lets the pointer travel from the header up onto the button without hiding.
   const [hoverColumn, setHoverColumn] = useState<string | null>(null);
   const [hoverColumnRemoving, setHoverColumnRemoving] = useState(false);
+  // Two-step delete: the floating button asks for confirmation before the
+  // column (and its grades) are hard-deleted.
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Snapshot of the last removed column so the teacher can undo the delete.
   // `index` restores the column to its original position in the grid.
@@ -207,9 +210,13 @@ export function GradesTable({
 
   // Parent loads exams asynchronously when the teacher switches materia; the
   // table keeps the same React key for that subject, so sync props into state.
-  useEffect(() => {
+  // Adjust during render (React's recommended "reset state on prop change"
+  // pattern) instead of an effect, avoiding a cascading second render.
+  const [syncedExams, setSyncedExams] = useState(initialExams);
+  if (initialExams !== syncedExams) {
+    setSyncedExams(initialExams);
     setExams(initialExams);
-  }, [initialExams]);
+  }
 
   function showDelete(columnId: string) {
     if (hideTimer.current) {
@@ -221,6 +228,7 @@ export function GradesTable({
 
   function hideDelete() {
     if (hideTimer.current) clearTimeout(hideTimer.current);
+    setConfirmRemove(false);
     hideTimer.current = setTimeout(() => setHoverColumn(null), 200);
   }
 
@@ -501,6 +509,7 @@ export function GradesTable({
     const removedIndex = exams.findIndex((column) => column.id === hoverColumn);
     const removedColumn = exams[removedIndex];
     if (!removedColumn) return;
+    setConfirmRemove(false);
     setHoverColumnRemoving(true);
     setActionError(null);
     const result = await removeExamColumn({
@@ -567,23 +576,50 @@ export function GradesTable({
                 insetBlockStart: -25,
               }}
             >
-              <button
-                type="button"
-                onClick={() => void handleRemoveHovered()}
-                disabled={hoverColumnRemoving}
-                aria-label="Eliminar columna"
-                title="Eliminar columna"
-                onMouseEnter={() => showDelete(hoverColumn!)}
-                onMouseLeave={hideDelete}
-                className="flex w-full cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-t-md border border-error/40 bg-error/10 px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-60"
-              >
-                {hoverColumnRemoving ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3 w-3" />
-                )}
-                Eliminar
-              </button>
+              {confirmRemove ? (
+                <div
+                  onMouseEnter={() => showDelete(hoverColumn!)}
+                  onMouseLeave={hideDelete}
+                  className="flex items-center justify-between gap-2 whitespace-nowrap rounded-t-md border border-error/50 bg-error/15 px-2 py-1 text-xs font-medium text-error"
+                >
+                  <span>¿Eliminar la columna y sus notas?</span>
+                  <span className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveHovered()}
+                      disabled={hoverColumnRemoving}
+                      className="rounded bg-error px-1.5 py-0.5 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                    >
+                      Sí, eliminar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRemove(false)}
+                      className="rounded px-1.5 py-0.5 font-semibold text-error/80 transition-colors hover:bg-error/10"
+                    >
+                      Cancelar
+                    </button>
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmRemove(true)}
+                  disabled={hoverColumnRemoving}
+                  aria-label="Eliminar columna"
+                  title="Eliminar columna"
+                  onMouseEnter={() => showDelete(hoverColumn!)}
+                  onMouseLeave={hideDelete}
+                  className="flex w-full cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-t-md border border-error/40 bg-error/10 px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-60"
+                >
+                  {hoverColumnRemoving ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
+                  Eliminar
+                </button>
+              )}
             </div>
           ) : null}
 

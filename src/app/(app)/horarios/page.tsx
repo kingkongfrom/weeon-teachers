@@ -1,5 +1,6 @@
 import { CalendarDays } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   loadTeacherSchedule,
   WEEKDAYS,
@@ -39,12 +40,11 @@ export default async function HorariosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="brand-page-title text-2xl text-foreground sm:text-3xl">Horarios</h1>
-        <p className="text-sm font-medium text-foreground/55">
-          Sus clases de la semana, por grupo.
-        </p>
-      </header>
+      <PageHeader
+        title="Horarios"
+        description="Sus clases de la semana, por grupo."
+        backHref="/inicio"
+      />
 
       {lessons.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-16 text-center">

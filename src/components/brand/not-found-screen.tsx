@@ -68,11 +68,11 @@ export function NotFoundScreen() {
           className="mt-10 flex flex-col items-center gap-3 sm:flex-row"
         >
           <Link
-            href="/grupos"
+            href="/inicio"
             className="brand-gradient group inline-flex h-12 items-center justify-center gap-2 rounded-full px-8 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-95"
           >
             <Home className="h-4 w-4" />
-            Ir a mis grupos
+            Ir al inicio
           </Link>
           <Link
             href="/"

@@ -8,7 +8,7 @@ export default async function LoginPage() {
     redirect("/crear-contrasena");
   }
   if (session) {
-    redirect("/grupos");
+    redirect("/inicio");
   }
 
   return <LoginForm />;

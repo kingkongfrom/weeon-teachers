@@ -7,6 +7,10 @@ import { randomTempPassword } from "@/lib/auth/password";
 const LOOKUP_ERROR = "No encontramos esa cuenta. Revise su usuario o correo.";
 const AMBIGUOUS_ERROR =
   "Ese usuario existe en más de un colegio. Ingrese el correo de la cuenta.";
+const ADMIN_EMAIL_ERROR =
+  "Ese correo pertenece a una cuenta de administración del colegio. Los administradores no pueden ingresar como docentes; use un correo distinto para el docente.";
+const EMAIL_IN_USE_ERROR =
+  "Ese correo ya está registrado en otra cuenta. Use un correo distinto para el docente.";
 
 export type TenantRow = {
   id: string;
@@ -119,6 +123,36 @@ export async function findTeacherRoster(
   return { tenant, roster };
 }
 
+/**
+ * Role of an existing profile that already owns this Auth email within the
+ * tenant, ignoring teacher rows (those are reusable by provisioning). Used to
+ * fail with an explicit message instead of a duplicate-email error.
+ */
+async function findConflictingAccountRole(
+  admin: SupabaseClient,
+  email: string,
+  tenantId: string,
+): Promise<string | null> {
+  const normalized = email.trim().toLowerCase();
+  const [{ data: byEmail }, { data: byAuthEmail }] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("role")
+      .eq("email", normalized)
+      .eq("tenant_id", tenantId),
+    admin
+      .from("profiles")
+      .select("role")
+      .eq("auth_email", normalized)
+      .eq("tenant_id", tenantId),
+  ]);
+
+  const roles = [...(byEmail ?? []), ...(byAuthEmail ?? [])].map((row) =>
+    String(row.role ?? ""),
+  );
+  return roles.find((role) => role && role !== "teacher") ?? null;
+}
+
 async function findReusableTeacherAuth(
   admin: SupabaseClient,
   email: string,
@@ -199,6 +233,14 @@ export async function prepareTeacherLogin(
   }
 
   if (!userId) {
+    const conflictRole = await findConflictingAccountRole(admin, email, tenant.id);
+    if (conflictRole === "admin") {
+      return { error: ADMIN_EMAIL_ERROR };
+    }
+    if (conflictRole) {
+      return { error: EMAIL_IN_USE_ERROR };
+    }
+
     const tempPassword = randomTempPassword();
     const created = await admin.auth.admin.createUser({
       email,
