@@ -68,12 +68,20 @@ Honest snapshot — do not assume the rest exists.
   chips, student count, three disabled quick actions). Data from
   `loadTeacherGrupos()` (`classes` + `enrollments` + `subjects`).
 - **`/aula-virtual/[classId]`** — class banner + `ClassTabs`:
-  - **Novedades** — empty state.
+  - **Novedades** — **stream (P2)**: `StreamPanel` — the teacher posts
+    announcements, sees them newest-first with author + relative time, and
+    deletes their own.
   - **Trabajo de clase** — **assessments (P5a)** + **materials (P1)**:
     - *Tareas y exámenes*: `AssessmentsPanel` → the `AssessmentEditor`
       (`/aula-virtual/[classId]/evaluaciones/[id]`) builds a homework/exam with a
-      TipTap WYSIWYG, question types, preview, and draft/publish.
+      TipTap WYSIWYG, question types, a **Materia** selector, preview, and
+      draft/publish. **Publishing creates/updates its grade column** (linked via
+      `assignments.assessment_id`, typed by the assessment kind), so it shows up
+      in the gradebook with no manual column.
     - *Materiales*: `MaterialsPanel` uploads/lists/downloads/removes documents.
+    - *Temas*: `ClassworkPanel` — topic chips (Temas) create topics and filter
+      assessments + materials; topics are set on the assessment/column and on the
+      material upload.
   - **Personas** — teacher row + enrolled students.
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
 - **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over
@@ -82,14 +90,17 @@ Honest snapshot — do not assume the rest exists.
   `EXAM 1`…), inline keyboard editing + autosave, color-coded cells, per-student
   FINAL and per-column averages, density toggle, CSV export, and undo on delete.
   `assignments.category` groups columns (classwork/evaluation) for weighting.
-- No stream; student fill/submit (P5b) and auto-grading (P5c) not built yet.
+- No stream comments; student fill/submit (P5b) and auto-grading (P5c) not built yet.
 
 > **Deploy note:** P1 needs `20260911130000_class_materials.sql`, P5a needs
-> `20260911150000_assessments.sql`, and the typed gradebook needs
+> `20260911150000_assessments.sql`, the typed gradebook needs
 > `20260911160000_assignments_assessment_link.sql` +
-> `20260911170000_assignments_kind.sql`, applied in `weeon-tenants`, then the
+> `20260911170000_assignments_kind.sql`, the stream needs
+> `20260911190000_class_stream.sql`, and topics need
+> `20260911200000_classwork_topics.sql`, applied in `weeon-tenants`, then the
 > generated Supabase types regenerated. The teacher repo is untyped, so it builds
 > without the type refresh, but the migrations are required at runtime.
+> (`20260911180000_backup_academic_tables.sql` is the tenants backup change.)
 
 ## Target architecture
 
@@ -156,7 +167,7 @@ style — no generic attachments table. Columns: `id`, `tenant_id`, `class_id`,
 member-read / teacher-write RLS, the trial write-gate trigger, and the private
 `class-materials` Storage bucket with path-based policies.
 
-**P2 — assignments (extend the existing `assignments` table):**
+**P3 — assignments (extend the existing `assignments` table):**
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -168,12 +179,12 @@ member-read / teacher-write RLS, the trial write-gate trigger, and the private
 | `created_by` | uuid | author `profiles.id` |
 | `updated_at` | timestamptz | touch on edit |
 
-**Later tables (P2+):**
+**Later tables (P3+):**
 
 | Table | Key columns |
 | --- | --- |
-| `classwork_topics` | `id`, `tenant_id`, `class_id`, `name`, `position` |
-| `class_stream_posts` | `id`, `tenant_id`, `class_id`, `author_profile_id`, `kind` (announcement\|assignment), `body`, `assignment_id?`, `created_at`, `updated_at` |
+| `classwork_topics` *(implemented, P3 — Temas)* | `id`, `tenant_id`, `class_id`, `name`, `position`, `created_at`, `updated_at`; `assessments.topic_id` and `class_materials.topic_id` (nullable, on delete set null) — migration `20260911200000_classwork_topics.sql` |
+| `class_stream_posts` *(implemented, P2 — announcements)* | `id`, `tenant_id`, `class_id`, `author_profile_id`, `kind` (`announcement`), `body`, `created_at`, `updated_at` — migration `20260911190000_class_stream.sql` |
 | `class_stream_comments` | `id`, `tenant_id`, `post_id`, `author_profile_id`, `body`, `created_at` |
 
 Reuse the **existing** `submissions` table for turn-in in P4 — do not create a
@@ -302,6 +313,11 @@ every field (instructions + question prompts).
 The rule: **an assessment is a grade column.** Evaluating once writes the grade —
 no second manual entry (the "Classwork = Gradebook" promise, made real).
 
+**Status:** the authoring→gradebook link is **implemented** — publishing an
+assessment creates/updates its `assignments` column (subject from the editor's
+Materia selector, kind from the assessment type). Student submission (P5b) and the
+grading queue (P5c) are still pending.
+
 - **Link, don't duplicate.** `assignments.assessment_id` connects the classwork
   item to its column. Publishing an assessment creates/updates that column.
 - **Submissions attach to the column** via the existing `submissions.assignment_id`.
@@ -366,7 +382,7 @@ a follow-up (kept simple first: FINAL = mean of column percentages).
 | --- | --- | --- |
 | **P0** *(done)* | Hub grid, class page, tabs, Personas, gradebook link. | — |
 | **P1** *(done)* | **Materials / documents**: upload, list, download, delete per group. | `class_materials`, `class-materials` bucket, `MaterialsPanel` |
-| **P2** | Stream: announcements + comments. | `class_stream_posts`, `class_stream_comments` |
+| **P2** *(partial)* | Stream announcements **done**; comments pending. | `class_stream_posts` ✓ |
 | **P3** | Assignments / homework: topics, authoring, unified with gradebook. | `assignments` columns, `classwork_topics` |
 | **P4** | Submissions + grading flow (turn-in state, return + comment). | existing `submissions` table |
 | **P5a** *(done)* | **Assessment builder**: WYSIWYG homework/exam authoring + preview. | `assessments` |

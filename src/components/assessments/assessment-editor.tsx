@@ -57,7 +57,15 @@ function toDateOnly(iso: string): string {
   return `${year}-${month}-${day}`;
 }
 
-export function AssessmentEditor({ initial }: { initial: Assessment }) {
+export function AssessmentEditor({
+  initial,
+  subjects,
+  topics,
+}: {
+  initial: Assessment;
+  subjects: { id: string; name: string }[];
+  topics: { id: string; name: string }[];
+}) {
   const t = useT();
   const a = t.assessments;
   const router = useRouter();
@@ -65,6 +73,8 @@ export function AssessmentEditor({ initial }: { initial: Assessment }) {
   const [draft, setDraft] = useState<AssessmentDraft>({
     title: initial.title,
     kind: initial.kind,
+    subjectId: initial.subjectId,
+    topicId: initial.topicId,
     dueAt: initial.dueAt,
     instructions: initial.instructions ?? emptyDoc(),
     content: initial.content,
@@ -144,6 +154,8 @@ export function AssessmentEditor({ initial }: { initial: Assessment }) {
       classId: initial.classId,
       title: draft.title,
       kind: draft.kind,
+      subjectId: draft.subjectId,
+      topicId: draft.topicId,
       dueAt: draft.dueAt,
       instructions: draft.instructions,
       content: draft.content,
@@ -271,6 +283,40 @@ export function AssessmentEditor({ initial }: { initial: Assessment }) {
             <option value="homework">{a.homework}</option>
             <option value="exam">{a.exam}</option>
           </select>
+          {subjects.length > 0 ? (
+            <select
+              value={draft.subjectId ?? ""}
+              onChange={(event) =>
+                update({ subjectId: event.target.value || null })
+              }
+              aria-label={a.subject}
+              className="h-9 rounded-lg border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-brand-400"
+            >
+              <option value="">{a.subject}</option>
+              {subjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {topics.length > 0 ? (
+            <select
+              value={draft.topicId ?? ""}
+              onChange={(event) =>
+                update({ topicId: event.target.value || null })
+              }
+              aria-label={t.topics.selectLabel}
+              className="h-9 rounded-lg border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-brand-400"
+            >
+              <option value="">{t.topics.none}</option>
+              {topics.map((topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {topic.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <span
             className={cn(
               "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide",

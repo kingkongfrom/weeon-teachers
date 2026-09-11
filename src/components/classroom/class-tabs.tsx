@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, GraduationCap, Megaphone, Users } from "lucide-react";
+import { ArrowUpRight, GraduationCap, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
-import { MaterialsPanel } from "@/components/classroom/materials-panel";
-import { AssessmentsPanel } from "@/components/assessments/assessments-panel";
+import { ClassworkPanel } from "@/components/classroom/classwork-panel";
+import { StreamPanel } from "@/components/classroom/stream-panel";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
+import type { StreamPost } from "@/lib/dashboard/stream";
+import type { ClassTopic } from "@/lib/dashboard/topics";
 import type { AssessmentSummary } from "@/lib/assessments/model";
 
 type TabId = "novedades" | "trabajo" | "personas" | "calificaciones";
@@ -27,12 +29,16 @@ export function ClassTabs({
   students,
   materials,
   assessments,
+  stream,
+  topics,
 }: {
   classId: string;
   teacherName: string;
   students: TeacherStudent[];
   materials: ClassMaterial[];
   assessments: AssessmentSummary[];
+  stream: StreamPost[];
+  topics: ClassTopic[];
 }) {
   const t = useT();
   const [tab, setTab] = useState<TabId>("novedades");
@@ -80,18 +86,16 @@ export function ClassTabs({
 
       <div className="pt-5">
         {tab === "novedades" ? (
-          <EmptyState
-            icon={<Megaphone className="h-6 w-6" />}
-            title={t.classroom.novedadesEmptyTitle}
-            body={t.classroom.novedadesEmptyBody}
-          />
+          <StreamPanel classId={classId} posts={stream} />
         ) : null}
 
         {tab === "trabajo" ? (
-          <div className="flex flex-col gap-8">
-            <AssessmentsPanel classId={classId} assessments={assessments} />
-            <MaterialsPanel classId={classId} materials={materials} />
-          </div>
+          <ClassworkPanel
+            classId={classId}
+            assessments={assessments}
+            materials={materials}
+            topics={topics}
+          />
         ) : null}
 
         {tab === "personas" ? (
@@ -149,26 +153,6 @@ export function ClassTabs({
           </section>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function EmptyState({
-  icon,
-  title,
-  body,
-}: {
-  icon: ReactNode;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center">
-      <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted text-foreground/50">
-        {icon}
-      </span>
-      <p className="mt-4 text-sm font-semibold text-foreground">{title}</p>
-      <p className="mx-auto mt-1 max-w-sm text-xs font-medium text-foreground/50">{body}</p>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { AssessmentEditor } from "@/components/assessments/assessment-editor";
 import { loadAssessment } from "@/lib/dashboard/assessments";
+import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
+import { loadClassTopics } from "@/lib/dashboard/topics";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +18,21 @@ export default async function AssessmentEditorPage({
 }) {
   const { classId, assessmentId } = await params;
 
-  const assessment = await loadAssessment(assessmentId);
+  const [assessment, detail, topics] = await Promise.all([
+    loadAssessment(assessmentId),
+    loadTeacherGrupo(classId),
+    loadClassTopics(classId),
+  ]);
   if (!assessment || assessment.classId !== classId) notFound();
 
-  return <AssessmentEditor initial={assessment} />;
+  return (
+    <AssessmentEditor
+      initial={assessment}
+      subjects={(detail?.grupo.subjects ?? []).map((subject) => ({
+        id: subject.id,
+        name: subject.name,
+      }))}
+      topics={topics.map((topic) => ({ id: topic.id, name: topic.name }))}
+    />
+  );
 }

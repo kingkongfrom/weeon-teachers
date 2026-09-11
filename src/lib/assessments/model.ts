@@ -54,6 +54,7 @@ export type AssessmentSummary = {
   id: string;
   title: string;
   kind: AssessmentKind;
+  topicId: string | null;
   dueAt: string | null;
   pointsTotal: number;
   published: boolean;
@@ -72,6 +73,8 @@ export type Assessment = AssessmentSummary & {
 export type AssessmentDraft = {
   title: string;
   kind: AssessmentKind;
+  subjectId: string | null;
+  topicId: string | null;
   dueAt: string | null;
   instructions: RichTextDoc | null;
   content: AssessmentContent;

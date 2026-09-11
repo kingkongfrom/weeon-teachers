@@ -5,6 +5,8 @@ import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassMaterials } from "@/lib/dashboard/materials";
 import { loadClassAssessments } from "@/lib/dashboard/assessments";
+import { loadClassStream } from "@/lib/dashboard/stream";
+import { loadClassTopics } from "@/lib/dashboard/topics";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { classBannerClass } from "@/lib/dashboard/class-banner";
@@ -28,10 +30,12 @@ export default async function AulaVirtualClassPage({
   const detail = await loadTeacherGrupo(classId);
   if (!detail) notFound();
 
-  const [session, materials, assessments] = await Promise.all([
+  const [session, materials, assessments, stream, topics] = await Promise.all([
     getTeacherSession(),
     loadClassMaterials(classId),
     loadClassAssessments(classId),
+    loadClassStream(classId),
+    loadClassTopics(classId),
   ]);
   const schoolName = session ? await loadSchoolName(session.tenantId) : null;
   const t = await getT();
@@ -66,6 +70,8 @@ export default async function AulaVirtualClassPage({
         students={students}
         materials={materials}
         assessments={assessments}
+        stream={stream}
+        topics={topics}
       />
     </div>
   );

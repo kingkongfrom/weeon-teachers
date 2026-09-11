@@ -17,6 +17,7 @@ type Row = {
   id: string;
   class_id: string;
   subject_id: string | null;
+  topic_id: string | null;
   title: string;
   kind: string;
   instructions: RichTextDoc | null;
@@ -38,6 +39,7 @@ function toSummary(row: Row): AssessmentSummary {
     id: row.id,
     title: row.title,
     kind: (row.kind === "exam" ? "exam" : "homework") as AssessmentKind,
+    topicId: row.topic_id,
     dueAt: row.due_at,
     pointsTotal: row.points_total ?? computePointsTotal(content),
     published: row.published,
@@ -56,7 +58,7 @@ export const loadClassAssessments = cache(
     const { data, error } = await supabase
       .from("assessments")
       .select(
-        "id, class_id, subject_id, title, kind, instructions, content, due_at, points_total, published, updated_at",
+        "id, class_id, subject_id, topic_id, title, kind, instructions, content, due_at, points_total, published, updated_at",
       )
       .eq("class_id", classId)
       .order("position", { ascending: true })
@@ -75,7 +77,7 @@ export const loadAssessment = cache(async (id: string): Promise<Assessment | nul
   const { data, error } = await supabase
     .from("assessments")
     .select(
-      "id, class_id, subject_id, title, kind, instructions, content, due_at, points_total, published, updated_at",
+      "id, class_id, subject_id, topic_id, title, kind, instructions, content, due_at, points_total, published, updated_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -91,3 +93,4 @@ export const loadAssessment = cache(async (id: string): Promise<Assessment | nul
     content,
   };
 });
+

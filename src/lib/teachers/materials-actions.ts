@@ -39,6 +39,7 @@ export async function uploadMaterial(formData: FormData): Promise<MaterialAction
   const classId = String(formData.get("classId") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const topicId = String(formData.get("topicId") ?? "").trim() || null;
   const file = formData.get("file");
 
   if (!z.string().uuid().safeParse(classId).success) {
@@ -89,6 +90,7 @@ export async function uploadMaterial(formData: FormData): Promise<MaterialAction
     class_id: classId,
     title,
     description: description || null,
+    topic_id: topicId,
     storage_path: path,
     file_name: fileName,
     mime_type: file.type || null,

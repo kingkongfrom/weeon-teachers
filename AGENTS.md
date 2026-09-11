@@ -32,13 +32,17 @@ per-column averages, density toggle and CSV export — plus submit report and
 **Aula virtual** is a Google Classroom-style hub (`/aula-virtual` +
 `/aula-virtual/[classId]`): classes grid, stream/classwork tabs, people, and a
 gradebook link. Built: **P1 documents** (`class_materials` + private
-`class-materials` bucket, `MaterialsPanel`) and **P5a assessment builder**
-(`assessments`; TipTap WYSIWYG homework/exam editor at
-`/aula-virtual/[classId]/evaluaciones/[id]`). The stream is still an empty state;
-student fill/submit (P5b) and auto-grading (P5c) are pending. Read
-`docs/aula-virtual.md` before touching it — P1 needs
-`20260911130000_class_materials.sql` and P5a needs
-`20260911150000_assessments.sql` in `weeon-tenants`. Not built: full reports
+`class-materials` bucket, `MaterialsPanel`), **P2 stream** (`class_stream_posts`,
+`StreamPanel` announcements), **P3 topics** (`classwork_topics`, `ClassworkPanel`
+Temas), and **P5a assessment builder** (`assessments`;
+TipTap WYSIWYG homework/exam editor at
+`/aula-virtual/[classId]/evaluaciones/[id]`; publishing creates its grade column).
+Stream comments, student fill/submit (P5b) and auto-grading (P5c) are pending.
+Read `docs/aula-virtual.md` before touching it — the aula virtual needs
+`20260911130000_class_materials.sql`, `20260911150000_assessments.sql`,
+`20260911160000_assignments_assessment_link.sql`,
+`20260911170000_assignments_kind.sql`, `20260911190000_class_stream.sql`, and
+`20260911200000_classwork_topics.sql` in `weeon-tenants`. Not built: full reports
 composer or parity with mobile daily classroom.
 
 ## The five repos

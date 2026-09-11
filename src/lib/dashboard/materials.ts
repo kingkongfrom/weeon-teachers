@@ -12,6 +12,7 @@ export type ClassMaterial = {
   mimeType: string | null;
   sizeBytes: number | null;
   subjectId: string | null;
+  topicId: string | null;
   createdAt: string;
 };
 
@@ -26,7 +27,7 @@ export const loadClassMaterials = cache(
     const { data, error } = await supabase
       .from("class_materials")
       .select(
-        "id, title, description, file_name, mime_type, size_bytes, subject_id, created_at",
+        "id, title, description, file_name, mime_type, size_bytes, subject_id, topic_id, created_at",
       )
       .eq("class_id", classId)
       .order("position", { ascending: true })
@@ -42,6 +43,7 @@ export const loadClassMaterials = cache(
       mime_type: string | null;
       size_bytes: number | null;
       subject_id: string | null;
+      topic_id: string | null;
       created_at: string;
     }>).map((row) => ({
       id: row.id,
@@ -51,7 +53,9 @@ export const loadClassMaterials = cache(
       mimeType: row.mime_type,
       sizeBytes: row.size_bytes,
       subjectId: row.subject_id,
+      topicId: row.topic_id,
       createdAt: row.created_at,
     }));
   },
 );
+

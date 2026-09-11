@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
+import type { ClassTopic } from "@/lib/dashboard/topics";
 import {
   MATERIAL_ACCEPT,
   MATERIAL_MAX_BYTES,
@@ -74,9 +75,13 @@ function hasFiles(event: DragEvent): boolean {
 export function MaterialsPanel({
   classId,
   materials,
+  topics = [],
+  defaultTopicId = null,
 }: {
   classId: string;
   materials: ClassMaterial[];
+  topics?: ClassTopic[];
+  defaultTopicId?: string | null;
 }) {
   const t = useT();
   const tPanel = t.classroom.materialsPanel;
@@ -259,6 +264,8 @@ export function MaterialsPanel({
                   key="upload-material"
                   classId={classId}
                   initialFile={pendingFile}
+                  topics={topics}
+                  defaultTopicId={defaultTopicId}
                   onClose={() => {
                     setOpen(false);
                     setPendingFile(null);
@@ -289,10 +296,14 @@ export function MaterialsPanel({
 function UploadDialog({
   classId,
   initialFile,
+  topics,
+  defaultTopicId,
   onClose,
 }: {
   classId: string;
   initialFile: File | null;
+  topics: ClassTopic[];
+  defaultTopicId: string | null;
   onClose: () => void;
 }) {
   const t = useT();
@@ -300,6 +311,7 @@ function UploadDialog({
   const [file, setFile] = useState<File | null>(initialFile);
   const [title, setTitle] = useState(initialFile ? initialFile.name.replace(/\.[^.]+$/, "") : "");
   const [description, setDescription] = useState("");
+  const [topic, setTopic] = useState(defaultTopicId ?? "none");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -360,6 +372,7 @@ function UploadDialog({
     formData.set("classId", classId);
     formData.set("title", title.trim());
     formData.set("description", description.trim());
+    if (topic !== "none") formData.set("topicId", topic);
     formData.set("file", file);
 
     setPending(true);
@@ -493,6 +506,30 @@ function UploadDialog({
               className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-950"
             />
           </div>
+
+          {topics.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="material-topic"
+                className="text-xs font-semibold text-foreground/70"
+              >
+                {t.topics.selectLabel}
+              </label>
+              <select
+                id="material-topic"
+                value={topic}
+                onChange={(event) => setTopic(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400"
+              >
+                <option value="none">{t.topics.none}</option>
+                {topics.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <label
