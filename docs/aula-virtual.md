@@ -86,9 +86,11 @@ Honest snapshot — do not assume the rest exists.
       live inside Classroom only** and filter its assessments + materials
       (`?subject=<id>&tab=trabajo`); **Novedades / Personas / Calificaciones stay
       class-wide**. New assessments and materials default to the active subject.
-      Every class banner uses one shared green gradient with fixed dark-green ink
-      (per-subject pastels flipped to white ink in dark mode and lost contrast);
-      the active subject rides in a white badge on that banner.
+      Every class banner uses the shared Panel General green tone (per-subject
+      pastels flipped to white ink in dark mode and lost contrast); the active
+      subject is not repeated on the banner — it is chosen/seen in Trabajo de
+      clase. The tone palette is defined once in `src/lib/dashboard/tones.ts`
+      and shared with the hub and lesson tiles.
   - **Personas** — teacher row + enrolled students.
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
 - **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over

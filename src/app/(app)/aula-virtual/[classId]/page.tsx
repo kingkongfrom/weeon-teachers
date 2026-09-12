@@ -9,7 +9,7 @@ import { loadClassStream } from "@/lib/dashboard/stream";
 import { loadClassTopics } from "@/lib/dashboard/topics";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
-import { CLASS_BANNER, CLASS_BANNER_BADGE } from "@/lib/dashboard/class-banner";
+import { CLASS_BANNER } from "@/lib/dashboard/class-banner";
 import { getT } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 
@@ -52,8 +52,6 @@ export default async function AulaVirtualClassPage({
     subject && subjects.some((option) => option.id === subject)
       ? subject
       : (subjects[0]?.id ?? null);
-  const selectedSubject =
-    subjects.find((option) => option.id === selectedSubjectId) ?? null;
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -69,17 +67,7 @@ export default async function AulaVirtualClassPage({
         <p className="mt-1 text-sm font-medium opacity-70">
           {schoolName ?? t.common.fallbackSchool} · {year}
         </p>
-        {selectedSubject ? (
-          <span
-            className={cn(
-              "mt-3 inline-flex max-w-full items-center rounded-full border px-3 py-1 text-sm font-semibold",
-              CLASS_BANNER_BADGE,
-            )}
-          >
-            <span className="truncate">{selectedSubject.name}</span>
-          </span>
-        ) : null}
-        <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold opacity-75">
+        <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold opacity-75">
           <Users className="h-3.5 w-3.5" />
           {t.grupos.studentsCount(grupo.studentCount)}
         </p>

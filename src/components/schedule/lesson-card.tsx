@@ -16,6 +16,12 @@ import {
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { schoolCycleName } from "@/lib/dashboard/school-cycles";
+import {
+  TONE_CARD,
+  TONE_INK,
+  TONE_INK_FAINT,
+  type Tone,
+} from "@/lib/dashboard/tones";
 import type { TeacherLesson } from "@/lib/dashboard/schedule";
 
 function timeLabel(hhmm: string): string {
@@ -24,21 +30,24 @@ function timeLabel(hhmm: string): string {
   return `${Number(hours)}:${minutes}`;
 }
 
-/** Shared soft tints, matched to the panel cards. Keys mirror the calendar
- * LESSON_COLORS names. */
-const LESSON_TONE: Record<string, string> = {
-  red: "bg-[#f6d4dd] dark:bg-[#432830]",
-  green: "bg-[#c4ecd6] dark:bg-[#1f3d2e]",
-  orange: "bg-[#f7e3ba] dark:bg-[#443a20]",
-  purple: "bg-[#dcd3f7] dark:bg-[#33295a]",
-  cyan: "bg-[#c3ece6] dark:bg-[#1f3d3b]",
-  rose: "bg-[#f6d4dd] dark:bg-[#432830]",
-  amber: "bg-[#f7e3ba] dark:bg-[#443a20]",
-  blue: "bg-[#c9d4fb] dark:bg-[#2a3151]",
+/** Calendar colours collapsed onto the shared Panel General tones (keys mirror
+ * the calendar LESSON_COLORS names). */
+const LESSON_TONE: Record<string, Tone> = {
+  red: "rose",
+  rose: "rose",
+  orange: "yellow",
+  amber: "yellow",
+  lime: "green",
+  green: "green",
+  cyan: "green",
+  teal: "green",
+  blue: "blue",
+  sky: "blue",
+  indigo: "blue",
+  purple: "purple",
+  fuchsia: "purple",
+  pink: "purple",
 };
-
-const CARD_INK = "text-[#1b2433] dark:text-white";
-const CARD_INK_FAINT = "text-[#4c5563] dark:text-white/60";
 
 /** A lesson tile. Clicking opens a preview of the class — it does not jump
  * straight into grades. */
@@ -52,7 +61,7 @@ export function LessonCard({
   const t = useT();
   const locale = useLocale();
   const [open, setOpen] = useState(false);
-  const tone = LESSON_TONE[lesson.color] ?? LESSON_TONE.blue;
+  const tone = TONE_CARD[LESSON_TONE[lesson.color] ?? "blue"];
   const cycle = lesson.grade ? schoolCycleName(lesson.grade, locale) : "";
 
   useEffect(() => {
@@ -73,7 +82,7 @@ export function LessonCard({
         className={cn(
           "flex w-full flex-col gap-1 rounded-xl p-3 text-left ring-1 ring-inset ring-black/5 transition-all hover:brightness-[0.96] active:scale-[0.99] dark:ring-white/10 dark:hover:brightness-110",
           tone,
-          CARD_INK,
+          TONE_INK,
         )}
       >
         <div className="flex items-baseline justify-between gap-2">
@@ -81,13 +90,13 @@ export function LessonCard({
           <span
             className={cn(
               "shrink-0 text-[11px] font-semibold tabular-nums",
-              CARD_INK_FAINT,
+              TONE_INK_FAINT,
             )}
           >
             {timeLabel(lesson.startTime)}
           </span>
         </div>
-        <span className={cn("text-[11px] font-medium", CARD_INK_FAINT)}>
+        <span className={cn("text-[11px] font-medium", TONE_INK_FAINT)}>
           {lesson.groupName}
           {lesson.room ? ` · ${lesson.room}` : ""}
         </span>
@@ -132,7 +141,7 @@ export function LessonCard({
                       </button>
                     </div>
 
-                    <div className={cn("rounded-2xl p-4", tone, CARD_INK)}>
+                    <div className={cn("rounded-2xl p-4", tone, TONE_INK)}>
                       <p className="text-lg font-bold leading-snug">{lesson.title}</p>
                       <p className="mt-0.5 text-sm font-medium opacity-75">
                         {lesson.groupName}

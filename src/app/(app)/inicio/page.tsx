@@ -16,41 +16,23 @@ import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
 import { loadMyReportCount } from "@/lib/dashboard/reports";
 import { getT } from "@/lib/i18n/server";
+import {
+  TONE_CARD,
+  TONE_ICON,
+  TONE_INK,
+  TONE_INK_MUTED,
+  TONE_INK_FAINT,
+  type HubTone,
+} from "@/lib/dashboard/tones";
 
 export const dynamic = "force-dynamic";
-
-type ModuleTone = "blue" | "purple" | "yellow" | "whatsapp";
-
-/** Soft, brand-anchored card tints (low saturation, subtle top-left gradient)
- * so the hub reads as one product rather than a candy set. Dark mode deepens to
- * muted ink wells. */
-const TONE_CARD: Record<ModuleTone, string> = {
-  blue: "bg-gradient-to-br from-[#dfe7ff] to-[#c3cffb] dark:from-[#2a3151] dark:to-[#232a45]",
-  purple: "bg-gradient-to-br from-[#eae0fc] to-[#d6c9f6] dark:from-[#33295a] dark:to-[#2a2149]",
-  yellow: "bg-gradient-to-br from-[#fdf1d3] to-[#f6e0ae] dark:from-[#3d3720] dark:to-[#332e1b]",
-  whatsapp: "bg-gradient-to-br from-[#d3f2e0] to-[#bce7cf] dark:from-[#1f3d2e] dark:to-[#193327]",
-};
-
-/** Icon accent per tone: a deeper, saturated shade of the card colour so the
- * glyph reads on the tint (and a bright tint on the dark-mode surface). */
-const TONE_ICON: Record<ModuleTone, string> = {
-  blue: "text-[#3b5bdb] dark:text-[#9db4ff]",
-  purple: "text-[#6741d9] dark:text-[#c9b8ff]",
-  yellow: "text-[#9a6700] dark:text-[#eacb74]",
-  whatsapp: "text-[#0f7a4b] dark:text-[#6fd6a1]",
-};
-
-/** Solid ink shades (no opacity) so contrast holds on the lightest pastels. */
-const CARD_INK = "text-[#1b2433] dark:text-white";
-const CARD_INK_MUTED = "text-[#39424f] dark:text-white/70";
-const CARD_INK_FAINT = "text-[#4c5563] dark:text-white/60";
 
 type DashboardModule = {
   id: string;
   label: string;
   description: string;
   icon: LucideIcon;
-  tone: ModuleTone;
+  tone: HubTone;
   /** Set when the module maps to a built section; omit to show "Próximamente". */
   href?: string;
   /** Footer metric — every built card carries its own, unique number. */
@@ -107,7 +89,7 @@ export default async function InicioPage() {
       label: t.panel.communication.label,
       description: t.panel.communication.description,
       icon: MessageSquare,
-      tone: "whatsapp",
+      tone: "green",
     },
   ];
 
@@ -131,7 +113,7 @@ export default async function InicioPage() {
               className={cn(
                 "flex h-full flex-col rounded-2xl p-5 ring-1 ring-inset transition-all",
                 TONE_CARD[module.tone],
-                CARD_INK,
+                TONE_INK,
                 upcoming
                   ? "ring-black/5 dark:ring-white/10"
                   : "ring-black/5 group-hover:brightness-[0.96] group-hover:ring-black/15 dark:group-hover:brightness-110 dark:group-hover:ring-white/20",
@@ -152,13 +134,13 @@ export default async function InicioPage() {
                 )}
               </div>
 
-              <p className={cn("mt-3 text-sm font-medium", CARD_INK_MUTED)}>
+              <p className={cn("mt-3 text-sm font-medium", TONE_INK_MUTED)}>
                 {module.description}
               </p>
 
               <div className="mt-auto pt-5">
                 {module.stat ? (
-                  <p className={cn("text-xs font-semibold", CARD_INK_FAINT)}>
+                  <p className={cn("text-xs font-semibold", TONE_INK_FAINT)}>
                     {module.stat}
                   </p>
                 ) : upcoming ? (
