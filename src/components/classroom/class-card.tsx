@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FolderOpen, Megaphone, MoreVertical, Users } from "lucide-react";
+import { FolderOpen, Megaphone, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SubjectChips } from "@/components/grupos/subject-chips";
 import { classBannerClass } from "@/lib/dashboard/class-banner";
@@ -17,10 +17,23 @@ export async function ClassCard({
 }) {
   const t = await getT();
   const banner = classBannerClass(grupo.subjects[0]?.color);
+  const base = `/aula-virtual/${grupo.id}`;
   const actions = [
-    { label: t.classroom.publish, icon: Megaphone },
-    { label: t.classroom.materials, icon: FolderOpen },
-    { label: t.classroom.moreOptions, icon: MoreVertical },
+    {
+      label: t.classroom.tabs.novedades,
+      icon: Megaphone,
+      href: `${base}?tab=novedades`,
+    },
+    {
+      label: t.classroom.tabs.trabajo,
+      icon: FolderOpen,
+      href: `${base}?tab=trabajo`,
+    },
+    {
+      label: t.classroom.tabs.personas,
+      icon: Users,
+      href: `${base}?tab=personas`,
+    },
   ] as const;
 
   return (
@@ -49,16 +62,16 @@ export async function ClassCard({
       </div>
 
       <div className="flex items-center justify-end gap-0.5 border-t border-border px-2 py-1.5">
-        {actions.map(({ label, icon: Icon }) => (
-          <button
+        {actions.map(({ label, icon: Icon, href }) => (
+          <Link
             key={label}
-            type="button"
-            title={t.panel.upcoming}
+            href={href}
+            title={label}
             aria-label={label}
             className="flex h-9 w-9 items-center justify-center rounded-full text-foreground/45 transition-colors hover:bg-surface-muted hover:text-foreground/70"
           >
             <Icon className="h-4 w-4" />
-          </button>
+          </Link>
         ))}
       </div>
     </article>

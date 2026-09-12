@@ -27,6 +27,7 @@ const es = {
   schedule: {
     weekdays: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
     noClasses: "Sin clases",
+    openClass: "Abrir aula virtual",
   },
   panel: {
     title: "Panel general",
@@ -169,6 +170,7 @@ const es = {
     homework: "Tarea",
     exam: "Examen",
     subject: "Materia",
+    kind: "Tipo",
     questionCount: (n: number) => `${n} ${n === 1 ? "pregunta" : "preguntas"}`,
     instructions: "Instrucciones",
     instructionsPlaceholder: "Escriba las instrucciones para los estudiantes…",
@@ -477,6 +479,7 @@ const en: Messages = {
   schedule: {
     weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     noClasses: "No classes",
+    openClass: "Open virtual classroom",
   },
   panel: {
     title: "General dashboard",
@@ -618,6 +621,7 @@ const en: Messages = {
     homework: "Homework",
     exam: "Exam",
     subject: "Subject",
+    kind: "Type",
     questionCount: (n: number) => `${n} ${n === 1 ? "question" : "questions"}`,
     instructions: "Instructions",
     instructionsPlaceholder: "Write instructions for students…",

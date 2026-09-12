@@ -82,6 +82,11 @@ Honest snapshot — do not assume the rest exists.
     - *Temas*: `ClassworkPanel` — topic chips (Temas) create topics and filter
       assessments + materials; topics are set on the assessment/column and on the
       material upload.
+    - *Materias*: when the class has more than one subject, the **subject badges
+      live inside Classroom only** and filter its assessments + materials
+      (`?subject=<id>&tab=trabajo`); **Novedades / Personas / Calificaciones stay
+      class-wide**. New assessments and materials default to the active subject.
+      The banner shows the current subject with a softer, desaturated palette.
   - **Personas** — teacher row + enrolled students.
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
 - **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over

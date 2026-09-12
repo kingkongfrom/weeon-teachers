@@ -56,6 +56,7 @@ export async function createAssessment(input: {
   classId: string;
   kind: "homework" | "exam";
   topicId?: string | null;
+  subjectId?: string | null;
 }): Promise<AssessmentActionResult> {
   const t = await getT();
   const parsed = z
@@ -63,6 +64,7 @@ export async function createAssessment(input: {
       classId: z.string().uuid(),
       kind: z.enum(["homework", "exam"]),
       topicId: z.string().uuid().nullable().optional(),
+      subjectId: z.string().uuid().nullable().optional(),
     })
     .safeParse(input);
   if (!parsed.success) {
@@ -85,6 +87,7 @@ export async function createAssessment(input: {
       class_id: parsed.data.classId,
       kind: parsed.data.kind,
       topic_id: parsed.data.topicId ?? null,
+      subject_id: parsed.data.subjectId ?? null,
       title: t.assessments.untitled,
       instructions: null,
       content: { questions: [] },

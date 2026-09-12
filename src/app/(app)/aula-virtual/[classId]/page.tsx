@@ -16,16 +16,19 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 /**
- * Virtual classroom class page — banner + the four Classroom tabs. Novedades is
- * still an honest empty state; Trabajo de clase hosts shared documents
- * (`class_materials`).
+ * Virtual classroom class page. The subject badges below the banner switch the
+ * active subject; the banner shows the current one and Trabajo de clase is
+ * filtered to it, so documents and work stay separated per subject.
  */
 export default async function AulaVirtualClassPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ classId: string }>;
+  searchParams: Promise<{ tab?: string; subject?: string }>;
 }) {
   const { classId } = await params;
+  const { tab, subject } = await searchParams;
 
   const detail = await loadTeacherGrupo(classId);
   if (!detail) notFound();
@@ -44,6 +47,14 @@ export default async function AulaVirtualClassPage({
   const year = new Date().getFullYear();
   const teacherName = session?.name ?? t.classroom.teacherFallback;
 
+  const subjects = grupo.subjects;
+  const selectedSubjectId =
+    subject && subjects.some((option) => option.id === subject)
+      ? subject
+      : (subjects[0]?.id ?? null);
+  const selectedSubject =
+    subjects.find((option) => option.id === selectedSubjectId) ?? null;
+
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <BackLink href="/aula-virtual" label={t.classroom.back} />
@@ -51,14 +62,19 @@ export default async function AulaVirtualClassPage({
       <section
         className={cn(
           "relative overflow-hidden rounded-2xl bg-gradient-to-br p-6 text-white",
-          classBannerClass(grupo.subjects[0]?.color),
+          classBannerClass(selectedSubject?.color ?? subjects[0]?.color),
         )}
       >
         <h1 className="brand-page-title text-3xl font-bold sm:text-4xl">{grupo.name}</h1>
         <p className="mt-1 text-sm font-medium text-white/80">
           {schoolName ?? t.common.fallbackSchool} · {year}
         </p>
-        <p className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-white/85">
+        {selectedSubject ? (
+          <p className="mt-3 text-lg font-semibold text-white">
+            {selectedSubject.name}
+          </p>
+        ) : null}
+        <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-white/85">
           <Users className="h-3.5 w-3.5" />
           {t.grupos.studentsCount(grupo.studentCount)}
         </p>
@@ -72,6 +88,9 @@ export default async function AulaVirtualClassPage({
         assessments={assessments}
         stream={stream}
         topics={topics}
+        selectedSubjectId={selectedSubjectId}
+        subjects={subjects.map((option) => ({ id: option.id, name: option.name }))}
+        initialTab={tab}
       />
     </div>
   );

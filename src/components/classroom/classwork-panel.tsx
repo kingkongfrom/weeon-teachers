@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
@@ -19,11 +20,15 @@ export function ClassworkPanel({
   assessments,
   materials,
   topics,
+  selectedSubjectId,
+  subjects,
 }: {
   classId: string;
   assessments: AssessmentSummary[];
   materials: ClassMaterial[];
   topics: ClassTopic[];
+  selectedSubjectId: string | null;
+  subjects: { id: string; name: string }[];
 }) {
   const t = useT();
   const [selected, setSelected] = useState<string>("all");
@@ -39,6 +44,19 @@ export function ClassworkPanel({
     if (selected === NONE) return topicId == null;
     return topicId === selected;
   }
+
+  /** Items of the active subject, plus any still unassigned (never lose work). */
+  function subjectMatches(itemSubjectId: string | null): boolean {
+    if (!selectedSubjectId) return true;
+    return itemSubjectId === selectedSubjectId || itemSubjectId == null;
+  }
+
+  const shownAssessments = assessments.filter(
+    (item) => matches(item.topicId) && subjectMatches(item.subjectId),
+  );
+  const shownMaterials = materials.filter(
+    (item) => matches(item.topicId) && subjectMatches(item.subjectId),
+  );
 
   async function submitTopic() {
     const value = name.trim();
@@ -64,6 +82,28 @@ export function ClassworkPanel({
 
   return (
     <div className="flex flex-col gap-6">
+      {subjects.length > 1 ? (
+        <div className="no-scrollbar flex flex-wrap gap-2">
+          {subjects.map((option) => {
+            const active = option.id === selectedSubjectId;
+            return (
+              <Link
+                key={option.id}
+                href={`/aula-virtual/${classId}?subject=${option.id}&tab=trabajo`}
+                className={cn(
+                  "rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                  active
+                    ? "brand-gradient text-white"
+                    : "border border-border text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+                )}
+              >
+                {option.name}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-wide text-foreground/45">
           {t.topics.title}
@@ -128,14 +168,17 @@ export function ClassworkPanel({
       <div className="flex flex-col gap-8">
         <AssessmentsPanel
           classId={classId}
-          assessments={assessments.filter((item) => matches(item.topicId))}
+          assessments={shownAssessments}
           defaultTopicId={defaultTopicId}
+          defaultSubjectId={selectedSubjectId}
         />
         <MaterialsPanel
           classId={classId}
-          materials={materials.filter((item) => matches(item.topicId))}
+          materials={shownMaterials}
           topics={topics}
+          subjects={subjects}
           defaultTopicId={defaultTopicId}
+          defaultSubjectId={selectedSubjectId}
         />
       </div>
     </div>

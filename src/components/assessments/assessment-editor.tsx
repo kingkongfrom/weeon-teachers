@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Dropdown } from "@/components/ui/dropdown";
 import { RichTextEditor } from "@/components/assessments/rich-text";
 import { AssessmentPreview } from "@/components/assessments/assessment-preview";
 import { QuestionEditor } from "@/components/assessments/question-editor";
@@ -273,49 +274,52 @@ export function AssessmentEditor({
 
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5">
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={draft.kind}
-            onChange={(event) =>
-              update({ kind: event.target.value as AssessmentDraft["kind"] })
-            }
-            className="h-9 rounded-lg border border-border bg-background px-2 text-sm font-semibold text-foreground outline-none focus:border-brand-400"
-          >
-            <option value="homework">{a.homework}</option>
-            <option value="exam">{a.exam}</option>
-          </select>
-          {subjects.length > 0 ? (
-            <select
-              value={draft.subjectId ?? ""}
-              onChange={(event) =>
-                update({ subjectId: event.target.value || null })
+          <div className="w-36">
+            <Dropdown
+              value={draft.kind}
+              onChange={(value) =>
+                update({ kind: value as AssessmentDraft["kind"] })
               }
-              aria-label={a.subject}
-              className="h-9 rounded-lg border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-brand-400"
-            >
-              <option value="">{a.subject}</option>
-              {subjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </select>
+              ariaLabel={a.kind}
+              options={[
+                { value: "homework", label: a.homework },
+                { value: "exam", label: a.exam },
+              ]}
+            />
+          </div>
+          {subjects.length > 0 ? (
+            <div className="w-44">
+              <Dropdown
+                value={draft.subjectId ?? ""}
+                onChange={(value) => update({ subjectId: value || null })}
+                ariaLabel={a.subject}
+                placeholder={a.subject}
+                options={[
+                  { value: "", label: a.subject },
+                  ...subjects.map((subject) => ({
+                    value: subject.id,
+                    label: subject.name,
+                  })),
+                ]}
+              />
+            </div>
           ) : null}
           {topics.length > 0 ? (
-            <select
-              value={draft.topicId ?? ""}
-              onChange={(event) =>
-                update({ topicId: event.target.value || null })
-              }
-              aria-label={t.topics.selectLabel}
-              className="h-9 rounded-lg border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-brand-400"
-            >
-              <option value="">{t.topics.none}</option>
-              {topics.map((topic) => (
-                <option key={topic.id} value={topic.id}>
-                  {topic.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-44">
+              <Dropdown
+                value={draft.topicId ?? ""}
+                onChange={(value) => update({ topicId: value || null })}
+                ariaLabel={t.topics.selectLabel}
+                placeholder={t.topics.none}
+                options={[
+                  { value: "", label: t.topics.none },
+                  ...topics.map((topic) => ({
+                    value: topic.id,
+                    label: topic.name,
+                  })),
+                ]}
+              />
+            </div>
           ) : null}
           <span
             className={cn(

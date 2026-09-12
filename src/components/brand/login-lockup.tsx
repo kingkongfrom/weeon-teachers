@@ -55,8 +55,13 @@ export function LoginLockup({
           />
         </svg>
       </span>
-      <span className={`${s.secondary} login-school font-medium leading-none`}>
-        {secondary}
+      <span
+        className={`inline-flex flex-col items-start ${s.secondary} font-medium leading-none`}
+      >
+        <span className="login-school">{secondary}</span>
+        <span className="mt-[0.16em] text-[0.4em] font-semibold uppercase tracking-[0.16em] opacity-75">
+          TEACHERS
+        </span>
       </span>
     </span>
   );

@@ -54,6 +54,7 @@ export type AssessmentSummary = {
   id: string;
   title: string;
   kind: AssessmentKind;
+  subjectId: string | null;
   topicId: string | null;
   dueAt: string | null;
   pointsTotal: number;

@@ -45,7 +45,7 @@ export function Dropdown({ value, onChange, options, ariaLabel, placeholder }: D
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={() => setOpen((was) => !was)}
-        className="inline-flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 min-w-36"
+        className="inline-flex h-9 w-full min-w-36 cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors hover:bg-surface-muted focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25"
       >
         <span className="truncate">
           {current?.label ?? placeholder ?? "Seleccionar"}
@@ -58,7 +58,7 @@ export function Dropdown({ value, onChange, options, ariaLabel, placeholder }: D
       {open ? (
         <ul
           role="listbox"
-          className="absolute z-30 mt-1.5 max-h-64 min-w-full overflow-y-auto rounded-lg border border-border bg-surface-elevated p-1 shadow-lg"
+          className="absolute z-30 mt-2 min-w-full rounded-xl border border-border bg-surface-elevated p-1 shadow-xl"
         >
           {options.map((option) => {
             const selected = option.value === value;
@@ -70,7 +70,7 @@ export function Dropdown({ value, onChange, options, ariaLabel, placeholder }: D
                     onChange(option.value);
                     setOpen(false);
                   }}
-                  className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
+                  className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ${
                     selected
                       ? "bg-brand-50 font-medium text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
                       : "text-foreground hover:bg-surface-muted"

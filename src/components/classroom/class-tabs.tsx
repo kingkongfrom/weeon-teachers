@@ -31,6 +31,9 @@ export function ClassTabs({
   assessments,
   stream,
   topics,
+  selectedSubjectId,
+  subjects,
+  initialTab,
 }: {
   classId: string;
   teacherName: string;
@@ -39,9 +42,15 @@ export function ClassTabs({
   assessments: AssessmentSummary[];
   stream: StreamPost[];
   topics: ClassTopic[];
+  selectedSubjectId: string | null;
+  subjects: { id: string; name: string }[];
+  initialTab?: string;
 }) {
   const t = useT();
-  const [tab, setTab] = useState<TabId>("novedades");
+  const VALID_TABS: TabId[] = ["novedades", "trabajo", "personas", "calificaciones"];
+  const [tab, setTab] = useState<TabId>(
+    VALID_TABS.includes(initialTab as TabId) ? (initialTab as TabId) : "novedades",
+  );
   const tabs: { id: TabId; label: string }[] = [
     { id: "novedades", label: t.classroom.tabs.novedades },
     { id: "trabajo", label: t.classroom.tabs.trabajo },
@@ -95,6 +104,8 @@ export function ClassTabs({
             assessments={assessments}
             materials={materials}
             topics={topics}
+            selectedSubjectId={selectedSubjectId}
+            subjects={subjects}
           />
         ) : null}
 

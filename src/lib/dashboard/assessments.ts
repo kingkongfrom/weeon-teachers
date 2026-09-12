@@ -39,6 +39,7 @@ function toSummary(row: Row): AssessmentSummary {
     id: row.id,
     title: row.title,
     kind: (row.kind === "exam" ? "exam" : "homework") as AssessmentKind,
+    subjectId: row.subject_id,
     topicId: row.topic_id,
     dueAt: row.due_at,
     pointsTotal: row.points_total ?? computePointsTotal(content),

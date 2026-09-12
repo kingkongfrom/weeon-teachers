@@ -17,10 +17,12 @@ export function AssessmentsPanel({
   classId,
   assessments,
   defaultTopicId = null,
+  defaultSubjectId = null,
 }: {
   classId: string;
   assessments: AssessmentSummary[];
   defaultTopicId?: string | null;
+  defaultSubjectId?: string | null;
 }) {
   const t = useT();
   const a = t.assessments;
@@ -33,7 +35,12 @@ export function AssessmentsPanel({
     setMenuOpen(false);
     setCreating(true);
     setError(null);
-    const res = await createAssessment({ classId, kind, topicId: defaultTopicId });
+    const res = await createAssessment({
+      classId,
+      kind,
+      topicId: defaultTopicId,
+      subjectId: defaultSubjectId,
+    });
     setCreating(false);
     if (!res.ok) {
       setError(res.error);

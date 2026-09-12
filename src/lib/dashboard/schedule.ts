@@ -20,6 +20,9 @@ export type TeacherLesson = {
   classId: string;
   groupName: string;
   title: string;
+  grade: string | null;
+  section: string | null;
+  studentCount: number;
   weekday: Weekday;
   startTime: string;
   endTime: string;
@@ -62,6 +65,19 @@ export const loadTeacherSchedule = cache(
 
   if (lessonError) return [];
 
+  // Distinct enrolled students per class, for the lesson preview.
+  const { data: enrollRows } = await supabase
+    .from("enrollments")
+    .select("class_id, student_id")
+    .in("class_id", classIds)
+    .is("dropped_at", null);
+  const studentsByClass = new Map<string, Set<string>>();
+  for (const row of enrollRows ?? []) {
+    const set = studentsByClass.get(row.class_id) ?? new Set<string>();
+    set.add(row.student_id);
+    studentsByClass.set(row.class_id, set);
+  }
+
   const lessons: TeacherLesson[] = [];
   for (const row of lessonRows ?? []) {
     const weekday = normalizeWeekday(row.weekday);
@@ -89,6 +105,9 @@ export const loadTeacherSchedule = cache(
       classId: klassRow.id,
       groupName: displayGroupName(klassRow),
       title: row.title,
+      grade: klassRow.grade,
+      section: klassRow.section,
+      studentCount: studentsByClass.get(klassRow.id)?.size ?? 0,
       weekday,
       startTime: row.start_time,
       endTime: row.end_time,
