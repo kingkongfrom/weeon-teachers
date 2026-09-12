@@ -9,7 +9,7 @@ import { loadClassStream } from "@/lib/dashboard/stream";
 import { loadClassTopics } from "@/lib/dashboard/topics";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
-import { classBannerClass } from "@/lib/dashboard/class-banner";
+import { CLASS_BANNER, CLASS_BANNER_BADGE } from "@/lib/dashboard/class-banner";
 import { getT } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 
@@ -61,20 +61,25 @@ export default async function AulaVirtualClassPage({
 
       <section
         className={cn(
-          "relative overflow-hidden rounded-2xl bg-gradient-to-br p-6 text-white",
-          classBannerClass(selectedSubject?.color ?? subjects[0]?.color),
+          "relative overflow-hidden rounded-2xl bg-gradient-to-br p-6",
+          CLASS_BANNER,
         )}
       >
         <h1 className="brand-page-title text-3xl font-bold sm:text-4xl">{grupo.name}</h1>
-        <p className="mt-1 text-sm font-medium text-white/80">
+        <p className="mt-1 text-sm font-medium opacity-70">
           {schoolName ?? t.common.fallbackSchool} · {year}
         </p>
         {selectedSubject ? (
-          <p className="mt-3 text-lg font-semibold text-white">
-            {selectedSubject.name}
-          </p>
+          <span
+            className={cn(
+              "mt-3 inline-flex max-w-full items-center rounded-full border px-3 py-1 text-sm font-semibold",
+              CLASS_BANNER_BADGE,
+            )}
+          >
+            <span className="truncate">{selectedSubject.name}</span>
+          </span>
         ) : null}
-        <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-white/85">
+        <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold opacity-75">
           <Users className="h-3.5 w-3.5" />
           {t.grupos.studentsCount(grupo.studentCount)}
         </p>

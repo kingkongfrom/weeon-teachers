@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FolderOpen, Megaphone, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SubjectChips } from "@/components/grupos/subject-chips";
-import { classBannerClass } from "@/lib/dashboard/class-banner";
+import { CLASS_BANNER } from "@/lib/dashboard/class-banner";
 import { getT } from "@/lib/i18n/server";
 import type { TeacherGrupo } from "@/lib/dashboard/grupos";
 
@@ -16,7 +16,6 @@ export async function ClassCard({
   year: number;
 }) {
   const t = await getT();
-  const banner = classBannerClass(grupo.subjects[0]?.color);
   const base = `/aula-virtual/${grupo.id}`;
   const actions = [
     {
@@ -39,11 +38,9 @@ export async function ClassCard({
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-brand-200 dark:hover:border-border-strong">
       <Link href={`/aula-virtual/${grupo.id}`} className="block">
-        <div className={cn("relative bg-gradient-to-br px-4 py-3", banner)}>
-          <p className="line-clamp-2 text-lg font-bold leading-snug text-white drop-shadow-sm">
-            {grupo.name}
-          </p>
-          <p className="mt-0.5 text-xs font-semibold text-white/80">{year}</p>
+        <div className={cn("relative bg-gradient-to-br px-4 py-3", CLASS_BANNER)}>
+          <p className="line-clamp-2 text-lg font-bold leading-snug">{grupo.name}</p>
+          <p className="mt-0.5 text-xs font-semibold opacity-70">{year}</p>
         </div>
         <div className="px-4 pt-3">
           <p className="truncate text-xs font-medium text-foreground/50">
