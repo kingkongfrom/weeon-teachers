@@ -7,6 +7,8 @@ import { loadClassMaterials } from "@/lib/dashboard/materials";
 import { loadClassAssessments } from "@/lib/dashboard/assessments";
 import { loadClassStream } from "@/lib/dashboard/stream";
 import { loadClassTopics } from "@/lib/dashboard/topics";
+import { loadClassAttendance } from "@/lib/dashboard/attendance";
+import { normalizeAttendanceDate } from "@/lib/attendance/model";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { CLASS_BANNER } from "@/lib/dashboard/class-banner";
@@ -25,21 +27,27 @@ export default async function AulaVirtualClassPage({
   searchParams,
 }: {
   params: Promise<{ classId: string }>;
-  searchParams: Promise<{ tab?: string; subject?: string }>;
+  searchParams: Promise<{ tab?: string; subject?: string; date?: string; lesson?: string }>;
 }) {
   const { classId } = await params;
-  const { tab, subject } = await searchParams;
+  const { tab, subject, date, lesson } = await searchParams;
 
   const detail = await loadTeacherGrupo(classId);
   if (!detail) notFound();
 
-  const [session, materials, assessments, stream, topics] = await Promise.all([
-    getTeacherSession(),
-    loadClassMaterials(classId),
-    loadClassAssessments(classId),
-    loadClassStream(classId),
-    loadClassTopics(classId),
-  ]);
+  const attendanceDate = normalizeAttendanceDate(date);
+  const attendanceLessonId =
+    lesson && /^[0-9a-fA-F-]{36}$/.test(lesson) ? lesson : null;
+
+  const [session, materials, assessments, stream, topics, attendanceMarks] =
+    await Promise.all([
+      getTeacherSession(),
+      loadClassMaterials(classId),
+      loadClassAssessments(classId),
+      loadClassStream(classId),
+      loadClassTopics(classId),
+      loadClassAttendance(classId, attendanceDate),
+    ]);
   const schoolName = session ? await loadSchoolName(session.tenantId) : null;
   const t = await getT();
 
@@ -84,6 +92,11 @@ export default async function AulaVirtualClassPage({
         selectedSubjectId={selectedSubjectId}
         subjects={subjects.map((option) => ({ id: option.id, name: option.name }))}
         initialTab={tab}
+        attendanceDate={attendanceDate}
+        attendanceLessonId={attendanceLessonId}
+        attendanceMarks={Object.fromEntries(
+          Object.entries(attendanceMarks).map(([studentId, mark]) => [studentId, mark.status]),
+        )}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -29,6 +30,20 @@ import {
 import type { AssignmentKind, ExamColumn } from "@/lib/dashboard/exams";
 import type { ClassOption } from "@/lib/dashboard/gradebook";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
+import {
+  ATTENDANCE_CODE,
+  emptyAttendanceCounts,
+  type AttendanceCounts,
+  type AttendanceStatus,
+} from "@/lib/attendance/model";
+
+/** Ausencia types shown in the gradebook summary, most severe first. */
+const ABSENCE_ORDER: AttendanceStatus[] = [
+  "absence_unjustified",
+  "absence_justified",
+  "late_unjustified",
+  "late_justified",
+];
 
 const PASS = 70;
 
@@ -92,6 +107,7 @@ export function GradebookWorkspace({
   classContext,
   initialSubjectId,
   initialExams,
+  attendance,
 }: {
   classId: string;
   groupName: string;
@@ -99,6 +115,7 @@ export function GradebookWorkspace({
   classContext: ClassOption;
   initialSubjectId: string | null;
   initialExams: ExamColumn[];
+  attendance: Record<string, AttendanceCounts>;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
@@ -115,6 +132,11 @@ export function GradebookWorkspace({
 
   const subject = classContext.subjects.find((s) => s.id === subjectId) ?? null;
   const subjectName = subject?.name ?? (classContext.subjects.length <= 1 ? null : w.title);
+
+  // Density drives every cell, not just the grade columns, so the toggle is
+  // visible on a subject that has no columns yet.
+  const rowY = dense ? "py-0.5" : "py-1.5";
+  const headY = dense ? "py-1.5" : "py-2";
 
   const visibleStudents = students.filter((student) =>
     studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
@@ -135,6 +157,12 @@ export function GradebookWorkspace({
       exams.map((column) => columnPct(column, student.id)),
     ),
   );
+
+  const attendanceTotals = visibleStudents.reduce<AttendanceCounts>((totals, student) => {
+    const counts = attendance[student.id] ?? emptyAttendanceCounts();
+    for (const status of ABSENCE_ORDER) totals[status] += counts[status];
+    return totals;
+  }, emptyAttendanceCounts());
 
   async function changeSubject(nextId: string | null) {
     setSubjectId(nextId);
@@ -204,12 +232,21 @@ export function GradebookWorkspace({
   }
 
   function exportCsv() {
-    const header = [t.gradebook.headers.student, ...exams.map((column) => column.title), w.final];
-    const rows = visibleStudents.map((student) => [
-      studentName(student),
-      ...exams.map((column) => column.grades[student.id]?.mark ?? ""),
-      studentAverage(exams, student.id) ?? "",
-    ]);
+    const header = [
+      t.gradebook.headers.student,
+      ...exams.map((column) => column.title),
+      ...ABSENCE_ORDER.map((status) => ATTENDANCE_CODE[status]),
+      w.final,
+    ];
+    const rows = visibleStudents.map((student) => {
+      const counts = attendance[student.id] ?? emptyAttendanceCounts();
+      return [
+        studentName(student),
+        ...exams.map((column) => column.grades[student.id]?.mark ?? ""),
+        ...ABSENCE_ORDER.map((status) => counts[status]),
+        studentAverage(exams, student.id) ?? "",
+      ];
+    });
     const csv = [header, ...rows]
       .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
       .join("\n");
@@ -312,6 +349,18 @@ export function GradebookWorkspace({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-foreground/50">
+        <span className="font-bold uppercase tracking-wide text-foreground/40">
+          {t.attendance.column}
+        </span>
+        {ABSENCE_ORDER.map((status) => (
+          <span key={status} className="inline-flex items-center gap-1.5">
+            <span className="font-bold text-foreground/70">{ATTENDANCE_CODE[status]}</span>
+            {t.attendance.statuses[status]}
+          </span>
+        ))}
+      </div>
+
       {error ? (
         <div className="rounded-xl border border-error/30 bg-error/10 px-4 py-2.5 text-sm font-medium text-error">
           {error}
@@ -338,10 +387,6 @@ export function GradebookWorkspace({
         <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm font-medium text-foreground/50">
           {w.noStudents}
         </p>
-      ) : exams.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm font-medium text-foreground/50">
-          {w.noColumns}
-        </p>
       ) : (
         <div className="relative overflow-auto rounded-2xl border border-border bg-surface">
           {loading ? (
@@ -353,10 +398,10 @@ export function GradebookWorkspace({
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
-                <th className="sticky left-0 top-0 z-40 w-10 border-b border-r border-border bg-surface px-2 py-2 text-center text-xs font-bold text-foreground/40">
+                <th className={cn("sticky left-0 top-0 z-40 w-10 border-b border-r border-border bg-surface px-2 text-center text-xs font-bold text-foreground/40", headY)}>
                   #
                 </th>
-                <th className="sticky left-10 top-0 z-40 min-w-[13rem] border-b border-r border-border bg-surface px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-foreground/50">
+                <th className={cn("sticky left-10 top-0 z-40 min-w-[13rem] border-b border-r border-border bg-surface px-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
                   {t.gradebook.headers.student}
                 </th>
                 {exams.map((column) => (
@@ -372,7 +417,10 @@ export function GradebookWorkspace({
                     />
                   </th>
                 ))}
-                <th className="sticky right-0 top-0 z-40 border-b border-l border-border bg-surface px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+                <th className={cn("sticky right-[5.5rem] top-0 z-40 w-[11rem] border-b border-l border-border bg-surface px-2 text-center text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
+                  {t.attendance.column}
+                </th>
+                <th className={cn("sticky right-0 top-0 z-40 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center text-xs font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300", headY)}>
                   {w.final}
                 </th>
               </tr>
@@ -383,13 +431,17 @@ export function GradebookWorkspace({
                 const final = studentAverage(exams, student.id);
                 return (
                   <tr key={student.id} className="group">
-                    <td className="sticky left-0 z-20 border-b border-r border-border bg-surface px-2 py-1 text-center text-xs font-semibold text-foreground/35">
+                    <td className={cn("sticky left-0 z-20 border-b border-r border-border bg-surface px-2 text-center text-xs font-semibold text-foreground/35", rowY)}>
                       {rowIndex + 1}
                     </td>
-                    <td className="sticky left-10 z-20 border-b border-r border-border bg-surface px-3 py-1">
-                      <span className="block truncate font-medium text-foreground">
+                    <td className={cn("sticky left-10 z-20 border-b border-r border-border bg-surface px-3", rowY)}>
+                      <Link
+                        href={`/estudiantes/${student.id}`}
+                        title={studentName(student)}
+                        className="block truncate font-medium text-foreground transition-colors hover:text-brand-700 dark:hover:text-brand-300"
+                      >
                         {studentName(student)}
-                      </span>
+                      </Link>
                     </td>
                     {exams.map((column, colIndex) => (
                       <td key={column.id} className="border-b border-r border-border p-0.5">
@@ -405,7 +457,10 @@ export function GradebookWorkspace({
                         />
                       </td>
                     ))}
-                    <td className="sticky right-0 z-20 border-b border-l border-border bg-surface px-3 py-1 text-center">
+                    <td className={cn("sticky right-[5.5rem] z-20 border-b border-l border-border bg-surface px-2", rowY)}>
+                      <AttendanceCell counts={attendance[student.id]} />
+                    </td>
+                    <td className={cn("sticky right-0 z-20 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center", rowY)}>
                       <span className={cn("inline-block rounded-md px-2 py-0.5 text-sm font-bold", tintFor(final) || "text-foreground/40")}>
                         {final == null ? "—" : `${final}%`}
                       </span>
@@ -417,8 +472,8 @@ export function GradebookWorkspace({
 
             <tfoot>
               <tr>
-                <td className="sticky bottom-0 left-0 z-40 border-r border-t border-border bg-surface-muted px-2 py-2" />
-                <td className="sticky bottom-0 left-10 z-40 border-r border-t border-border bg-surface-muted px-3 py-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                <td className={cn("sticky bottom-0 left-0 z-40 border-r border-t border-border bg-surface-muted px-2", headY)} />
+                <td className={cn("sticky bottom-0 left-10 z-40 border-r border-t border-border bg-surface-muted px-3 text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
                   {w.columnAverage}
                 </td>
                 {exams.map((column) => {
@@ -434,7 +489,23 @@ export function GradebookWorkspace({
                     </td>
                   );
                 })}
-                <td className="sticky bottom-0 right-0 z-40 border-l border-t border-border bg-surface-muted px-3 py-2 text-center text-xs font-bold text-brand-700 dark:text-brand-300">
+                <td className={cn("sticky bottom-0 right-[5.5rem] z-30 border-l border-t border-border bg-surface-muted px-2", headY)}>
+                  <div className="flex items-center justify-center gap-2 whitespace-nowrap text-[11px] font-bold tabular-nums text-foreground/55">
+                    {ABSENCE_ORDER.map((status) => (
+                      <span
+                        key={status}
+                        title={t.attendance.statuses[status]}
+                        className="inline-flex items-center gap-0.5"
+                      >
+                        <span>{ATTENDANCE_CODE[status]}</span>
+                        <span className={cn("rounded px-1", absenceTint(attendanceTotals[status]))}>
+                          {attendanceTotals[status]}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className={cn("sticky bottom-0 right-0 z-40 w-[5.5rem] border-l border-t border-border bg-surface-muted px-3 text-center text-xs font-bold text-brand-700 dark:text-brand-300", headY)}>
                   {overall == null ? "—" : `${overall}%`}
                 </td>
               </tr>
@@ -558,6 +629,36 @@ function GradeCell({
       {status === "saving" ? (
         <Loader2 className="absolute right-1 top-1.5 h-3 w-3 animate-spin text-foreground/40" />
       ) : null}
+    </div>
+  );
+}
+
+/** Absence counts escalate visually: 1-2 amber, 3+ rose, 0 stays muted. */
+function absenceTint(count: number): string {
+  if (count <= 0) return "text-foreground/70";
+  if (count >= 3) return "bg-rose-500/15 text-rose-700 dark:text-rose-300";
+  return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
+}
+
+/** Read-only attendance cell: the four ausencia counts accumulated across every
+ * recorded date. Numbers only — the rate is not shown because it is cumulative. */
+function AttendanceCell({ counts }: { counts?: AttendanceCounts }) {
+  const t = useT();
+  const resolved = counts ?? emptyAttendanceCounts();
+  return (
+    <div className="flex items-center justify-center gap-2 whitespace-nowrap text-[11px] font-semibold tabular-nums">
+      {ABSENCE_ORDER.map((status) => (
+        <span
+          key={status}
+          title={t.attendance.statuses[status]}
+          className="inline-flex items-center gap-0.5"
+        >
+          <span className="font-bold text-foreground/55">{ATTENDANCE_CODE[status]}</span>
+          <span className={cn("rounded px-1 font-bold", absenceTint(resolved[status]))}>
+            {resolved[status]}
+          </span>
+        </span>
+      ))}
     </div>
   );
 }

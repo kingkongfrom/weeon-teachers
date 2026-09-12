@@ -28,7 +28,11 @@ section is opened. Phase 2 is **partial**: `/grupos/[id]` was rebuilt as a
 (Trabajo / Tarea / Examen / Prueba / Proyecto) with auto labels (`CW 1`,
 `EXAM 1`…), inline keyboard editing + autosave, per-student FINAL and
 per-column averages, density toggle and CSV export — plus submit report and
-`/reportes` to list submitted snapshots.
+`/reportes` to list submitted snapshots. **Asistencia (Libro de clase)** is also
+built here: a dated register over the shared `attendance_records` table
+(P / TJ / TI / AJ / A) reached from a lesson card, with a read-only **Asistencia**
+column in the gradebook. `/estudiantes/[id]` renders a per-student **transcript**
+across every subject the teacher teaches.
 **Aula virtual** is a Google Classroom-style hub (`/aula-virtual` +
 `/aula-virtual/[classId]`): classes grid, stream/classwork tabs, people, and a
 gradebook link. Built: **P1 documents** (`class_materials` + private
@@ -41,8 +45,9 @@ Stream comments, student fill/submit (P5b) and auto-grading (P5c) are pending.
 Read `docs/aula-virtual.md` before touching it — the aula virtual needs
 `20260911130000_class_materials.sql`, `20260911150000_assessments.sql`,
 `20260911160000_assignments_assessment_link.sql`,
-`20260911170000_assignments_kind.sql`, `20260911190000_class_stream.sql`, and
-`20260911200000_classwork_topics.sql` in `weeon-tenants`. Not built: full reports
+`20260911170000_assignments_kind.sql`, `20260911190000_class_stream.sql`,
+`20260911200000_classwork_topics.sql`, and
+`20260912180000_attendance_ausencias.sql` in `weeon-tenants`. Not built: full reports
 composer or parity with mobile daily classroom.
 
 ## The five repos
@@ -70,8 +75,10 @@ composer or parity with mobile daily classroom.
    `class_lessons` → `teachers.profile_id`).
 4. **First password is shared.** Teachers set it here **or** in
    `weeon-mobile-apps`. Same `auth.users` row. Do **not** build first-password
-   UI in `weeon-tenants`. Daily classroom (attendance, live grades, notices)
-   stays on mobile unless product moves a slice here.
+   UI in `weeon-tenants`. Daily classroom (live grades, notices, student/parent
+   consumption) stays on mobile, **except the dated attendance register
+   (Libro de clase)** — an intentional slice now built here (see
+   `docs/aula-virtual.md` § Asistencia).
 5. **Align brand** with admin: Geist, W-mark, gradient `#5e25cc` →
    `#2b59ff`, Spanish school-facing copy.
 6. **Never commit secrets.** `.env*` git-ignored; only `.env.example`.
@@ -87,7 +94,8 @@ composer or parity with mobile daily classroom.
 - App Router under `src/app/`. Routes: `/` (login), `/crear-contrasena`,
   `/inicio` (landing / hub with cards), `/aula-virtual` (virtual classroom
   section), `/aula-virtual/[classId]` (class workspace), `/grupos`,
-  `/grupos/[id]` (gradebook), `/horarios`, `/estudiantes`, `/reportes`.
+  `/grupos/[id]` (gradebook), `/horarios`, `/estudiantes` (roster),
+  `/estudiantes/[id]` (student transcript), `/reportes`.
   **Aula virtual mirrors Google Classroom** (classes grid → Novedades /
   Trabajo de clase / Personas / Calificaciones); the target design, schema, and
   phases live in [`docs/aula-virtual.md`](docs/aula-virtual.md).

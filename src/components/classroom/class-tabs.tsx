@@ -2,18 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, GraduationCap, Users } from "lucide-react";
+import { ArrowUpRight, ChevronRight, GraduationCap, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ClassworkPanel } from "@/components/classroom/classwork-panel";
 import { StreamPanel } from "@/components/classroom/stream-panel";
+import { AttendanceRegister } from "@/components/attendance/attendance-register";
+import type { AttendanceStatus } from "@/lib/attendance/model";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
 import type { StreamPost } from "@/lib/dashboard/stream";
 import type { ClassTopic } from "@/lib/dashboard/topics";
 import type { AssessmentSummary } from "@/lib/assessments/model";
 
-type TabId = "novedades" | "trabajo" | "personas" | "calificaciones";
+type TabId = "novedades" | "trabajo" | "personas" | "asistencia" | "calificaciones";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -34,6 +36,9 @@ export function ClassTabs({
   selectedSubjectId,
   subjects,
   initialTab,
+  attendanceDate,
+  attendanceLessonId,
+  attendanceMarks,
 }: {
   classId: string;
   teacherName: string;
@@ -45,9 +50,18 @@ export function ClassTabs({
   selectedSubjectId: string | null;
   subjects: { id: string; name: string }[];
   initialTab?: string;
+  attendanceDate: string;
+  attendanceLessonId: string | null;
+  attendanceMarks: Record<string, AttendanceStatus>;
 }) {
   const t = useT();
-  const VALID_TABS: TabId[] = ["novedades", "trabajo", "personas", "calificaciones"];
+  const VALID_TABS: TabId[] = [
+    "novedades",
+    "trabajo",
+    "personas",
+    "asistencia",
+    "calificaciones",
+  ];
   const [tab, setTab] = useState<TabId>(
     VALID_TABS.includes(initialTab as TabId) ? (initialTab as TabId) : "novedades",
   );
@@ -55,6 +69,7 @@ export function ClassTabs({
     { id: "novedades", label: t.classroom.tabs.novedades },
     { id: "trabajo", label: t.classroom.tabs.trabajo },
     { id: "personas", label: t.classroom.tabs.personas },
+    { id: "asistencia", label: t.classroom.tabs.asistencia },
     { id: "calificaciones", label: t.classroom.tabs.calificaciones },
   ];
 
@@ -132,6 +147,7 @@ export function ClassTabs({
                     <li key={student.id}>
                       <PersonRow
                         name={`${student.lastName} ${student.firstName}`.trim()}
+                        href={`/estudiantes/${student.id}`}
                       />
                     </li>
                   ))}
@@ -139,6 +155,17 @@ export function ClassTabs({
               )}
             </section>
           </div>
+        ) : null}
+
+        {tab === "asistencia" ? (
+          <AttendanceRegister
+            key={attendanceDate}
+            classId={classId}
+            date={attendanceDate}
+            lessonId={attendanceLessonId}
+            students={students}
+            initialMarks={attendanceMarks}
+          />
         ) : null}
 
         {tab === "calificaciones" ? (
@@ -172,13 +199,20 @@ function PersonRow({
   name,
   subtitle,
   tone = "muted",
+  href,
 }: {
   name: string;
   subtitle?: string | null;
   tone?: "brand" | "muted";
+  href?: string;
 }) {
-  return (
-    <div className="flex items-center gap-3 px-1 py-3">
+  const content = (
+    <div
+      className={cn(
+        "flex items-center gap-3 py-3",
+        href ? "-mx-2 rounded-lg px-2 transition-colors hover:bg-surface-muted" : "px-1",
+      )}
+    >
       <span
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
@@ -195,7 +229,17 @@ function PersonRow({
       </span>
       {tone === "brand" ? (
         <Users className="ml-auto h-4 w-4 text-foreground/30" aria-hidden />
+      ) : href ? (
+        <ChevronRight className="ml-auto h-4 w-4 text-foreground/30" aria-hidden />
       ) : null}
     </div>
+  );
+
+  return href ? (
+    <Link href={href} className="block">
+      {content}
+    </Link>
+  ) : (
+    content
   );
 }

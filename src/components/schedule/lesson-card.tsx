@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowUpRight,
+  CalendarCheck,
   CalendarDays,
   Clock,
   DoorOpen,
@@ -16,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { schoolCycleName } from "@/lib/dashboard/school-cycles";
+import { schoolWeekday } from "@/lib/attendance/model";
 import {
   TONE_CARD,
   TONE_INK,
@@ -63,6 +65,7 @@ export function LessonCard({
   const [open, setOpen] = useState(false);
   const tone = TONE_CARD[LESSON_TONE[lesson.color] ?? "blue"];
   const cycle = lesson.grade ? schoolCycleName(lesson.grade, locale) : "";
+  const isToday = schoolWeekday() === lesson.weekday;
 
   useEffect(() => {
     if (!open) return;
@@ -175,6 +178,16 @@ export function LessonCard({
                     </dl>
 
                     <div className="mt-5 flex flex-col gap-2">
+                      {isToday ? (
+                        <Link
+                          href={`/aula-virtual/${lesson.classId}?tab=asistencia&lesson=${lesson.id}`}
+                          onClick={() => setOpen(false)}
+                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
+                        >
+                          <CalendarCheck className="h-4 w-4" />
+                          {t.attendance.openRegister}
+                        </Link>
+                      ) : null}
                       <Link
                         href={`/aula-virtual/${lesson.classId}`}
                         onClick={() => setOpen(false)}

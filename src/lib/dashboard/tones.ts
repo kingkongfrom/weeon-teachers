@@ -23,13 +23,14 @@ export const TONE_CARD: Record<Tone, string> = {
   rose: "bg-gradient-to-br from-[#fbe0e8] to-[#f5cbd7] dark:from-[#432830] dark:to-[#38222a]",
 };
 
-/** Icon accent per hub tone: a deeper, saturated shade of the card colour so the
+/** Icon accent per tone: a deeper, saturated shade of the card colour so the
  * glyph reads on the tint (and a bright tint on the dark-mode surface). */
-export const TONE_ICON: Record<HubTone, string> = {
+export const TONE_ICON: Record<Tone, string> = {
   blue: "text-[#3b5bdb] dark:text-[#9db4ff]",
   purple: "text-[#6741d9] dark:text-[#c9b8ff]",
   yellow: "text-[#9a6700] dark:text-[#eacb74]",
   green: "text-[#0f7a4b] dark:text-[#6fd6a1]",
+  rose: "text-[#c2255c] dark:text-[#f7a8c4]",
 };
 
 /** Solid ink shades (no opacity) so contrast holds on the lightest pastels. */

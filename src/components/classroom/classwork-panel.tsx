@@ -45,10 +45,11 @@ export function ClassworkPanel({
     return topicId === selected;
   }
 
-  /** Items of the active subject, plus any still unassigned (never lose work). */
+  /** Classwork is per subject: show only the active subject's items. Unassigned
+   * items are not leaked into every subject. */
   function subjectMatches(itemSubjectId: string | null): boolean {
     if (!selectedSubjectId) return true;
-    return itemSubjectId === selectedSubjectId || itemSubjectId == null;
+    return itemSubjectId === selectedSubjectId;
   }
 
   const shownAssessments = assessments.filter(

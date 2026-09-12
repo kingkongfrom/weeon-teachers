@@ -34,13 +34,15 @@ here. Exams/homework, native assessments, and editable PDFs come later; see
 | --- | ------ |
 | Classroom **UI + authoring** (this doc) | `weeon-teachers` |
 | **Schema / RLS / Storage**, additive only | `weeon-tenants` |
-| Daily consumption (attendance, live classroom, student/parent view) | `weeon-mobile-apps` |
+| Attendance **register** (Libro de clase, this doc) | `weeon-teachers` |
+| Daily consumption (live grades, notices, student/parent view) | `weeon-mobile-apps` |
 | School structure (classes, subjects, enrollments, staff) | `weeon-tenants` (admin) |
 
-Product decision: authoring of announcements, classwork, and materials moves to
-**teacher web**, while mobile keeps the daily-consumption surface. This is an
-intentional slice of the "daily classroom stays on mobile" rule in
-`weeon-teachers/AGENTS.md`; update that rule when a phase lands.
+Product decision: authoring of announcements, classwork, materials, **and the
+dated attendance register** moves to **teacher web**, while mobile keeps the
+daily-consumption surface. This is an intentional slice of the "daily classroom
+stays on mobile" rule in `weeon-teachers/AGENTS.md`; update that rule when a
+phase lands.
 
 ## What we mirror from Classroom (verbatim names)
 
@@ -86,12 +88,33 @@ Honest snapshot — do not assume the rest exists.
       live inside Classroom only** and filter its assessments + materials
       (`?subject=<id>&tab=trabajo`); **Novedades / Personas / Calificaciones stay
       class-wide**. New assessments and materials default to the active subject.
+      Work is **strictly per subject**: a subject view lists only its own
+      assessments/materials — unassigned items are not leaked into every subject.
       Every class banner uses the shared Panel General green tone (per-subject
       pastels flipped to white ink in dark mode and lost contrast); the active
       subject is not repeated on the banner — it is chosen/seen in Trabajo de
       clase. The tone palette is defined once in `src/lib/dashboard/tones.ts`
       and shared with the hub and lesson tiles.
   - **Personas** — teacher row + enrolled students.
+  - **Asistencia** — the **dated class register** (`AttendanceRegister`):
+    `attendance_records` (shared table) keyed `(tenant, class, student, date)`.
+    Five MEP states — **P** presente, **TJ** tardía justificada, **TI** tardía
+    injustificada, **AJ** ausencia justificada, **A** ausencia no justificada.
+    The date is the day the class is taught: it **defaults to today in
+    `America/Costa_Rica`** (`src/lib/attendance/model.ts`) and is normally
+    entered from today's lesson — a lesson card for the current weekday links
+    to `?tab=asistencia&lesson=<id>`. Default is Presente (a normal day is zero
+    taps); each exception is one tap and autosaves (debounced batch upsert via
+    `saveAttendance`, `src/lib/teachers/attendance-actions.ts`). Prev/next-day
+    and the date picker exist only for corrections. Writes are RLS-limited to
+    `teaches_class`/admin; reads to class members. Requires
+    `20260912180000_attendance_ausencias.sql` in `weeon-tenants`.
+    The **gradebook** (`/grupos/[id]`) reflects it too: a read-only
+    **Asistencia** column next to FINAL shows the four ausencia counts
+    (`A · AJ · TI · TJ`) accumulated per student across dates, aggregated from
+    `attendance_records` by `loadClassAttendanceCounts`; it is numbers only (no
+    percentage, since it is cumulative), class-wide, so it repeats across
+    subject tabs, and it is exported in the CSV.
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
 - **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over
   `assignments` (columns) + `grades` (marks). Sticky student column, typed
@@ -99,14 +122,35 @@ Honest snapshot — do not assume the rest exists.
   `EXAM 1`…), inline keyboard editing + autosave, color-coded cells, per-student
   FINAL and per-column averages, density toggle, CSV export, and undo on delete.
   `assignments.category` groups columns (classwork/evaluation) for weighting.
+  **Grading math:** each mark reduces to a percentage via
+  `grades.max_marks` → column `assignments.points` → 100; FINAL is the
+  unweighted mean of column percentages (pass ≥ 70) — category weighting is a
+  later phase, kept simple first. Subject tabs come from `class_lessons`;
+  **untagged columns (`subject_id = null`) have no tab** and are not shown here.
+  Student names link to the transcript below.
+- **Individual transcript** — `/estudiantes/[id]`: `StudentGradesView` renders one
+  student across every group the teacher teaches, reached from the gradebook (click
+  a student name) or **Aula virtual → Personas**; the `/estudiantes` roster lists
+  everyone. `loadTeacherStudentReport` (`src/lib/dashboard/student-report.ts`)
+  groups the student's `assignments` by subject, reduces each `grades` mark to a
+  percentage (`max_marks` → column `points` → 100), and averages graded items per
+  subject, per group, and overall (pass ≥ 70). **Columns with no `subject_id`
+  (untagged) are excluded** — they are not a real subject and never render a
+  "No subject" bucket. The hero shows an overall ring + status and the group name
+  with its MEP level (`1B Elementary` / `1B Primaria`, 1–6 vs 7+); a KPI row
+  (promedio, evaluaciones, materias, ausencias) and a group filter follow, then one
+  card per group whose **subject rows start collapsed** (average, status, bar) and
+  expand into the full column breakdown, so a many-subject secondary student stays
+  scannable. Attendance shows the four ausencia counts only (no percentage).
 - No stream comments; student fill/submit (P5b) and auto-grading (P5c) not built yet.
 
 > **Deploy note:** P1 needs `20260911130000_class_materials.sql`, P5a needs
 > `20260911150000_assessments.sql`, the typed gradebook needs
 > `20260911160000_assignments_assessment_link.sql` +
 > `20260911170000_assignments_kind.sql`, the stream needs
-> `20260911190000_class_stream.sql`, and topics need
-> `20260911200000_classwork_topics.sql`, applied in `weeon-tenants`, then the
+> `20260911190000_class_stream.sql`, topics need
+> `20260911200000_classwork_topics.sql`, and the attendance register needs
+> `20260912180000_attendance_ausencias.sql`, applied in `weeon-tenants`, then the
 > generated Supabase types regenerated. The teacher repo is untyped, so it builds
 > without the type refresh, but the migrations are required at runtime.
 > (`20260911180000_backup_academic_tables.sql` is the tenants backup change.)
@@ -124,6 +168,9 @@ Honest snapshot — do not assume the rest exists.
 | `/aula-virtual/[classId]/a/[assignmentId]` | Assignment detail: instructions, attachments, student work + grading. |
 | `/aula-virtual/[classId]/personas` | Teachers + students (+ co-teachers later). |
 | `/aula-virtual/[classId]/calificaciones` | Gradebook (reuses `/grupos/[id]`). |
+| `/grupos/[id]` | Gradebook matrix (columns × students), also opened from the Calificaciones tab. |
+| `/estudiantes` | Roster of students in the teacher's groups. |
+| `/estudiantes/[id]` | Per-student transcript across every subject the teacher teaches. |
 
 Today the tabs are client state inside `ClassTabs`. When Classwork needs deep
 links (assignment URLs, topic filters), promote the tab ids to **route
@@ -355,8 +402,9 @@ Two surfaces, one flow:
 **Why it beats the WOOT IT grid** (the reference screenshot): modern branded UI
 instead of an Excel clone; columns **auto-created from the assessments** the
 teacher already authored; the same columns are editable directly (no Excel
-round-trip); attendance/reading-time columns are dropped (mobile owns daily
-attendance); and grading happens in the context of the student's actual answers.
+round-trip); a read-only cumulative **Asistencia** column next to FINAL (numbers
+only — mobile owns daily capture, teacher web owns corrections); and grading
+happens in the context of the student's actual answers.
 
 ### Schema additions (additive, `weeon-tenants`)
 

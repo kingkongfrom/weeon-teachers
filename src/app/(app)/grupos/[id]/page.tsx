@@ -3,6 +3,7 @@ import { GradebookWorkspace } from "@/components/grades/gradebook-workspace";
 import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassExams } from "@/lib/dashboard/exams";
+import { loadClassAttendanceCounts } from "@/lib/dashboard/attendance";
 import { loadGradebookContext } from "@/lib/dashboard/gradebook";
 import { getT } from "@/lib/i18n/server";
 
@@ -39,6 +40,7 @@ export default async function GrupoDetailPage({
   // Only the selected subject's exams are loaded server-side; switching subjects
   // happens client-side via the panel (no full reload).
   const exams = await loadClassExams(id, selectedSubject);
+  const attendance = await loadClassAttendanceCounts(id);
   const t = await getT();
 
   return (
@@ -61,6 +63,7 @@ export default async function GrupoDetailPage({
         }
         initialSubjectId={selectedSubject}
         initialExams={exams}
+        attendance={attendance}
       />
     </div>
   );
