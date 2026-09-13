@@ -1,21 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Search } from "lucide-react";
+import { Loader2, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dropdown } from "@/components/ui/dropdown";
 import { Switch } from "@/components/ui/switch";
 import { RichTextEditor } from "@/components/assessments/rich-text";
+import { AttachmentDropzone } from "@/components/messages/attachment-dropzone";
+import { RecipientPicker } from "@/components/messages/recipient-picker";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { docToPlainText, emptyDoc, type RichTextDoc } from "@/lib/assessments/model";
-import { createMessageThread } from "@/lib/teachers/message-actions";
+import { createMessageThread, uploadMessageAttachment } from "@/lib/teachers/message-actions";
 import type { MessageContact } from "@/lib/dashboard/messages";
 
 type GroupOption = { id: string; name: string };
 
-/** Compose an email-style message: people or a group, subject, rich body. */
+/** Compose an email-style message: people or a group, subject, rich body, files. */
 export function MessageComposer({
   contacts,
   groups,
@@ -28,34 +30,19 @@ export function MessageComposer({
   const router = useRouter();
 
   const [audience, setAudience] = useState<"individual" | "group">("individual");
-  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [classId, setClassId] = useState(groups[0]?.id ?? "");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState<RichTextDoc>(() => emptyDoc());
+  const [files, setFiles] = useState<File[]>([]);
   const [allowReplies, setAllowReplies] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) return contacts;
-    return contacts.filter(
-      (contact) =>
-        contact.name.toLowerCase().includes(term) || contact.context.toLowerCase().includes(term),
-    );
-  }, [contacts, query]);
-
+  const contactById = new Map(contacts.map((contact) => [contact.profileId, contact]));
   const hasBody = docToPlainText(body).trim().length > 0;
   const canSend = hasBody && (audience === "group" ? classId.length > 0 : selected.length > 0);
-
-  function toggle(profileId: string) {
-    setSelected((current) =>
-      current.includes(profileId)
-        ? current.filter((id) => id !== profileId)
-        : [...current, profileId],
-    );
-  }
 
   async function send() {
     if (!canSend || sending) return;
@@ -69,11 +56,24 @@ export function MessageComposer({
       recipientProfileIds: audience === "group" ? [] : selected,
       allowReplies,
     });
-    setSending(false);
-    if (!res.ok) {
-      setError(res.error);
+    if (!res.ok || !res.threadId) {
+      setSending(false);
+      setError(res.ok ? m.error : res.error);
       return;
     }
+
+    for (const file of files) {
+      const formData = new FormData();
+      formData.set("threadId", res.threadId);
+      formData.set("file", file);
+      const uploaded = await uploadMessageAttachment(formData);
+      if (!uploaded.ok) {
+        setError(uploaded.error);
+        break;
+      }
+    }
+
+    setSending(false);
     router.push(`/comunicacion/${res.threadId}`);
   }
 
@@ -81,7 +81,7 @@ export function MessageComposer({
     "h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25";
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5">
+    <div className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-5">
       <div className="flex flex-wrap items-center gap-2">
         {(
           [
@@ -121,64 +121,35 @@ export function MessageComposer({
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-foreground/60">{m.pickPeople}</span>
-            {selected.length > 0 ? (
-              <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-semibold text-foreground/60">
-                {m.selectedCount(selected.length)}
+          <span className="text-xs font-semibold text-foreground/60">{m.audience}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {selected.map((profileId) => (
+              <span
+                key={profileId}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5"
+              >
+                <span className="max-w-[220px] truncate text-xs font-semibold text-foreground/80">
+                  {contactById.get(profileId)?.name ?? "Destinatario"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelected((current) => current.filter((id) => id !== profileId))}
+                  aria-label={m.remove}
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-error/10 hover:text-error"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </span>
-            ) : null}
+            ))}
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
+            >
+              <UserPlus className="h-4 w-4" />
+              {m.addRecipient}
+            </button>
           </div>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/35" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={m.pickPeople}
-              className={cn(inputClass, "pl-9")}
-            />
-          </div>
-          <ul className="max-h-56 overflow-y-auto rounded-xl border border-border">
-            {filtered.length === 0 ? (
-              <li className="px-3 py-4 text-center text-sm font-medium text-foreground/45">
-                {m.empty}
-              </li>
-            ) : (
-              filtered.map((contact) => {
-                const active = selected.includes(contact.profileId);
-                return (
-                  <li key={contact.profileId}>
-                    <button
-                      type="button"
-                      onClick={() => toggle(contact.profileId)}
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-muted/60"
-                    >
-                      <span
-                        className={cn(
-                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                          active
-                            ? "border-brand-500 bg-brand-500 text-white"
-                            : "border-border text-transparent",
-                        )}
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-foreground">
-                          {contact.name}
-                        </span>
-                        {contact.context ? (
-                          <span className="block truncate text-xs font-medium text-foreground/45">
-                            {contact.context}
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
         </div>
       )}
 
@@ -203,6 +174,11 @@ export function MessageComposer({
         <Switch checked={allowReplies} onChange={setAllowReplies} label={m.allowReplies} />
       </div>
 
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold text-foreground/60">{m.attach}</span>
+        <AttachmentDropzone files={files} onChange={setFiles} disabled={sending} />
+      </div>
+
       {error ? (
         <p className="rounded-lg bg-error/10 px-3 py-2 text-sm font-medium text-error">{error}</p>
       ) : null}
@@ -213,6 +189,14 @@ export function MessageComposer({
           {sending ? m.sending : m.send}
         </Button>
       </div>
+
+      <RecipientPicker
+        open={pickerOpen}
+        contacts={contacts}
+        selected={selected}
+        onConfirm={setSelected}
+        onClose={() => setPickerOpen(false)}
+      />
     </div>
   );
 }

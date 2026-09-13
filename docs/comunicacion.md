@@ -52,13 +52,21 @@ Migration: `20260913160000_messaging.sql`.
 - `lib/teachers/message-actions.ts` — `createMessageThread`, `sendThreadMessage`,
   `markThreadRead` (Zod-validated; the RPC derives tenant/author).
 - `components/messages/message-composer.tsx` — audience toggle (Personas /
-  Grupo), searchable contact multi-select or group dropdown, subject, the shared
-  **`RichTextEditor`** (TipTap, from the assessment builder), allow-replies.
+  Grupo), a modal **recipient picker** (`recipient-picker.tsx`: search, select,
+  confirm) with selected chips, subject, the shared **`RichTextEditor`** (TipTap,
+  from the assessment builder), allow-replies, and the **attachment dropzone**.
+- `components/messages/attachment-dropzone.tsx` — always-available **drag & drop**
+  (plus click-to-browse) file staging, with chips and remove.
 - `components/messages/thread-view.tsx` — history rendered with `RichTextView`,
-  reply composer when replies are allowed; marks the thread read on open.
+  the thread's **attachments** (signed URLs) as chips, and a reply composer with
+  its own dropzone; marks the thread read on open.
+- Attachments: `uploadMessageAttachment(formData)` stores the file under
+  `{tenant}/{thread}/{uuid}-{name}` in the private **`message-attachments`**
+  bucket and records a `message_attachments` row. 20 MB limit. The inbox list
+  shows a paperclip + count per thread.
 
 ## Deferred (follow-ups)
 
-- Attachments, Cc UI (column exists), drafts, trash/folders, star/favorite.
+- Cc UI (column + roles exist), drafts, trash/folders, star/favorite.
 - Realtime + notifications; the parent/student side in `weeon-mobile`.
 - `allow_replies = false` threads: the author can still post; recipients cannot.

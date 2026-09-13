@@ -17,6 +17,7 @@ export type MessageThreadSummary = {
   lastMessageAt: string;
   unread: boolean;
   recipientCount: number;
+  attachmentCount: number;
   mine: boolean;
 };
 
@@ -35,12 +36,21 @@ export type MessageRecipient = {
   readAt: string | null;
 };
 
+export type MessageAttachment = {
+  id: string;
+  name: string;
+  url: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+};
+
 export type MessageThreadDetail = {
   summary: MessageThreadSummary;
   allowReplies: boolean;
   classId: string | null;
   messages: MessageItem[];
   recipients: MessageRecipient[];
+  attachments: MessageAttachment[];
 };
 
 export type MessageContact = {
@@ -114,7 +124,7 @@ export const loadMessageSummaries = cache(
     const ids = rows.map((row) => row.id);
     if (ids.length === 0) return [];
 
-    const [{ data: recipients }, { data: messages }] = await Promise.all([
+    const [{ data: recipients }, { data: messages }, { data: attachments }] = await Promise.all([
       supabase
         .from("thread_recipients")
         .select("thread_id, profile_id, role, read_at, profiles(name)")
@@ -124,6 +134,7 @@ export const loadMessageSummaries = cache(
         .select("thread_id, body, created_at, author_profile_id, profiles(name)")
         .in("thread_id", ids)
         .order("created_at", { ascending: true }),
+      supabase.from("message_attachments").select("thread_id").in("thread_id", ids),
     ]);
 
     const recipientRows = (recipients ?? []) as Array<{
@@ -140,6 +151,11 @@ export const loadMessageSummaries = cache(
       author_profile_id: string | null;
       profiles: NameEmbed;
     }>;
+
+    const attachmentCount = new Map<string, number>();
+    for (const row of (attachments ?? []) as Array<{ thread_id: string }>) {
+      attachmentCount.set(row.thread_id, (attachmentCount.get(row.thread_id) ?? 0) + 1);
+    }
 
     return rows
       .map((row) => {
@@ -167,6 +183,7 @@ export const loadMessageSummaries = cache(
           lastMessageAt: row.last_message_at,
           unread: folder === "inbox" && Boolean(myRecipient && !myRecipient.read_at),
           recipientCount: threadRecipients.length,
+          attachmentCount: attachmentCount.get(row.id) ?? 0,
           mine,
         } satisfies MessageThreadSummary;
       })
@@ -202,7 +219,7 @@ export const loadThreadDetail = cache(
       classes: { name?: string; grade?: string; section?: string } | Array<{ name?: string; grade?: string; section?: string }> | null;
     };
 
-    const [{ data: messages }, { data: recipients }] = await Promise.all([
+    const [{ data: messages }, { data: recipients }, { data: attachmentRows }] = await Promise.all([
       supabase
         .from("messages")
         .select("id, body, created_at, author_profile_id, profiles(name)")
@@ -212,7 +229,31 @@ export const loadThreadDetail = cache(
         .from("thread_recipients")
         .select("profile_id, role, read_at, profiles(name)")
         .eq("thread_id", threadId),
+      supabase
+        .from("message_attachments")
+        .select("id, file_name, storage_path, mime_type, size_bytes")
+        .eq("thread_id", threadId)
+        .order("created_at", { ascending: true }),
     ]);
+
+    const attachments = (attachmentRows ?? []) as Array<{
+      id: string;
+      file_name: string;
+      storage_path: string;
+      mime_type: string | null;
+      size_bytes: number | null;
+    }>;
+    let signedUrls = new Map<string, string>();
+    if (attachments.length > 0) {
+      const { data: signed } = await supabase.storage
+        .from("message-attachments")
+        .createSignedUrls(attachments.map((row) => row.storage_path), 60 * 60);
+      signedUrls = new Map(
+        (signed ?? [])
+          .filter((row) => row.path && row.signedUrl)
+          .map((row) => [row.path as string, row.signedUrl as string]),
+      );
+    }
 
     const messageRows = (messages ?? []) as Array<{
       id: string;
@@ -247,6 +288,7 @@ export const loadThreadDetail = cache(
         lastMessageAt: row.last_message_at,
         unread: false,
         recipientCount: recipientRows.length,
+        attachmentCount: attachments.length,
         mine,
       },
       messages: messageRows.map((message) => ({
@@ -261,6 +303,13 @@ export const loadThreadDetail = cache(
         name: nameOf(recipient.profiles),
         role: recipient.role,
         readAt: recipient.read_at,
+      })),
+      attachments: attachments.map((attachment) => ({
+        id: attachment.id,
+        name: attachment.file_name,
+        url: signedUrls.get(attachment.storage_path) ?? "",
+        mimeType: attachment.mime_type,
+        sizeBytes: attachment.size_bytes,
       })),
     };
   },

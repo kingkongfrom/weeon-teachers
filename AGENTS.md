@@ -64,11 +64,12 @@ and comments need `20260913150000_class_stream_comments.sql` in `weeon-tenants`.
 Not built: full reports composer.
 
 **Comunicación v1 is built** (`/comunicacion`): email-style threads — subject +
-TipTap rich body — to hand-picked parents or a whole group's guardians, with an
-inbox/sent list, thread view and replies. Schema `threads` / `messages` /
-`thread_recipients` + RPCs, migration `20260913160000_messaging.sql`. See
-[`docs/comunicacion.md`](docs/comunicacion.md). Attachments, drafts, folders and
-the parent/student side are follow-ups.
+TipTap rich body + **drag-&-drop attachments** — to hand-picked parents (modal
+picker) or a whole group's guardians, with an inbox/sent list, thread view and
+replies. Schema `threads` / `messages` / `thread_recipients` / `message_attachments`
++ RPCs, migrations `20260913160000_messaging.sql` + `20260913170000_message_attachments.sql`.
+See [`docs/comunicacion.md`](docs/comunicacion.md). Cc, drafts, folders and the
+parent/student side are follow-ups.
 
 ## The five repos
 

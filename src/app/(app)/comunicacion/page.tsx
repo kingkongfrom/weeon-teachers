@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Inbox, PenSquare, Send } from "lucide-react";
+import { Inbox, Paperclip, PenSquare, Send } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { loadMessageSummaries, type MessageFolder } from "@/lib/dashboard/messages";
 import { getT } from "@/lib/i18n/server";
@@ -109,6 +109,12 @@ export default async function MessagesPage({
                         {thread.className ? (
                           <span className="hidden shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-semibold text-foreground/55 sm:inline">
                             {thread.className}
+                          </span>
+                        ) : null}
+                        {thread.attachmentCount > 0 ? (
+                          <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-foreground/45">
+                            <Paperclip className="h-3 w-3" />
+                            {thread.attachmentCount}
                           </span>
                         ) : null}
                         <span className="ml-auto shrink-0 text-xs font-medium text-foreground/40">

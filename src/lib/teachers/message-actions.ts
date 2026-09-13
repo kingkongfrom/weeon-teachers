@@ -101,3 +101,46 @@ export async function markThreadRead(threadId: string): Promise<MessageActionRes
   revalidatePath("/comunicacion");
   return { ok: true };
 }
+
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
+/** Uploads a file to the private bucket and records it against a thread. */
+export async function uploadMessageAttachment(formData: FormData): Promise<MessageActionResult> {
+  const t = await getT();
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: t.messages.error };
+
+  const threadId = String(formData.get("threadId") ?? "");
+  const messageId = formData.get("messageId");
+  const file = formData.get("file");
+  if (!z.string().uuid().safeParse(threadId).success || !(file instanceof File)) {
+    return { ok: false, error: t.messages.error };
+  }
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return { ok: false, error: t.messages.attachmentTooLarge };
+  }
+
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-120) || "archivo";
+  const path = `${session.tenantId}/${threadId}/${crypto.randomUUID()}-${safeName}`;
+  const supabase = await createSessionClient();
+
+  const { error: uploadError } = await supabase.storage
+    .from("message-attachments")
+    .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+  if (uploadError) return { ok: false, error: t.messages.error };
+
+  const { error } = await supabase.from("message_attachments").insert({
+    thread_id: threadId,
+    message_id: typeof messageId === "string" && messageId ? messageId : null,
+    uploader_profile_id: session.userId,
+    file_name: file.name,
+    storage_path: path,
+    mime_type: file.type || null,
+    size_bytes: file.size,
+  });
+  if (error) return { ok: false, error: t.messages.error };
+
+  revalidatePath(`/comunicacion/${threadId}`);
+  revalidatePath("/comunicacion");
+  return { ok: true, threadId };
+}

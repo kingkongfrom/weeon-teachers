@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Paperclip, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RichTextEditor, RichTextView } from "@/components/assessments/rich-text";
+import { AttachmentDropzone } from "@/components/messages/attachment-dropzone";
 import { useT } from "@/lib/i18n/client";
 import { docToPlainText, emptyDoc, type RichTextDoc } from "@/lib/assessments/model";
-import { markThreadRead, sendThreadMessage } from "@/lib/teachers/message-actions";
+import {
+  markThreadRead,
+  sendThreadMessage,
+  uploadMessageAttachment,
+} from "@/lib/teachers/message-actions";
 import type { MessageThreadDetail } from "@/lib/dashboard/messages";
 
 function relativeTime(iso: string): string {
@@ -27,6 +32,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
   const m = t.messages;
   const router = useRouter();
   const [reply, setReply] = useState<RichTextDoc>(() => emptyDoc());
+  const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,12 +45,24 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
     setSending(true);
     setError(null);
     const res = await sendThreadMessage(detail.summary.id, reply);
-    setSending(false);
     if (!res.ok) {
+      setSending(false);
       setError(res.error);
       return;
     }
+    for (const file of files) {
+      const formData = new FormData();
+      formData.set("threadId", detail.summary.id);
+      formData.set("file", file);
+      const uploaded = await uploadMessageAttachment(formData);
+      if (!uploaded.ok) {
+        setError(uploaded.error);
+        break;
+      }
+    }
+    setSending(false);
     setReply(emptyDoc());
+    setFiles([]);
     router.refresh();
   }
 
@@ -71,6 +89,23 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
         </p>
       </section>
 
+      {detail.attachments.length > 0 ? (
+        <section className="flex flex-wrap gap-2">
+          {detail.attachments.map((attachment) => (
+            <a
+              key={attachment.id}
+              href={attachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground/80 transition-colors hover:bg-surface-muted"
+            >
+              <Paperclip className="h-3.5 w-3.5 shrink-0 text-foreground/45" />
+              <span className="truncate">{attachment.name}</span>
+            </a>
+          ))}
+        </section>
+      ) : null}
+
       <ul className="flex flex-col gap-3">
         {detail.messages.map((message) => (
           <li
@@ -93,6 +128,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
       {detail.allowReplies ? (
         <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
           <RichTextEditor value={reply} onChange={setReply} placeholder={m.replyPlaceholder} />
+          <AttachmentDropzone files={files} onChange={setFiles} disabled={sending} />
           {error ? (
             <p className="rounded-lg bg-error/10 px-3 py-2 text-sm font-medium text-error">{error}</p>
           ) : null}
