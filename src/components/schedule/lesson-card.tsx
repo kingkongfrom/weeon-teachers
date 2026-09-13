@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowUpRight,
   CalendarCheck,
   CalendarDays,
+  CalendarPlus,
   Clock,
   DoorOpen,
   GraduationCap,
@@ -18,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { schoolCycleName } from "@/lib/dashboard/school-cycles";
 import { schoolWeekday } from "@/lib/attendance/model";
+import { EventFormDialog } from "@/components/agenda/event-form-dialog";
+import type { LessonChoice } from "@/lib/agenda/lesson-choice";
 import {
   TONE_CARD,
   TONE_INK,
@@ -56,16 +60,24 @@ const LESSON_TONE: Record<string, Tone> = {
 export function LessonCard({
   lesson,
   dayLabel,
+  dateISO,
+  lessonChoices,
 }: {
   lesson: TeacherLesson;
   dayLabel: string;
+  /** Selected week's date for this day — enables "add event" prefilled. */
+  dateISO?: string;
+  lessonChoices?: LessonChoice[];
 }) {
   const t = useT();
   const locale = useLocale();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [eventOpen, setEventOpen] = useState(false);
   const tone = TONE_CARD[LESSON_TONE[lesson.color] ?? "blue"];
   const cycle = lesson.grade ? schoolCycleName(lesson.grade, locale) : "";
   const isToday = schoolWeekday() === lesson.weekday;
+  const canAddEvent = Boolean(dateISO && lessonChoices && lessonChoices.length > 0);
 
   useEffect(() => {
     if (!open) return;
@@ -178,6 +190,19 @@ export function LessonCard({
                     </dl>
 
                     <div className="mt-5 flex flex-col gap-2">
+                      {canAddEvent ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpen(false);
+                            setEventOpen(true);
+                          }}
+                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
+                        >
+                          <CalendarPlus className="h-4 w-4" />
+                          {t.agenda.events.addButton}
+                        </button>
+                      ) : null}
                       {isToday ? (
                         <Link
                           href={`/aula-virtual/${lesson.classId}?tab=asistencia&lesson=${lesson.id}`}
@@ -212,6 +237,17 @@ export function LessonCard({
             document.body,
           )
         : null}
+
+      {canAddEvent ? (
+        <EventFormDialog
+          open={eventOpen}
+          lessons={lessonChoices ?? []}
+          initialLessonId={lesson.id}
+          initialDate={dateISO}
+          onClose={() => setEventOpen(false)}
+          onSaved={() => router.refresh()}
+        />
+      ) : null}
     </>
   );
 }

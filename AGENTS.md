@@ -103,11 +103,14 @@ composer or the cross-group grading inbox.
 - Next.js **16.3.4**, React **19**, Tailwind **v4**, `motion`, `lucide-react`,
   `@supabase/ssr`, Zod.
 - App Router under `src/app/`. Routes: `/` (login), `/crear-contrasena`,
-  `/inicio` (landing / hub with cards), `/aula-virtual` (virtual classroom
-  section), `/aula-virtual/[classId]` (class workspace), `/grupos`,
-  `/grupos/[id]` (gradebook), `/horarios`, `/estudiantes/[id]` (per-student
-  transcript — reached from aula virtual **Personas** or the gradebook; there is
-  no standalone students section), `/reportes`.
+  `/inicio` (landing / hub with cards), `/agenda` (hub: Horarios + Eventos;
+  Calendario is a placeholder), `/agenda/eventos` (create/delete group
+  events & exams), `/aula-virtual` (virtual classroom section),
+  `/aula-virtual/[classId]` (class workspace), `/grupos`, `/grupos/[id]`
+  (gradebook), `/horarios?week=` (weekly timetable with week navigation),
+  `/estudiantes/[id]` (per-student transcript — reached from aula virtual
+  **Personas** or the gradebook; there is no standalone students section),
+  `/reportes`.
   **Aula virtual mirrors Google Classroom** (classes grid → Novedades /
   Trabajo de clase / Personas / Calificaciones); the target design, schema, and
   phases live in [`docs/aula-virtual.md`](docs/aula-virtual.md).
@@ -146,6 +149,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | --- | ----- |
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
+| **Agenda (schedule, events, exams)** | `docs/agenda.md` |
 | Student Entregar (Expo) | `../weeon-mobile/docs/aula-virtual.md` |
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |

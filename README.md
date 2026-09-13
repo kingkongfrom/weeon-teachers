@@ -23,6 +23,8 @@ grader (answer-key auto-suggestions, per-question points/comments,
 **Guardar y devolver**) that writes `grades`, so `/estudiantes/[id]` and the
 gradebook update — see [`docs/aula-virtual.md`](docs/aula-virtual.md)
 § Submit vs grade. Needs the `weeon-tenants` classroom migrations listed there.
+The **Panel general** (`/inicio`) now has an **Agenda** card that opens `/agenda`,
+a hub for **Horarios** (built), **Eventos**, and **Calendario**.
 
 | Route | Purpose |
 | ----- | ------- |
@@ -35,8 +37,10 @@ gradebook update — see [`docs/aula-virtual.md`](docs/aula-virtual.md)
 | `/aula-virtual/[classId]/evaluaciones/[assessmentId]/entregas/[submissionId]` | Grader — student answers, scoring, feedback, return |
 | `/grupos` | Grupos this teacher is assigned to (`teaches_class`) |
 | `/grupos/[id]` | Gradebook — sticky spreadsheet, typed columns (CW/HW/EXAM…), inline editing, CSV, submit report |
-| `/horarios` | Weekly timetable |
-| `/estudiantes` | Students in the teacher's groups |
+| `/agenda` | Agenda hub — Horarios, Eventos, Calendario (placeholder) |
+| `/agenda/eventos` | Create/delete group events & exams (students see them as upcoming) |
+| `/horarios?week=` | Weekly timetable with week navigation + the week's events |
+| `/estudiantes/[id]` | Per-student transcript (from aula virtual Personas or the gradebook) |
 | `/reportes` | Submitted grade snapshots for this teacher |
 
 Admin assigns a username in Comunidad. This app creates the Auth user on

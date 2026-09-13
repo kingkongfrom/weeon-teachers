@@ -28,6 +28,9 @@ const es = {
     weekdays: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
     noClasses: "Sin clases",
     openClass: "Abrir aula virtual",
+    thisWeek: "Esta semana",
+    previousWeek: "Semana anterior",
+    nextWeek: "Semana siguiente",
   },
   panel: {
     title: "Panel general",
@@ -36,7 +39,7 @@ const es = {
     upcoming: "Próximamente",
     classesCount: (n: number) => `${n} ${n === 1 ? "clase" : "clases"}`,
     subjectsCount: (n: number) => `${n} ${n === 1 ? "materia" : "materias"}`,
-    reportsCount: (n: number) => `${n} ${n === 1 ? "reporte" : "reportes"}`,
+    agendaCount: (n: number) => `${n} ${n === 1 ? "clase" : "clases"} esta semana`,
     classroom: {
       label: "Aula virtual",
       description: "Clases, materiales y tareas en un solo lugar.",
@@ -45,13 +48,73 @@ const es = {
       label: "Calificaciones",
       description: "Notas y avance académico por grupo.",
     },
-    reports: {
-      label: "Reportes",
-      description: "Los reportes de calificaciones que has subido.",
+    agenda: {
+      label: "Agenda",
+      description: "Tu horario de clases de la semana.",
     },
     communication: {
       label: "Comunicación",
       description: "Mensajes, avisos y notificaciones.",
+    },
+  },
+  agenda: {
+    title: "Agenda",
+    description: "Horario, eventos y calendario.",
+    horarios: {
+      label: "Horarios",
+      description: "Tu horario de clases de la semana.",
+    },
+    eventos: {
+      label: "Eventos",
+      description: "Actividades y avisos del colegio.",
+    },
+    calendario: {
+      label: "Calendario",
+      description: "Vista mensual del ciclo escolar.",
+    },
+    events: {
+      title: "Eventos y exámenes",
+      description:
+        "Publica exámenes y actividades para tus grupos; los estudiantes los verán en la app.",
+      add: "Agregar",
+      addButton: "Agregar evento",
+      dialogTitle: "Nuevo evento",
+      form: {
+        lesson: "Clase (materia y horario)",
+        lessonPlaceholder: "Seleccione una clase",
+        title: "Título",
+        titlePlaceholder: "Examen de Matemática",
+        type: "Tipo",
+        date: "Fecha",
+        dateHint: "Debe ser un día con clase de esa materia.",
+        allDay: "Todo el día",
+        start: "Inicio",
+        end: "Fin",
+        location: "Lugar (opcional)",
+        description: "Descripción (opcional)",
+        submit: "Guardar evento",
+        saving: "Guardando…",
+      },
+      types: {
+        exam: "Examen",
+        academic: "Académico",
+        activity: "Actividad",
+        meeting: "Reunión",
+        holiday: "Feriado",
+        institutional: "Institucional",
+      },
+      list: {
+        title: "Tus eventos",
+        empty: "Aún no has publicado eventos.",
+        group: "Grupo",
+        delete: "Eliminar",
+        deleteConfirm: "¿Eliminar este evento?",
+      },
+    },
+    errors: {
+      invalid: "Complete los datos del evento.",
+      generic: "No se pudo guardar el evento.",
+      weekday: "La fecha debe ser un día con clase de esta materia.",
     },
   },
   aulaVirtual: {
@@ -535,6 +598,9 @@ const en: Messages = {
     weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     noClasses: "No classes",
     openClass: "Open virtual classroom",
+    thisWeek: "This week",
+    previousWeek: "Previous week",
+    nextWeek: "Next week",
   },
   panel: {
     title: "General dashboard",
@@ -543,7 +609,7 @@ const en: Messages = {
     upcoming: "Coming soon",
     classesCount: (n: number) => `${n} ${n === 1 ? "class" : "classes"}`,
     subjectsCount: (n: number) => `${n} ${n === 1 ? "subject" : "subjects"}`,
-    reportsCount: (n: number) => `${n} ${n === 1 ? "report" : "reports"}`,
+    agendaCount: (n: number) => `${n} ${n === 1 ? "class" : "classes"} this week`,
     classroom: {
       label: "Virtual classroom",
       description: "Classes, materials, and homework in one place.",
@@ -552,13 +618,73 @@ const en: Messages = {
       label: "Grades",
       description: "Marks and academic progress by group.",
     },
-    reports: {
-      label: "Reports",
-      description: "The grade reports you have submitted.",
+    agenda: {
+      label: "Agenda",
+      description: "Your class schedule for the week.",
     },
     communication: {
       label: "Communication",
       description: "Messages, notices, and notifications.",
+    },
+  },
+  agenda: {
+    title: "Agenda",
+    description: "Schedule, events, and calendar.",
+    horarios: {
+      label: "Schedule",
+      description: "Your class schedule for the week.",
+    },
+    eventos: {
+      label: "Events",
+      description: "School activities and notices.",
+    },
+    calendario: {
+      label: "Calendar",
+      description: "Monthly view of the school year.",
+    },
+    events: {
+      title: "Events and exams",
+      description:
+        "Publish exams and activities for your groups; students see them in the app.",
+      add: "Add",
+      addButton: "Add event",
+      dialogTitle: "New event",
+      form: {
+        lesson: "Class (subject and schedule)",
+        lessonPlaceholder: "Select a class",
+        title: "Title",
+        titlePlaceholder: "Math exam",
+        type: "Type",
+        date: "Date",
+        dateHint: "Must be a day with a class for that subject.",
+        allDay: "All day",
+        start: "Start",
+        end: "End",
+        location: "Location (optional)",
+        description: "Description (optional)",
+        submit: "Save event",
+        saving: "Saving…",
+      },
+      types: {
+        exam: "Exam",
+        academic: "Academic",
+        activity: "Activity",
+        meeting: "Meeting",
+        holiday: "Holiday",
+        institutional: "Institutional",
+      },
+      list: {
+        title: "Your events",
+        empty: "You haven't published events yet.",
+        group: "Group",
+        delete: "Delete",
+        deleteConfirm: "Delete this event?",
+      },
+    },
+    errors: {
+      invalid: "Complete the event details.",
+      generic: "Couldn't save the event.",
+      weekday: "The date must be a day with a class for this subject.",
     },
   },
   aulaVirtual: {

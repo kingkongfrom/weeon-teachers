@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  FileText,
+  CalendarDays,
   GraduationCap,
   MessageSquare,
   Presentation,
@@ -14,7 +14,6 @@ import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
-import { loadMyReportCount } from "@/lib/dashboard/reports";
 import { getT } from "@/lib/i18n/server";
 import {
   TONE_CARD,
@@ -47,11 +46,10 @@ export default async function InicioPage() {
   const session = await getTeacherSession();
   const t = await getT();
 
-  const [grupos, schedule, schoolName, reportCount] = await Promise.all([
+  const [grupos, schedule, schoolName] = await Promise.all([
     loadTeacherGrupos(),
     loadTeacherSchedule(),
     session ? loadSchoolName(session.tenantId) : Promise.resolve(null),
-    loadMyReportCount(),
   ]);
 
   const subjectCount = grupos.reduce((total, grupo) => total + grupo.subjects.length, 0);
@@ -76,13 +74,13 @@ export default async function InicioPage() {
       stat: t.panel.subjectsCount(subjectCount),
     },
     {
-      id: "reports",
-      label: t.panel.reports.label,
-      description: t.panel.reports.description,
-      icon: FileText,
+      id: "agenda",
+      label: t.panel.agenda.label,
+      description: t.panel.agenda.description,
+      icon: CalendarDays,
       tone: "yellow",
-      href: "/reportes",
-      stat: t.panel.reportsCount(reportCount),
+      href: "/agenda",
+      stat: t.panel.agendaCount(schedule.length),
     },
     {
       id: "communication",
