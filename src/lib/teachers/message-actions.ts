@@ -104,6 +104,115 @@ export async function markThreadRead(threadId: string): Promise<MessageActionRes
   return { ok: true };
 }
 
+async function currentFolder(
+  supabase: Awaited<ReturnType<typeof createSessionClient>>,
+  threadId: string,
+  userId: string,
+): Promise<"inbox" | "sent"> {
+  const { data } = await supabase.from("threads").select("created_by").eq("id", threadId).maybeSingle();
+  return (data as { created_by?: string } | null)?.created_by === userId ? "sent" : "inbox";
+}
+
+/** Moves a thread to a folder (inbox / sent / trash) for the signed-in user. */
+export async function setThreadFolder(
+  threadId: string,
+  folder: "inbox" | "sent" | "trash",
+): Promise<MessageActionResult> {
+  const t = await getT();
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: t.messages.error };
+
+  const parsed = z
+    .object({ threadId: z.string().uuid(), folder: z.enum(["inbox", "sent", "trash"]) })
+    .safeParse({ threadId, folder });
+  if (!parsed.success) return { ok: false, error: t.messages.error };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.from("message_thread_state").upsert(
+    {
+      tenant_id: session.tenantId,
+      owner_profile_id: session.userId,
+      thread_id: parsed.data.threadId,
+      folder: parsed.data.folder,
+    },
+    { onConflict: "owner_profile_id,thread_id" },
+  );
+  if (error) return { ok: false, error: t.messages.error };
+
+  revalidatePath("/comunicacion");
+  return { ok: true };
+}
+
+/** Assigns (or clears) a category for a thread. */
+export async function setThreadLabel(
+  threadId: string,
+  labelId: string | null,
+): Promise<MessageActionResult> {
+  const t = await getT();
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: t.messages.error };
+
+  const parsed = z
+    .object({ threadId: z.string().uuid(), labelId: z.string().uuid().nullable() })
+    .safeParse({ threadId, labelId });
+  if (!parsed.success) return { ok: false, error: t.messages.error };
+
+  const supabase = await createSessionClient();
+  const folder = await currentFolder(supabase, parsed.data.threadId, session.userId);
+  const { error } = await supabase.from("message_thread_state").upsert(
+    {
+      tenant_id: session.tenantId,
+      owner_profile_id: session.userId,
+      thread_id: parsed.data.threadId,
+      folder,
+      label_id: parsed.data.labelId,
+    },
+    { onConflict: "owner_profile_id,thread_id" },
+  );
+  if (error) return { ok: false, error: t.messages.error };
+
+  revalidatePath("/comunicacion");
+  return { ok: true };
+}
+
+/** Creates a message category (folder). */
+export async function createMessageLabel(
+  name: string,
+): Promise<MessageActionResult & { labelId?: string }> {
+  const t = await getT();
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: t.messages.error };
+
+  const parsed = z.string().trim().min(1).max(60).safeParse(name);
+  if (!parsed.success) return { ok: false, error: t.messages.labelError };
+
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase
+    .from("message_labels")
+    .insert({ name: parsed.data })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false, error: t.messages.labelError };
+
+  revalidatePath("/comunicacion");
+  return { ok: true, labelId: data.id as string };
+}
+
+/** Deletes a category (threads keep their folder; the label is cleared). */
+export async function deleteMessageLabel(labelId: string): Promise<MessageActionResult> {
+  const t = await getT();
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: t.messages.error };
+  if (!z.string().uuid().safeParse(labelId).success) return { ok: false, error: t.messages.labelError };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.from("message_labels").delete().eq("id", labelId);
+  if (error) return { ok: false, error: t.messages.labelError };
+
+  revalidatePath("/comunicacion");
+  return { ok: true };
+}
+
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
 /** Uploads a file to the private bucket and records it against a thread. */

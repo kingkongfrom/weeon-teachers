@@ -15,15 +15,26 @@ own copy.
 
 | Route | Purpose |
 | --- | --- |
-| `/comunicacion` | Inbox / Sent list (`?folder=sent`) |
+| `/comunicacion` | Mailbox — folder `?folder=inbox\|sent\|trash`, category `?label=<id>` |
 | `/comunicacion/nuevo` | Compose (recipients + subject + rich body) |
 | `/comunicacion/[threadId]` | Thread view + reply |
-| `/comunicacion/novedades` | **Novedades** (class announcements + comments), `?classId=` |
 
-Panel general's **Comunicación** card → `/comunicacion`. **Novedades** (the
-class-level stream) also lives here — select a class and post/read/comment via
-the same `StreamPanel` used in the aula virtual. The stream actions revalidate
-both `/aula-virtual/[classId]` and `/comunicacion/novedades`.
+Panel general's **Comunicación** card → `/comunicacion`. **Novedades stays in the
+aula virtual** (class stream) — it is not part of Comunicación.
+
+## Mailbox (folders, categories, drag & drop)
+
+`mailbox-workspace.tsx` renders the sidebar + list and owns the drag-&-drop:
+
+- **Folders:** Recibidos (`inbox`), Enviados (`sent`), Papelera (`trash`). A
+  thread's default folder is derived (authored → sent, received → inbox) and can
+  be overridden in `message_thread_state`.
+- **Categorías:** user-created folders (`message_labels`). Create inline
+  ("Nueva categoría"), delete (messages are kept; the label is cleared).
+- **Drag & drop:** each thread row is `draggable` (`application/x-weeon-thread`);
+  folder/category entries are drop targets that call `setThreadFolder` /
+  `setThreadLabel`. The site look (gradient Redactar button, active-row tint,
+  grouped nav) is matched via the shared tone/`brand-gradient` styling.
 
 ## Data model (weeon-tenants, additive)
 

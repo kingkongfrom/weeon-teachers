@@ -117,9 +117,9 @@ parent/student side are follow-ups.
   eventos; Calendario is a placeholder), `/agenda/eventos` (read-only upcoming
   institution events), `/aula-virtual` (virtual classroom section),
   `/aula-virtual/[classId]` (class workspace), `/aula-virtual/por-evaluar`
-  (cross-group grading inbox), `/comunicacion` (inbox/sent),
-  `/comunicacion/novedades` (class announcements), `/comunicacion/nuevo`
-  (compose), `/comunicacion/[threadId]` (thread), `/grupos`, `/grupos/[id]`
+  (cross-group grading inbox), `/comunicacion` (mailbox: folders, categories,
+  drag & drop), `/comunicacion/nuevo` (compose), `/comunicacion/[threadId]`
+  (thread), `/grupos`, `/grupos/[id]`
   (gradebook), `/horarios?week=` (weekly timetable, paged; add an
   exam/activity from a class tile), `/estudiantes/[id]` (per-student transcript — reached from aula virtual
   **Personas** or the gradebook; there is no standalone students section),

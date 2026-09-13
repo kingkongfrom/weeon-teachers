@@ -5,7 +5,7 @@ import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
 import { docToPlainText, type RichTextDoc } from "@/lib/assessments/model";
 
-export type MessageFolder = "inbox" | "sent";
+export type MessageFolder = "inbox" | "sent" | "trash";
 
 export type MessageThreadSummary = {
   id: string;
@@ -19,6 +19,8 @@ export type MessageThreadSummary = {
   recipientCount: number;
   attachmentCount: number;
   mine: boolean;
+  folder: MessageFolder;
+  labelId: string | null;
 };
 
 export type MessageItem = {
@@ -60,6 +62,11 @@ export type MessageContact = {
   context: string;
 };
 
+export type MessageLabel = {
+  id: string;
+  name: string;
+};
+
 type NameEmbed = { name: string } | { name: string }[] | null;
 
 function nameOf(embed: NameEmbed): string {
@@ -67,11 +74,53 @@ function nameOf(embed: NameEmbed): string {
   return row?.name?.trim() ?? "";
 }
 
-function classLabel(embed: { name?: string; grade?: string; section?: string } | { name?: string; grade?: string; section?: string }[] | null): string | null {
+function classLabel(
+  embed:
+    | { name?: string; grade?: string; section?: string }
+    | { name?: string; grade?: string; section?: string }[]
+    | null,
+): string | null {
   const row = Array.isArray(embed) ? embed[0] : embed;
   if (!row) return null;
   return row.name?.trim() || [row.grade, row.section].filter(Boolean).join("").toUpperCase() || null;
 }
+
+type ThreadRow = {
+  id: string;
+  subject: string | null;
+  audience: string;
+  class_id: string | null;
+  created_by: string | null;
+  allow_replies: boolean;
+  last_message_at: string;
+  created_at: string;
+  profiles: NameEmbed;
+  classes:
+    | { name?: string; grade?: string; section?: string }
+    | { name?: string; grade?: string; section?: string }[]
+    | null;
+};
+
+type RecipientRow = {
+  thread_id: string;
+  profile_id: string | null;
+  recipient_key: string | null;
+  role: "to" | "cc";
+  read_at: string | null;
+  display_name: string | null;
+  profiles: NameEmbed;
+};
+
+type MessageRow = {
+  thread_id: string;
+  body: RichTextDoc;
+  created_at: string;
+  author_profile_id: string | null;
+  profiles: NameEmbed;
+};
+
+const THREAD_COLUMNS =
+  "id, subject, audience, class_id, created_by, allow_replies, last_message_at, created_at, profiles(name), classes(name, grade, section)";
 
 /** Parents a teacher may message (RPC), for the composer's recipient picker. */
 export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => {
@@ -90,69 +139,62 @@ export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => 
   }));
 });
 
-/** Thread summaries for a folder (inbox = received, sent = authored). */
+/** The teacher's message categories (folders). */
+export const loadMessageLabels = cache(async (): Promise<MessageLabel[]> => {
+  const session = await getTeacherSession();
+  if (!session) return [];
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase
+    .from("message_labels")
+    .select("id, name, position")
+    .eq("owner_profile_id", session.userId)
+    .order("position", { ascending: true })
+    .order("name", { ascending: true });
+  if (error || !data) return [];
+  return (data as Array<{ id: string; name: string }>).map((row) => ({ id: row.id, name: row.name }));
+});
+
+/** Thread summaries for a mailbox folder (optionally filtered by category). */
 export const loadMessageSummaries = cache(
-  async (folder: MessageFolder): Promise<MessageThreadSummary[]> => {
+  async (folder: MessageFolder, labelId?: string | null): Promise<MessageThreadSummary[]> => {
     const session = await getTeacherSession();
     if (!session) return [];
     const supabase = await createSessionClient();
 
     const { data: threads, error } = await supabase
       .from("threads")
-      .select(
-        "id, subject, audience, class_id, created_by, allow_replies, last_message_at, created_at, profiles(name), classes(name, grade, section)",
-      )
+      .select(THREAD_COLUMNS)
       .order("last_message_at", { ascending: false })
-      .limit(60);
-
+      .limit(200);
     if (error || !threads) return [];
-
-    type ThreadRow = {
-      id: string;
-      subject: string | null;
-      audience: string;
-      class_id: string | null;
-      created_by: string | null;
-      allow_replies: boolean;
-      last_message_at: string;
-      created_at: string;
-      profiles: NameEmbed;
-      classes: { name?: string; grade?: string; section?: string } | Array<{ name?: string; grade?: string; section?: string }> | null;
-    };
 
     const rows = threads as ThreadRow[];
     const ids = rows.map((row) => row.id);
     if (ids.length === 0) return [];
 
-    const [{ data: recipients }, { data: messages }, { data: attachments }] = await Promise.all([
-      supabase
-        .from("thread_recipients")
-        .select("thread_id, profile_id, recipient_key, role, read_at, display_name, profiles(name)")
-        .in("thread_id", ids),
-      supabase
-        .from("messages")
-        .select("thread_id, body, created_at, author_profile_id, profiles(name)")
-        .in("thread_id", ids)
-        .order("created_at", { ascending: true }),
-      supabase.from("message_attachments").select("thread_id").in("thread_id", ids),
-    ]);
+    const [{ data: recipients }, { data: messages }, { data: attachments }, { data: states }] =
+      await Promise.all([
+        supabase
+          .from("thread_recipients")
+          .select("thread_id, profile_id, recipient_key, role, read_at, display_name, profiles(name)")
+          .in("thread_id", ids),
+        supabase
+          .from("messages")
+          .select("thread_id, body, created_at, author_profile_id, profiles(name)")
+          .in("thread_id", ids)
+          .order("created_at", { ascending: true }),
+        supabase.from("message_attachments").select("thread_id").in("thread_id", ids),
+        supabase
+          .from("message_thread_state")
+          .select("thread_id, folder, label_id")
+          .eq("owner_profile_id", session.userId)
+          .in("thread_id", ids),
+      ]);
 
-    const recipientRows = (recipients ?? []) as Array<{
-      thread_id: string;
-      profile_id: string | null;
-      recipient_key: string | null;
-      role: "to" | "cc";
-      read_at: string | null;
-      display_name: string | null;
-      profiles: NameEmbed;
-    }>;
-    const messageRows = (messages ?? []) as Array<{
-      thread_id: string;
-      body: RichTextDoc;
-      created_at: string;
-      author_profile_id: string | null;
-      profiles: NameEmbed;
-    }>;
+    const recipientRows = (recipients ?? []) as RecipientRow[];
+    const messageRows = (messages ?? []) as MessageRow[];
+    const stateRows = (states ?? []) as Array<{ thread_id: string; folder: MessageFolder; label_id: string | null }>;
+    const stateByThread = new Map(stateRows.map((row) => [row.thread_id, row]));
 
     const attachmentCount = new Map<string, number>();
     for (const row of (attachments ?? []) as Array<{ thread_id: string }>) {
@@ -165,15 +207,16 @@ export const loadMessageSummaries = cache(
         const threadMessages = messageRows.filter((item) => item.thread_id === row.id);
         const last = threadMessages[threadMessages.length - 1];
         const mine = row.created_by === session.userId;
+        const state = stateByThread.get(row.id);
+        const resolvedFolder: MessageFolder = state?.folder ?? (mine ? "sent" : "inbox");
 
-        if (folder === "inbox" && !threadRecipients.some((item) => item.profile_id === session.userId)) {
-          return null;
-        }
-        if (folder === "sent" && !mine) return null;
+        if (resolvedFolder !== folder) return null;
+        if (labelId && state?.label_id !== labelId) return null;
 
         const myRecipient = threadRecipients.find(
           (item) => item.profile_id === session.userId || item.recipient_key === session.userId,
         );
+
         return {
           id: row.id,
           subject: row.subject?.trim() || "(Sin asunto)",
@@ -191,6 +234,8 @@ export const loadMessageSummaries = cache(
           recipientCount: threadRecipients.length,
           attachmentCount: attachmentCount.get(row.id) ?? 0,
           mine,
+          folder: resolvedFolder,
+          labelId: state?.label_id ?? null,
         } satisfies MessageThreadSummary;
       })
       .filter((row): row is MessageThreadSummary => row !== null);
@@ -206,41 +251,36 @@ export const loadThreadDetail = cache(
 
     const { data: thread, error } = await supabase
       .from("threads")
-      .select(
-        "id, subject, audience, class_id, created_by, allow_replies, last_message_at, created_at, profiles(name), classes(name, grade, section)",
-      )
+      .select(THREAD_COLUMNS)
       .eq("id", threadId)
       .maybeSingle();
     if (error || !thread) return null;
 
-    const row = thread as {
-      id: string;
-      subject: string | null;
-      audience: string;
-      class_id: string | null;
-      created_by: string | null;
-      allow_replies: boolean;
-      last_message_at: string;
-      profiles: NameEmbed;
-      classes: { name?: string; grade?: string; section?: string } | Array<{ name?: string; grade?: string; section?: string }> | null;
-    };
+    const row = thread as ThreadRow;
 
-    const [{ data: messages }, { data: recipients }, { data: attachmentRows }] = await Promise.all([
-      supabase
-        .from("messages")
-        .select("id, body, created_at, author_profile_id, profiles(name)")
-        .eq("thread_id", threadId)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("thread_recipients")
-        .select("profile_id, recipient_key, role, read_at, display_name, profiles(name)")
-        .eq("thread_id", threadId),
-      supabase
-        .from("message_attachments")
-        .select("id, file_name, storage_path, mime_type, size_bytes")
-        .eq("thread_id", threadId)
-        .order("created_at", { ascending: true }),
-    ]);
+    const [{ data: messages }, { data: recipients }, { data: attachmentRows }, { data: state }] =
+      await Promise.all([
+        supabase
+          .from("messages")
+          .select("id, body, created_at, author_profile_id, profiles(name)")
+          .eq("thread_id", threadId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("thread_recipients")
+          .select("profile_id, recipient_key, role, read_at, display_name, profiles(name)")
+          .eq("thread_id", threadId),
+        supabase
+          .from("message_attachments")
+          .select("id, file_name, storage_path, mime_type, size_bytes")
+          .eq("thread_id", threadId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("message_thread_state")
+          .select("folder, label_id")
+          .eq("owner_profile_id", session.userId)
+          .eq("thread_id", threadId)
+          .maybeSingle(),
+      ]);
 
     const attachments = (attachmentRows ?? []) as Array<{
       id: string;
@@ -253,11 +293,11 @@ export const loadThreadDetail = cache(
     if (attachments.length > 0) {
       const { data: signed } = await supabase.storage
         .from("message-attachments")
-        .createSignedUrls(attachments.map((row) => row.storage_path), 60 * 60);
+        .createSignedUrls(attachments.map((item) => item.storage_path), 60 * 60);
       signedUrls = new Map(
         (signed ?? [])
-          .filter((row) => row.path && row.signedUrl)
-          .map((row) => [row.path as string, row.signedUrl as string]),
+          .filter((item) => item.path && item.signedUrl)
+          .map((item) => [item.path as string, item.signedUrl as string]),
       );
     }
 
@@ -279,6 +319,7 @@ export const loadThreadDetail = cache(
 
     const mine = row.created_by === session.userId;
     const last = messageRows[messageRows.length - 1];
+    const stateRow = state as { folder: MessageFolder; label_id: string | null } | null;
 
     return {
       allowReplies: row.allow_replies,
@@ -300,6 +341,8 @@ export const loadThreadDetail = cache(
         recipientCount: recipientRows.length,
         attachmentCount: attachments.length,
         mine,
+        folder: stateRow?.folder ?? (mine ? "sent" : "inbox"),
+        labelId: stateRow?.label_id ?? null,
       },
       messages: messageRows.map((message) => ({
         id: message.id,
