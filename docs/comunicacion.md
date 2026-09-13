@@ -32,9 +32,12 @@ both `/aula-virtual/[classId]` and `/comunicacion/novedades`.
   timestamps.
 - `messages`: `thread_id`, `author_profile_id`, `body` **jsonb ProseMirror doc**
   (same safe format as assessments — never HTML), `created_at`.
-- `thread_recipients`: `thread_id`, `profile_id`, `role` (`to`/`cc`), `read_at`;
-  unique `(thread_id, profile_id)`. Recipients are `profiles` — parents already
-  have one via `parent_student_links.parent_profile_id`.
+- `thread_recipients`: `thread_id`, `profile_id` (nullable), **`recipient_key`**
+  (roster account id, or a profile id) + **`display_name` snapshot**, `role`
+  (`to`/`cc`), `read_at`; unique `(thread_id, recipient_key)`. Students and
+  guardians are **roster-keyed** (they usually have no Auth profile yet), so a
+  teacher can pick **parents and students**; a recipient matches once they sign
+  in (`my_identity_keys()` = profile id + linked `roster_accounts`).
 
 Helpers `is_thread_participant()` / `owns_thread()` are **SECURITY DEFINER** so
 the `threads` ↔ `thread_recipients` policies never recurse. A recipient may mark

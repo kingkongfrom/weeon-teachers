@@ -63,11 +63,9 @@ function PickerBody({
     );
   }, [contacts, query]);
 
-  function toggle(profileId: string) {
+  function toggle(key: string) {
     setDraft((current) =>
-      current.includes(profileId)
-        ? current.filter((id) => id !== profileId)
-        : [...current, profileId],
+      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
     );
   }
 
@@ -87,16 +85,16 @@ function PickerBody({
       <ul className="max-h-72 overflow-y-auto rounded-xl border border-border">
         {filtered.length === 0 ? (
           <li className="px-3 py-6 text-center text-sm font-medium text-foreground/45">
-            {m.empty}
+            {m.noContacts}
           </li>
         ) : (
           filtered.map((contact) => {
-            const active = draft.includes(contact.profileId);
+            const active = draft.includes(contact.key);
             return (
-              <li key={contact.profileId}>
+              <li key={contact.key}>
                 <button
                   type="button"
-                  onClick={() => toggle(contact.profileId)}
+                  onClick={() => toggle(contact.key)}
                   className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-muted/60"
                 >
                   <span
@@ -110,8 +108,17 @@ function PickerBody({
                     <Check className="h-3.5 w-3.5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground">
-                      {contact.name}
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-foreground">
+                        {contact.name}
+                      </span>
+                      {contact.kind ? (
+                        <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground/50">
+                          {contact.kind === "student"
+                            ? t.messages.kindStudent
+                            : t.messages.kindParent}
+                        </span>
+                      ) : null}
                     </span>
                     {contact.context ? (
                       <span className="block truncate text-xs font-medium text-foreground/45">

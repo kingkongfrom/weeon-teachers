@@ -18,7 +18,9 @@ const composeSchema = z.object({
   body: docSchema,
   audience: z.enum(["individual", "group"]),
   classId: z.string().uuid().nullable(),
-  recipientProfileIds: z.array(z.string().uuid()).max(200),
+  recipients: z
+    .array(z.object({ key: z.string().trim().min(1), name: z.string().trim().max(200) }))
+    .max(300),
   allowReplies: z.boolean(),
 });
 
@@ -34,7 +36,7 @@ export async function createMessageThread(input: ComposeMessageInput): Promise<M
   if (!parsed.success) return { ok: false, error: t.messages.error };
   const value = parsed.data;
 
-  if (value.audience === "individual" && value.recipientProfileIds.length === 0) {
+  if (value.audience === "individual" && value.recipients.length === 0) {
     return { ok: false, error: t.messages.noRecipients };
   }
   if (value.audience === "group" && !value.classId) {
@@ -47,7 +49,7 @@ export async function createMessageThread(input: ComposeMessageInput): Promise<M
     p_body: value.body as RichTextDoc,
     p_class_id: value.audience === "group" ? value.classId : null,
     p_audience: value.audience,
-    p_recipient_profile_ids: value.audience === "group" ? [] : value.recipientProfileIds,
+    p_recipients: value.audience === "group" ? [] : value.recipients,
     p_allow_replies: value.allowReplies,
   });
 

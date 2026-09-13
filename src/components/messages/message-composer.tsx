@@ -40,7 +40,7 @@ export function MessageComposer({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const contactById = new Map(contacts.map((contact) => [contact.profileId, contact]));
+  const contactByKey = new Map(contacts.map((contact) => [contact.key, contact]));
   const hasBody = docToPlainText(body).trim().length > 0;
   const canSend = hasBody && (audience === "group" ? classId.length > 0 : selected.length > 0);
 
@@ -53,7 +53,10 @@ export function MessageComposer({
       body,
       audience,
       classId: audience === "group" ? classId : null,
-      recipientProfileIds: audience === "group" ? [] : selected,
+      recipients:
+        audience === "group"
+          ? []
+          : selected.map((key) => ({ key, name: contactByKey.get(key)?.name ?? "" })),
       allowReplies,
     });
     if (!res.ok || !res.threadId) {
@@ -123,17 +126,17 @@ export function MessageComposer({
         <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold text-foreground/60">{m.audience}</span>
           <div className="flex flex-wrap items-center gap-2">
-            {selected.map((profileId) => (
+            {selected.map((key) => (
               <span
-                key={profileId}
+                key={key}
                 className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5"
               >
                 <span className="max-w-[220px] truncate text-xs font-semibold text-foreground/80">
-                  {contactById.get(profileId)?.name ?? "Destinatario"}
+                  {contactByKey.get(key)?.name ?? "Destinatario"}
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSelected((current) => current.filter((id) => id !== profileId))}
+                  onClick={() => setSelected((current) => current.filter((item) => item !== key))}
                   aria-label={m.remove}
                   className="flex h-5 w-5 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-error/10 hover:text-error"
                 >

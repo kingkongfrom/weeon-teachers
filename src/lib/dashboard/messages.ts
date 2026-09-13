@@ -54,7 +54,7 @@ export type MessageThreadDetail = {
 };
 
 export type MessageContact = {
-  profileId: string;
+  key: string;
   name: string;
   kind: string;
   context: string;
@@ -80,14 +80,14 @@ export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => 
   const supabase = await createSessionClient();
   const { data, error } = await supabase.rpc("list_message_contacts");
   if (error || !data) return [];
-  return (data as Array<{ profile_id: string; full_name: string; kind: string; context: string }>).map(
-    (row) => ({
-      profileId: row.profile_id,
-      name: row.full_name,
-      kind: row.kind,
-      context: row.context ?? "",
-    }),
-  );
+  return (
+    data as Array<{ recipient_key: string; full_name: string; kind: string; context: string }>
+  ).map((row) => ({
+    key: row.recipient_key,
+    name: row.full_name || "Contacto",
+    kind: row.kind,
+    context: row.context ?? "",
+  }));
 });
 
 /** Thread summaries for a folder (inbox = received, sent = authored). */
@@ -127,7 +127,7 @@ export const loadMessageSummaries = cache(
     const [{ data: recipients }, { data: messages }, { data: attachments }] = await Promise.all([
       supabase
         .from("thread_recipients")
-        .select("thread_id, profile_id, role, read_at, profiles(name)")
+        .select("thread_id, profile_id, recipient_key, role, read_at, display_name, profiles(name)")
         .in("thread_id", ids),
       supabase
         .from("messages")
@@ -139,9 +139,11 @@ export const loadMessageSummaries = cache(
 
     const recipientRows = (recipients ?? []) as Array<{
       thread_id: string;
-      profile_id: string;
+      profile_id: string | null;
+      recipient_key: string | null;
       role: "to" | "cc";
       read_at: string | null;
+      display_name: string | null;
       profiles: NameEmbed;
     }>;
     const messageRows = (messages ?? []) as Array<{
@@ -169,15 +171,19 @@ export const loadMessageSummaries = cache(
         }
         if (folder === "sent" && !mine) return null;
 
-        const myRecipient = threadRecipients.find((item) => item.profile_id === session.userId);
+        const myRecipient = threadRecipients.find(
+          (item) => item.profile_id === session.userId || item.recipient_key === session.userId,
+        );
         return {
           id: row.id,
           subject: row.subject?.trim() || "(Sin asunto)",
           audience: row.audience === "group" ? "group" : "individual",
           className: classLabel(row.classes),
           counterpart: mine
-            ? threadRecipients.map((item) => nameOf(item.profiles)).filter(Boolean).join(", ") ||
-              "Sin destinatarios"
+            ? threadRecipients
+                .map((item) => nameOf(item.profiles) || item.display_name || "")
+                .filter(Boolean)
+                .join(", ") || "Sin destinatarios"
             : nameOf(row.profiles) || "Docente",
           preview: last ? docToPlainText(last.body).slice(0, 140) : "",
           lastMessageAt: row.last_message_at,
@@ -227,7 +233,7 @@ export const loadThreadDetail = cache(
         .order("created_at", { ascending: true }),
       supabase
         .from("thread_recipients")
-        .select("profile_id, role, read_at, profiles(name)")
+        .select("profile_id, recipient_key, role, read_at, display_name, profiles(name)")
         .eq("thread_id", threadId),
       supabase
         .from("message_attachments")
@@ -263,9 +269,11 @@ export const loadThreadDetail = cache(
       profiles: NameEmbed;
     }>;
     const recipientRows = (recipients ?? []) as Array<{
-      profile_id: string;
+      profile_id: string | null;
+      recipient_key: string | null;
       role: "to" | "cc";
       read_at: string | null;
+      display_name: string | null;
       profiles: NameEmbed;
     }>;
 
@@ -281,8 +289,10 @@ export const loadThreadDetail = cache(
         audience: row.audience === "group" ? "group" : "individual",
         className: classLabel(row.classes),
         counterpart: mine
-          ? recipientRows.map((item) => nameOf(item.profiles)).filter(Boolean).join(", ") ||
-            "Sin destinatarios"
+          ? recipientRows
+              .map((item) => nameOf(item.profiles) || item.display_name || "")
+              .filter(Boolean)
+              .join(", ") || "Sin destinatarios"
           : nameOf(row.profiles) || "Docente",
         preview: last ? docToPlainText(last.body).slice(0, 140) : "",
         lastMessageAt: row.last_message_at,
@@ -299,8 +309,8 @@ export const loadThreadDetail = cache(
         mine: message.author_profile_id === session.userId,
       })),
       recipients: recipientRows.map((recipient) => ({
-        profileId: recipient.profile_id,
-        name: nameOf(recipient.profiles),
+        profileId: recipient.profile_id ?? recipient.recipient_key ?? "",
+        name: nameOf(recipient.profiles) || recipient.display_name || "",
         role: recipient.role,
         readAt: recipient.read_at,
       })),
