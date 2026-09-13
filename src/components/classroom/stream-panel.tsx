@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import { Loader2, MessageSquare, Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   createAnnouncement,
+  createStreamComment,
   deleteAnnouncement,
+  deleteStreamComment,
 } from "@/lib/teachers/stream-actions";
-import type { StreamPost } from "@/lib/dashboard/stream";
+import type { StreamComment, StreamPost } from "@/lib/dashboard/stream";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -30,7 +32,7 @@ function relativeTime(iso: string, locale: string): string {
   return formatter.format(-Math.round(hours / 24), "day");
 }
 
-/** Stream (Novedades): the teacher posts announcements to the class. */
+/** Stream (Novedades): the teacher posts announcements and replies to comments. */
 export function StreamPanel({
   classId,
   posts,
@@ -121,37 +123,41 @@ export function StreamPanel({
           {posts.map((post) => (
             <li
               key={post.id}
-              className="group flex items-start gap-3 rounded-2xl border border-border bg-surface p-4"
+              className="group flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl brand-gradient text-xs font-bold text-white">
-                {initials(post.authorName)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-semibold text-foreground">
-                    {post.authorName}
-                  </span>
-                  <span className="shrink-0 text-xs font-medium text-foreground/40">
-                    {relativeTime(post.createdAt, locale)}
-                  </span>
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl brand-gradient text-xs font-bold text-white">
+                  {initials(post.authorName)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold text-foreground">
+                      {post.authorName}
+                    </span>
+                    <span className="shrink-0 text-xs font-medium text-foreground/40">
+                      {relativeTime(post.createdAt, locale)}
+                    </span>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground/80">
+                    {post.body}
+                  </p>
                 </div>
-                <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground/80">
-                  {post.body}
-                </p>
+                {post.mine ? (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(post)}
+                    aria-label={s.delete}
+                    title={s.delete}
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-error/70 opacity-0 transition-all hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100",
+                    )}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                ) : null}
               </div>
-              {post.mine ? (
-                <button
-                  type="button"
-                  onClick={() => setDeleteTarget(post)}
-                  aria-label={s.delete}
-                  title={s.delete}
-                  className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-error/70 opacity-0 transition-all hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100",
-                  )}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              ) : null}
+
+              <PostComments classId={classId} post={post} />
             </li>
           ))}
         </ul>
@@ -169,5 +175,126 @@ export function StreamPanel({
         }}
       />
     </section>
+  );
+}
+
+function PostComments({ classId, post }: { classId: string; post: StreamPost }) {
+  const t = useT();
+  const s = t.stream;
+  const locale = useLocale();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StreamComment | null>(null);
+
+  async function send() {
+    const text = draft.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setError(null);
+    const res = await createStreamComment({ postId: post.id, classId, body: text });
+    setSending(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setDraft("");
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    const res = await deleteStreamComment({ id: target.id, classId });
+    if (!res.ok) setError(res.error);
+  }
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-border pt-3 pl-12">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-foreground/55 transition-colors hover:text-foreground"
+      >
+        <MessageSquare className="h-3.5 w-3.5" />
+        {s.commentsTitle(post.comments.length)}
+      </button>
+
+      {post.comments.length > 0 ? (
+        <ul className="flex flex-col gap-2">
+          {post.comments.map((comment) => (
+            <li key={comment.id} className="group/c flex items-start gap-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-muted text-[10px] font-bold text-foreground/60">
+                {initials(comment.authorName)}
+              </span>
+              <div className="min-w-0 flex-1 rounded-2xl bg-background px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-xs font-semibold text-foreground">
+                    {comment.authorName}
+                  </span>
+                  <span className="shrink-0 text-[11px] font-medium text-foreground/40">
+                    {relativeTime(comment.createdAt, locale)}
+                  </span>
+                </div>
+                <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-foreground/80">
+                  {comment.body}
+                </p>
+              </div>
+              {comment.mine ? (
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(comment)}
+                  aria-label={s.deleteComment}
+                  title={s.deleteComment}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-error/60 opacity-0 transition-all hover:bg-error/10 hover:text-error group-hover/c:opacity-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {open || post.comments.length > 0 ? (
+        <div className="flex items-center gap-2">
+          <input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onFocus={() => setOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void send();
+              }
+            }}
+            placeholder={s.commentPlaceholder}
+            maxLength={2000}
+            className="h-9 flex-1 rounded-full border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
+          />
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={sending || draft.trim().length === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted disabled:opacity-50"
+          >
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {sending ? s.commenting : s.comment}
+          </button>
+        </div>
+      ) : null}
+
+      {error ? <p className="text-xs font-medium text-error">{error}</p> : null}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={s.deleteComment}
+        confirmLabel={s.delete}
+        cancelLabel={t.classroom.materialsPanel.cancel}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
   );
 }

@@ -161,8 +161,9 @@ Honest snapshot — do not assume the rest exists.
    the total is written to `grades`, so Geografía → Tarea shows a percentage and
    feeds the subject average. Before grading, it stays **0 de 1 con nota / Sin
    notas** even after the student delivered it.
-- Stream comments and a grading queue across *all* groups are not built.
-  **Student fill + submit (P5b) is built** on `weeon-mobile` (Expo).
+- **Stream comments (P2.1) are built**, and so is the cross-group **"Por
+  evaluar" inbox** (`/aula-virtual/por-evaluar`). **Student fill + submit (P5b)
+  is built** on `weeon-mobile` (Expo).
   **Teacher grading (P5c) is built per assessment** here: the assignment's
   **Entregas** list opens a grader with the student's answers, objective
   auto-suggestions from the answer key, per-question points/feedback, and
@@ -446,7 +447,9 @@ Two surfaces, one flow:
 
 1. **Entregas (per assessment)** — the submitted students for one assignment, with
    a pending count and a **Por evaluar / Evaluada · X / Y** status. Each row opens
-   the grader. (A cross-group "Por evaluar" inbox is still a follow-up.)
+   the grader. The cross-group **"Por evaluar"** inbox lives at
+   `/aula-virtual/por-evaluar` (every `state = submitted` turn-in across the
+   teacher's grupos, oldest first; reached from a banner on `/aula-virtual`).
 2. **Grader** — the student's answers in view, objective auto-suggestions from the
    answer key, per-question points + comment, an overall feedback field, then
    **Guardar y devolver** → writes `grades` and returns the work. **Guardar**
@@ -498,7 +501,7 @@ a follow-up (kept simple first: FINAL = mean of column percentages).
 | --- | --- | --- |
 | **P0** *(done)* | Hub grid, class page, tabs, Personas, gradebook link. | — |
 | **P1** *(done)* | **Materials / documents**: upload, list, download, delete per group. | `class_materials`, `class-materials` bucket, `MaterialsPanel` |
-| **P2** *(partial)* | Stream announcements **done**; comments pending. | `class_stream_posts` ✓ |
+| **P2** *(done)* | Stream announcements **+ comments** (any class member comments; author/teacher/admin can delete). | `class_stream_posts`, `class_stream_comments` |
 | **P3** | Assignments / homework: topics, authoring, unified with gradebook. | `assignments` columns, `classwork_topics` |
 | **P4** | Submissions + grading flow (turn-in state, return + comment). | existing `submissions` table |
 | **P5a** *(done)* | **Assessment builder**: WYSIWYG homework/exam authoring + preview. | `assessments` |
@@ -528,7 +531,6 @@ types are refreshed in this repo.
   admin owns `classes`; leaning admin-only for now, `Próximamente` on the card.)
 - Materials: should the teacher be able to tag a **materia** per document? The
   column exists (`subject_id`); the P1 UI does not expose it yet.
-- Cross-group **"Por evaluar" inbox** (grading is per-assessment today).
 - Auto-grading rules for objective types beyond exact answer-key matching
   (`short_answer`/`number` are exact-compare with accent/case folding).
 - Editable-PDF scope: which forms, and whether annotations are per-student

@@ -48,7 +48,9 @@ built per assessment:** the assignment **Entregas** list opens a grader
 (`/aula-virtual/[classId]/evaluaciones/[assessmentId]/entregas/[submissionId]`)
 with answer-key auto-suggestions, per-question points/comments, and **Guardar y
 devolver** → writes `grades`, so the student transcript and gradebook update.
-Stream comments and a cross-group grading inbox are pending.
+**P2.1 stream comments** are built (any class member comments on a Novidad;
+author/teacher/admin deletes), and so is the cross-group **"Por evaluar" inbox**
+(`/aula-virtual/por-evaluar`, from a banner on `/aula-virtual`).
 Read `docs/aula-virtual.md` (especially § Submit vs grade) before touching it —
 the aula virtual needs
 `20260911130000_class_materials.sql`, `20260911150000_assessments.sql`,
@@ -57,9 +59,9 @@ the aula virtual needs
 `20260911200000_classwork_topics.sql`,
 `20260912180000_attendance_ausencias.sql`,
 `20260912220000_assessment_submissions.sql`, and
-`20260912230000_teacher_sees_submissions.sql`, and grading needs
-`20260913000000_assessment_grading.sql` in `weeon-tenants`. Not built: full reports
-composer or the cross-group grading inbox.
+`20260912230000_teacher_sees_submissions.sql`, `20260913000000_assessment_grading.sql`,
+and comments need `20260913150000_class_stream_comments.sql` in `weeon-tenants`.
+Not built: full reports composer.
 
 ## The five repos
 
@@ -106,7 +108,8 @@ composer or the cross-group grading inbox.
   `/inicio` (landing / hub with cards), `/agenda` (hub: Horarios + Próximos
   eventos; Calendario is a placeholder), `/agenda/eventos` (read-only upcoming
   institution events), `/aula-virtual` (virtual classroom section),
-  `/aula-virtual/[classId]` (class workspace), `/grupos`, `/grupos/[id]`
+  `/aula-virtual/[classId]` (class workspace), `/aula-virtual/por-evaluar`
+  (cross-group grading inbox), `/grupos`, `/grupos/[id]`
   (gradebook), `/horarios?week=` (weekly timetable, paged; add an
   exam/activity from a class tile), `/estudiantes/[id]` (per-student transcript — reached from aula virtual
   **Personas** or the gradebook; there is no standalone students section),

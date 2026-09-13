@@ -1,10 +1,12 @@
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, ClipboardCheck, Plus } from "lucide-react";
 import { FadeIn } from "@/components/motion/fade-in";
 import { PageHeader } from "@/components/layout/page-header";
 import { ClassCard } from "@/components/classroom/class-card";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
+import { loadGradingInbox } from "@/lib/dashboard/grading-inbox";
 import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +19,10 @@ export default async function AulaVirtualPage() {
   const session = await getTeacherSession();
   const t = await getT();
 
-  const [grupos, schoolName] = await Promise.all([
+  const [grupos, schoolName, inbox] = await Promise.all([
     loadTeacherGrupos(),
     session ? loadSchoolName(session.tenantId) : Promise.resolve(null),
+    loadGradingInbox(),
   ]);
 
   const year = new Date().getFullYear();
@@ -31,6 +34,26 @@ export default async function AulaVirtualPage() {
         description={t.aulaVirtual.description}
         backHref="/inicio"
       />
+
+      {inbox.length > 0 ? (
+        <Link
+          href="/aula-virtual/por-evaluar"
+          className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 transition-colors hover:bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30 dark:hover:bg-amber-950/50"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+            <ClipboardCheck className="h-5 w-5" strokeWidth={2.2} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+              {t.assessments.grading.inboxTitle}
+            </p>
+            <p className="text-xs font-medium text-amber-800/80 dark:text-amber-200/80">
+              {t.assessments.grading.pendingCount(inbox.length)}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-amber-700/60 dark:text-amber-300/60" />
+        </Link>
+      ) : null}
 
       {/* Classes grid. */}
       <section className="flex flex-col gap-4">
