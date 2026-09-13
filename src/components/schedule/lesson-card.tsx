@@ -28,6 +28,7 @@ import {
   TONE_INK_FAINT,
   type Tone,
 } from "@/lib/dashboard/tones";
+import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 import type { TeacherLesson } from "@/lib/dashboard/schedule";
 
 function timeLabel(hhmm: string): string {
@@ -61,13 +62,14 @@ export function LessonCard({
   lesson,
   dayLabel,
   dateISO,
-  lessonChoices,
+  events = [],
 }: {
   lesson: TeacherLesson;
   dayLabel: string;
   /** Selected week's date for this day — enables "add event" prefilled. */
   dateISO?: string;
-  lessonChoices?: LessonChoice[];
+  /** Exams/activities attached to this lesson (for that day). */
+  events?: TeacherCalendarEvent[];
 }) {
   const t = useT();
   const locale = useLocale();
@@ -77,7 +79,16 @@ export function LessonCard({
   const tone = TONE_CARD[LESSON_TONE[lesson.color] ?? "blue"];
   const cycle = lesson.grade ? schoolCycleName(lesson.grade, locale) : "";
   const isToday = schoolWeekday() === lesson.weekday;
-  const canAddEvent = Boolean(dateISO && lessonChoices && lessonChoices.length > 0);
+  const canAddEvent = Boolean(dateISO);
+  const a = t.agenda.events;
+  const lessonChoice: LessonChoice = {
+    id: lesson.id,
+    subject: lesson.title,
+    groupName: lesson.groupName,
+    weekday: lesson.weekday,
+    startTime: lesson.startTime,
+    endTime: lesson.endTime,
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -111,10 +122,21 @@ export function LessonCard({
             {timeLabel(lesson.startTime)}
           </span>
         </div>
-        <span className={cn("text-[11px] font-medium", TONE_INK_FAINT)}>
+        <span className={cn("flex items-center gap-1 text-[11px] font-medium", TONE_INK_FAINT)}>
           {lesson.groupName}
-          {lesson.room ? ` · ${lesson.room}` : ""}
+          {lesson.room ? (
+            <>
+              <DoorOpen className="h-3 w-3 shrink-0" />
+              {lesson.room}
+            </>
+          ) : null}
         </span>
+        {events.length > 0 ? (
+          <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide dark:bg-white/15">
+            {events[0].eventType === "exam" ? a.types.exam : a.types.activity}
+            {events.length > 1 ? ` +${events.length - 1}` : ""}
+          </span>
+        ) : null}
       </button>
 
       {typeof document !== "undefined"
@@ -189,6 +211,29 @@ export function LessonCard({
                       </div>
                     </dl>
 
+                    {events.length > 0 ? (
+                      <ul className="mt-4 flex flex-col gap-2">
+                        {events.map((event) => (
+                          <li
+                            key={event.id}
+                            className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm dark:bg-amber-950/40"
+                          >
+                            <span className="rounded-full bg-amber-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">
+                              {event.eventType === "exam" ? a.types.exam : a.types.activity}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate font-semibold text-amber-900 dark:text-amber-100">
+                              {event.title}
+                            </span>
+                            <span className="shrink-0 text-xs font-medium text-amber-800/80 dark:text-amber-200/80">
+                              {event.allDay || !event.startTime
+                                ? a.form.allDay
+                                : `${event.startTime}${event.endTime ? `–${event.endTime}` : ""}`}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+
                     <div className="mt-5 flex flex-col gap-2">
                       {canAddEvent ? (
                         <button
@@ -200,7 +245,7 @@ export function LessonCard({
                           className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
                         >
                           <CalendarPlus className="h-4 w-4" />
-                          {t.agenda.events.addButton}
+                          {a.addButton}
                         </button>
                       ) : null}
                       {isToday ? (
@@ -241,8 +286,7 @@ export function LessonCard({
       {canAddEvent ? (
         <EventFormDialog
           open={eventOpen}
-          lessons={lessonChoices ?? []}
-          initialLessonId={lesson.id}
+          lesson={lessonChoice}
           initialDate={dateISO}
           onClose={() => setEventOpen(false)}
           onSaved={() => router.refresh()}

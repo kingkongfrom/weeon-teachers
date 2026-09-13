@@ -4,7 +4,6 @@ import { ScheduleGrid } from "@/components/schedule/schedule-grid";
 import { WeekNavigator } from "@/components/schedule/week-navigator";
 import { loadGroupEventsBetween } from "@/lib/dashboard/calendar";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
-import { toLessonChoices } from "@/lib/agenda/lesson-choice";
 import {
   addDays,
   isoDate,
@@ -63,12 +62,7 @@ export default async function HorariosPage({
           <p className="text-sm font-medium text-foreground/60">{t.panel.noLessons}</p>
         </div>
       ) : (
-        <ScheduleGrid
-          lessons={lessons}
-          weekStart={weekStart}
-          events={events}
-          lessonChoices={toLessonChoices(lessons)}
-        />
+        <ScheduleGrid lessons={lessons} weekStart={weekStart} events={events} />
       )}
     </div>
   );

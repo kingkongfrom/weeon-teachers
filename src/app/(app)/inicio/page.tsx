@@ -14,6 +14,8 @@ import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
+import { loadGroupEventsBetween } from "@/lib/dashboard/calendar";
+import { addDays, isoDate, mondayOf } from "@/lib/dashboard/week";
 import { getT } from "@/lib/i18n/server";
 import {
   TONE_CARD,
@@ -46,10 +48,12 @@ export default async function InicioPage() {
   const session = await getTeacherSession();
   const t = await getT();
 
-  const [grupos, schedule, schoolName] = await Promise.all([
+  const weekStart = mondayOf(new Date());
+  const [grupos, schedule, schoolName, weekEvents] = await Promise.all([
     loadTeacherGrupos(),
     loadTeacherSchedule(),
     session ? loadSchoolName(session.tenantId) : Promise.resolve(null),
+    loadGroupEventsBetween(isoDate(weekStart), isoDate(addDays(weekStart, 4))),
   ]);
 
   const subjectCount = grupos.reduce((total, grupo) => total + grupo.subjects.length, 0);
@@ -102,7 +106,7 @@ export default async function InicioPage() {
         </p>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid auto-rows-fr gap-4 sm:grid-cols-2">
         {modules.map((module, index) => {
           const Icon = module.icon;
           const upcoming = !module.href;
@@ -178,7 +182,7 @@ export default async function InicioPage() {
             </p>
           </div>
         ) : (
-          <ScheduleGrid lessons={schedule} />
+          <ScheduleGrid lessons={schedule} weekStart={weekStart} events={weekEvents} />
         )}
       </section>
     </FadeIn>

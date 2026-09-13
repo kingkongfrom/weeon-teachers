@@ -6,7 +6,6 @@ import {
 import { isoDate, weekDates } from "@/lib/dashboard/week";
 import { getT } from "@/lib/i18n/server";
 import { LessonCard } from "@/components/schedule/lesson-card";
-import type { LessonChoice } from "@/lib/agenda/lesson-choice";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 
 /**
@@ -18,12 +17,10 @@ export async function ScheduleGrid({
   lessons,
   weekStart,
   events = [],
-  lessonChoices,
 }: {
   lessons: TeacherLesson[];
   weekStart?: Date;
   events?: TeacherCalendarEvent[];
-  lessonChoices?: LessonChoice[];
 }) {
   const t = await getT();
   const dates = weekStart ? weekDates(weekStart) : null;
@@ -83,7 +80,7 @@ export async function ScheduleGrid({
                     lesson={lesson}
                     dayLabel={t.schedule.weekdays[index]}
                     dateISO={dateISO ?? undefined}
-                    lessonChoices={lessonChoices}
+                    events={dayEvents.filter((event) => event.lessonId === lesson.id)}
                   />
                 ))
               )}

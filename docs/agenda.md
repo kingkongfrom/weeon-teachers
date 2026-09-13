@@ -6,32 +6,23 @@ side is `weeon-mobile`.*
 ## One line
 
 **Agenda** (`/agenda`) is a hub with three cards: **Horarios** (weekly timetable
-with week navigation), **Eventos** (teacher-authored events/exams), and
-**Calendario** (placeholder). Exams and events share one table,
-`calendar_events`, so they show up on the student home automatically.
+with week navigation), **Próximos eventos** (read-only list of upcoming
+institution events), and **Calendario** (placeholder). Teachers add **exams and
+activities** from a class tile in the schedule popover (not from the events
+page).
 
 ## Routes
 
 | Route | Purpose |
 | --- | --- |
-| `/agenda` | Hub: Horarios / Eventos / Calendario |
+| `/agenda` | Hub: Horarios / Próximos eventos / Calendario |
 | `/horarios?week=YYYY-MM-DD` | Weekly timetable; `week` = any day of the target week |
-| `/agenda/eventos` | Create/list/delete group events and exams |
+| `/agenda/eventos` | Read-only upcoming events (institution calendar) |
 
-Panel general (`/inicio`) has an **Agenda** card → `/agenda`.
+Panel general (`/inicio`) has an **Agenda** card → `/agenda`; its **Horario de la
+semana** section now shows the **current week's dates** like `/horarios`.
 
-## Where do exams go? (decision)
-
-**One source of truth: `calendar_events`**, and every teacher event is **tied to
-a scheduled class period** (`class_lessons`). An exam is an event with
-`event_type = 'exam'`, `audience = 'group'`, `group_id` + `subject_id` +
-`lesson_id` derived from the chosen lesson. So an event for Matemática can only
-target a Matemática period, and the **date must fall on that lesson's weekday**.
-This reuses the existing student "Próximos eventos" pipeline and the admin
-calendar instead of a parallel table. The **Horarios** week view renders the
-selected week's group events on their day.
-
-## Horarios — week navigation
+## Horarios — week navigation + exams
 
 - `searchParams.week` (any `YYYY-MM-DD`) is snapped to that week's **Monday**
   (`lib/dashboard/week.ts`: `parseWeekStart`, `mondayOf`, `addDays`, `isoDate`,
@@ -39,51 +30,48 @@ selected week's group events on their day.
 - `WeekNavigator` links to the previous/next week and "Esta semana".
 - `ScheduleGrid` receives `weekStart` + the week's `events`; day headers show the
   real date and each day lists its events (amber chip) above the lessons.
+- **Each class tile shows room and an exam/activity indicator**; clicking it opens
+  a preview with the day, time, **room**, students, the **exams/activities**
+  attached to that class, and **Agregar examen o actividad**.
 - Lessons come from `loadTeacherSchedule()` (recurring `class_lessons`), so
   paging through weeks pages through the semester.
-- **Clicking a class tile** opens its preview; the preview has **Agregar
-  evento**, which opens the event dialog **prefilled with that class**
-  (subject, group, weekday) and **that day's date + times** — so the teacher
-  never re-picks what the schedule already knows.
 
-## Eventos — create & delete
+## Próximos eventos — read only
 
-- `lib/dashboard/calendar.ts`: `loadMyCalendarEvents()` (authored by this
-  teacher) and `loadGroupEventsBetween(startISO, endISO)` (group events for the
-  teacher's classes, any author). Rows carry `subjectName`, `groupName`,
-  `lessonId`.
-- `lib/teachers/calendar-actions.ts`: `createCalendarEvent` / `deleteCalendarEvent`
-  (Zod-validated). `createCalendarEvent` loads the **lesson**, verifies the date's
-  weekday matches, then inserts with `group_id`/`subject_id`/`lesson_id` from it
-  (`created_by` defaults to `auth.uid()`). Mismatched weekday → `agenda.errors.weekday`.
-- `components/agenda/event-form-dialog.tsx` is the single form (dialog), reused
-  by the **Eventos page** and by each **schedule tile**. It remounts on open, so
-  the requested lesson/date seed the fields with no effect-driven reset.
-- `/agenda/eventos` shows the **list** with an **Agregar evento** button (opens
-  the dialog with a class selector); delete via `ConfirmDialog`. The schedule
-  flow opens the same dialog with the class fixed to the clicked period.
+- `loadUpcomingEvents()` (`lib/dashboard/calendar.ts`): direct RLS `select` on
+  `calendar_events` with `date >= today`, ordered by date/time. RLS shows the
+  teacher school-wide, teacher-facing, and their-group events. The page renders a
+  card with a title + orange underline, the event list, and a friendly empty
+  message (no blank page). **No create/delete UI and no server actions here.**
+- The week view overlays the selected week's events via
+  `loadGroupEventsBetween(startISO, endISO)`.
+
+## Adding exams/activities (from the schedule)
+
+- `components/agenda/event-form-dialog.tsx` is the single form, opened from a
+  class tile's preview. **Subject, group, weekday, time and the date are fixed**
+  by the tile that was clicked (shown read-only), so the form only asks for the
+  **type** (Examen / Actividad — other types are school-managed), a title,
+  location and notes.
+- `lib/teachers/calendar-actions.ts#createCalendarEvent` loads the **lesson**,
+  verifies the date's weekday matches, then inserts with
+  `group_id`/`subject_id`/`lesson_id` from it (`created_by` defaults to
+  `auth.uid()`). Mismatched weekday → `agenda.errors.weekday`.
+- `lib/agenda/lesson-choice.ts` defines the `LessonChoice` the tile builds from
+  its `TeacherLesson`.
 
 ## Schema (weeon-tenants)
 
-Three additive migrations:
+Three additive migrations restore teacher authoring:
 
-- `20260913100000_teacher_calendar_events.sql`: `calendar_events.created_by`
-  (defaults `auth.uid()`), `subject_id`; `event_type` check extended with `exam`;
-  teacher policies (insert `audience='group'` events for a class they
-  `teaches_class`; update/delete only rows they authored). Admin policies remain.
-- `20260913110000_calendar_event_lesson.sql`: `calendar_events.lesson_id`
-  → `class_lessons(id)`.
-- `20260913120000_teacher_calendar_event_types.sql`: teachers may only insert
-  `event_type in ('exam','activity')` — every other type is school-managed.
+- `20260913100000_teacher_calendar_events.sql`: `created_by` (default
+  `auth.uid()`), `subject_id`; `event_type` check gains `exam`; teacher
+  insert/update/delete policies for `audience='group'` events on classes they
+  teach (edit only their own).
+- `20260913110000_calendar_event_lesson.sql`: `lesson_id` → `class_lessons(id)`.
+- `20260913120000_teacher_calendar_event_types.sql`: teacher inserts limited to
+  `event_type in ('exam','activity')`.
 
-Teachers pick only **Examen** or **Actividad** in the form (`TEACHER_EVENT_TYPES`
-in `event-form-dialog.tsx`, `z.enum(['exam','activity'])` in the action, and the
-RLS check above).
-
-Students read group events through the existing `calendar_events_member_select`
-policy (`teaches_class` / `is_enrolled_in_class` / `child_enrolled_in_class`), so
-`audience='group'` exams reach the enrolled students.
-
-> Note: the existing policy exposes `audience='teachers'` events to every
-> authenticated member (including students). The mobile query narrows to
-> `audience in ('school','group')`; fixing the policy is a follow-up.
+Students read group/school events through the existing
+`calendar_events_member_select` policy, so a teacher's group exam reaches that
+group's students as an upcoming event on mobile (`/student/eventos`).

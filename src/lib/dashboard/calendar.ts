@@ -28,7 +28,6 @@ export type TeacherCalendarEvent = {
   groupId: string | null;
   groupName: string | null;
   subjectId: string | null;
-  subjectName: string | null;
   lessonId: string | null;
 };
 
@@ -63,16 +62,12 @@ function toEventType(value: string): CalendarEventType {
   return known.includes(value as CalendarEventType) ? (value as CalendarEventType) : "academic";
 }
 
-async function decorate(
+async function withGroupNames(
   supabase: Awaited<ReturnType<typeof createSessionClient>>,
   rows: EventRow[],
 ): Promise<TeacherCalendarEvent[]> {
   const groupIds = [...new Set(rows.map((row) => row.group_id).filter((id): id is string => !!id))];
-  const subjectIds = [
-    ...new Set(rows.map((row) => row.subject_id).filter((id): id is string => !!id)),
-  ];
-
-  const groupNames = new Map<string, string>();
+  const names = new Map<string, string>();
   if (groupIds.length > 0) {
     const { data } = await supabase.from("classes").select("id, name, grade, section").in("id", groupIds);
     for (const row of data ?? []) {
@@ -80,14 +75,8 @@ async function decorate(
         row.name?.trim() ||
         [row.grade, row.section].filter(Boolean).join("").toUpperCase() ||
         "Grupo";
-      groupNames.set(row.id, label);
+      names.set(row.id, label);
     }
-  }
-
-  const subjectNames = new Map<string, string>();
-  if (subjectIds.length > 0) {
-    const { data } = await supabase.from("subjects").select("id, name").in("id", subjectIds);
-    for (const row of data ?? []) subjectNames.set(row.id, row.name);
   }
 
   return rows.map((row) => ({
@@ -102,15 +91,21 @@ async function decorate(
     location: row.location,
     description: row.description,
     groupId: row.group_id,
-    groupName: row.group_id ? groupNames.get(row.group_id) ?? null : null,
+    groupName: row.group_id ? names.get(row.group_id) ?? null : null,
     subjectId: row.subject_id,
-    subjectName: row.subject_id ? subjectNames.get(row.subject_id) ?? null : null,
     lessonId: row.lesson_id,
   }));
 }
 
-/** Events this teacher authored (exams/quizzes/activities), soonest first. */
-export const loadMyCalendarEvents = cache(async (): Promise<TeacherCalendarEvent[]> => {
+function isoDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Upcoming institution events the teacher can see (school-wide, teacher-facing,
+ * or their groups). Read-only — the school creates and manages these.
+ */
+export const loadUpcomingEvents = cache(async (): Promise<TeacherCalendarEvent[]> => {
   const session = await getTeacherSession();
   if (!session) return [];
 
@@ -118,15 +113,15 @@ export const loadMyCalendarEvents = cache(async (): Promise<TeacherCalendarEvent
   const { data, error } = await supabase
     .from("calendar_events")
     .select(EVENT_COLUMNS)
-    .eq("created_by", session.userId)
+    .gte("date", isoDate(new Date()))
     .order("date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: true });
 
   if (error || !data) return [];
-  return decorate(supabase, data as EventRow[]);
+  return withGroupNames(supabase, data as EventRow[]);
 });
 
-/** Group events (any author) for the teacher's classes within a date range. */
+/** Group events for the teacher's classes within a date range (Horarios week). */
 export const loadGroupEventsBetween = cache(
   async (startISO: string, endISO: string): Promise<TeacherCalendarEvent[]> => {
     const session = await getTeacherSession();
@@ -146,6 +141,6 @@ export const loadGroupEventsBetween = cache(
       .order("start_time", { ascending: true, nullsFirst: true });
 
     if (error || !data) return [];
-    return decorate(supabase, data as EventRow[]);
+    return withGroupNames(supabase, data as EventRow[]);
   },
 );

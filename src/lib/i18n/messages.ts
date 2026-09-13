@@ -65,20 +65,17 @@ const es = {
       description: "Tu horario de clases de la semana.",
     },
     eventos: {
-      label: "Eventos",
-      description: "Actividades y avisos del colegio.",
+      label: "Próximos eventos",
+      description: "Actividades y avisos publicados por el colegio.",
     },
     calendario: {
       label: "Calendario",
       description: "Vista mensual del ciclo escolar.",
     },
     events: {
-      title: "Eventos y exámenes",
-      description:
-        "Publica exámenes y actividades para tus grupos; los estudiantes los verán en la app.",
-      add: "Agregar",
-      addButton: "Agregar evento",
+      empty: "No hay eventos próximos publicados por el colegio.",
       dialogTitle: "Nuevo evento",
+      addButton: "Agregar examen o actividad",
       form: {
         lesson: "Clase (materia y horario)",
         lessonPlaceholder: "Seleccione una clase",
@@ -102,13 +99,6 @@ const es = {
         meeting: "Reunión",
         holiday: "Feriado",
         institutional: "Institucional",
-      },
-      list: {
-        title: "Tus eventos",
-        empty: "Aún no has publicado eventos.",
-        group: "Grupo",
-        delete: "Eliminar",
-        deleteConfirm: "¿Eliminar este evento?",
       },
     },
     errors: {
@@ -635,20 +625,17 @@ const en: Messages = {
       description: "Your class schedule for the week.",
     },
     eventos: {
-      label: "Events",
-      description: "School activities and notices.",
+      label: "Upcoming events",
+      description: "Activities and notices published by the school.",
     },
     calendario: {
       label: "Calendar",
       description: "Monthly view of the school year.",
     },
     events: {
-      title: "Events and exams",
-      description:
-        "Publish exams and activities for your groups; students see them in the app.",
-      add: "Add",
-      addButton: "Add event",
+      empty: "No upcoming events have been published by the school.",
       dialogTitle: "New event",
+      addButton: "Add exam or activity",
       form: {
         lesson: "Class (subject and schedule)",
         lessonPlaceholder: "Select a class",
@@ -672,13 +659,6 @@ const en: Messages = {
         meeting: "Meeting",
         holiday: "Holiday",
         institutional: "Institutional",
-      },
-      list: {
-        title: "Your events",
-        empty: "You haven't published events yet.",
-        group: "Group",
-        delete: "Delete",
-        deleteConfirm: "Delete this event?",
       },
     },
     errors: {

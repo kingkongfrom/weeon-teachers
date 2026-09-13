@@ -24,7 +24,8 @@ grader (answer-key auto-suggestions, per-question points/comments,
 gradebook update — see [`docs/aula-virtual.md`](docs/aula-virtual.md)
 § Submit vs grade. Needs the `weeon-tenants` classroom migrations listed there.
 The **Panel general** (`/inicio`) now has an **Agenda** card that opens `/agenda`,
-a hub for **Horarios** (built), **Eventos**, and **Calendario**.
+a hub for **Horarios** (weekly, paged), **Próximos eventos** (read-only institution
+events), and **Calendario**.
 
 | Route | Purpose |
 | ----- | ------- |
@@ -38,8 +39,8 @@ a hub for **Horarios** (built), **Eventos**, and **Calendario**.
 | `/grupos` | Grupos this teacher is assigned to (`teaches_class`) |
 | `/grupos/[id]` | Gradebook — sticky spreadsheet, typed columns (CW/HW/EXAM…), inline editing, CSV, submit report |
 | `/agenda` | Agenda hub — Horarios, Eventos, Calendario (placeholder) |
-| `/agenda/eventos` | Create/delete group events & exams (students see them as upcoming) |
-| `/horarios?week=` | Weekly timetable with week navigation + the week's events |
+| `/agenda/eventos` | Read-only upcoming institution events |
+| `/horarios?week=` | Weekly timetable (paged) with room, exams/activities; add exam/activity from a class tile |
 | `/estudiantes/[id]` | Per-student transcript (from aula virtual Personas or the gradebook) |
 | `/reportes` | Submitted grade snapshots for this teacher |
 
