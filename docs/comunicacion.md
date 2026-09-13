@@ -22,19 +22,19 @@ own copy.
 Panel general's **Comunicación** card → `/comunicacion`. **Novedades stays in the
 aula virtual** (class stream) — it is not part of Comunicación.
 
-## Mailbox (folders, categories, drag & drop)
+## Mailbox (folders + drag & drop)
 
-`mailbox-workspace.tsx` renders the sidebar + list and owns the drag-&-drop:
+`mailbox-workspace.tsx` renders folder chips + the list and owns the drag-&-drop:
 
 - **Folders:** Recibidos (`inbox`), Enviados (`sent`), Papelera (`trash`). A
   thread's default folder is derived (authored → sent, received → inbox) and can
   be overridden in `message_thread_state`.
-- **Categorías:** user-created folders (`message_labels`). Create inline
-  ("Nueva categoría"), delete (messages are kept; the label is cleared).
 - **Drag & drop:** each thread row is `draggable` (`application/x-weeon-thread`);
-  folder/category entries are drop targets that call `setThreadFolder` /
-  `setThreadLabel`. The site look (gradient Redactar button, active-row tint,
-  grouped nav) is matched via the shared tone/`brand-gradient` styling.
+  the folder chips are drop targets that call `setThreadFolder`.
+- **Look:** folder **chips** + a single card list with initials avatars and a
+  gradient **Redactar** button — the same list/chip language as the rest of the
+  portal (aula virtual, students, grading inbox). Categories were removed; the
+  layout is a plain folder mailbox.
 
 ## Data model (weeon-tenants, additive)
 

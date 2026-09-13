@@ -20,7 +20,6 @@ export type MessageThreadSummary = {
   attachmentCount: number;
   mine: boolean;
   folder: MessageFolder;
-  labelId: string | null;
 };
 
 export type MessageItem = {
@@ -60,11 +59,6 @@ export type MessageContact = {
   name: string;
   kind: string;
   context: string;
-};
-
-export type MessageLabel = {
-  id: string;
-  name: string;
 };
 
 type NameEmbed = { name: string } | { name: string }[] | null;
@@ -139,24 +133,9 @@ export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => 
   }));
 });
 
-/** The teacher's message categories (folders). */
-export const loadMessageLabels = cache(async (): Promise<MessageLabel[]> => {
-  const session = await getTeacherSession();
-  if (!session) return [];
-  const supabase = await createSessionClient();
-  const { data, error } = await supabase
-    .from("message_labels")
-    .select("id, name, position")
-    .eq("owner_profile_id", session.userId)
-    .order("position", { ascending: true })
-    .order("name", { ascending: true });
-  if (error || !data) return [];
-  return (data as Array<{ id: string; name: string }>).map((row) => ({ id: row.id, name: row.name }));
-});
-
-/** Thread summaries for a mailbox folder (optionally filtered by category). */
+/** Thread summaries for a mailbox folder. */
 export const loadMessageSummaries = cache(
-  async (folder: MessageFolder, labelId?: string | null): Promise<MessageThreadSummary[]> => {
+  async (folder: MessageFolder): Promise<MessageThreadSummary[]> => {
     const session = await getTeacherSession();
     if (!session) return [];
     const supabase = await createSessionClient();
@@ -186,14 +165,14 @@ export const loadMessageSummaries = cache(
         supabase.from("message_attachments").select("thread_id").in("thread_id", ids),
         supabase
           .from("message_thread_state")
-          .select("thread_id, folder, label_id")
+          .select("thread_id, folder")
           .eq("owner_profile_id", session.userId)
           .in("thread_id", ids),
       ]);
 
     const recipientRows = (recipients ?? []) as RecipientRow[];
     const messageRows = (messages ?? []) as MessageRow[];
-    const stateRows = (states ?? []) as Array<{ thread_id: string; folder: MessageFolder; label_id: string | null }>;
+    const stateRows = (states ?? []) as Array<{ thread_id: string; folder: MessageFolder }>;
     const stateByThread = new Map(stateRows.map((row) => [row.thread_id, row]));
 
     const attachmentCount = new Map<string, number>();
@@ -211,7 +190,6 @@ export const loadMessageSummaries = cache(
         const resolvedFolder: MessageFolder = state?.folder ?? (mine ? "sent" : "inbox");
 
         if (resolvedFolder !== folder) return null;
-        if (labelId && state?.label_id !== labelId) return null;
 
         const myRecipient = threadRecipients.find(
           (item) => item.profile_id === session.userId || item.recipient_key === session.userId,
@@ -235,7 +213,6 @@ export const loadMessageSummaries = cache(
           attachmentCount: attachmentCount.get(row.id) ?? 0,
           mine,
           folder: resolvedFolder,
-          labelId: state?.label_id ?? null,
         } satisfies MessageThreadSummary;
       })
       .filter((row): row is MessageThreadSummary => row !== null);
@@ -276,7 +253,7 @@ export const loadThreadDetail = cache(
           .order("created_at", { ascending: true }),
         supabase
           .from("message_thread_state")
-          .select("folder, label_id")
+          .select("folder")
           .eq("owner_profile_id", session.userId)
           .eq("thread_id", threadId)
           .maybeSingle(),
@@ -319,7 +296,7 @@ export const loadThreadDetail = cache(
 
     const mine = row.created_by === session.userId;
     const last = messageRows[messageRows.length - 1];
-    const stateRow = state as { folder: MessageFolder; label_id: string | null } | null;
+    const stateRow = state as { folder: MessageFolder } | null;
 
     return {
       allowReplies: row.allow_replies,
@@ -342,7 +319,6 @@ export const loadThreadDetail = cache(
         attachmentCount: attachments.length,
         mine,
         folder: stateRow?.folder ?? (mine ? "sent" : "inbox"),
-        labelId: stateRow?.label_id ?? null,
       },
       messages: messageRows.map((message) => ({
         id: message.id,
