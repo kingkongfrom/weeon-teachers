@@ -3,6 +3,7 @@ import { AssessmentEditor } from "@/components/assessments/assessment-editor";
 import { loadAssessment } from "@/lib/dashboard/assessments";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassTopics } from "@/lib/dashboard/topics";
+import { loadClassTurnIns } from "@/lib/dashboard/submissions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,10 @@ export default async function AssessmentEditorPage({
   ]);
   if (!assessment || assessment.classId !== classId) notFound();
 
+  const students = detail?.students ?? [];
+  const turnIns = await loadClassTurnIns(classId, students);
+  const stat = turnIns.get(assessmentId);
+
   return (
     <AssessmentEditor
       initial={assessment}
@@ -33,6 +38,8 @@ export default async function AssessmentEditorPage({
         name: subject.name,
       }))}
       topics={topics.map((topic) => ({ id: topic.id, name: topic.name }))}
+      studentCount={students.length}
+      submissions={stat?.submissions ?? []}
     />
   );
 }

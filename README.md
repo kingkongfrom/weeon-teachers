@@ -15,11 +15,14 @@ Workspace map: `../AGENTS.md`.
 Phase 1 (login + grupos) is implemented. Phase 2 is partial: a rebuilt
 **gradebook spreadsheet** on `/grupos/[id]`, submit report, and a reportes
 list — not a full reports composer.
-The **Aula virtual** is a Google Classroom-style hub. *Trabajo de clase* now has
-an **assessment builder** (TipTap WYSIWYG homeworks/exams) and **document
-sharing**; the stream is still an empty state. Needs the `weeon-tenants`
-`20260911130000_class_materials.sql` and `20260911150000_assessments.sql`
-migrations — see [`docs/aula-virtual.md`](docs/aula-virtual.md).
+The **Aula virtual** is a Google Classroom-style hub. *Novedades* is a stream.
+*Trabajo de clase* has an **assessment builder**, **document sharing**,
+**turn-in counts** (N de M entregadas + names) once a student submits on
+`weeon-mobile`, and **grading**: the assignment's **Entregas** list opens a
+grader (answer-key auto-suggestions, per-question points/comments,
+**Guardar y devolver**) that writes `grades`, so `/estudiantes/[id]` and the
+gradebook update — see [`docs/aula-virtual.md`](docs/aula-virtual.md)
+§ Submit vs grade. Needs the `weeon-tenants` classroom migrations listed there.
 
 | Route | Purpose |
 | ----- | ------- |
@@ -28,6 +31,8 @@ migrations — see [`docs/aula-virtual.md`](docs/aula-virtual.md).
 | `/inicio` | Landing hub with the section cards + weekly schedule |
 | `/aula-virtual` | Classes grid (Classroom-style home) |
 | `/aula-virtual/[classId]` | Class page — Novedades / Trabajo de clase / Personas / Calificaciones |
+| `/aula-virtual/[classId]/evaluaciones/[assessmentId]` | Assessment builder — WYSIWYG, question types, draft/publish |
+| `/aula-virtual/[classId]/evaluaciones/[assessmentId]/entregas/[submissionId]` | Grader — student answers, scoring, feedback, return |
 | `/grupos` | Grupos this teacher is assigned to (`teaches_class`) |
 | `/grupos/[id]` | Gradebook — sticky spreadsheet, typed columns (CW/HW/EXAM…), inline editing, CSV, submit report |
 | `/horarios` | Weekly timetable |

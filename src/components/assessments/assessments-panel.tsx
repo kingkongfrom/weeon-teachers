@@ -11,16 +11,19 @@ import {
   type AssessmentKind,
   type AssessmentSummary,
 } from "@/lib/assessments/model";
+import { SubmissionStatus } from "@/components/assessments/submission-status";
 
 /** "Trabajo de clase" list of homeworks/exams the teacher has created. */
 export function AssessmentsPanel({
   classId,
   assessments,
+  studentCount,
   defaultTopicId = null,
   defaultSubjectId = null,
 }: {
   classId: string;
   assessments: AssessmentSummary[];
+  studentCount: number;
   defaultTopicId?: string | null;
   defaultSubjectId?: string | null;
 }) {
@@ -146,6 +149,14 @@ export function AssessmentsPanel({
                         ? ` · ${a.dueDate}: ${new Date(assessment.dueAt).toLocaleDateString("es-CR")}`
                         : ""}
                     </p>
+                    {assessment.published ? (
+                      <SubmissionStatus
+                        compact
+                        studentCount={studentCount}
+                        submittedCount={assessment.submittedCount}
+                        submitterNames={assessment.submitterNames}
+                      />
+                    ) : null}
                   </div>
                 </Link>
               </li>

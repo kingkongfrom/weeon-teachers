@@ -3,13 +3,6 @@
 
 import type { Locale } from "@/lib/i18n/config";
 
-export type StudentGroupScore = {
-  id: string;
-  name: string;
-  finalScore: number | null; // 0..100, null when the group has no grades yet
-  gradedExams: number;
-};
-
 export function fullName(student: {
   firstName: string;
   lastName: string;

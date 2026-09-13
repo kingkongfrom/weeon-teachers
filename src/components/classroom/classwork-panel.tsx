@@ -22,6 +22,7 @@ export function ClassworkPanel({
   topics,
   selectedSubjectId,
   subjects,
+  studentCount,
 }: {
   classId: string;
   assessments: AssessmentSummary[];
@@ -29,6 +30,7 @@ export function ClassworkPanel({
   topics: ClassTopic[];
   selectedSubjectId: string | null;
   subjects: { id: string; name: string }[];
+  studentCount: number;
 }) {
   const t = useT();
   const [selected, setSelected] = useState<string>("all");
@@ -170,6 +172,7 @@ export function ClassworkPanel({
         <AssessmentsPanel
           classId={classId}
           assessments={shownAssessments}
+          studentCount={studentCount}
           defaultTopicId={defaultTopicId}
           defaultSubjectId={selectedSubjectId}
         />

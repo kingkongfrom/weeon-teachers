@@ -61,6 +61,8 @@ export type AssessmentSummary = {
   published: boolean;
   questionCount: number;
   updatedAt: string;
+  submittedCount: number;
+  submitterNames: string[];
 };
 
 export type Assessment = AssessmentSummary & {

@@ -142,14 +142,17 @@ export function GradebookWorkspace({
     studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
   );
 
-  // Auto label per column: type short code + its sequence among that type
-  // (CW1, CW2, EXAM1, …) — no manual titles shown.
-  const labels = new Map<string, string>();
+  // Auto label per column: short code + sequence among that type (CW 1) for the
+  // compact view, and the full kind name (Classwork 1) for the expanded view.
+  const labels = new Map<string, { short: string; full: string }>();
   const counters = new Map<AssignmentKind, number>();
   for (const column of exams) {
     const next = (counters.get(column.kind) ?? 0) + 1;
     counters.set(column.kind, next);
-    labels.set(column.id, `${w.kindShort[column.kind]} ${next}`);
+    labels.set(column.id, {
+      short: `${w.kindShort[column.kind]} ${next}`,
+      full: `${w.kinds[column.kind]} ${next}`,
+    });
   }
 
   const overall = average(
@@ -157,12 +160,6 @@ export function GradebookWorkspace({
       exams.map((column) => columnPct(column, student.id)),
     ),
   );
-
-  const attendanceTotals = visibleStudents.reduce<AttendanceCounts>((totals, student) => {
-    const counts = attendance[student.id] ?? emptyAttendanceCounts();
-    for (const status of ABSENCE_ORDER) totals[status] += counts[status];
-    return totals;
-  }, emptyAttendanceCounts());
 
   async function changeSubject(nextId: string | null) {
     setSubjectId(nextId);
@@ -278,7 +275,7 @@ export function GradebookWorkspace({
             className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
           >
             {dense ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-            {dense ? w.comfortable : w.dense}
+            {dense ? w.expanded : w.dense}
           </button>
           <button
             type="button"
@@ -388,129 +385,123 @@ export function GradebookWorkspace({
           {w.noStudents}
         </p>
       ) : (
-        <div className="relative overflow-auto rounded-2xl border border-border bg-surface">
-          {loading ? (
-            <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface/60 backdrop-blur-[1px]">
-              <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
-            </div>
-          ) : null}
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="relative min-w-0 flex-1 overflow-auto rounded-2xl border border-border bg-surface">
+            {loading ? (
+              <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface/60 backdrop-blur-[1px]">
+                <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
+              </div>
+            ) : null}
 
-          <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr>
-                <th className={cn("sticky left-0 top-0 z-40 w-10 border-b border-r border-border bg-surface px-2 text-center text-xs font-bold text-foreground/40", headY)}>
-                  #
-                </th>
-                <th className={cn("sticky left-10 top-0 z-40 min-w-[13rem] border-b border-r border-border bg-surface px-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
-                  {t.gradebook.headers.student}
-                </th>
-                {exams.map((column) => (
-                  <th
-                    key={column.id}
-                    className="sticky top-0 z-30 border-b border-r border-border bg-surface px-1 py-1.5 align-bottom"
-                  >
-                    <ColumnHeader
-                      column={column}
-                      label={labels.get(column.id) ?? column.title}
-                      dense={dense}
-                      onDelete={() => setDeleteTarget(column)}
-                    />
+            <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
+              <thead>
+                <tr className={dense ? "h-8" : "h-10"}>
+                  <th className={cn("sticky left-0 top-0 z-40 w-10 border-b border-r border-border bg-surface px-2 text-center text-xs font-bold text-foreground/40", headY)}>
+                    #
                   </th>
-                ))}
-                <th className={cn("sticky right-[5.5rem] top-0 z-40 w-[11rem] border-b border-l border-border bg-surface px-2 text-center text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
-                  {t.attendance.column}
-                </th>
-                <th className={cn("sticky right-0 top-0 z-40 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center text-xs font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300", headY)}>
-                  {w.final}
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {visibleStudents.map((student, rowIndex) => {
-                const final = studentAverage(exams, student.id);
-                return (
-                  <tr key={student.id} className="group">
-                    <td className={cn("sticky left-0 z-20 border-b border-r border-border bg-surface px-2 text-center text-xs font-semibold text-foreground/35", rowY)}>
-                      {rowIndex + 1}
-                    </td>
-                    <td className={cn("sticky left-10 z-20 border-b border-r border-border bg-surface px-3", rowY)}>
-                      <Link
-                        href={`/estudiantes/${student.id}`}
-                        title={studentName(student)}
-                        className="block truncate font-medium text-foreground transition-colors hover:text-brand-700 dark:hover:text-brand-300"
+                  <th className={cn("sticky left-10 top-0 z-40 min-w-[13rem] border-b border-r border-border bg-surface px-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
+                    {t.gradebook.headers.student}
+                  </th>
+                  {exams.map((column) => {
+                    const label = labels.get(column.id) ?? {
+                      short: column.title,
+                      full: column.title,
+                    };
+                    return (
+                      <th
+                        key={column.id}
+                        className={cn(
+                          "sticky top-0 z-30 border-b border-r border-border bg-surface px-1 py-1.5 text-center align-bottom",
+                          dense ? "w-[3.5rem]" : "w-[7.5rem]",
+                        )}
                       >
-                        {studentName(student)}
-                      </Link>
-                    </td>
-                    {exams.map((column, colIndex) => (
-                      <td key={column.id} className="border-b border-r border-border p-0.5">
-                        <GradeCell
-                          key={`${column.id}:${student.id}`}
-                          classId={classId}
+                        <ColumnHeader
                           column={column}
-                          studentId={student.id}
-                          row={rowIndex}
-                          col={colIndex}
+                          label={label}
                           dense={dense}
-                          onSaved={refresh}
+                          onDelete={() => setDeleteTarget(column)}
                         />
-                      </td>
-                    ))}
-                    <td className={cn("sticky right-[5.5rem] z-20 border-b border-l border-border bg-surface px-2", rowY)}>
-                      <AttendanceCell counts={attendance[student.id]} />
-                    </td>
-                    <td className={cn("sticky right-0 z-20 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center", rowY)}>
-                      <span className={cn("inline-block rounded-md px-2 py-0.5 text-sm font-bold", tintFor(final) || "text-foreground/40")}>
-                        {final == null ? "—" : `${final}%`}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+                      </th>
+                    );
+                  })}
+                  <th className={cn("sticky right-0 top-0 z-40 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center text-xs font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300", headY)}>
+                    {w.final}
+                  </th>
+                </tr>
+              </thead>
 
-            <tfoot>
-              <tr>
-                <td className={cn("sticky bottom-0 left-0 z-40 border-r border-t border-border bg-surface-muted px-2", headY)} />
-                <td className={cn("sticky bottom-0 left-10 z-40 border-r border-t border-border bg-surface-muted px-3 text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
-                  {w.columnAverage}
-                </td>
-                {exams.map((column) => {
-                  const avg = columnAverage(column, visibleStudents);
+              <tbody>
+                {visibleStudents.map((student, rowIndex) => {
+                  const final = studentAverage(exams, student.id);
                   return (
-                    <td
-                      key={column.id}
-                      className="sticky bottom-0 z-30 border-r border-t border-border bg-surface-muted px-1 py-2 text-center text-xs font-bold"
-                    >
-                      <span className={cn("rounded px-1.5 py-0.5", tintFor(avg) || "text-foreground/40")}>
-                        {avg == null ? "—" : `${avg}%`}
-                      </span>
-                    </td>
+                    <tr key={student.id} className={cn("group", dense ? "h-8" : "h-9")}>
+                      <td className={cn("sticky left-0 z-20 border-b border-r border-border bg-surface px-2 text-center text-xs font-semibold text-foreground/35", rowY)}>
+                        {rowIndex + 1}
+                      </td>
+                      <td className={cn("sticky left-10 z-20 border-b border-r border-border bg-surface px-3", rowY)}>
+                        <Link
+                          href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}`)}`}
+                          title={studentName(student)}
+                          className="block truncate font-medium text-foreground transition-colors hover:text-brand-700 dark:hover:text-brand-300"
+                        >
+                          {studentName(student)}
+                        </Link>
+                      </td>
+                      {exams.map((column, colIndex) => (
+                        <td key={column.id} className="border-b border-r border-border px-0.5">
+                          <GradeCell
+                            key={`${column.id}:${student.id}`}
+                            classId={classId}
+                            column={column}
+                            studentId={student.id}
+                            row={rowIndex}
+                            col={colIndex}
+                            dense={dense}
+                            onSaved={refresh}
+                          />
+                        </td>
+                      ))}
+                      <td className={cn("sticky right-0 z-20 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center", rowY)}>
+                        <span className={cn("inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none", tintFor(final) || "text-foreground/40")}>
+                          {final == null ? "—" : `${final}%`}
+                        </span>
+                      </td>
+                    </tr>
                   );
                 })}
-                <td className={cn("sticky bottom-0 right-[5.5rem] z-30 border-l border-t border-border bg-surface-muted px-2", headY)}>
-                  <div className="flex items-center justify-center gap-2 whitespace-nowrap text-[11px] font-bold tabular-nums text-foreground/55">
-                    {ABSENCE_ORDER.map((status) => (
-                      <span
-                        key={status}
-                        title={t.attendance.statuses[status]}
-                        className="inline-flex items-center gap-0.5"
+              </tbody>
+
+              <tfoot>
+                <tr className={dense ? "h-8" : "h-10"}>
+                  <td className={cn("sticky bottom-0 left-0 z-40 border-r border-t border-border bg-surface-muted px-2", headY)} />
+                  <td className={cn("sticky bottom-0 left-10 z-40 border-r border-t border-border bg-surface-muted px-3 text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
+                    {w.columnAverage}
+                  </td>
+                  {exams.map((column) => {
+                    const avg = columnAverage(column, visibleStudents);
+                    return (
+                      <td
+                        key={column.id}
+                        className="sticky bottom-0 z-30 border-r border-t border-border bg-surface-muted px-1 py-1 text-center text-xs font-bold"
                       >
-                        <span>{ATTENDANCE_CODE[status]}</span>
-                        <span className={cn("rounded px-1", absenceTint(attendanceTotals[status]))}>
-                          {attendanceTotals[status]}
+                        <span className={cn("rounded px-1.5 py-0.5", tintFor(avg) || "text-foreground/40")}>
+                          {avg == null ? "—" : `${avg}%`}
                         </span>
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className={cn("sticky bottom-0 right-0 z-40 w-[5.5rem] border-l border-t border-border bg-surface-muted px-3 text-center text-xs font-bold text-brand-700 dark:text-brand-300", headY)}>
-                  {overall == null ? "—" : `${overall}%`}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+                      </td>
+                    );
+                  })}
+                  <td className={cn("sticky bottom-0 right-0 z-40 w-[5.5rem] border-l border-t border-border bg-surface-muted px-3 text-center text-xs font-bold text-brand-700 dark:text-brand-300", headY)}>
+                    {overall == null ? "—" : `${overall}%`}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <AttendancePanel
+            students={visibleStudents}
+            attendance={attendance}
+            dense={dense}
+          />
         </div>
       )}
 
@@ -621,7 +612,7 @@ function GradeCell({
           }
         }}
         className={cn(
-          "w-full rounded-md border border-transparent bg-transparent text-center font-medium tabular-nums text-foreground outline-none transition-colors focus:border-brand-400 focus:bg-surface",
+          "w-full rounded-md border border-transparent bg-transparent px-1 text-center font-medium tabular-nums text-foreground outline-none transition-colors focus:border-brand-400 focus:bg-surface",
           dense ? "h-7 min-w-[2.25rem] text-[13px]" : "h-8 min-w-[3.25rem] text-sm",
           status === "error" ? "border-error/60 text-error" : tintFor(pct),
         )}
@@ -646,19 +637,72 @@ function AttendanceCell({ counts }: { counts?: AttendanceCounts }) {
   const t = useT();
   const resolved = counts ?? emptyAttendanceCounts();
   return (
-    <div className="flex items-center justify-center gap-2 whitespace-nowrap text-[11px] font-semibold tabular-nums">
+    <div className="flex items-center justify-center divide-x divide-border text-[11px] font-semibold tabular-nums">
       {ABSENCE_ORDER.map((status) => (
         <span
           key={status}
           title={t.attendance.statuses[status]}
-          className="inline-flex items-center gap-0.5"
+          className="inline-flex items-center gap-0.5 px-1.5 first:pl-0 last:pr-0"
         >
           <span className="font-bold text-foreground/55">{ATTENDANCE_CODE[status]}</span>
-          <span className={cn("rounded px-1 font-bold", absenceTint(resolved[status]))}>
+          <span
+            className={cn(
+              "min-w-[1rem] rounded px-1 text-center font-bold",
+              absenceTint(resolved[status]),
+            )}
+          >
             {resolved[status]}
           </span>
         </span>
       ))}
+    </div>
+  );
+}
+
+/** Read-only attendance panel: the cumulative ausencia counts per student, in a
+ * detached card next to the gradebook. Row heights mirror the table (`h-8`/`h-9`
+ * body, taller header/footer) so the two columns line up. */
+function AttendancePanel({
+  students,
+  attendance,
+  dense,
+}: {
+  students: TeacherStudent[];
+  attendance: Record<string, AttendanceCounts>;
+  dense: boolean;
+}) {
+  const t = useT();
+  const headH = dense ? "h-8" : "h-10";
+  const rowH = dense ? "h-8" : "h-9";
+  const footH = dense ? "h-8" : "h-10";
+
+  return (
+    <div className="flex w-[13rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface">
+      <div
+        className={cn(
+          "flex items-center justify-center border-b border-border px-2 text-center text-xs font-bold uppercase tracking-wide text-foreground/50",
+          headH,
+        )}
+      >
+        {t.attendance.column}
+      </div>
+      <div className="flex flex-1 flex-col">
+        {students.map((student) => (
+          <div
+            key={student.id}
+            className={cn(
+              "flex items-center justify-center border-b border-border px-2",
+              rowH,
+            )}
+          >
+            <AttendanceCell counts={attendance[student.id]} />
+          </div>
+        ))}
+      </div>
+      <div
+        className={cn("border-t border-border bg-surface-muted", footH)}
+        aria-hidden
+      />
     </div>
   );
 }
@@ -670,7 +714,7 @@ function ColumnHeader({
   onDelete,
 }: {
   column: ExamColumn;
-  label: string;
+  label: { short: string; full: string };
   dense: boolean;
   onDelete: () => void;
 }) {
@@ -678,35 +722,26 @@ function ColumnHeader({
   const w = t.gradebook.workspace;
 
   return (
-    <div
-      className={cn(
-        "group/col flex flex-col items-center gap-1",
-        dense ? "w-[4rem]" : "w-[6.5rem]",
-      )}
-    >
+    <div className="group/col relative flex w-full flex-col items-center gap-1">
       <span
         title={column.title || w.kinds[column.kind]}
         className={cn(
-          "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+          "max-w-full whitespace-nowrap rounded px-1.5 py-0.5 text-center text-[10px] font-bold leading-tight",
           KIND_STYLES[column.kind],
+          dense ? "uppercase tracking-wide" : "normal-case",
         )}
       >
-        {label}
+        {dense ? label.short : label.full}
       </span>
-      <div className="flex w-full items-center justify-between">
-        <span className="text-[10px] font-medium text-foreground/40">
-          {column.points ?? 100}
-        </span>
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label={w.deleteColumn}
-          title={w.deleteColumn}
-          className="flex h-5 w-5 items-center justify-center rounded text-error/60 opacity-0 transition-all hover:bg-error/10 hover:text-error focus:opacity-100 group-hover/col:opacity-100"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label={w.deleteColumn}
+        title={w.deleteColumn}
+        className="absolute right-0 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-error/60 opacity-0 transition-all hover:bg-error/10 hover:text-error focus:opacity-100 group-hover/col:opacity-100"
+      >
+        <Trash2 className="h-3 w-3" />
+      </button>
     </div>
   );
 }

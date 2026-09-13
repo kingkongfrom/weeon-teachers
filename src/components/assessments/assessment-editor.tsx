@@ -39,6 +39,8 @@ import {
   saveAssessment,
   setAssessmentPublished,
 } from "@/lib/teachers/assessments-actions";
+import { AssessmentSubmissions } from "@/components/assessments/assessment-submissions";
+import type { SubmissionSummary } from "@/lib/dashboard/submissions";
 
 const ADD_TYPES: QuestionType[] = [
   "multiple_choice",
@@ -62,10 +64,14 @@ export function AssessmentEditor({
   initial,
   subjects,
   topics,
+  studentCount = 0,
+  submissions = [],
 }: {
   initial: Assessment;
   subjects: { id: string; name: string }[];
   topics: { id: string; name: string }[];
+  studentCount?: number;
+  submissions?: SubmissionSummary[];
 }) {
   const t = useT();
   const a = t.assessments;
@@ -270,6 +276,16 @@ export function AssessmentEditor({
         <div className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm font-medium text-error">
           {error}
         </div>
+      ) : null}
+
+      {initial.published ? (
+        <AssessmentSubmissions
+          classId={initial.classId}
+          assessmentId={initial.id}
+          studentCount={studentCount}
+          submissions={submissions}
+          maxMarks={initial.pointsTotal || total}
+        />
       ) : null}
 
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5">

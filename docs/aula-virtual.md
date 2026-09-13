@@ -12,10 +12,11 @@ Personas / Calificaciones** — and then improve on it by **unifying Classwork
 with the gradebook** (an assignment *is* a grade column) and keeping
 everything MEP- and tenant-aware.
 
-**P1 is implemented: the teacher shares documents with a group.** Groups and
+**P1–P3 and P5a–P5c are implemented: documents, stream, topics, the assessment
+builder, and teacher grading of student submissions.** Groups and
 students already come from the admin assignment — the teacher never adds them
-here. Exams/homework, native assessments, and editable PDFs come later; see
-§ Documents vs assessments and § Build phases.
+here. Editable PDFs come later; see § Documents vs assessments and § Build
+phases.
 
 ## Why Classroom
 
@@ -35,7 +36,7 @@ here. Exams/homework, native assessments, and editable PDFs come later; see
 | Classroom **UI + authoring** (this doc) | `weeon-teachers` |
 | **Schema / RLS / Storage**, additive only | `weeon-tenants` |
 | Attendance **register** (Libro de clase, this doc) | `weeon-teachers` |
-| Daily consumption (live grades, notices, student/parent view) | `weeon-mobile-apps` |
+| Daily consumption (live grades, notices, student fill/submit) | `weeon-mobile` (Expo; Flutter `weeon-mobile-apps` is the predecessor) |
 | School structure (classes, subjects, enrollments, staff) | `weeon-tenants` (admin) |
 
 Product decision: authoring of announcements, classwork, materials, **and the
@@ -80,6 +81,13 @@ Honest snapshot — do not assume the rest exists.
       draft/publish. **Publishing creates/updates its grade column** (linked via
       `assignments.assessment_id`, typed by the assessment kind), so it shows up
       in the gradebook with no manual column.
+      **Turn-in visibility (P5b) + grading (P5c):** a published card shows
+      **N de M entregadas** and the student names (`loadClassTurnIns` →
+      `submissions` where `state in ('submitted','returned')`). Opening the tarea
+      shows the interactive **Entregas** list — each row links to the grader at
+      `/aula-virtual/[classId]/evaluaciones/[assessmentId]/entregas/[submissionId]`
+      — with a **Por evaluar / Evaluada** status and the mark. See
+      § Submit vs grade and § Grades & evaluation.
     - *Materiales*: `MaterialsPanel` uploads/lists/downloads/removes documents.
     - *Temas*: `ClassworkPanel` — topic chips (Temas) create topics and filter
       assessments + materials; topics are set on the assessment/column and on the
@@ -95,7 +103,9 @@ Honest snapshot — do not assume the rest exists.
       subject is not repeated on the banner — it is chosen/seen in Trabajo de
       clase. The tone palette is defined once in `src/lib/dashboard/tones.ts`
       and shared with the hub and lesson tiles.
-  - **Personas** — teacher row + enrolled students.
+  - **Personas** — teacher row + enrolled students; each student opens their
+    transcript (`/estudiantes/[id]`). This is the home for the roster — there is
+    no separate students section in the hub.
   - **Asistencia** — the **dated class register** (`AttendanceRegister`):
     `attendance_records` (shared table) keyed `(tenant, class, student, date)`.
     Five MEP states — **P** presente, **TJ** tardía justificada, **TI** tardía
@@ -110,17 +120,20 @@ Honest snapshot — do not assume the rest exists.
     `teaches_class`/admin; reads to class members. Requires
     `20260912180000_attendance_ausencias.sql` in `weeon-tenants`.
     The **gradebook** (`/grupos/[id]`) reflects it too: a read-only
-    **Asistencia** column next to FINAL shows the four ausencia counts
-    (`A · AJ · TI · TJ`) accumulated per student across dates, aggregated from
-    `attendance_records` by `loadClassAttendanceCounts`; it is numbers only (no
-    percentage, since it is cumulative), class-wide, so it repeats across
-    subject tabs, and it is exported in the CSV.
+    **Asistencia** panel sits to the right of the table (a separate card, not a
+    table column) showing the four ausencia counts (`A · AJ · TI · TJ`)
+    accumulated per student across dates, aggregated from `attendance_records`
+    by `loadClassAttendanceCounts`; it is numbers only (no percentage, since it
+    is cumulative), class-wide, so it repeats across subject tabs, mirrors the
+    table rows one-to-one, and is exported in the CSV.
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
 - **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over
   `assignments` (columns) + `grades` (marks). Sticky student column, typed
   columns (Trabajo/Tarea/Examen/Prueba/Proyecto) with auto labels (`CW 1`,
   `EXAM 1`…), inline keyboard editing + autosave, color-coded cells, per-student
-  FINAL and per-column averages, density toggle, CSV export, and undo on delete.
+  FINAL and per-column averages, a **Compact / Expanded** density toggle (dense
+  narrows the columns to the marks; expanded widens them and shows the full kind
+  label — `Classwork 1` instead of `CW 1`), CSV export, and undo on delete.
   `assignments.category` groups columns (classwork/evaluation) for weighting.
   **Grading math:** each mark reduces to a percentage via
   `grades.max_marks` → column `assignments.points` → 100; FINAL is the
@@ -129,9 +142,10 @@ Honest snapshot — do not assume the rest exists.
   **untagged columns (`subject_id = null`) have no tab** and are not shown here.
   Student names link to the transcript below.
 - **Individual transcript** — `/estudiantes/[id]`: `StudentGradesView` renders one
-  student across every group the teacher teaches, reached from the gradebook (click
-  a student name) or **Aula virtual → Personas**; the `/estudiantes` roster lists
-  everyone. `loadTeacherStudentReport` (`src/lib/dashboard/student-report.ts`)
+  student across every group the teacher teaches. Students have **no standalone
+  section**: they are the aula virtual **Personas** tab (per group) and the
+  gradebook rows, and either opens the transcript (`?from=` returns the teacher
+  there). `loadTeacherStudentReport` (`src/lib/dashboard/student-report.ts`)
   groups the student's `assignments` by subject, reduces each `grades` mark to a
   percentage (`max_marks` → column `points` → 100), and averages graded items per
   subject, per group, and overall (pass ≥ 70). **Columns with no `subject_id`
@@ -142,18 +156,53 @@ Honest snapshot — do not assume the rest exists.
   card per group whose **subject rows start collapsed** (average, status, bar) and
   expand into the full column breakdown, so a many-subject secondary student stays
   scannable. Attendance shows the four ausencia counts only (no percentage).
-- No stream comments; student fill/submit (P5b) and auto-grading (P5c) not built yet.
+   **A graded homework does appear as a mark here.** The transcript reads
+   `grades`, not `submissions`. Once the teacher evaluates a submission (P5c),
+   the total is written to `grades`, so Geografía → Tarea shows a percentage and
+   feeds the subject average. Before grading, it stays **0 de 1 con nota / Sin
+   notas** even after the student delivered it.
+- Stream comments and a grading queue across *all* groups are not built.
+  **Student fill + submit (P5b) is built** on `weeon-mobile` (Expo).
+  **Teacher grading (P5c) is built per assessment** here: the assignment's
+  **Entregas** list opens a grader with the student's answers, objective
+  auto-suggestions from the answer key, per-question points/feedback, and
+  **Guardar y devolver** → writes `grades` and returns the work.
 
 > **Deploy note:** P1 needs `20260911130000_class_materials.sql`, P5a needs
 > `20260911150000_assessments.sql`, the typed gradebook needs
 > `20260911160000_assignments_assessment_link.sql` +
 > `20260911170000_assignments_kind.sql`, the stream needs
 > `20260911190000_class_stream.sql`, topics need
-> `20260911200000_classwork_topics.sql`, and the attendance register needs
-> `20260912180000_attendance_ausencias.sql`, applied in `weeon-tenants`, then the
-> generated Supabase types regenerated. The teacher repo is untyped, so it builds
-> without the type refresh, but the migrations are required at runtime.
+> `20260911200000_classwork_topics.sql`, the attendance register needs
+> `20260912180000_attendance_ausencias.sql`, student turn-in needs
+> `20260912220000_assessment_submissions.sql`, and teacher `SELECT` of those
+> rows needs `20260912230000_teacher_sees_submissions.sql`, and grading needs
+> `20260913000000_assessment_grading.sql` (`submission_answers.score`/`feedback`
+> + the `grade_assessment_submission` RPC), applied in
+> `weeon-tenants`. The teacher repo is untyped, so it builds without a type
+> refresh, but the migrations are required at runtime.
 > (`20260911180000_backup_academic_tables.sql` is the tenants backup change.)
+
+## Submit vs grade (do not confuse these)
+
+Two different writes. The student transcript (`/estudiantes/[id]`) and the
+gradebook (`/grupos/[id]`) only show the second.
+
+| Event | Writes | Teacher sees | Transcript / gradebook |
+| --- | --- | --- | --- |
+| Teacher **publishes** a homework | `assessments.published` + `assignments` column (`assessment_id`) | Card **PUBLICADO**; empty **Tarea** column | Column exists, **no mark** (`0 de 1 con nota`) |
+| Student **Entregar** (P5b) | `submissions.state = submitted` + `submission_answers` via `save_assessment_work` | **N de M entregadas** + names on the card and in **Entregas** | Still **Sin notas** — no `grades` row |
+| Teacher grades (P5c, **built**) or types a mark in the gradebook | `grades.mark` / `max_marks` via RPC `grade_assessment_submission`; submission `state = returned` | Mark in the matrix; **Evaluada · X / Y** in **Entregas** | Percentage + subject average |
+
+Grading is one atomic RPC write: it stores per-answer `score`/`feedback`, sums to
+the column's mark in `grades`, and flips the submission to `returned`. The same
+column remains editable in the gradebook, so the teacher can always override.
+
+Student confirmation after Entregar is an in-app alert (**Tarea entregada**)
+plus an **Entregada** badge on the mobile card. That is not a grade.
+
+Daily student player: `weeon-mobile` (`src/app/student/aula-virtual/tarea/[id].tsx`).
+Teacher loaders: `src/lib/dashboard/submissions.ts` (`loadClassTurnIns`).
 
 ## Target architecture
 
@@ -169,8 +218,7 @@ Honest snapshot — do not assume the rest exists.
 | `/aula-virtual/[classId]/personas` | Teachers + students (+ co-teachers later). |
 | `/aula-virtual/[classId]/calificaciones` | Gradebook (reuses `/grupos/[id]`). |
 | `/grupos/[id]` | Gradebook matrix (columns × students), also opened from the Calificaciones tab. |
-| `/estudiantes` | Roster of students in the teacher's groups. |
-| `/estudiantes/[id]` | Per-student transcript across every subject the teacher teaches. |
+| `/estudiantes/[id]` | Per-student transcript across every subject the teacher teaches — reached from Personas or a gradebook row (no standalone students section). |
 
 Today the tabs are client state inside `ClassTabs`. When Classwork needs deep
 links (assignment URLs, topic filters), promote the tab ids to **route
@@ -182,7 +230,9 @@ segments** so a post can link to `/aula-virtual/[classId]/a/[id]`.
 - `components/classroom/class-tabs.tsx` — tab shell (exists; grows).
 - `components/classroom/stream/*` — composer, post card, comments.
 - `components/classroom/classwork/*` — topic list, item row, composer.
-- `components/classroom/assignment/*` — detail, submission grid, grading.
+- `components/assessments/*` — builder, preview, question editor, and the
+  **Entregas list + grader** (`assessment-submissions.tsx`,
+  `submission-grader.tsx`).
 - `components/classroom/people/*` — roster.
 - Reuse `SubjectChips`, `classBannerClass`, and the pastel tone palette.
 
@@ -201,7 +251,8 @@ ahead of the generated types):
 | `class_materials` | **P1 — shared documents.** One row = one file (`storage_path`, `file_name`, `mime_type`, `size_bytes`). |
 | `assignments` | **Classwork item + grade column.** `title`, `description`, `due_date`, `points`, `subject_id`. |
 | `grades` | Per `(class, student, assignment)` mark. |
-| `submissions` | Already exists (`assignment_id`, `student_id`, `content`, `attachment_url`, `grade`, `feedback`, `submitted_at`) — reuse in P4; do not recreate. |
+| `submissions` | Reused for P5b/P5c. Added `assessment_id`, `state` (`draft` \| `submitted` \| `returned`), `grade`, `feedback`, `updated_at`. `assignment_id` is nullable. One row per `(assessment_id, student_id)`. |
+| `submission_answers` | Per-question `option_ids` / `text_value` + `score` / `feedback` (P5c). Graded by `grade_assessment_submission`. |
 | `class_reports` | Submitted snapshots (`/reportes`). |
 
 `assignments` today is effectively "exam column" (title, points, due date,
@@ -332,11 +383,13 @@ source of truth**; a PDF is only an export.
   (questions + keys + points). Question ids are **stable uuids inside the JSON**
   so future submissions/answers can reference them.
 - **Publishing:** draft → published. Published items reach students (P5b, mobile).
-- **Grading (P5c):** objective types auto-score from the answer key; open types
-  go to a manual queue; scores flow into the gradebook (Classwork = gradebook).
+- **Grading (P5c):** objective types suggest a score from the answer key
+  (teacher confirms/overrides); open types are scored manually; the per-question
+  sum flows into the gradebook (Classwork = gradebook) via
+  `grade_assessment_submission`.
 
-Schema (additive): **`assessments` only** for P5a. `submission_answers`/grading
-arrive with P5b/P5c.
+Schema (additive): **`assessments` only** for P5a. `submission_answers` arrived
+with P5b and its `score`/`feedback` columns with P5c.
 
 Why JSON, not HTML or PDF: cross-platform (Flutter renders the same model),
 XSS-safe, offline-friendly, and free of PDF fidelity/XFA risk.
@@ -369,30 +422,35 @@ every field (instructions + question prompts).
 The rule: **an assessment is a grade column.** Evaluating once writes the grade —
 no second manual entry (the "Classwork = Gradebook" promise, made real).
 
-**Status:** the authoring→gradebook link is **implemented** — publishing an
-assessment creates/updates its `assignments` column (subject from the editor's
-Materia selector, kind from the assessment type). Student submission (P5b) and the
-grading queue (P5c) are still pending.
+**Status:** the authoring→gradebook **column** is implemented — publishing an
+assessment creates/updates its `assignments` row (subject from the editor's
+Materia selector, kind from the assessment type). **Student fill + submit (P5b)
+is implemented** on `weeon-mobile`, and **teacher grading (P5c) is implemented**
+here: the assignment's **Entregas** list opens the grader, and saving writes
+`grades` so the transcript and gradebook update with no retyping.
 
 - **Link, don't duplicate.** `assignments.assessment_id` connects the classwork
   item to its column. Publishing an assessment creates/updates that column.
 - **Submissions attach to the column** via the existing `submissions.assignment_id`.
 - **The number lives in `grades`** (`mark`, `max_marks`). `submissions` carries the
-  workflow (`state`, returned feedback). One source for the number.
-- **Grading writes `grades`** atomically (RPC), so the gradebook and `/reportes`
-  update with no retyping. Objective questions auto-score from the answer key;
-  open answers are manual; the total becomes the column's mark.
-- **Student turn-in** is mobile (P5b); the **grading queue** is here (P5c).
+  workflow (`state`, `grade`, `feedback`). One source for the number.
+- **Grading writes `grades`** atomically (RPC `grade_assessment_submission`), so
+  the gradebook and `/reportes` update with no retyping. Objective questions get
+  an auto-suggestion from the answer key (teacher confirms); open answers are
+  scored manually; the per-question sum becomes the column's mark.
+- **Student turn-in** is mobile (P5b); the **grader** is here (P5c).
 
 ### The new Grades interface (replaces the old grid)
 
 Two surfaces, one flow:
 
-1. **"Por evaluar" queue** — every submission across the teacher's groups, with a
-   pending count, filtered by group/assessment. Each row opens the grader.
-2. **Grader** — the student's answers in view, objective auto-scored, open answers
-   scored inline, feedback field, then **Guardar y devolver** → writes `grades`.
-   Bulk **Publicar calificaciones** for many at once.
+1. **Entregas (per assessment)** — the submitted students for one assignment, with
+   a pending count and a **Por evaluar / Evaluada · X / Y** status. Each row opens
+   the grader. (A cross-group "Por evaluar" inbox is still a follow-up.)
+2. **Grader** — the student's answers in view, objective auto-suggestions from the
+   answer key, per-question points + comment, an overall feedback field, then
+   **Guardar y devolver** → writes `grades` and returns the work. **Guardar**
+   stores the mark without flipping the state.
 3. **Gradebook matrix** — the overview/adjust surface: students × columns with
    sticky header + student column, inline editing with keyboard navigation
    (Enter/Tab/arrows), live per-student average and per-column average, a
@@ -402,9 +460,9 @@ Two surfaces, one flow:
 **Why it beats the WOOT IT grid** (the reference screenshot): modern branded UI
 instead of an Excel clone; columns **auto-created from the assessments** the
 teacher already authored; the same columns are editable directly (no Excel
-round-trip); a read-only cumulative **Asistencia** column next to FINAL (numbers
-only — mobile owns daily capture, teacher web owns corrections); and grading
-happens in the context of the student's actual answers.
+round-trip); a read-only cumulative **Asistencia** panel beside the table
+(numbers only — mobile owns daily capture, teacher web owns corrections); and
+grading happens in the context of the student's actual answers.
 
 ### Schema additions (additive, `weeon-tenants`)
 
@@ -412,8 +470,9 @@ happens in the context of the student's actual answers.
 | --- | --- |
 | `assignments.assessment_id` (nullable) | Link the assessment to its grade column. |
 | `assignments.category` (`classwork` \| `evaluation`) | Group columns for the matrix. |
-| `submissions.state`, `returned_at` | Turn-in workflow (P5c). |
-| `submission_answers` | Per-question answers + auto-score + feedback. |
+| `submissions.state`, `grade`, `feedback` (+ `updated_at`) | Turn-in + grading workflow (P5c). |
+| `submission_answers` + `score`, `feedback` | Per-question answers, auto-score and comments. |
+| RPC `grade_assessment_submission(uuid, jsonb, text, boolean)` | Atomic grade write → `grades` + `state = returned`. |
 
 Everything else (`grades`, `assignments.points`, `submissions`) already exists.
 Weighted category percentages and an `FINAL` policy beyond the column average are
@@ -443,8 +502,8 @@ a follow-up (kept simple first: FINAL = mean of column percentages).
 | **P3** | Assignments / homework: topics, authoring, unified with gradebook. | `assignments` columns, `classwork_topics` |
 | **P4** | Submissions + grading flow (turn-in state, return + comment). | existing `submissions` table |
 | **P5a** *(done)* | **Assessment builder**: WYSIWYG homework/exam authoring + preview. | `assessments` |
-| **P5b** | Student fill + autosave + submit (mobile). | `submissions`, `submission_answers` |
-| **P5c** | Auto-grading + manual queue → gradebook. | `submission_answers` |
+| **P5b** *(done)* | Student fill + save draft + submit (`weeon-mobile`); teacher sees **N de M entregadas** + names. Does **not** write `grades`. | `submissions`, `submission_answers`, `save_assessment_work`, `20260912230000_teacher_sees_submissions.sql` |
+| **P5c** *(done, per-assessment)* | Teacher grader → `grades` / gradebook / transcript. Answer-key auto-suggestions, per-question points + comments, **Guardar y devolver**. | `submission_answers.score/feedback`, `20260913000000_assessment_grading.sql` |
 | **P5d** | Question bank, templates, math, drawing/file answers. | — |
 | **P6** | **PDF export/import** (printable exam; PDF.js read-only) + optional Meet link. | — |
 
@@ -469,8 +528,9 @@ types are refreshed in this repo.
   admin owns `classes`; leaning admin-only for now, `Próximamente` on the card.)
 - Materials: should the teacher be able to tag a **materia** per document? The
   column exists (`subject_id`); the P1 UI does not expose it yet.
-- Student turn-in UI: teacher web vs mobile (`P4`).
-- Native quiz table shape and auto-grading rules (`P5`).
+- Cross-group **"Por evaluar" inbox** (grading is per-assessment today).
+- Auto-grading rules for objective types beyond exact answer-key matching
+  (`short_answer`/`number` are exact-compare with accent/case folding).
 - Editable-PDF scope: which forms, and whether annotations are per-student
   copies or a shared layer (`P6`).
 
@@ -482,3 +542,4 @@ types are refreshed in this repo.
   `../weeon-tenants/docs/tenancy.md`
 - Module catalog — `../weeon-tenants/docs/modules.md` § Virtual Classroom
 - Mobile contracts — `../weeon-mobile-apps/plans/weeon-tenants.md`
+- Student player (Expo) — `../weeon-mobile/docs/aula-virtual.md`

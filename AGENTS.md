@@ -31,8 +31,9 @@ per-column averages, density toggle and CSV export — plus submit report and
 `/reportes` to list submitted snapshots. **Asistencia (Libro de clase)** is also
 built here: a dated register over the shared `attendance_records` table
 (P / TJ / TI / AJ / A) reached from a lesson card, with a read-only **Asistencia**
-column in the gradebook. `/estudiantes/[id]` renders a per-student **transcript**
-across every subject the teacher teaches.
+column in the gradebook. **Students** live in the aula virtual **Personas** tab
+(per group) and in the gradebook rows; selecting one opens `/estudiantes/[id]`, a
+per-student **transcript** across every subject the teacher teaches.
 **Aula virtual** is a Google Classroom-style hub (`/aula-virtual` +
 `/aula-virtual/[classId]`): classes grid, stream/classwork tabs, people, and a
 gradebook link. Built: **P1 documents** (`class_materials` + private
@@ -41,14 +42,24 @@ gradebook link. Built: **P1 documents** (`class_materials` + private
 Temas), and **P5a assessment builder** (`assessments`;
 TipTap WYSIWYG homework/exam editor at
 `/aula-virtual/[classId]/evaluaciones/[id]`; publishing creates its grade column).
-Stream comments, student fill/submit (P5b) and auto-grading (P5c) are pending.
-Read `docs/aula-virtual.md` before touching it — the aula virtual needs
+**P5b** student fill/submit is on `weeon-mobile`; this portal shows **N de M
+entregadas** and names on the Trabajo de clase card. **P5c teacher grading is
+built per assessment:** the assignment **Entregas** list opens a grader
+(`/aula-virtual/[classId]/evaluaciones/[assessmentId]/entregas/[submissionId]`)
+with answer-key auto-suggestions, per-question points/comments, and **Guardar y
+devolver** → writes `grades`, so the student transcript and gradebook update.
+Stream comments and a cross-group grading inbox are pending.
+Read `docs/aula-virtual.md` (especially § Submit vs grade) before touching it —
+the aula virtual needs
 `20260911130000_class_materials.sql`, `20260911150000_assessments.sql`,
 `20260911160000_assignments_assessment_link.sql`,
 `20260911170000_assignments_kind.sql`, `20260911190000_class_stream.sql`,
-`20260911200000_classwork_topics.sql`, and
-`20260912180000_attendance_ausencias.sql` in `weeon-tenants`. Not built: full reports
-composer or parity with mobile daily classroom.
+`20260911200000_classwork_topics.sql`,
+`20260912180000_attendance_ausencias.sql`,
+`20260912220000_assessment_submissions.sql`, and
+`20260912230000_teacher_sees_submissions.sql`, and grading needs
+`20260913000000_assessment_grading.sql` in `weeon-tenants`. Not built: full reports
+composer or the cross-group grading inbox.
 
 ## The five repos
 
@@ -94,8 +105,9 @@ composer or parity with mobile daily classroom.
 - App Router under `src/app/`. Routes: `/` (login), `/crear-contrasena`,
   `/inicio` (landing / hub with cards), `/aula-virtual` (virtual classroom
   section), `/aula-virtual/[classId]` (class workspace), `/grupos`,
-  `/grupos/[id]` (gradebook), `/horarios`, `/estudiantes` (roster),
-  `/estudiantes/[id]` (student transcript), `/reportes`.
+  `/grupos/[id]` (gradebook), `/horarios`, `/estudiantes/[id]` (per-student
+  transcript — reached from aula virtual **Personas** or the gradebook; there is
+  no standalone students section), `/reportes`.
   **Aula virtual mirrors Google Classroom** (classes grid → Novedades /
   Trabajo de clase / Personas / Calificaciones); the target design, schema, and
   phases live in [`docs/aula-virtual.md`](docs/aula-virtual.md).
@@ -134,6 +146,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | --- | ----- |
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
+| Student Entregar (Expo) | `../weeon-mobile/docs/aula-virtual.md` |
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |
 | Usernames / first login | `weeon-tenants/docs/user-provisioning.md` |

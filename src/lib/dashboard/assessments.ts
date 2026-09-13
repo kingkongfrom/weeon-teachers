@@ -46,6 +46,8 @@ function toSummary(row: Row): AssessmentSummary {
     published: row.published,
     questionCount: content.questions.length,
     updatedAt: row.updated_at,
+    submittedCount: 0,
+    submitterNames: [],
   };
 }
 

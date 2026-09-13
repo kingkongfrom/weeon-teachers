@@ -5,6 +5,7 @@ import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassMaterials } from "@/lib/dashboard/materials";
 import { loadClassAssessments } from "@/lib/dashboard/assessments";
+import { loadClassTurnIns } from "@/lib/dashboard/submissions";
 import { loadClassStream } from "@/lib/dashboard/stream";
 import { loadClassTopics } from "@/lib/dashboard/topics";
 import { loadClassAttendance } from "@/lib/dashboard/attendance";
@@ -39,7 +40,8 @@ export default async function AulaVirtualClassPage({
   const attendanceLessonId =
     lesson && /^[0-9a-fA-F-]{36}$/.test(lesson) ? lesson : null;
 
-  const [session, materials, assessments, stream, topics, attendanceMarks] =
+  const { grupo, students } = detail;
+  const [session, materials, rawAssessments, stream, topics, attendanceMarks, turnIns] =
     await Promise.all([
       getTeacherSession(),
       loadClassMaterials(classId),
@@ -47,11 +49,19 @@ export default async function AulaVirtualClassPage({
       loadClassStream(classId),
       loadClassTopics(classId),
       loadClassAttendance(classId, attendanceDate),
+      loadClassTurnIns(classId, students),
     ]);
   const schoolName = session ? await loadSchoolName(session.tenantId) : null;
   const t = await getT();
 
-  const { grupo, students } = detail;
+  const assessments = rawAssessments.map((item) => {
+    const stat = turnIns.get(item.id);
+    return {
+      ...item,
+      submittedCount: stat?.submittedCount ?? 0,
+      submitterNames: stat?.submitterNames ?? [],
+    };
+  });
   const year = new Date().getFullYear();
   const teacherName = session?.name ?? t.classroom.teacherFallback;
 

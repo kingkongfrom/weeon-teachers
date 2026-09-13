@@ -121,6 +121,7 @@ export function ClassTabs({
             topics={topics}
             selectedSubjectId={selectedSubjectId}
             subjects={subjects}
+            studentCount={students.length}
           />
         ) : null}
 
@@ -147,7 +148,7 @@ export function ClassTabs({
                     <li key={student.id}>
                       <PersonRow
                         name={`${student.lastName} ${student.firstName}`.trim()}
-                        href={`/estudiantes/${student.id}`}
+                        href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/aula-virtual/${classId}?tab=personas`)}`}
                       />
                     </li>
                   ))}
