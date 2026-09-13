@@ -1,0 +1,267 @@
+import "server-only";
+
+import { cache } from "react";
+import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { createSessionClient } from "@/lib/supabase/session";
+import { docToPlainText, type RichTextDoc } from "@/lib/assessments/model";
+
+export type MessageFolder = "inbox" | "sent";
+
+export type MessageThreadSummary = {
+  id: string;
+  subject: string;
+  audience: "individual" | "group";
+  className: string | null;
+  counterpart: string;
+  preview: string;
+  lastMessageAt: string;
+  unread: boolean;
+  recipientCount: number;
+  mine: boolean;
+};
+
+export type MessageItem = {
+  id: string;
+  authorName: string;
+  body: RichTextDoc;
+  createdAt: string;
+  mine: boolean;
+};
+
+export type MessageRecipient = {
+  profileId: string;
+  name: string;
+  role: "to" | "cc";
+  readAt: string | null;
+};
+
+export type MessageThreadDetail = {
+  summary: MessageThreadSummary;
+  allowReplies: boolean;
+  classId: string | null;
+  messages: MessageItem[];
+  recipients: MessageRecipient[];
+};
+
+export type MessageContact = {
+  profileId: string;
+  name: string;
+  kind: string;
+  context: string;
+};
+
+type NameEmbed = { name: string } | { name: string }[] | null;
+
+function nameOf(embed: NameEmbed): string {
+  const row = Array.isArray(embed) ? embed[0] : embed;
+  return row?.name?.trim() ?? "";
+}
+
+function classLabel(embed: { name?: string; grade?: string; section?: string } | { name?: string; grade?: string; section?: string }[] | null): string | null {
+  const row = Array.isArray(embed) ? embed[0] : embed;
+  if (!row) return null;
+  return row.name?.trim() || [row.grade, row.section].filter(Boolean).join("").toUpperCase() || null;
+}
+
+/** Parents a teacher may message (RPC), for the composer's recipient picker. */
+export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => {
+  const session = await getTeacherSession();
+  if (!session) return [];
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("list_message_contacts");
+  if (error || !data) return [];
+  return (data as Array<{ profile_id: string; full_name: string; kind: string; context: string }>).map(
+    (row) => ({
+      profileId: row.profile_id,
+      name: row.full_name,
+      kind: row.kind,
+      context: row.context ?? "",
+    }),
+  );
+});
+
+/** Thread summaries for a folder (inbox = received, sent = authored). */
+export const loadMessageSummaries = cache(
+  async (folder: MessageFolder): Promise<MessageThreadSummary[]> => {
+    const session = await getTeacherSession();
+    if (!session) return [];
+    const supabase = await createSessionClient();
+
+    const { data: threads, error } = await supabase
+      .from("threads")
+      .select(
+        "id, subject, audience, class_id, created_by, allow_replies, last_message_at, created_at, profiles(name), classes(name, grade, section)",
+      )
+      .order("last_message_at", { ascending: false })
+      .limit(60);
+
+    if (error || !threads) return [];
+
+    type ThreadRow = {
+      id: string;
+      subject: string | null;
+      audience: string;
+      class_id: string | null;
+      created_by: string | null;
+      allow_replies: boolean;
+      last_message_at: string;
+      created_at: string;
+      profiles: NameEmbed;
+      classes: { name?: string; grade?: string; section?: string } | Array<{ name?: string; grade?: string; section?: string }> | null;
+    };
+
+    const rows = threads as ThreadRow[];
+    const ids = rows.map((row) => row.id);
+    if (ids.length === 0) return [];
+
+    const [{ data: recipients }, { data: messages }] = await Promise.all([
+      supabase
+        .from("thread_recipients")
+        .select("thread_id, profile_id, role, read_at, profiles(name)")
+        .in("thread_id", ids),
+      supabase
+        .from("messages")
+        .select("thread_id, body, created_at, author_profile_id, profiles(name)")
+        .in("thread_id", ids)
+        .order("created_at", { ascending: true }),
+    ]);
+
+    const recipientRows = (recipients ?? []) as Array<{
+      thread_id: string;
+      profile_id: string;
+      role: "to" | "cc";
+      read_at: string | null;
+      profiles: NameEmbed;
+    }>;
+    const messageRows = (messages ?? []) as Array<{
+      thread_id: string;
+      body: RichTextDoc;
+      created_at: string;
+      author_profile_id: string | null;
+      profiles: NameEmbed;
+    }>;
+
+    return rows
+      .map((row) => {
+        const threadRecipients = recipientRows.filter((item) => item.thread_id === row.id);
+        const threadMessages = messageRows.filter((item) => item.thread_id === row.id);
+        const last = threadMessages[threadMessages.length - 1];
+        const mine = row.created_by === session.userId;
+
+        if (folder === "inbox" && !threadRecipients.some((item) => item.profile_id === session.userId)) {
+          return null;
+        }
+        if (folder === "sent" && !mine) return null;
+
+        const myRecipient = threadRecipients.find((item) => item.profile_id === session.userId);
+        return {
+          id: row.id,
+          subject: row.subject?.trim() || "(Sin asunto)",
+          audience: row.audience === "group" ? "group" : "individual",
+          className: classLabel(row.classes),
+          counterpart: mine
+            ? threadRecipients.map((item) => nameOf(item.profiles)).filter(Boolean).join(", ") ||
+              "Sin destinatarios"
+            : nameOf(row.profiles) || "Docente",
+          preview: last ? docToPlainText(last.body).slice(0, 140) : "",
+          lastMessageAt: row.last_message_at,
+          unread: folder === "inbox" && Boolean(myRecipient && !myRecipient.read_at),
+          recipientCount: threadRecipients.length,
+          mine,
+        } satisfies MessageThreadSummary;
+      })
+      .filter((row): row is MessageThreadSummary => row !== null);
+  },
+);
+
+/** One thread with its messages and recipients. */
+export const loadThreadDetail = cache(
+  async (threadId: string): Promise<MessageThreadDetail | null> => {
+    const session = await getTeacherSession();
+    if (!session) return null;
+    const supabase = await createSessionClient();
+
+    const { data: thread, error } = await supabase
+      .from("threads")
+      .select(
+        "id, subject, audience, class_id, created_by, allow_replies, last_message_at, created_at, profiles(name), classes(name, grade, section)",
+      )
+      .eq("id", threadId)
+      .maybeSingle();
+    if (error || !thread) return null;
+
+    const row = thread as {
+      id: string;
+      subject: string | null;
+      audience: string;
+      class_id: string | null;
+      created_by: string | null;
+      allow_replies: boolean;
+      last_message_at: string;
+      profiles: NameEmbed;
+      classes: { name?: string; grade?: string; section?: string } | Array<{ name?: string; grade?: string; section?: string }> | null;
+    };
+
+    const [{ data: messages }, { data: recipients }] = await Promise.all([
+      supabase
+        .from("messages")
+        .select("id, body, created_at, author_profile_id, profiles(name)")
+        .eq("thread_id", threadId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("thread_recipients")
+        .select("profile_id, role, read_at, profiles(name)")
+        .eq("thread_id", threadId),
+    ]);
+
+    const messageRows = (messages ?? []) as Array<{
+      id: string;
+      body: RichTextDoc;
+      created_at: string;
+      author_profile_id: string | null;
+      profiles: NameEmbed;
+    }>;
+    const recipientRows = (recipients ?? []) as Array<{
+      profile_id: string;
+      role: "to" | "cc";
+      read_at: string | null;
+      profiles: NameEmbed;
+    }>;
+
+    const mine = row.created_by === session.userId;
+    const last = messageRows[messageRows.length - 1];
+
+    return {
+      allowReplies: row.allow_replies,
+      classId: row.class_id,
+      summary: {
+        id: row.id,
+        subject: row.subject?.trim() || "(Sin asunto)",
+        audience: row.audience === "group" ? "group" : "individual",
+        className: classLabel(row.classes),
+        counterpart: mine
+          ? recipientRows.map((item) => nameOf(item.profiles)).filter(Boolean).join(", ") ||
+            "Sin destinatarios"
+          : nameOf(row.profiles) || "Docente",
+        preview: last ? docToPlainText(last.body).slice(0, 140) : "",
+        lastMessageAt: row.last_message_at,
+        unread: false,
+        recipientCount: recipientRows.length,
+        mine,
+      },
+      messages: messageRows.map((message) => ({
+        id: message.id,
+        authorName: nameOf(message.profiles),
+        body: message.body,
+        createdAt: message.created_at,
+        mine: message.author_profile_id === session.userId,
+      })),
+      recipients: recipientRows.map((recipient) => ({
+        profileId: recipient.profile_id,
+        name: nameOf(recipient.profiles),
+        role: recipient.role,
+        readAt: recipient.read_at,
+      })),
+    };
+  },
+);

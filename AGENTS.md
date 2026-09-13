@@ -63,6 +63,13 @@ the aula virtual needs
 and comments need `20260913150000_class_stream_comments.sql` in `weeon-tenants`.
 Not built: full reports composer.
 
+**Comunicación v1 is built** (`/comunicacion`): email-style threads — subject +
+TipTap rich body — to hand-picked parents or a whole group's guardians, with an
+inbox/sent list, thread view and replies. Schema `threads` / `messages` /
+`thread_recipients` + RPCs, migration `20260913160000_messaging.sql`. See
+[`docs/comunicacion.md`](docs/comunicacion.md). Attachments, drafts, folders and
+the parent/student side are follow-ups.
+
 ## The five repos
 
 | Repo | Role |
@@ -109,7 +116,8 @@ Not built: full reports composer.
   eventos; Calendario is a placeholder), `/agenda/eventos` (read-only upcoming
   institution events), `/aula-virtual` (virtual classroom section),
   `/aula-virtual/[classId]` (class workspace), `/aula-virtual/por-evaluar`
-  (cross-group grading inbox), `/grupos`, `/grupos/[id]`
+  (cross-group grading inbox), `/comunicacion` (inbox/sent), `/comunicacion/nuevo`
+  (compose), `/comunicacion/[threadId]` (thread), `/grupos`, `/grupos/[id]`
   (gradebook), `/horarios?week=` (weekly timetable, paged; add an
   exam/activity from a class tile), `/estudiantes/[id]` (per-student transcript — reached from aula virtual
   **Personas** or the gradebook; there is no standalone students section),
@@ -153,6 +161,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
 | **Agenda (schedule, upcoming events)** | `docs/agenda.md` |
+| **Comunicación (messaging)** | `docs/comunicacion.md` |
 | Student Entregar (Expo) | `../weeon-mobile/docs/aula-virtual.md` |
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |

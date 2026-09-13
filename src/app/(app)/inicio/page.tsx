@@ -92,6 +92,7 @@ export default async function InicioPage() {
       description: t.panel.communication.description,
       icon: MessageSquare,
       tone: "green",
+      href: "/comunicacion",
     },
   ];
 
