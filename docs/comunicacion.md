@@ -18,8 +18,12 @@ own copy.
 | `/comunicacion` | Inbox / Sent list (`?folder=sent`) |
 | `/comunicacion/nuevo` | Compose (recipients + subject + rich body) |
 | `/comunicacion/[threadId]` | Thread view + reply |
+| `/comunicacion/novedades` | **Novedades** (class announcements + comments), `?classId=` |
 
-Panel general's **Comunicación** card → `/comunicacion`.
+Panel general's **Comunicación** card → `/comunicacion`. **Novedades** (the
+class-level stream) also lives here — select a class and post/read/comment via
+the same `StreamPanel` used in the aula virtual. The stream actions revalidate
+both `/aula-virtual/[classId]` and `/comunicacion/novedades`.
 
 ## Data model (weeon-tenants, additive)
 

@@ -34,6 +34,7 @@ export async function createAnnouncement(input: {
   if (error || !data) return { ok: false, error: t.stream.error };
 
   revalidatePath(`/aula-virtual/${parsed.data.classId}`);
+  revalidatePath("/comunicacion/novedades");
   return { ok: true, id: data.id };
 }
 
@@ -58,6 +59,7 @@ export async function deleteAnnouncement(input: {
   if (error) return { ok: false, error: t.stream.error };
 
   revalidatePath(`/aula-virtual/${parsed.data.classId}`);
+  revalidatePath("/comunicacion/novedades");
   return { ok: true };
 }
 
@@ -90,6 +92,7 @@ export async function createStreamComment(input: {
   if (error || !data) return { ok: false, error: t.stream.error };
 
   revalidatePath(`/aula-virtual/${parsed.data.classId}`);
+  revalidatePath("/comunicacion/novedades");
   return { ok: true, id: data.id };
 }
 
@@ -109,5 +112,6 @@ export async function deleteStreamComment(input: {
   if (error) return { ok: false, error: t.stream.error };
 
   revalidatePath(`/aula-virtual/${parsed.data.classId}`);
+  revalidatePath("/comunicacion/novedades");
   return { ok: true };
 }

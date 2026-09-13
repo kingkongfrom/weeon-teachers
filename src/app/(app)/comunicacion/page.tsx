@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Inbox, Paperclip, PenSquare, Send } from "lucide-react";
+import { Inbox, Megaphone, Paperclip, PenSquare, Send } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { loadMessageSummaries, type MessageFolder } from "@/lib/dashboard/messages";
 import { getT } from "@/lib/i18n/server";
@@ -66,6 +66,13 @@ export default async function MessagesPage({
               </Link>
             );
           })}
+          <Link
+            href="/comunicacion/novedades"
+            className="inline-flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground/65 transition-colors hover:bg-surface-muted"
+          >
+            <Megaphone className="h-4 w-4" />
+            {m.news}
+          </Link>
         </aside>
 
         <section className="min-w-0">
