@@ -63,13 +63,19 @@ the aula virtual needs
 and comments need `20260913150000_class_stream_comments.sql` in `weeon-tenants`.
 Not built: full reports composer.
 
-**Comunicación v1 is built** (`/comunicacion`): email-style threads — subject +
-TipTap rich body + **drag-&-drop attachments** — to hand-picked parents (modal
-picker) or a whole group's guardians, with an inbox/sent list, thread view and
-replies. Schema `threads` / `messages` / `thread_recipients` / `message_attachments`
-+ RPCs, migrations `20260913160000_messaging.sql` + `20260913170000_message_attachments.sql`.
-See [`docs/comunicacion.md`](docs/comunicacion.md). Cc, drafts, folders and the
-parent/student side are follow-ups.
+**Comunicación is built** (`/comunicacion`) as a hub with two channels:
+**Correo** — email-style threads (subject + TipTap rich body +
+**drag-&-drop attachments**) to hand-picked parents or a group's guardians, at
+`/comunicacion/correo`; schema `threads`/`messages`/`thread_recipients`/
+`message_attachments` (migrations `20260913160000_messaging.sql` +
+`20260913170000_message_attachments.sql`). **Chat** — realtime 1:1 teacher ↔
+guardian (guardians only), iMessage-style at `/comunicacion/chat`; schema
+`chat_conversations`/`chat_messages` + RPCs, migration `20260914050000_chat.sql`
+(the shared `list_message_contacts()` becomes admin-aware in
+`20260914060000_message_contacts_admin.sql`). See
+[`docs/comunicacion.md`](docs/comunicacion.md).
+Cc/drafts/folders and the parent/student **email** side are follow-ups (Chat
+already ships teacher web + parent mobile).
 
 ## The five repos
 
@@ -119,9 +125,11 @@ parent/student side are follow-ups.
   ERP, `?view=month|week|day|agenda&date=YYYY-MM-DD`),
   `/aula-virtual` (virtual classroom section),
   `/aula-virtual/[classId]` (class workspace), `/aula-virtual/por-evaluar`
-  (cross-group grading inbox), `/comunicacion` (mailbox: folders, categories,
-  drag & drop), `/comunicacion/nuevo` (compose), `/comunicacion/[threadId]`
-  (thread), `/grupos`, `/grupos/[id]`
+  (cross-group grading inbox), `/comunicacion` (hub: Correo + Chat cards),
+  `/comunicacion/correo` (mailbox), `/comunicacion/nuevo` (compose email),
+  `/comunicacion/correo/[threadId]` (email thread), `/comunicacion/chat`
+  (realtime guardian chat), `/comunicacion/chat/[conversationId]`,
+  `/grupos`, `/grupos/[id]`
   (gradebook), `/horarios?week=` (weekly timetable, paged; add an
   exam/activity from a class tile), `/estudiantes/[id]` (per-student transcript — reached from aula virtual
   **Personas** or the gradebook; there is no standalone students section),

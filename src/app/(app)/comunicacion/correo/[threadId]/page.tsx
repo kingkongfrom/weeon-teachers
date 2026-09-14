@@ -6,7 +6,7 @@ import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-/** One message thread. */
+/** One email thread. */
 export default async function MessageThreadPage({
   params,
 }: {
@@ -22,7 +22,7 @@ export default async function MessageThreadPage({
       <PageHeader
         title={t.messages.title}
         description={detail.summary.subject}
-        backHref="/comunicacion"
+        backHref="/comunicacion/correo"
       />
       <ThreadView detail={detail} />
     </div>

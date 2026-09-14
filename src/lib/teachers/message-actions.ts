@@ -55,7 +55,7 @@ export async function createMessageThread(input: ComposeMessageInput): Promise<M
 
   if (error || !data) return { ok: false, error: t.messages.error };
 
-  revalidatePath("/comunicacion");
+  revalidatePath("/comunicacion/correo");
   return { ok: true, threadId: data as string };
 }
 
@@ -82,8 +82,8 @@ export async function sendThreadMessage(threadId: string, body: RichTextDoc): Pr
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", parsed.data.threadId);
 
-  revalidatePath(`/comunicacion/${parsed.data.threadId}`);
-  revalidatePath("/comunicacion");
+  revalidatePath(`/comunicacion/correo/${parsed.data.threadId}`);
+  revalidatePath("/comunicacion/correo");
   return { ok: true, threadId: parsed.data.threadId };
 }
 
@@ -100,7 +100,7 @@ export async function markThreadRead(threadId: string): Promise<MessageActionRes
     .update({ read_at: new Date().toISOString() })
     .eq("thread_id", threadId);
 
-  revalidatePath("/comunicacion");
+  revalidatePath("/comunicacion/correo");
   return { ok: true };
 }
 
@@ -130,7 +130,7 @@ export async function setThreadFolder(
   );
   if (error) return { ok: false, error: t.messages.error };
 
-  revalidatePath("/comunicacion");
+  revalidatePath("/comunicacion/correo");
   return { ok: true };
 }
 
@@ -172,7 +172,7 @@ export async function uploadMessageAttachment(formData: FormData): Promise<Messa
   });
   if (error) return { ok: false, error: t.messages.error };
 
-  revalidatePath(`/comunicacion/${threadId}`);
-  revalidatePath("/comunicacion");
+  revalidatePath(`/comunicacion/correo/${threadId}`);
+  revalidatePath("/comunicacion/correo");
   return { ok: true, threadId };
 }

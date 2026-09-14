@@ -78,7 +78,7 @@ export function MessageComposer({
     }
 
     setSending(false);
-    router.push(`/comunicacion/${res.threadId}`);
+    router.push(`/comunicacion/correo/${res.threadId}`);
   }
 
   const inputClass =

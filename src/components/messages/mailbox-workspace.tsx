@@ -35,9 +35,9 @@ export function MailboxWorkspace({
   const [dropTarget, setDropTarget] = useState<MessageFolder | null>(null);
 
   const folders: Array<{ id: MessageFolder; label: string; icon: typeof Inbox; href: string }> = [
-    { id: "inbox", label: m.folderInbox, icon: Inbox, href: "/comunicacion" },
-    { id: "sent", label: m.folderSent, icon: Send, href: "/comunicacion?folder=sent" },
-    { id: "trash", label: m.folderTrash, icon: Trash2, href: "/comunicacion?folder=trash" },
+    { id: "inbox", label: m.folderInbox, icon: Inbox, href: "/comunicacion/correo" },
+    { id: "sent", label: m.folderSent, icon: Send, href: "/comunicacion/correo?folder=sent" },
+    { id: "trash", label: m.folderTrash, icon: Trash2, href: "/comunicacion/correo?folder=trash" },
   ];
 
   async function moveTo(threadId: string, next: MessageFolder) {
@@ -116,7 +116,7 @@ export function MailboxWorkspace({
                   className={cn(draggingId === thread.id && "opacity-50")}
                 >
                   <Link
-                    href={`/comunicacion/${thread.id}`}
+                    href={`/comunicacion/correo/${thread.id}`}
                     className="ui-hover flex items-start gap-3 px-4 py-3.5"
                   >
                     <span
