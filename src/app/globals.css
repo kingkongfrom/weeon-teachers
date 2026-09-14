@@ -4,8 +4,9 @@
 
 :root {
   color-scheme: light;
-  /* Light palette — "Noche" day mode: pure white canvas, a breath of teal */
-  --background: #ffffff;
+  /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
+     white so the white cards read), a breath of teal */
+  --background: #f3f6f5;
   --foreground: #10201d;
 
   /* Brand palette: refined indigo with teal accent */
