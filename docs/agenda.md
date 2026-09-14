@@ -7,9 +7,10 @@ side is `weeon-mobile`.*
 
 **Agenda** (`/agenda`) is a hub with three cards: **Horarios** (weekly timetable
 with week navigation), **Próximos eventos** (read-only list of upcoming
-institution events), and **Calendario** (placeholder). Teachers add **exams and
-activities** from a class tile in the schedule popover (not from the events
-page).
+institution events), and **Calendario** (month/week/day/agenda calendar:
+institution events + the teacher's aula virtual exams).
+Teachers add **exams and activities** from a class tile in the schedule popover
+(not from the events page).
 
 ## Routes
 
@@ -18,6 +19,7 @@ page).
 | `/agenda` | Hub: Horarios / Próximos eventos / Calendario |
 | `/horarios?week=YYYY-MM-DD` | Weekly timetable; `week` = any day of the target week |
 | `/agenda/eventos` | Read-only upcoming events (institution calendar) |
+| `/agenda/calendario?view=month\|week\|day\|agenda&date=YYYY-MM-DD` | Teacher calendar; `date` is the anchor day (defaults to today), `view` defaults to month |
 
 Panel general (`/inicio`) has an **Agenda** card → `/agenda`; its **Horario de la
 semana** section now shows the **current week's dates** like `/horarios`.
@@ -45,6 +47,48 @@ semana** section now shows the **current week's dates** like `/horarios`.
   message (no blank page). **No create/delete UI and no server actions here.**
 - The week view overlays the selected week's events via
   `loadGroupEventsBetween(startISO, endISO)`.
+
+## Calendario — month / week / day / agenda
+
+The calendar **mirrors the school ERP design** (`weeon-tenants`
+`components/dashboard/calendar-client.tsx`) adapted to the teacher surface.
+
+It aggregates **two sources**:
+
+- `loadEventsBetween(startISO, endISO)` — the institution calendar
+  (`calendar_events`, same RLS as `loadUpcomingEvents`: school-wide,
+  teacher-facing and the teacher's groups).
+- `loadExamDueBetween(startISO, endISO)` — the teacher's **aula virtual exams**
+  (`assessments` where `kind = 'exam'` and `due_at` is set) for their classes.
+  Homeworks are intentionally **not** shown. Because `due_at` is a
+  `timestamptz`, the query is padded a day each side and rows are kept by their
+  **school-local** date via `lib/dashboard/timezone.ts` (`America/Costa_Rica`),
+  so a late-evening due date lands on the right day.
+
+`lib/dashboard/month.ts` holds the pure helpers: `parseCalendarView`,
+`parseAnchor`, `rangeFor`, `shiftAnchor`, `monthCells` (Monday-first 42-day
+grid), `isSameDay`, `minutesFromMidnight`, `timeBlockOffset`,
+`layoutTimedRanges` (overlap packing for the time grid), `WEEK_START_HOUR` /
+`WEEK_END_HOUR`, and the `AGENDA_DAYS` span. The grid is **Monday–Friday only**
+(no weekends): `monthCells` returns whole Mon–Fri rows and the week/agenda views
+skip Sat/Sun.
+
+`components/agenda/calendar-view.tsx` is a **client** component (navigation
+pushes `?view=` / `?date=`; selection, search and type filters are local state):
+
+- Toolbar: prev / Hoy / next + title, a **Mes · Semana · Día · Agenda**
+  segmented switcher, a **Tipos** filter (per event type — including exams),
+  and search.
+- **Mes** — Monday-first grid; each day shows up to three chips + `+N`; the day
+  number opens the day view, clicking a cell selects it (brand ring).
+- **Semana** — a time grid (07:00–19:00, `HOUR_HEIGHT` 52) with an all-day row,
+  overlapped timed blocks packed into columns, and a "now" line.
+- **Día** — the same time grid for one day (`DAY_HOUR_HEIGHT` 64).
+- **Agenda** — a 14-day list of only the days that have items.
+
+Institution events are colour-coded by type (`STYLES` in the component); aula
+virtual exams use the **rose** tone. All times are 24h. Read-only — no
+create/delete here. There is no legend/sidebar (the grid carries the colours).
 
 ## Adding exams/activities (from the schedule)
 

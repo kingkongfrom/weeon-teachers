@@ -1,9 +1,8 @@
 import Link from "next/link";
 import {
-  ArrowRight,
+  BellRing,
   CalendarDays,
-  CalendarRange,
-  PartyPopper,
+  Clock,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,8 +10,8 @@ import { FadeIn } from "@/components/motion/fade-in";
 import { PageHeader } from "@/components/layout/page-header";
 import { getT } from "@/lib/i18n/server";
 import {
+  CHIP_ICON,
   TONE_CARD,
-  TONE_ICON,
   TONE_INK,
   TONE_INK_MUTED,
   type HubTone,
@@ -42,7 +41,7 @@ export default async function AgendaPage() {
       id: "horarios",
       label: t.agenda.horarios.label,
       description: t.agenda.horarios.description,
-      icon: CalendarDays,
+      icon: Clock,
       tone: "blue",
       href: "/horarios",
     },
@@ -50,7 +49,7 @@ export default async function AgendaPage() {
       id: "eventos",
       label: t.agenda.eventos.label,
       description: t.agenda.eventos.description,
-      icon: PartyPopper,
+      icon: BellRing,
       tone: "green",
       href: "/agenda/eventos",
     },
@@ -58,8 +57,9 @@ export default async function AgendaPage() {
       id: "calendario",
       label: t.agenda.calendario.label,
       description: t.agenda.calendario.description,
-      icon: CalendarRange,
+      icon: CalendarDays,
       tone: "purple",
+      href: "/agenda/calendario",
     },
   ];
 
@@ -88,12 +88,9 @@ export default async function AgendaPage() {
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/45 dark:bg-white/10">
-                  <Icon className={cn("h-5 w-5", TONE_ICON[module.tone])} strokeWidth={2.2} />
+                  <Icon className={cn("h-6 w-6", CHIP_ICON)} strokeWidth={2.2} />
                 </div>
                 <h2 className="min-w-0 text-xl font-bold leading-tight">{module.label}</h2>
-                {upcoming ? null : (
-                  <ArrowRight className="ml-auto h-4 w-4 shrink-0 opacity-55 transition-transform group-hover:translate-x-0.5 group-hover:opacity-100" />
-                )}
               </div>
 
               <p className={cn("mt-3 text-sm font-medium", TONE_INK_MUTED)}>

@@ -307,7 +307,7 @@ function GrammarPanel({
           <button
             type="button"
             onClick={onFixAll}
-            className="rounded-md brand-gradient px-2.5 py-1 text-[11px] font-bold text-white transition-all hover:brightness-105"
+            className="btn-ink rounded-md px-2.5 py-1 text-[11px] font-bold"
           >
             {t.editor.fixAll}
           </button>
@@ -478,7 +478,7 @@ function Toolbar({
             <button
               type="button"
               onClick={applyLink}
-              className="h-8 shrink-0 rounded-md brand-gradient px-2.5 text-xs font-semibold text-white"
+              className="btn-ink h-8 shrink-0 rounded-md px-2.5 text-xs font-semibold"
             >
               {e.apply}
             </button>

@@ -263,7 +263,7 @@ export function SubmissionGrader({
               type="button"
               onClick={() => void save(true)}
               disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-full brand-gradient px-4 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-105 disabled:opacity-60"
+              className="btn-ink inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {saving ? g.saving : g.saveAndReturn}

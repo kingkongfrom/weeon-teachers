@@ -32,9 +32,12 @@ then the folder list — with the thread list on the right:
   be overridden in `message_thread_state`.
 - **Drag & drop:** each thread row is `draggable` (`application/x-weeon-thread`);
   the folder entries are drop targets that call `setThreadFolder`.
-- **Colors match the app:** brand purple→blue (`brand-50`/`brand-700` active
-  tints, `brand-gradient` for Redactar and the unread dot/tags) — not the green of
-  the reference product. Categories were removed; the layout is unchanged.
+- **Colors match the app:** `brand-gradient` for every primary CTA (Redactar,
+  confirm selection, send) and `TONE_PILL.purple` (the shared brand-violet pill
+  from `lib/dashboard/tones.ts`) for active folders and the audience toggle, so
+  the mailbox sits in the same purple→blue family as the Redactar button. Unread
+  dots and tags use the teal accent. Categories were removed; the layout is
+  unchanged.
 
 ## Data model (weeon-tenants, additive)
 

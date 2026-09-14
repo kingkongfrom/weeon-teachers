@@ -261,7 +261,7 @@ export function LessonCard({
                       <Link
                         href={`/aula-virtual/${lesson.classId}`}
                         onClick={() => setOpen(false)}
-                        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl brand-gradient text-sm font-semibold text-white transition-all hover:brightness-105"
+                        className="btn-ink inline-flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold"
                       >
                         {t.schedule.openClass}
                         <ArrowUpRight className="h-4 w-4" />

@@ -10,7 +10,7 @@ import type { AppUser } from "@/components/layout/app-shell";
  */
 export function AppHeader({ user }: { user: AppUser | null }) {
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur-md sm:px-6 lg:px-8">
+    <header className="header-hairline sticky top-0 z-30 flex h-16 items-center gap-2 bg-surface/75 px-3 backdrop-blur-xl sm:px-6 lg:px-8">
       <Link
         href="/inicio"
         className="shrink-0 transition-opacity hover:opacity-85"

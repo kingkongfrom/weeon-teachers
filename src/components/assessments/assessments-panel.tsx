@@ -67,7 +67,7 @@ export function AssessmentsPanel({
             type="button"
             onClick={() => setMenuOpen((value) => !value)}
             disabled={creating}
-            className="inline-flex items-center gap-1.5 rounded-full brand-gradient px-4 py-2 text-sm font-semibold text-white transition-all hover:brightness-105 disabled:opacity-60"
+            className="btn-ink inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60"
           >
             {creating ? (
               <Loader2 className="h-4 w-4 animate-spin" />

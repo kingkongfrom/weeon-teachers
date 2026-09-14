@@ -4,9 +4,9 @@
 
 :root {
   color-scheme: light;
-  /* Light palette — Brand paper (matches the marketing site) */
-  --background: #f7f7f9;
-  --foreground: #1b2433;
+  /* Light palette — "Noche" day mode: pure white canvas, a breath of teal */
+  --background: #ffffff;
+  --foreground: #10201d;
 
   /* Brand palette: refined indigo with teal accent */
   --brand-50: #eef2ff;
@@ -26,33 +26,40 @@
   --brand-mid: #4f46e5;
   --brand-end: #2b59ff;
 
-  --accent: #0891b2;
-  --accent-light: #cffafe;
-
   --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --surface-muted: #eef1f6;
-  --border: #e4e7ee;
-  --border-strong: #cdd3de;
+  --surface-muted: #e5edeb;
+  --border: #dde7e4;
+  --border-strong: #c3d2ce;
   --ring: #6366f1;
+
+  --accent: #0891b2;
+  --accent-light: #cffafe;
 
   --success: #10b981;
   --success-subtle: #ecfdf5;
   --error: #ef4444;
   --error-subtle: #fef2f2;
   --warning: #f59e0b;
+
+  /* Interaction washes — hover is a whisper-light tone, active a soft shadow */
+  --wash-hover: rgb(16 32 29 / 0.045);
+  --wash-active: rgb(16 32 29 / 0.1);
+
+  /* Primary-action glow (auth screens only — app surfaces stay flat). */
+  --shadow-glow: 0 10px 28px -8px rgb(79 70 229 / 0.55);
 }
 
 .dark {
   color-scheme: dark;
-  /* Dark palette — Dusk slate */
-  --background: #1c2230;
-  --foreground: #e8edf5;
-  --surface: #262d3c;
-  --surface-elevated: #333c4f;
-  --surface-muted: #222838;
-  --border: #3a4356;
-  --border-strong: #505a73;
+  /* Dark palette — "Noche": tamed slate-dusk field, clearly lifted, flat */
+  --background: #232a41;
+  --foreground: #e6eef7;
+  --surface: #2d3550;
+  --surface-elevated: #363f5e;
+  --surface-muted: #1d2438;
+  --border: #414b6e;
+  --border-strong: #545f88;
   --ring: #8b9cff;
   --accent: #22d3ee;
   --accent-light: #164e63;
@@ -61,6 +68,10 @@
   --error: #f87171;
   --error-subtle: #7f1d1d;
   --warning: #fbbf24;
+  --wash-hover: rgb(255 255 255 / 0.055);
+  --wash-active: rgb(0 0 0 / 0.28);
+
+  --shadow-glow: 0 10px 30px -8px rgb(94 37 204 / 0.6);
 }
 
 @theme inline {
@@ -138,6 +149,44 @@ body {
   color: transparent;
 }
 
+/* Neutral interaction language — no chromatic buttons inside the app shell.
+   .ui-hover: whisper-light wash · .ui-active: soft pressed shadow ·
+   .btn-ink: plain monochrome primary (dark pill by day, light pill at night). */
+.ui-hover {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+
+.ui-hover:hover {
+  background-color: var(--wash-hover);
+}
+
+.ui-active {
+  background-color: var(--wash-active);
+}
+
+.btn-ink {
+  background-color: var(--foreground);
+  color: var(--background);
+  transition:
+    opacity 160ms ease,
+    transform 120ms ease;
+}
+
+.btn-ink:hover {
+  opacity: 0.86;
+}
+
+.btn-ink:active {
+  transform: scale(0.98);
+}
+
+.btn-ink:disabled {
+  opacity: 0.45;
+}
+
 /* Display type for the brand lockup — Bricolage Grotesque, medium weight. */
 .brand-display {
   font-family: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -152,17 +201,53 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* Dashboard canvas: brand paper with a soft radial wash (light theme only). */
+/* Dashboard canvas: cool mist with a faint teal/violet breath by day; the dark
+   theme stays a flat deep field — no wash, the jewel cards carry the colour. */
 .dashboard-shell {
   background-image:
-    radial-gradient(58% 42% at 100% 0%, rgb(79 70 229 / 0.05), transparent 58%),
-    radial-gradient(50% 40% at 0% 100%, rgb(8 145 178 / 0.04), transparent 60%);
+    radial-gradient(58% 42% at 100% 0%, rgb(20 184 166 / 0.05), transparent 60%),
+    radial-gradient(50% 40% at 0% 100%, rgb(94 37 204 / 0.04), transparent 60%);
 }
 
 .dark .dashboard-shell {
-  background-image:
-    radial-gradient(58% 42% at 100% 0%, rgb(79 70 229 / 0.07), transparent 58%),
-    radial-gradient(50% 40% at 0% 100%, rgb(8 145 178 / 0.05), transparent 60%);
+  background-image: none;
+}
+
+/* Primary gradient buttons: brand glow + inset top light. */
+.btn-glow {
+  box-shadow:
+    var(--shadow-glow),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+
+.btn-glow:hover {
+  filter: brightness(1.08);
+}
+
+.btn-glow:active {
+  filter: brightness(0.98);
+}
+
+/* Top bar: the separator is a soft brand-gradient hairline, not a flat border. */
+.header-hairline {
+  position: relative;
+}
+
+.header-hairline::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--brand-start) 30%,
+    var(--brand-end) 70%,
+    transparent 100%
+  );
+  opacity: 0.35;
 }
 
 /* Quiet tint for clickable cards/tiles — no lift or shadow, just a color change. */
@@ -250,7 +335,7 @@ body {
 
 .dark .not-found-bg {
   color-scheme: dark;
-  background-color: #0a1840;
+  background-color: #232a41;
   background-image: none;
 }
 
@@ -269,7 +354,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: rgb(10 24 64 / 0.22);
+  background: rgb(35 42 65 / 0.22);
   backdrop-filter: blur(56px);
   -webkit-backdrop-filter: blur(56px);
 }
@@ -292,29 +377,89 @@ body {
   box-shadow: 0 10px 30px rgb(7 20 51 / 0.45);
 }
 
-/* Ambient auth screens (login, create-password): gentle navy field with soft
-   radial brand glows — same night-sky language as the marketing site. */
+/* Ambient auth screens (login, create-password): a deep-space field with a
+   pin-point star field and three slowly drifting aurora blobs (violet, cyan,
+   blue) — the night-sky language of the brand, in motion. */
 .login-bg {
   isolation: isolate;
   overflow: hidden;
   color-scheme: dark;
   background:
-    radial-gradient(46% 40% at 14% -8%, rgb(94 37 204 / 0.34), transparent 64%),
-    radial-gradient(42% 40% at 100% 112%, rgb(8 145 178 / 0.26), transparent 60%),
-    radial-gradient(50% 44% at 72% 4%, rgb(43 89 255 / 0.28), transparent 66%),
-    linear-gradient(180deg, #202c60 0%, #131f50 100%);
+    radial-gradient(120% 90% at 50% 0%, #333d60 0%, transparent 60%),
+    linear-gradient(180deg, #252c45 0%, #2b3349 52%, #222940 100%);
 }
 
-.login-bg-glow {
+.login-stars {
   pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 0;
-  background:
-    radial-gradient(38% 30% at 12% -8%, rgb(94 37 204 / 0.28), transparent 62%),
-    radial-gradient(34% 32% at 100% 108%, rgb(8 145 178 / 0.22), transparent 58%),
-    radial-gradient(46% 38% at 72% 6%, rgb(43 89 255 / 0.22), transparent 66%);
-  filter: blur(80px) saturate(1.05);
+  background-image:
+    radial-gradient(1.2px 1.2px at 18% 22%, rgb(255 255 255 / 0.75), transparent 100%),
+    radial-gradient(1px 1px at 66% 12%, rgb(255 255 255 / 0.55), transparent 100%),
+    radial-gradient(1.4px 1.4px at 84% 34%, rgb(255 255 255 / 0.65), transparent 100%),
+    radial-gradient(1px 1px at 38% 58%, rgb(255 255 255 / 0.45), transparent 100%),
+    radial-gradient(1.1px 1.1px at 8% 74%, rgb(255 255 255 / 0.5), transparent 100%),
+    radial-gradient(1.3px 1.3px at 92% 82%, rgb(255 255 255 / 0.55), transparent 100%),
+    radial-gradient(1px 1px at 52% 88%, rgb(255 255 255 / 0.4), transparent 100%),
+    radial-gradient(1px 1px at 28% 44%, rgb(255 255 255 / 0.5), transparent 100%);
+}
+
+.aurora-blob {
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+  border-radius: 9999px;
+  filter: blur(90px) saturate(1.15);
+  will-change: transform;
+}
+
+.aurora-blob-a {
+  top: -18%;
+  left: -12%;
+  width: min(58vw, 40rem);
+  height: min(58vw, 40rem);
+  background: rgb(94 37 204 / 0.5);
+  animation: aurora-drift-a 22s ease-in-out infinite;
+}
+
+.aurora-blob-b {
+  right: -14%;
+  bottom: -24%;
+  width: min(52vw, 36rem);
+  height: min(52vw, 36rem);
+  background: rgb(8 145 178 / 0.42);
+  animation: aurora-drift-b 26s ease-in-out infinite;
+}
+
+.aurora-blob-c {
+  top: 6%;
+  right: 8%;
+  width: min(44vw, 30rem);
+  height: min(44vw, 30rem);
+  background: rgb(43 89 255 / 0.45);
+  animation: aurora-drift-c 19s ease-in-out infinite;
+}
+
+@keyframes aurora-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(7%, 9%, 0) scale(1.14); }
+}
+
+@keyframes aurora-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-8%, -7%, 0) scale(1.12); }
+}
+
+@keyframes aurora-drift-c {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-6%, 8%, 0) scale(0.92); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob {
+    animation: none;
+  }
 }
 
 .login-bg > main {
@@ -336,11 +481,31 @@ body {
 }
 
 .login-card {
-  background: rgb(255 255 255 / 0.07);
-  border: 1px solid rgb(255 255 255 / 0.14);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-  box-shadow: 0 24px 60px rgb(7 20 51 / 0.3);
+  position: relative;
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  backdrop-filter: blur(26px) saturate(1.3);
+  -webkit-backdrop-filter: blur(26px) saturate(1.3);
+  box-shadow:
+    0 24px 60px rgb(3 8 30 / 0.4),
+    inset 0 1px 0 rgb(255 255 255 / 0.12);
+}
+
+/* Brand-gradient hairline across the card's top edge. */
+.login-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px -1px auto;
+  height: 1px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--brand-start) 25%,
+    var(--brand-end) 75%,
+    transparent
+  );
+  opacity: 0.8;
 }
 
 .login-card label,
@@ -354,8 +519,16 @@ body {
 
 .login-field {
   background: rgb(255 255 255 / 0.08);
-  border-color: rgb(255 255 255 / 0.22);
+  border-color: rgb(255 255 255 / 0.2);
   color: #fff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.login-field:hover {
+  border-color: rgb(255 255 255 / 0.32);
 }
 
 .login-field::placeholder {
@@ -363,8 +536,11 @@ body {
 }
 
 .login-field:focus {
-  border-color: rgb(255 255 255 / 0.55);
-  box-shadow: 0 0 0 3px rgb(43 89 255 / 0.25);
+  border-color: rgb(139 156 255 / 0.75);
+  background: rgb(255 255 255 / 0.1);
+  box-shadow:
+    0 0 0 3px rgb(43 89 255 / 0.3),
+    0 0 24px -6px rgb(43 89 255 / 0.5);
 }
 
 .login-field:-webkit-autofill,

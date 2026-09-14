@@ -26,7 +26,7 @@ export default async function EventosPage() {
       <section className="rounded-2xl border border-border bg-surface p-5">
         <div className="mb-4 flex flex-col gap-2">
           <h2 className="text-xl font-bold text-foreground">{t.agenda.eventos.label}</h2>
-          <span className="h-1 w-12 rounded-full bg-orange-500" />
+          <span className="brand-gradient h-1 w-12 rounded-full" />
         </div>
 
         {events.length === 0 ? (

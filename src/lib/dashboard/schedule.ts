@@ -53,24 +53,28 @@ export const loadTeacherSchedule = cache(
   const { teacherIds, classIds } = await loadTeacherTeachingScope(supabase, session);
   if (teacherIds.length === 0 || classIds.length === 0) return [];
 
-  const { data: lessonRows, error: lessonError } = await supabase
-    .from("class_lessons")
-    .select(
-      "id, class_id, title, weekday, start_time, end_time, room, color, teacher_id, classes(id, name, grade, section)",
-    )
-    .in("class_id", classIds)
-    .in("teacher_id", teacherIds)
-    .order("weekday")
-    .order("start_time");
+  // The lesson rows and the enrollment counts are independent, so fetch them
+  // together instead of stacking two round-trips.
+  const [{ data: lessonRows, error: lessonError }, { data: enrollRows }] = await Promise.all([
+    supabase
+      .from("class_lessons")
+      .select(
+        "id, class_id, title, weekday, start_time, end_time, room, color, teacher_id, classes(id, name, grade, section)",
+      )
+      .in("class_id", classIds)
+      .in("teacher_id", teacherIds)
+      .order("weekday")
+      .order("start_time"),
+    supabase
+      .from("enrollments")
+      .select("class_id, student_id")
+      .in("class_id", classIds)
+      .is("dropped_at", null),
+  ]);
 
   if (lessonError) return [];
 
   // Distinct enrolled students per class, for the lesson preview.
-  const { data: enrollRows } = await supabase
-    .from("enrollments")
-    .select("class_id, student_id")
-    .in("class_id", classIds)
-    .is("dropped_at", null);
   const studentsByClass = new Map<string, Set<string>>();
   for (const row of enrollRows ?? []) {
     const set = studentsByClass.get(row.class_id) ?? new Set<string>();

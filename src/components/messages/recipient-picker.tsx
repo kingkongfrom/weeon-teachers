@@ -139,7 +139,7 @@ function PickerBody({
           onConfirm(draft);
           onClose();
         }}
-        className="inline-flex h-11 items-center justify-center rounded-xl brand-gradient px-4 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-[0.98]"
+        className="brand-gradient inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]"
       >
         {m.confirmSelection}
       </button>

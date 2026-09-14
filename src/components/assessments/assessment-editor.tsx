@@ -410,7 +410,7 @@ export function AssessmentEditor({
           <button
             type="button"
             onClick={() => setAddOpen((value) => !value)}
-            className="inline-flex items-center gap-1.5 rounded-full brand-gradient px-4 py-2 text-sm font-semibold text-white transition-all hover:brightness-105"
+            className="btn-ink inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
           >
             <Plus className="h-4 w-4" strokeWidth={2.5} />
             {a.addQuestion}

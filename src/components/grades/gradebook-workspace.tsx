@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
+import { TONE_PILL } from "@/lib/dashboard/tones";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SubmitReport } from "@/components/grades/submit-report";
 import {
@@ -47,14 +48,18 @@ const ABSENCE_ORDER: AttendanceStatus[] = [
 
 const PASS = 70;
 
-/** Color per column type so a Tarea reads differently from an Examen. */
+/** Color per column type so a Tarea reads differently from an Examen —
+ * badges read from the shared tone palette. */
 const KIND_STYLES: Record<AssignmentKind, string> = {
-  classwork: "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300",
-  homework: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
-  exam: "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
-  quiz: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  project: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+  classwork: TONE_PILL.blue,
+  homework: TONE_PILL.green,
+  exam: TONE_PILL.purple,
+  quiz: TONE_PILL.yellow,
+  project: TONE_PILL.rose,
 };
+
+/** Calificaciones module accent (purple tone) for text-level highlights. */
+const ACCENT_TEXT = "text-[#7c3aed] dark:text-[#b9a3f7]";
 
 function pctOf(mark: number | null | undefined, max: number): number | null {
   if (mark == null || !max || max <= 0) return null;
@@ -88,9 +93,13 @@ function columnAverage(column: ExamColumn, students: TeacherStudent[]): number |
 
 function tintFor(pct: number | null): string {
   if (pct == null) return "";
-  if (pct >= PASS) return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
-  if (pct >= 50) return "bg-amber-500/10 text-amber-700 dark:text-amber-300";
-  return "bg-rose-500/10 text-rose-700 dark:text-rose-300";
+  /* Readable tints: a clear colour wash so passing, warning and failing
+     averages are distinguishable at a glance, not just by the numbers. */
+  if (pct >= PASS)
+    return "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
+  if (pct >= 50)
+    return "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
+  return "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200";
 }
 
 function studentName(student: TeacherStudent): string {
@@ -272,7 +281,7 @@ export function GradebookWorkspace({
             type="button"
             onClick={() => setDense((value) => !value)}
             title={w.density}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover"
           >
             {dense ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
             {dense ? w.expanded : w.dense}
@@ -281,7 +290,7 @@ export function GradebookWorkspace({
             type="button"
             onClick={exportCsv}
             disabled={exams.length === 0}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
             {w.export}
@@ -290,7 +299,7 @@ export function GradebookWorkspace({
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full brand-gradient px-4 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-[0.98]"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" strokeWidth={2.5} />
             {w.addColumn}
@@ -310,8 +319,8 @@ export function GradebookWorkspace({
                 className={cn(
                   "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
                   active
-                    ? "brand-gradient text-white"
-                    : "border border-border text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+                    ? cn("border border-transparent", TONE_PILL.blue)
+                    : "ui-hover border border-border text-foreground/60 hover:text-foreground",
                 )}
               >
                 {option.name}
@@ -333,15 +342,15 @@ export function GradebookWorkspace({
         </label>
         <div className="flex items-center gap-3 text-xs font-semibold">
           <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/50" />
             ≥ {PASS}%
           </span>
           <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-500/50" />
             50–69%
           </span>
           <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> &lt; 50%
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-500/60" /> &lt; 50%
           </span>
         </div>
       </div>
@@ -372,7 +381,7 @@ export function GradebookWorkspace({
           <button
             type="button"
             onClick={() => void handleUndo()}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold text-brand-700 transition-colors hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold text-[#7c3aed] transition-colors hover:bg-[#e6defb] dark:text-[#b9a3f7] dark:hover:bg-[#241b45]"
           >
             <Undo2 className="h-4 w-4" />
             {t.gradebook.undo}
@@ -389,7 +398,7 @@ export function GradebookWorkspace({
           <div className="relative min-w-0 flex-1 overflow-auto rounded-2xl border border-border bg-surface">
             {loading ? (
               <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface/60 backdrop-blur-[1px]">
-                <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
+                <Loader2 className={cn("h-6 w-6 animate-spin", ACCENT_TEXT)} />
               </div>
             ) : null}
 
@@ -424,7 +433,7 @@ export function GradebookWorkspace({
                       </th>
                     );
                   })}
-                  <th className={cn("sticky right-0 top-0 z-40 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center text-xs font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300", headY)}>
+                  <th className={cn("sticky right-0 top-0 z-40 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center text-xs font-bold uppercase tracking-wide", ACCENT_TEXT, headY)}>
                     {w.final}
                   </th>
                 </tr>
@@ -442,7 +451,7 @@ export function GradebookWorkspace({
                         <Link
                           href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}`)}`}
                           title={studentName(student)}
-                          className="block truncate font-medium text-foreground transition-colors hover:text-brand-700 dark:hover:text-brand-300"
+                          className="block truncate font-medium text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
                         >
                           {studentName(student)}
                         </Link>
@@ -490,7 +499,7 @@ export function GradebookWorkspace({
                       </td>
                     );
                   })}
-                  <td className={cn("sticky bottom-0 right-0 z-40 w-[5.5rem] border-l border-t border-border bg-surface-muted px-3 text-center text-xs font-bold text-brand-700 dark:text-brand-300", headY)}>
+                  <td className={cn("sticky bottom-0 right-0 z-40 w-[5.5rem] border-l border-t border-border bg-surface-muted px-3 text-center text-xs font-bold", ACCENT_TEXT, headY)}>
                     {overall == null ? "—" : `${overall}%`}
                   </td>
                 </tr>
@@ -847,14 +856,14 @@ function AddColumnDialog({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold text-foreground/70 ui-hover"
             >
               {t.gradebook.cancel}
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl brand-gradient px-4 text-sm font-semibold text-white transition-all hover:brightness-105 disabled:opacity-60"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50"
             >
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {w.create}

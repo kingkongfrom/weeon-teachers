@@ -1,9 +1,10 @@
 import { schoolCycleForGrade, schoolCycleName } from "@/lib/dashboard/school-cycles";
+import { TONE_PILL } from "@/lib/dashboard/tones";
 import type { Locale } from "@/lib/i18n/config";
 
 const CYCLE_STYLES = {
-  primaria: "bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300",
-  secundaria: "bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300",
+  primaria: TONE_PILL.blue,
+  secundaria: TONE_PILL.purple,
 } as const;
 
 /** Cycle pill (Primaria / Secundaria). Locale passed by the caller so this

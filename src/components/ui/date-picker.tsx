@@ -150,14 +150,14 @@ export function DatePicker({
                     type="button"
                     onClick={() => pick(day.date)}
                     className={cn(
-                      "flex h-9 items-center justify-center rounded-lg text-sm font-medium transition-colors",
+                      "ui-hover flex h-9 items-center justify-center rounded-lg text-sm font-medium",
                       isSelected
-                        ? "brand-gradient text-white"
+                        ? "bg-foreground text-background"
                         : isToday
                           ? "bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300"
                           : day.inMonth
-                            ? "text-foreground/80 hover:bg-surface-muted"
-                            : "text-foreground/30 hover:bg-surface-muted/60",
+                            ? "text-foreground/80"
+                            : "text-foreground/30",
                     )}
                   >
                     {day.date.getDate()}

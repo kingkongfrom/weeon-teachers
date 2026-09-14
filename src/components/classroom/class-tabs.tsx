@@ -90,17 +90,17 @@ export function ClassTabs({
               aria-selected={active}
               onClick={() => setTab(id)}
               className={cn(
-                "relative shrink-0 rounded-t-lg px-4 py-3 text-sm font-semibold transition-colors",
+                "ui-hover relative shrink-0 rounded-t-lg px-4 py-3 text-sm font-semibold",
                 active
-                  ? "text-brand-700 dark:text-brand-300"
-                  : "text-foreground/55 hover:bg-surface-muted hover:text-foreground",
+                  ? "text-foreground"
+                  : "text-foreground/55 hover:text-foreground",
               )}
             >
               {label}
               {active ? (
                 <span
                   aria-hidden
-                  className="absolute inset-x-2 -bottom-px h-0.5 rounded-full brand-gradient"
+                  className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-foreground"
                 />
               ) : null}
             </button>
@@ -211,7 +211,7 @@ function PersonRow({
     <div
       className={cn(
         "flex items-center gap-3 py-3",
-        href ? "-mx-2 rounded-lg px-2 transition-colors hover:bg-surface-muted" : "px-1",
+        href ? "ui-hover -mx-2 rounded-lg px-2" : "px-1",
       )}
     >
       <span

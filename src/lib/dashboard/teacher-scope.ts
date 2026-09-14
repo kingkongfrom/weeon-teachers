@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { TeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
 
@@ -58,11 +59,19 @@ export async function loadAssignedClassIds(
   return (classes ?? []).map((row) => row.id);
 }
 
-export async function loadTeacherTeachingScope(
-  supabase: Awaited<ReturnType<typeof createSessionClient>>,
-  session: TeacherSession,
-): Promise<{ teacherIds: string[]; classIds: string[] }> {
-  const teacherIds = await loadTeacherRosterIds(supabase, session.userId);
-  const classIds = await loadAssignedClassIds(supabase, teacherIds);
-  return { teacherIds, classIds };
-}
+/**
+ * Cached per render: several loaders on one page (e.g. Horarios resolves the
+ * timetable and the week's events) would otherwise each re-run the roster RPC
+ * and class query. The args are stable within a request because the session and
+ * session client are both `cache`d, so React dedupes the call.
+ */
+export const loadTeacherTeachingScope = cache(
+  async (
+    supabase: Awaited<ReturnType<typeof createSessionClient>>,
+    session: TeacherSession,
+  ): Promise<{ teacherIds: string[]; classIds: string[] }> => {
+    const teacherIds = await loadTeacherRosterIds(supabase, session.userId);
+    const classIds = await loadAssignedClassIds(supabase, teacherIds);
+    return { teacherIds, classIds };
+  },
+);

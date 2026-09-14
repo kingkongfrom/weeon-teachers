@@ -16,8 +16,10 @@ import {
   finalScoreStatus,
 } from "@/lib/dashboard/student-summary";
 import {
+  CHIP_ICON,
   TONE_CARD,
-  TONE_ICON,
+  TONE_CYCLE,
+  TONE_PILL,
   type Tone,
 } from "@/lib/dashboard/tones";
 import { ATTENDANCE_CODE, type AttendanceCounts } from "@/lib/attendance/model";
@@ -29,10 +31,6 @@ import type {
 } from "@/lib/dashboard/student-report";
 import type { AssignmentKind } from "@/lib/dashboard/exams";
 
-/** Cycles subject cards through the shared palette so a transcript stays
- * scannable without each subject inventing its own colour. */
-const TONE_CYCLE: Tone[] = ["blue", "purple", "green", "yellow", "rose"];
-
 const ABSENCE_ORDER = [
   "absence_unjustified",
   "absence_justified",
@@ -41,16 +39,16 @@ const ABSENCE_ORDER = [
 ] as const;
 
 const KIND_STYLES: Record<AssignmentKind, string> = {
-  classwork: "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300",
-  homework: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
-  exam: "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
-  quiz: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  project: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+  classwork: TONE_PILL.blue,
+  homework: TONE_PILL.green,
+  exam: TONE_PILL.purple,
+  quiz: TONE_PILL.yellow,
+  project: TONE_PILL.rose,
 };
 
 const BADGE_TONES: Record<string, string> = {
   excellent: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-  passed: "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300",
+  passed: TONE_PILL.purple,
   "at-risk": "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
   none: "bg-surface-muted text-foreground/50",
 };
@@ -315,7 +313,7 @@ function SubjectRow({
             TONE_CARD[tone],
           )}
         >
-          <BookOpen className={cn("h-4 w-4", TONE_ICON[tone])} strokeWidth={2.2} />
+          <BookOpen className={cn("h-5 w-5", CHIP_ICON)} strokeWidth={2.2} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-bold text-foreground">
@@ -429,7 +427,7 @@ function StatCard({
           TONE_CARD[tone],
         )}
       >
-        <Icon className={cn("h-5 w-5", TONE_ICON[tone])} strokeWidth={2.2} />
+        <Icon className={cn("h-6 w-6", CHIP_ICON)} strokeWidth={2.2} />
       </div>
       <div className="min-w-0">
         <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/45">
@@ -493,8 +491,8 @@ function FilterChip({
       className={cn(
         "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
         active
-          ? "brand-gradient text-white"
-          : "border border-border text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+          ? "ui-active text-foreground"
+          : "ui-hover border border-border text-foreground/60 hover:text-foreground",
       )}
     >
       {children}
@@ -509,7 +507,14 @@ function GradeRing({ value }: { value: number | null }) {
   const circumference = 2 * Math.PI * radius;
   const pct = Math.max(0, Math.min(100, value ?? 0));
   const dash = (pct / 100) * circumference;
-  const color = value == null ? "#cbd5e1" : pct >= 70 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#f43f5e";
+  const color =
+    value == null
+      ? "var(--border-strong)"
+      : pct >= 70
+        ? "#10b981"
+        : pct >= 50
+          ? "#f59e0b"
+          : "#f43f5e";
 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>

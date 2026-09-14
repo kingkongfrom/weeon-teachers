@@ -41,7 +41,7 @@ export async function ScheduleGrid({
         return (
           <section
             key={day.value}
-            className="flex flex-col gap-3 rounded-2xl bg-surface p-4 ring-1 ring-inset ring-black/5 dark:bg-[#2a3140] dark:ring-white/10"
+            className="flex flex-col gap-3 rounded-2xl bg-surface p-4 ring-1 ring-inset ring-black/5 dark:ring-white/10"
           >
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/70">

@@ -96,8 +96,8 @@ export function ClassworkPanel({
                 className={cn(
                   "rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
                   active
-                    ? "brand-gradient text-white"
-                    : "border border-border text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+                    ? "ui-active text-foreground"
+                    : "ui-hover border border-border text-foreground/60 hover:text-foreground",
                 )}
               >
                 {option.name}
@@ -119,8 +119,8 @@ export function ClassworkPanel({
             className={cn(
               "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
               selected === chip.id
-                ? "brand-gradient text-white"
-                : "border border-border text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+                ? "ui-active text-foreground"
+                : "ui-hover border border-border text-foreground/60 hover:text-foreground",
             )}
           >
             {chip.label}
@@ -148,7 +148,7 @@ export function ClassworkPanel({
               type="button"
               onClick={() => void submitTopic()}
               disabled={pending || name.trim().length === 0}
-              className="inline-flex h-8 items-center gap-1 rounded-full brand-gradient px-3 text-xs font-semibold text-white disabled:opacity-50"
+              className="btn-ink inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold"
             >
               {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
               {t.topics.create}

@@ -10,6 +10,7 @@ import { RichTextEditor } from "@/components/assessments/rich-text";
 import { AttachmentDropzone } from "@/components/messages/attachment-dropzone";
 import { RecipientPicker } from "@/components/messages/recipient-picker";
 import { cn } from "@/lib/utils";
+import { TONE_PILL } from "@/lib/dashboard/tones";
 import { useT } from "@/lib/i18n/client";
 import { docToPlainText, emptyDoc, type RichTextDoc } from "@/lib/assessments/model";
 import { createMessageThread, uploadMessageAttachment } from "@/lib/teachers/message-actions";
@@ -99,8 +100,8 @@ export function MessageComposer({
             className={cn(
               "h-9 rounded-full px-3.5 text-sm font-semibold transition-colors",
               audience === option.id
-                ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
-                : "text-foreground/60 hover:bg-surface-muted",
+                ? TONE_PILL.purple
+                : "ui-hover text-foreground/60",
             )}
           >
             {option.label}
@@ -147,7 +148,7 @@ export function MessageComposer({
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
+              className="ui-hover inline-flex h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
             >
               <UserPlus className="h-4 w-4" />
               {m.addRecipient}

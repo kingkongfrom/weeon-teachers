@@ -195,7 +195,7 @@ export function SettingsDrawer({ user }: { user: AppUser | null }) {
                       <form action={signOutTeacher}>
                         <button
                           type="submit"
-                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e7000b] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c40009]"
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
                         >
                           <LogOut className="h-4 w-4" />
                           {t.drawer.logout}

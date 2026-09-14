@@ -6,6 +6,8 @@ import { Loader2, Paperclip, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RichTextEditor, RichTextView } from "@/components/assessments/rich-text";
 import { AttachmentDropzone } from "@/components/messages/attachment-dropzone";
+import { TONE_PILL } from "@/lib/dashboard/tones";
+import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { docToPlainText, emptyDoc, type RichTextDoc } from "@/lib/assessments/model";
 import {
@@ -74,7 +76,12 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-bold text-foreground">{detail.summary.subject}</h2>
           {detail.summary.audience === "group" ? (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                TONE_PILL.green,
+              )}
+            >
               {m.groupTag}
             </span>
           ) : null}

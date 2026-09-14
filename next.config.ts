@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "26mb",
     },
+    // Keep dynamic page segments in the client router cache for a short window,
+    // so revisiting a screen (Horarios, Grupos, Comunicación…) is instant instead
+    // of re-fetching the RSC payload on every navigation. Mutations still call
+    // `router.refresh()`, which bypasses this.
+    staleTimes: {
+      dynamic: 30,
+      static: 300,
+    },
   },
 };
 

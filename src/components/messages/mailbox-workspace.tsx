@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Inbox, PenSquare, Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
+import { TONE_PILL } from "@/lib/dashboard/tones";
 import { setThreadFolder } from "@/lib/teachers/message-actions";
 import type { MessageFolder, MessageThreadSummary } from "@/lib/dashboard/messages";
 
@@ -63,7 +64,7 @@ export function MailboxWorkspace({
       <aside className="flex flex-col gap-2">
         <Link
           href="/comunicacion/nuevo"
-          className="mb-1 inline-flex h-11 items-center justify-center gap-2 rounded-xl brand-gradient px-4 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-[0.98]"
+          className="brand-gradient mb-1 inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]"
         >
           <PenSquare className="h-4 w-4" />
           {m.compose}
@@ -78,11 +79,9 @@ export function MailboxWorkspace({
               href={item.href}
               className={cn(
                 "inline-flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-                active
-                  ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
-                  : dropTarget === item.id
-                    ? "bg-brand-50/70 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
-                    : "text-foreground/65 hover:bg-surface-muted",
+                active || dropTarget === item.id
+                  ? TONE_PILL.purple
+                  : "ui-hover text-foreground/65 hover:text-foreground",
               )}
               {...dropProps(item.id)}
             >
@@ -118,12 +117,12 @@ export function MailboxWorkspace({
                 >
                   <Link
                     href={`/comunicacion/${thread.id}`}
-                    className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-surface-muted/50"
+                    className="ui-hover flex items-start gap-3 px-4 py-3.5"
                   >
                     <span
                       className={cn(
                         "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                        thread.unread ? "bg-brand-500" : "bg-transparent",
+                        thread.unread ? "bg-[#0f766e] dark:bg-[#5eead4]" : "bg-transparent",
                       )}
                       aria-hidden
                     />
@@ -140,7 +139,12 @@ export function MailboxWorkspace({
                           {thread.counterpart}
                         </p>
                         {thread.audience === "group" ? (
-                          <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                              TONE_PILL.green,
+                            )}
+                          >
                             {m.groupTag}
                           </span>
                         ) : null}

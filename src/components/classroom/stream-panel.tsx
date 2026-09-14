@@ -99,7 +99,7 @@ export function StreamPanel({
             type="button"
             onClick={() => void publish()}
             disabled={posting || body.trim().length === 0}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full brand-gradient px-4 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-50"
+            className="btn-ink inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold disabled:opacity-50"
           >
             {posting ? (
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { AmbientPage } from "@/components/brand/ambient-page";
@@ -56,17 +57,17 @@ export function LoginForm() {
     <AmbientPage>
       <form
         onSubmit={onSubmit}
-        className="login-card w-full rounded-2xl p-8"
+        className="login-card w-full rounded-3xl p-8 sm:p-9"
       >
-        <h1 className="text-xl font-semibold tracking-tight">{t.auth.login.title}</h1>
-        <p className="mt-1 text-sm text-foreground/60">
+        <h1 className="brand-page-title text-2xl">{t.auth.login.title}</h1>
+        <p className="mt-1.5 text-sm text-foreground/60">
           {t.auth.login.description}
         </p>
 
-        <label className="mt-6 block text-xs font-medium text-foreground/70">
+        <label className="mt-7 block text-xs font-medium text-foreground/70">
           {t.auth.login.userLabel}
           <input
-            className="login-field mt-1 h-10 w-full rounded-lg border px-3 text-sm outline-none"
+            className="login-field mt-1.5 h-11 w-full rounded-xl border px-3.5 text-sm outline-none"
             value={username}
             onChange={(event) => {
               setUsername(event.target.value);
@@ -85,8 +86,8 @@ export function LoginForm() {
             </label>
             <PasswordInput
               id="password"
-              wrapperClassName="mt-1"
-              fieldClassName="login-field h-10 w-full rounded-lg border px-3 text-sm outline-none"
+              wrapperClassName="mt-1.5"
+              fieldClassName="login-field h-11 w-full rounded-xl border px-3.5 text-sm outline-none"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="current-password"
@@ -98,15 +99,22 @@ export function LoginForm() {
 
         {error ? <p className="mt-4 text-sm text-error!">{error}</p> : null}
 
-        <Button type="submit" className="brand-gradient mt-6 w-full border-0" disabled={pending}>
+        <Button
+          type="submit"
+          className="brand-gradient btn-glow group mt-7 h-11 w-full rounded-xl border-0 text-[15px] font-semibold"
+          disabled={pending}
+        >
           {pending
             ? t.auth.login.submitting
             : askPassword
               ? t.auth.login.submitEnter
               : t.auth.login.submitContinue}
+          {!pending ? (
+            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+          ) : null}
         </Button>
 
-        <p className="mt-4 text-center text-sm text-white/55">
+        <p className="mt-5 text-center text-sm text-white/55">
           <Link href="/forgot-password" className="-mx-1 rounded-md px-1 py-0.5 transition-colors hover:bg-white/10 hover:text-white">
             {t.auth.login.forgot}
           </Link>

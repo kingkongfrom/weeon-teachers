@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   CalendarDays,
   GraduationCap,
   MessageSquare,
@@ -18,8 +17,8 @@ import { loadGroupEventsBetween } from "@/lib/dashboard/calendar";
 import { addDays, isoDate, mondayOf } from "@/lib/dashboard/week";
 import { getT } from "@/lib/i18n/server";
 import {
+  CHIP_ICON,
   TONE_CARD,
-  TONE_ICON,
   TONE_INK,
   TONE_INK_MUTED,
   TONE_INK_FAINT,
@@ -124,17 +123,11 @@ export default async function InicioPage() {
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/45 dark:bg-white/10">
-                  <Icon
-                    className={cn("h-5 w-5", TONE_ICON[module.tone])}
-                    strokeWidth={2.2}
-                  />
+                  <Icon className={cn("h-6 w-6", CHIP_ICON)} strokeWidth={2.2} />
                 </div>
                 <h2 className="min-w-0 text-xl font-bold leading-tight">
                   {module.label}
                 </h2>
-                {upcoming ? null : (
-                  <ArrowRight className="ml-auto h-4 w-4 shrink-0 opacity-55 transition-transform group-hover:translate-x-0.5 group-hover:opacity-100" />
-                )}
               </div>
 
               <p className={cn("mt-3 text-sm font-medium", TONE_INK_MUTED)}>
@@ -172,9 +165,14 @@ export default async function InicioPage() {
       </div>
 
       <section className="flex flex-col gap-3">
-        <h2 className="brand-page-title text-lg text-foreground">
-          {t.panel.weekTitle}
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="brand-page-title text-lg text-foreground">
+            {t.panel.weekTitle}
+          </h2>
+          <span className="rounded-full bg-surface px-3 py-1 text-[11px] font-semibold text-foreground/55 ring-1 ring-border">
+            {t.schedule.thisWeek}
+          </span>
+        </div>
 
         {schedule.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">
