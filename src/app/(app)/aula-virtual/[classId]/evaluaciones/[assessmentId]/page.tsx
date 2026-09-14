@@ -33,10 +33,10 @@ export default async function AssessmentEditorPage({
   return (
     <AssessmentEditor
       initial={assessment}
-      subjects={(detail?.grupo.subjects ?? []).map((subject) => ({
-        id: subject.id,
-        name: subject.name,
-      }))}
+      subjectName={
+        detail?.grupo.subjects.find((subject) => subject.id === assessment.subjectId)?.name ??
+        null
+      }
       topics={topics.map((topic) => ({ id: topic.id, name: topic.name }))}
       studentCount={students.length}
       submissions={stat?.submissions ?? []}

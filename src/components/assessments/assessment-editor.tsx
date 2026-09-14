@@ -62,13 +62,15 @@ function toDateOnly(iso: string): string {
 
 export function AssessmentEditor({
   initial,
-  subjects,
+  subjectName = null,
   topics,
   studentCount = 0,
   submissions = [],
 }: {
   initial: Assessment;
-  subjects: { id: string; name: string }[];
+  /** Read-only: the subject comes from the active subject tab / the row itself,
+   * so it is shown, not chosen. */
+  subjectName?: string | null;
   topics: { id: string; name: string }[];
   studentCount?: number;
   submissions?: SubmissionSummary[];
@@ -303,22 +305,13 @@ export function AssessmentEditor({
               ]}
             />
           </div>
-          {subjects.length > 0 ? (
-            <div className="w-44">
-              <Dropdown
-                value={draft.subjectId ?? ""}
-                onChange={(value) => update({ subjectId: value || null })}
-                ariaLabel={a.subject}
-                placeholder={a.subject}
-                options={[
-                  { value: "", label: a.subject },
-                  ...subjects.map((subject) => ({
-                    value: subject.id,
-                    label: subject.name,
-                  })),
-                ]}
-              />
-            </div>
+          {subjectName ? (
+            <span
+              className="inline-flex h-9 items-center rounded-xl border border-border bg-surface-muted px-3 text-sm font-medium text-foreground/70"
+              title={subjectName}
+            >
+              <span className="max-w-44 truncate">{subjectName}</span>
+            </span>
           ) : null}
           {topics.length > 0 ? (
             <div className="w-44">
