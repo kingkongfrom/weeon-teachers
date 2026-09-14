@@ -418,6 +418,32 @@ every field (instructions + question prompts).
 - Scope: **teacher authoring only**, spelling/grammar only. No AI rewriting and
   no student data (that would raise minors'/Ley 8968 concerns — see P6 notes).
 
+### Inline images (P5a.2)
+
+Instructions and question prompts can include images (PNG/JPEG/WebP/GIF,
+≤ 10 MiB) via the toolbar's image button.
+
+- **Where they live:** the private **`class-materials`** bucket, path
+  `{tenant}/{class_id}/assessments/{assessment_id}/{uuid}-{name}`. That bucket's
+  RLS is path-shaped, so the existing policies apply unchanged — the class's
+  teacher writes, any class member (student, parent) reads. **No new bucket,
+  table, or migration.**
+- **Stored shape:** a ProseMirror `image` node with `attrs.path` (durable) and
+  `attrs.alt`. Signed URLs are **never persisted**.
+- **Signed URLs:** `resolveAssessmentImages()` (`lib/assessments/images.server.ts`)
+  re-signs every referenced path (1 h) on load and injects `attrs.src`; the save
+  action strips `src` again (`lib/assessments/rich-text-images.ts`). The shared
+  `RichTextView` draws `<img>`, so the editor, the student paper and the grader
+  all agree.
+- **Gotcha — plain JSON before the server action:** ProseMirror's `attrs`
+  objects do not survive React's server-action serialization (they arrive as a
+  temp-ref `"$T"`, i.e. `attrs: {}`), so the image `path`/`alt` were silently
+  lost and mobile had nothing to sign. `AssessmentEditor.handleSave` therefore
+  JSON-round-trips `instructions` and `content` before calling `saveAssessment`.
+  Never pass raw TipTap `getJSON()` output straight into a server action.
+- **Mobile:** `weeon-mobile` parses the same JSON and renders the images (see
+  `weeon-mobile/docs/aula-virtual.md`).
+
 ## Grades & evaluation (P5b/P5c + the new gradebook)
 
 The rule: **an assessment is a grade column.** Evaluating once writes the grade —

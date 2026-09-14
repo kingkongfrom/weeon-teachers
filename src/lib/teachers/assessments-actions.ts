@@ -11,6 +11,7 @@ import {
   type AssessmentContent,
   type RichTextDoc,
 } from "@/lib/assessments/model";
+import { stripImageUrls } from "@/lib/assessments/rich-text-images";
 
 export type AssessmentActionResult =
   | { ok: true; id?: string }
@@ -192,7 +193,17 @@ export async function saveAssessment(input: {
     return { ok: false, error: t.assessments.errors.tooManyQuestions };
   }
 
-  const pointsTotal = computePointsTotal(content as AssessmentContent);
+  // Strip the transient signed `src` from inline images; only the durable
+  // `path` is persisted (URLs are re-signed on every load).
+  const safeInstructions = stripImageUrls(instructions as RichTextDoc | null) ?? emptyDoc();
+  const safeContent: AssessmentContent = {
+    questions: content.questions.map((question) => ({
+      ...question,
+      prompt: stripImageUrls(question.prompt as RichTextDoc) ?? emptyDoc(),
+    })),
+  };
+
+  const pointsTotal = computePointsTotal(safeContent);
   const safeTitle = title || t.assessments.untitled;
 
   const supabase = await createSessionClient();
@@ -204,8 +215,8 @@ export async function saveAssessment(input: {
       subject_id: subjectId,
       topic_id: topicId,
       due_at: dueAt,
-      instructions: (instructions ?? emptyDoc()) as RichTextDoc,
-      content: content as AssessmentContent,
+      instructions: safeInstructions,
+      content: safeContent,
       points_total: pointsTotal,
     })
     .eq("id", id)

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { SubmissionGrader } from "@/components/assessments/submission-grader";
 import { loadAssessment } from "@/lib/dashboard/assessments";
+import { resolveAssessmentImages } from "@/lib/assessments/images.server";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadAssessmentSubmission } from "@/lib/dashboard/submissions";
 
@@ -18,12 +19,15 @@ export default async function AssessmentSubmissionPage({
 }) {
   const { classId, assessmentId, submissionId } = await params;
 
-  const [assessment, detail, submission] = await Promise.all([
+  const [rawAssessment, detail, submission] = await Promise.all([
     loadAssessment(assessmentId),
     loadTeacherGrupo(classId),
     loadAssessmentSubmission(assessmentId, submissionId),
   ]);
-  if (!assessment || assessment.classId !== classId || !detail || !submission) notFound();
+  if (!rawAssessment || rawAssessment.classId !== classId || !detail || !submission) notFound();
+
+  // Inline images: inject fresh signed URLs before rendering the paper.
+  const assessment = await resolveAssessmentImages(rawAssessment);
 
   const student = detail.students.find((item) => item.id === submission.studentId);
   const studentName = student

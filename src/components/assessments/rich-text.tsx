@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
 import {
   EditorContent,
   useEditor,
@@ -12,6 +12,7 @@ import { Placeholder } from "@tiptap/extensions";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
+import TiptapImage from "@tiptap/extension-image";
 import {
   AlignCenter,
   AlignLeft,
@@ -19,6 +20,7 @@ import {
   Bold,
   Code,
   Highlighter,
+  Image as ImageIcon,
   Italic,
   Link2,
   List,
@@ -45,6 +47,19 @@ import {
   applyGrammarDecorations,
   clearGrammarDecorations,
 } from "@/components/assessments/grammar-extension";
+import { useAssessmentImageContext, type AssessmentImageContextValue } from "@/components/assessments/assessment-image-context";
+import { uploadAssessmentImage } from "@/lib/teachers/assessment-images-actions";
+
+/** Inline image. `path` is the durable storage object path; `src` is a signed
+ * URL injected on load (see lib/assessments/rich-text-images.ts). */
+const AssessmentImage = TiptapImage.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      path: { default: null },
+    };
+  },
+}).configure({ inline: false, allowBase64: false, HTMLAttributes: { class: "rte-image" } });
 
 type UiIssue = {
   id: string;
@@ -69,6 +84,7 @@ export function RichTextEditor({
   className?: string;
 }) {
   const t = useT();
+  const imageContext = useAssessmentImageContext();
   const [issues, setIssues] = useState<UiIssue[]>([]);
   const [checking, setChecking] = useState(false);
   const [checked, setChecked] = useState(false);
@@ -134,6 +150,7 @@ export function RichTextEditor({
       }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Highlight,
+      AssessmentImage,
       GrammarCheck,
       Placeholder.configure({ placeholder: placeholder ?? "" }),
     ],
@@ -257,6 +274,7 @@ export function RichTextEditor({
     >
       <Toolbar
         editor={editor}
+        imageContext={imageContext}
         grammarEnabled={grammarEnabled}
         checking={checking}
         checkLanguage={checkLanguage}
@@ -346,6 +364,7 @@ function GrammarPanel({
 
 function Toolbar({
   editor,
+  imageContext,
   grammarEnabled,
   checking,
   checkLanguage,
@@ -353,6 +372,7 @@ function Toolbar({
   onToggleGrammar,
 }: {
   editor: Editor;
+  imageContext: AssessmentImageContextValue | null;
   grammarEnabled: boolean;
   checking: boolean;
   checkLanguage: string;
@@ -363,6 +383,9 @@ function Toolbar({
   const e = t.editor;
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const state = useEditorState({
     editor,
@@ -410,7 +433,37 @@ function Toolbar({
     setLinkOpen(false);
   }
 
+  async function onPickImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !imageContext) return;
+    setImageError(null);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set("classId", imageContext.classId);
+      formData.set("assessmentId", imageContext.assessmentId);
+      formData.set("file", file);
+      const result = await uploadAssessmentImage(formData);
+      if (!result.ok) {
+        setImageError(result.error);
+        return;
+      }
+      // Build the node from the schema so the durable `path` is stored: a plain
+      // `insertContent({ attrs })` object drops custom attributes.
+      const imageNode = editor.schema.nodes.image.create({
+        src: result.url,
+        path: result.path,
+        alt: file.name,
+      });
+      editor.chain().focus().insertContent(imageNode).run();
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
+    <div>
     <div className="relative flex items-center gap-0.5 overflow-x-auto border-b border-border bg-surface-muted/40 px-1.5 py-1">
       <ToolbarButton icon={Undo2} label={e.undo} onClick={() => editor.chain().focus().undo().run()} disabled={!state.canUndo} />
       <ToolbarButton icon={Redo2} label={e.redo} onClick={() => editor.chain().focus().redo().run()} disabled={!state.canRedo} />
@@ -486,6 +539,25 @@ function Toolbar({
         ) : null}
       </div>
 
+      {imageContext ? (
+        <div className="relative shrink-0">
+          <ToolbarButton
+            icon={uploading ? Loader2 : ImageIcon}
+            label={uploading ? e.imageUploading : e.image}
+            spin={uploading}
+            disabled={uploading}
+            onClick={() => imageInputRef.current?.click()}
+          />
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={onPickImage}
+          />
+        </div>
+      ) : null}
+
       <ToolbarButton
         icon={RemoveFormatting}
         label={e.clearFormat}
@@ -514,6 +586,12 @@ function Toolbar({
           onClick={onToggleGrammar}
         />
       </div>
+      </div>
+      {imageError ? (
+        <p className="border-t border-border px-3 py-1.5 text-xs font-medium text-error">
+          {imageError}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -696,6 +774,23 @@ function renderNode(node: RichTextNode, key: number): ReactNode {
       return <br key={key} />;
     case "text":
       return <span key={key}>{applyMarks(node.text ?? "", node.marks)}</span>;
+    case "image": {
+      const src = typeof node.attrs?.src === "string" ? node.attrs.src : "";
+      if (!src) return null;
+      const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
+      return (
+        // Signed, short-lived storage URLs with unknown dimensions: next/image
+        // would need a loader + known sizes, so a plain <img> is intentional.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={key}
+          src={src}
+          alt={alt}
+          loading="lazy"
+          style={{ maxWidth: "100%", height: "auto", borderRadius: 8, margin: "4px 0" }}
+        />
+      );
+    }
     default:
       return node.content ? (
         <span key={key}>{renderNodes(node.content)}</span>

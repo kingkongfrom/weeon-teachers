@@ -21,6 +21,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Dropdown } from "@/components/ui/dropdown";
 import { RichTextEditor } from "@/components/assessments/rich-text";
+import { AssessmentImageProvider } from "@/components/assessments/assessment-image-context";
 import { AssessmentPreview } from "@/components/assessments/assessment-preview";
 import { QuestionEditor } from "@/components/assessments/question-editor";
 import {
@@ -158,6 +159,10 @@ export function AssessmentEditor({
   async function handleSave(): Promise<boolean> {
     setError(null);
     setSaving(true);
+    // Plain-JSON clone: rich-text docs come from ProseMirror with non-plain
+    // `attrs` objects, which React's server-action serializer drops (it emits a
+    // temp ref). Round-tripping through JSON keeps the image `path`/`alt`.
+    const plain = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
     const res = await saveAssessment({
       id: initial.id,
       classId: initial.classId,
@@ -166,8 +171,8 @@ export function AssessmentEditor({
       subjectId: draft.subjectId,
       topicId: draft.topicId,
       dueAt: draft.dueAt,
-      instructions: draft.instructions,
-      content: draft.content,
+      instructions: plain(draft.instructions),
+      content: plain(draft.content),
     });
     setSaving(false);
     if (!res.ok) {
@@ -212,7 +217,8 @@ export function AssessmentEditor({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
+    <AssessmentImageProvider value={{ classId: initial.classId, assessmentId: initial.id }}>
+      <div className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={`/aula-virtual/${initial.classId}`}
@@ -489,6 +495,7 @@ export function AssessmentEditor({
           if (!deleting) setDeleteOpen(false);
         }}
       />
-    </div>
+      </div>
+    </AssessmentImageProvider>
   );
 }
