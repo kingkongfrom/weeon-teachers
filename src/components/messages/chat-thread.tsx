@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
-import { getRealtimeClient, type RealtimeConfig } from "@/lib/supabase/browser";
+import { getAuthedRealtimeClient, type RealtimeConfig } from "@/lib/supabase/browser";
 import { markChatRead, sendChatMessage } from "@/lib/teachers/chat-actions";
 import type { ChatMessageItem } from "@/lib/messages/chat-model";
 
@@ -65,45 +65,54 @@ export function ChatThread({
   }, [conversationId]);
 
   useEffect(() => {
-    const supabase = getRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
-    const channel = supabase
-      .channel(`chat:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload: { new: Record<string, unknown> }) => {
-          const row = payload.new as {
-            id?: string;
-            body?: string;
-            author_profile_id?: string | null;
-            created_at?: string;
-          };
-          if (!row.id || typeof row.body !== "string") return;
-          const mine = row.author_profile_id === me;
-          setMessages((prev) =>
-            prev.some((item) => item.id === row.id)
-              ? prev
-              : [
-                  ...prev,
-                  {
-                    id: row.id as string,
-                    body: row.body as string,
-                    createdAt: row.created_at ?? new Date().toISOString(),
-                    mine,
-                    authorName: mine ? m.chatYou : counterpartName,
-                  },
-                ],
-          );
-        },
-      )
-      .subscribe();
+    let active = true;
+    let cleanup: (() => void) | null = null;
+    void (async () => {
+      const supabase = await getAuthedRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
+      if (!active) return;
+      const channel = supabase
+        .channel(`chat:${conversationId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_messages",
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload: { new: Record<string, unknown> }) => {
+            const row = payload.new as {
+              id?: string;
+              body?: string;
+              author_profile_id?: string | null;
+              created_at?: string;
+            };
+            if (!row.id || typeof row.body !== "string") return;
+            const mine = row.author_profile_id === me;
+            setMessages((prev) =>
+              prev.some((item) => item.id === row.id)
+                ? prev
+                : [
+                    ...prev,
+                    {
+                      id: row.id as string,
+                      body: row.body as string,
+                      createdAt: row.created_at ?? new Date().toISOString(),
+                      mine,
+                      authorName: mine ? m.chatYou : counterpartName,
+                    },
+                  ],
+            );
+          },
+        )
+        .subscribe();
+      cleanup = () => {
+        void supabase.removeChannel(channel);
+      };
+    })();
     return () => {
-      void supabase.removeChannel(channel);
+      active = false;
+      cleanup?.();
     };
   }, [conversationId, realtimeUrl, realtimeAnonKey, me, counterpartName, m.chatYou]);
 

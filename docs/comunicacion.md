@@ -108,6 +108,13 @@ only**. One conversation per `(teacher, guardian roster key)`.
 - **Realtime:** `lib/supabase/browser.ts` builds one `createBrowserClient` from
   the public URL + anon key, which the server route passes down (this app keeps
   Supabase env vars server-only). Subscriptions filter by `conversation_id`.
+  The client must pass `cookieOptions: authCookieOptions()` (custom cookie name
+  `sb-weeon-teachers-auth`, same as `createSessionClient`), and callers must use
+  `getAuthedRealtimeClient()` and only then create the channel. `realtime-js`
+  attaches the access token only to channels subscribed *after* the token is
+  resolved (or when it later changes), so subscribing before the async cookie
+  session resolves joins unauthenticated and RLS drops every incoming row —
+  i.e. the teacher would only see new guardian messages after a page reload.
 - Contacts come from `list_message_contacts()` filtered to `kind = 'parent'`
   (the same RPC the email composer uses). That RPC is admin-aware as of
   `20260914060000_message_contacts_admin.sql` — a school admin (who sees every

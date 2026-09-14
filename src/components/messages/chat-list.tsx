@@ -7,7 +7,7 @@ import { Loader2, Plus, Search } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
-import { getRealtimeClient, type RealtimeConfig } from "@/lib/supabase/browser";
+import { getAuthedRealtimeClient, type RealtimeConfig } from "@/lib/supabase/browser";
 import { startChatConversation } from "@/lib/teachers/chat-actions";
 import type { ChatContact, ChatConversationSummary } from "@/lib/messages/chat-model";
 
@@ -38,22 +38,31 @@ export function ChatList({
   const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
-    const supabase = getRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
+    let active = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const channel = supabase
-      .channel("chat-list")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages" },
-        () => {
-          if (timer) clearTimeout(timer);
-          timer = setTimeout(() => router.refresh(), 800);
-        },
-      )
-      .subscribe();
+    let cleanup: (() => void) | null = null;
+    void (async () => {
+      const supabase = await getAuthedRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
+      if (!active) return;
+      const channel = supabase
+        .channel("chat-list")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "chat_messages" },
+          () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => router.refresh(), 800);
+          },
+        )
+        .subscribe();
+      cleanup = () => {
+        void supabase.removeChannel(channel);
+      };
+    })();
     return () => {
+      active = false;
       if (timer) clearTimeout(timer);
-      void supabase.removeChannel(channel);
+      cleanup?.();
     };
   }, [realtimeUrl, realtimeAnonKey, router]);
 
