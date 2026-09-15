@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TONE_PILL } from "@/lib/dashboard/tones";
 import { useT } from "@/lib/i18n/client";
 import { AssessmentsPanel } from "@/components/assessments/assessments-panel";
 import { MaterialsPanel } from "@/components/classroom/materials-panel";
@@ -94,10 +95,10 @@ export function ClassworkPanel({
                 key={option.id}
                 href={`/aula-virtual/${classId}?subject=${option.id}&tab=trabajo`}
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                  "rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors",
                   active
-                    ? "ui-active text-foreground"
-                    : "ui-hover border border-border text-foreground/60 hover:text-foreground",
+                    ? cn("border-transparent", TONE_PILL.blue)
+                    : "ui-hover border-border text-foreground/60 hover:text-foreground",
                 )}
               >
                 {option.name}
@@ -117,10 +118,10 @@ export function ClassworkPanel({
             type="button"
             onClick={() => setSelected(chip.id)}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+              "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
               selected === chip.id
-                ? "ui-active text-foreground"
-                : "ui-hover border border-border text-foreground/60 hover:text-foreground",
+                ? cn("border-transparent", TONE_PILL.purple)
+                : "ui-hover border-border text-foreground/60 hover:text-foreground",
             )}
           >
             {chip.label}

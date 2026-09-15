@@ -16,12 +16,15 @@ export function DatePicker({
   placeholder,
   clearLabel,
   className,
+  fullWidth = false,
 }: {
   value: string | null;
   onChange: (value: string | null) => void;
   placeholder?: string;
   clearLabel?: string;
   className?: string;
+  /** Full-width trigger styled like form fields (rounded-xl, h-10). */
+  fullWidth?: boolean;
 }) {
   const locale = useLocale();
   const t = useT();
@@ -85,12 +88,15 @@ export function DatePicker({
   }
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
+    <div ref={rootRef} className={cn("relative", fullWidth && "w-full", className)}>
       <button
         type="button"
         onClick={toggleOpen}
         className={cn(
-          "inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:border-brand-300 focus-visible:border-brand-400 focus-visible:outline-none",
+          "inline-flex items-center gap-2 border border-border bg-background px-3 text-sm font-medium transition-colors hover:border-brand-300 focus-visible:border-brand-400 focus-visible:outline-none",
+          fullWidth
+            ? "h-10 w-full justify-start rounded-xl"
+            : "h-9 rounded-lg",
           triggerLabel ? "text-foreground" : "text-foreground/45",
         )}
       >
@@ -105,7 +111,7 @@ export function DatePicker({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 top-11 z-40 w-[19rem] rounded-2xl border border-border bg-surface p-3 shadow-2xl"
+            className="absolute left-0 top-11 z-[110] w-[19rem] rounded-2xl border border-border bg-surface p-3 shadow-2xl"
             role="dialog"
             aria-label={d.placeholder}
           >

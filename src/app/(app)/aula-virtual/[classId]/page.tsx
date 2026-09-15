@@ -105,7 +105,10 @@ export default async function AulaVirtualClassPage({
         attendanceDate={attendanceDate}
         attendanceLessonId={attendanceLessonId}
         attendanceMarks={Object.fromEntries(
-          Object.entries(attendanceMarks).map(([studentId, mark]) => [studentId, mark.status]),
+          Object.entries(attendanceMarks).map(([studentId, mark]) => [
+            studentId,
+            { status: mark.status, comment: mark.comment },
+          ]),
         )}
       />
     </div>

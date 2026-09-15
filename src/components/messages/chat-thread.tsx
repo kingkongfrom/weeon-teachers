@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowUp, Loader2 } from "lucide-react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { getAuthedRealtimeClient, type RealtimeConfig } from "@/lib/supabase/browser";
@@ -58,7 +59,11 @@ export function ChatThread({
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [otherTyping, setOtherTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const typingChannelRef = useRef<RealtimeChannel | null>(null);
+  const clearTypingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSentRef = useRef(0);
 
   useEffect(() => {
     void markChatRead(conversationId);
@@ -116,9 +121,44 @@ export function ChatThread({
     };
   }, [conversationId, realtimeUrl, realtimeAnonKey, me, counterpartName, m.chatYou]);
 
+  // Typing presence over Realtime Broadcast (ephemeral, nothing stored).
+  useEffect(() => {
+    let active = true;
+    let cleanup: (() => void) | null = null;
+    void (async () => {
+      const supabase = await getAuthedRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
+      if (!active) return;
+      const channel = supabase
+        .channel(`chat-typing:${conversationId}`, { config: { broadcast: { self: false } } })
+        .on("broadcast", { event: "typing" }, () => {
+          setOtherTyping(true);
+          if (clearTypingRef.current) clearTimeout(clearTypingRef.current);
+          clearTypingRef.current = setTimeout(() => setOtherTyping(false), 3500);
+        })
+        .subscribe();
+      typingChannelRef.current = channel;
+      cleanup = () => {
+        typingChannelRef.current = null;
+        void supabase.removeChannel(channel);
+      };
+    })();
+    return () => {
+      active = false;
+      if (clearTypingRef.current) clearTimeout(clearTypingRef.current);
+      cleanup?.();
+    };
+  }, [conversationId, realtimeUrl, realtimeAnonKey]);
+
+  function notifyTyping() {
+    const now = Date.now();
+    if (now - lastSentRef.current < 1500) return;
+    lastSentRef.current = now;
+    typingChannelRef.current?.send({ type: "broadcast", event: "typing", payload: { at: now } });
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, otherTyping]);
 
   async function send() {
     const value = text.trim();
@@ -223,6 +263,24 @@ export function ChatThread({
             );
           })
         )}
+        {otherTyping ? (
+          <div className="mt-1 flex justify-start">
+            <div
+              className="flex items-center gap-1 rounded-3xl bg-surface-muted px-3.5 py-3"
+              aria-label={m.chatTyping}
+            >
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/40" />
+              <span
+                className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/40"
+                style={{ animationDelay: "150ms" }}
+              />
+              <span
+                className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/40"
+                style={{ animationDelay: "300ms" }}
+              />
+            </div>
+          </div>
+        ) : null}
         <div ref={bottomRef} />
       </div>
 
@@ -234,7 +292,10 @@ export function ChatThread({
         <div className="flex items-end gap-2 rounded-3xl border border-border bg-background px-3 py-1.5">
           <textarea
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            onChange={(event) => {
+              setText(event.target.value);
+              notifyTyping();
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();

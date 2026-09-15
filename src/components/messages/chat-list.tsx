@@ -54,6 +54,16 @@ export function ChatList({
             timer = setTimeout(() => router.refresh(), 800);
           },
         )
+        .on(
+          // A guardian may start a conversation before sending anything, so
+          // refresh on the conversation insert too.
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "chat_conversations" },
+          () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => router.refresh(), 800);
+          },
+        )
         .subscribe();
       cleanup = () => {
         void supabase.removeChannel(channel);

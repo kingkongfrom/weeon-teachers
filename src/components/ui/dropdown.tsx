@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Option = { value: string; label: string };
 
@@ -11,11 +12,20 @@ type DropdownProps = {
   options: Option[];
   ariaLabel: string;
   placeholder?: string;
+  /** Taller trigger for form dialogs (h-10). Default h-9. */
+  size?: "default" | "form";
 };
 
 /** Styled dropdown (button + custom menu) so the menu corners can be rounded
  * and styled — the native <select> popup can't be. */
-export function Dropdown({ value, onChange, options, ariaLabel, placeholder }: DropdownProps) {
+export function Dropdown({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  placeholder,
+  size = "default",
+}: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +55,10 @@ export function Dropdown({ value, onChange, options, ariaLabel, placeholder }: D
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={() => setOpen((was) => !was)}
-        className="inline-flex h-9 w-full min-w-36 cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors hover:bg-surface-muted focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25"
+        className={cn(
+          "inline-flex w-full min-w-36 cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors hover:bg-surface-muted focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25",
+          size === "form" ? "h-10" : "h-9",
+        )}
       >
         <span className="truncate">
           {current?.label ?? placeholder ?? "Seleccionar"}
@@ -58,7 +71,7 @@ export function Dropdown({ value, onChange, options, ariaLabel, placeholder }: D
       {open ? (
         <ul
           role="listbox"
-          className="absolute z-30 mt-2 min-w-full rounded-xl border border-border bg-surface-elevated p-1 shadow-xl"
+          className="absolute z-[110] mt-2 min-w-full rounded-xl border border-border bg-surface-elevated p-1 shadow-xl"
         >
           {options.map((option) => {
             const selected = option.value === value;

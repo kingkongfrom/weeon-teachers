@@ -5,7 +5,11 @@ import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { getT } from "@/lib/i18n/server";
-import { ATTENDANCE_STATUS_LIST } from "@/lib/attendance/model";
+import {
+  ATTENDANCE_COMMENT_MAX,
+  ATTENDANCE_STATUS_LIST,
+  normalizeAttendanceComment,
+} from "@/lib/attendance/model";
 
 export type AttendanceActionResult = { ok: true } | { ok: false; error: string };
 
@@ -18,6 +22,7 @@ const saveSchema = z.object({
       z.object({
         studentId: z.string().uuid(),
         status: z.enum(ATTENDANCE_STATUS_LIST),
+        comment: z.string().max(ATTENDANCE_COMMENT_MAX).nullable().optional(),
       }),
     )
     .min(1)
@@ -30,7 +35,7 @@ export async function saveAttendance(input: {
   classId: string;
   date: string;
   lessonId?: string | null;
-  entries: { studentId: string; status: string }[];
+  entries: { studentId: string; status: string; comment?: string | null }[];
 }): Promise<AttendanceActionResult> {
   const t = await getT();
   const parsed = saveSchema.safeParse(input);
@@ -40,19 +45,24 @@ export async function saveAttendance(input: {
   if (!session) return { ok: false, error: t.attendance.errors.save };
 
   const supabase = await createSessionClient();
-  const rows = parsed.data.entries.map((entry) => ({
-    tenant_id: session.tenantId,
-    class_id: parsed.data.classId,
-    student_id: entry.studentId,
-    date: parsed.data.date,
-    status: entry.status,
-    marked_by: session.userId,
-    class_lesson_id: parsed.data.lessonId ?? null,
-  }));
+  const rows = parsed.data.entries.map((entry) => {
+    const comment = normalizeAttendanceComment(entry.comment);
+    return {
+      tenant_id: session.tenantId,
+      class_id: parsed.data.classId,
+      student_id: entry.studentId,
+      date: parsed.data.date,
+      status: entry.status,
+      marked_by: session.userId,
+      class_lesson_id: parsed.data.lessonId ?? null,
+      comment: entry.status === "present" ? null : comment,
+    };
+  });
 
-  const { error } = await supabase
-    .from("attendance_records")
-    .upsert(rows, { onConflict: "tenant_id,class_id,student_id,date" });
+  const { error } = await supabase.from("attendance_records").upsert(rows, {
+    onConflict: "tenant_id,class_id,student_id,date",
+    ignoreDuplicates: false,
+  });
 
   if (error) {
     console.error("[attendance] save failed:", error.code, error.message, error.details);

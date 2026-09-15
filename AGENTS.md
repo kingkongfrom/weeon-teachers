@@ -28,10 +28,16 @@ section is opened. Phase 2 is **partial**: `/grupos/[id]` was rebuilt as a
 (Trabajo / Tarea / Examen / Prueba / Proyecto) with auto labels (`CW 1`,
 `EXAM 1`…), inline keyboard editing + autosave, per-student FINAL and
 per-column averages, density toggle and CSV export — plus submit report and
-`/reportes` to list submitted snapshots. **Asistencia (Libro de clase)** is also
-built here: a dated register over the shared `attendance_records` table
-(P / TJ / TI / AJ / A) reached from a lesson card, with a read-only **Asistencia**
-column in the gradebook. **Students** live in the aula virtual **Personas** tab
+`/reportes` to list submitted snapshots. **Asistencia** is the middle tab on `/grupos/[id]` (`?tab=asistencia`): read-only
+TJ/TI history from `attendance_records` with a link to take attendance in aula
+virtual — see `docs/asistencia-grupos.md`. **Código de conducta** is the third
+tab (`?tab=conducta`): méritos/faltas log + per-student summary, separate from
+the grade spreadsheet (`conduct_records`, migration
+`20260915100000_conduct_records.sql`; see `docs/conducta.md`). **Asistencia
+(Libro de clase)** remains in aula virtual: a dated register over the shared
+`attendance_records` table (P / TJ / TI / AJ / A) reached from a lesson card or
+the Grupos Asistencia tab, with a read-only **Asistencia** column in the
+gradebook. **Students** live in the aula virtual **Personas** tab
 (per group) and in the gradebook rows; selecting one opens `/estudiantes/[id]`, a
 per-student **transcript** across every subject the teacher teaches.
 **Aula virtual** is a Google Classroom-style hub (`/aula-virtual` +
@@ -129,8 +135,8 @@ already ships teacher web + parent mobile).
   `/comunicacion/correo` (mailbox), `/comunicacion/nuevo` (compose email),
   `/comunicacion/correo/[threadId]` (email thread), `/comunicacion/chat`
   (realtime guardian chat), `/comunicacion/chat/[conversationId]`,
-  `/grupos`, `/grupos/[id]`
-  (gradebook), `/horarios?week=` (weekly timetable, paged; add an
+  `/grupos`, `/grupos/[id]` (gradebook + `?tab=conducta` conduct log),
+  `/horarios?week=` (weekly timetable, paged; add an
   exam/activity from a class tile), `/estudiantes/[id]` (per-student transcript — reached from aula virtual
   **Personas** or the gradebook; there is no standalone students section),
   `/reportes`.
@@ -174,6 +180,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
 | **Agenda (schedule, upcoming events)** | `docs/agenda.md` |
 | **Comunicación (messaging)** | `docs/comunicacion.md` |
+| **Código de conducta** | `docs/conducta.md` |
 | Student Entregar (Expo) | `../weeon-mobile/docs/aula-virtual.md` |
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |

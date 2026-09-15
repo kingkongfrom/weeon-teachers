@@ -9,10 +9,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { saveAttendance } from "@/lib/teachers/attendance-actions";
 import {
   ATTENDANCE_CODE,
+  ATTENDANCE_COMMENT_MAX,
   ATTENDANCE_KIND,
   ATTENDANCE_STATUS_LIST,
+  attendanceAllowsComment,
   schoolToday,
   shiftDate,
+  type AttendanceEntry,
   type AttendanceKind,
   type AttendanceStatus,
 } from "@/lib/attendance/model";
@@ -48,11 +51,11 @@ function displayName(student: AttendanceStudent): string {
 
 function defaultMarks(
   students: AttendanceStudent[],
-  initial: Record<string, AttendanceStatus>,
-): Record<string, AttendanceStatus> {
-  const marks: Record<string, AttendanceStatus> = {};
+  initial: Record<string, AttendanceEntry>,
+): Record<string, AttendanceEntry> {
+  const marks: Record<string, AttendanceEntry> = {};
   for (const student of students) {
-    marks[student.id] = initial[student.id] ?? "present";
+    marks[student.id] = initial[student.id] ?? { status: "present", comment: null };
   }
   return marks;
 }
@@ -71,33 +74,54 @@ export function AttendanceRegister({
   date: string;
   lessonId: string | null;
   students: AttendanceStudent[];
-  initialMarks: Record<string, AttendanceStatus>;
+  initialMarks: Record<string, AttendanceEntry>;
 }) {
   const t = useT();
   const a = t.attendance;
   const router = useRouter();
-  const [marks, setMarks] = useState(() => defaultMarks(students, initialMarks));
+  const marksRef = useRef(defaultMarks(students, initialMarks));
+  const [marks, setMarks] = useState(marksRef.current);
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const pending = useRef(new Map<string, AttendanceStatus>());
+  const pending = useRef(new Set<string>());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveGeneration = useRef(0);
+
+  function applyMark(studentId: string, patch: Partial<AttendanceEntry>): AttendanceEntry | null {
+    const previous = marksRef.current[studentId] ?? { status: "present", comment: null };
+    const next: AttendanceEntry = { ...previous, ...patch };
+    const updated = { ...marksRef.current, [studentId]: next };
+    marksRef.current = updated;
+    setMarks(updated);
+    return next;
+  }
 
   useEffect(() => {
     return () => {
       if (timer.current) clearTimeout(timer.current);
+      if (pending.current.size > 0) void flush();
     };
   }, []);
 
   async function flush() {
-    timer.current = null;
-    if (pending.current.size === 0) return;
-    const entries = Array.from(pending.current.entries()).map(([studentId, status]) => ({
-      studentId,
-      status,
-    }));
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    const studentIds = Array.from(pending.current);
     pending.current.clear();
+    if (studentIds.length === 0) return;
+
+    const entries = studentIds.map((studentId) => {
+      const mark = marksRef.current[studentId] ?? { status: "present" as const, comment: null };
+      return { studentId, status: mark.status, comment: mark.comment };
+    });
+
+    const generation = ++saveGeneration.current;
     setSaveState("saving");
     const res = await saveAttendance({ classId, date, lessonId, entries });
+    if (generation !== saveGeneration.current) return;
     setSaveState(res.ok ? "saved" : "error");
+    if (pending.current.size > 0) scheduleFlush();
   }
 
   function scheduleFlush() {
@@ -105,17 +129,44 @@ export function AttendanceRegister({
     timer.current = setTimeout(() => void flush(), 600);
   }
 
-  function setStatus(studentId: string, status: AttendanceStatus) {
-    setMarks((current) => ({ ...current, [studentId]: status }));
-    pending.current.set(studentId, status);
+  function flushNow() {
+    void flush();
+  }
+
+  function queueSave(studentId: string) {
+    pending.current.add(studentId);
     scheduleFlush();
+  }
+
+  function setStatus(studentId: string, status: AttendanceStatus) {
+    const previous = marksRef.current[studentId] ?? { status: "present", comment: null };
+    applyMark(studentId, {
+      status,
+      comment: attendanceAllowsComment(status) ? previous.comment : null,
+    });
+    queueSave(studentId);
+  }
+
+  function setComment(studentId: string, raw: string) {
+    const previous = marksRef.current[studentId] ?? { status: "present", comment: null };
+    if (!attendanceAllowsComment(previous.status)) return;
+    const comment = raw.slice(0, ATTENDANCE_COMMENT_MAX);
+    applyMark(studentId, { comment: comment.length === 0 ? null : comment });
+    queueSave(studentId);
+  }
+
+  /** Blur must persist the input value before flush — refs update synchronously. */
+  function commitComment(studentId: string, raw: string) {
+    setComment(studentId, raw);
+    flushNow();
   }
 
   function markAllPresent() {
     const next = defaultMarks(students, {});
+    marksRef.current = next;
     setMarks(next);
-    for (const student of students) pending.current.set(student.id, "present");
-    scheduleFlush();
+    for (const student of students) pending.current.add(student.id);
+    flushNow();
   }
 
   function goto(nextDate: string) {
@@ -125,7 +176,7 @@ export function AttendanceRegister({
 
   const today = schoolToday();
   const counts: Record<AttendanceKind, number> = { present: 0, late: 0, absence: 0 };
-  for (const status of Object.values(marks)) counts[ATTENDANCE_KIND[status]] += 1;
+  for (const mark of Object.values(marks)) counts[ATTENDANCE_KIND[mark.status]] += 1;
 
   const summaryKinds: { kind: AttendanceKind; dot: string }[] = [
     { kind: "present", dot: DOT.present },
@@ -213,43 +264,57 @@ export function AttendanceRegister({
       ) : (
         <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface">
           {students.map((student) => {
-            const status = marks[student.id] ?? "present";
+            const mark = marks[student.id] ?? { status: "present", comment: null };
+            const showComment = attendanceAllowsComment(mark.status);
             return (
-              <li
-                key={student.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-              >
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-                  {displayName(student)}
-                </span>
-                <div
-                  role="radiogroup"
-                  aria-label={displayName(student)}
-                  className="flex shrink-0 items-center gap-1"
-                >
-                  {ATTENDANCE_STATUS_LIST.map((option) => {
-                    const active = status === option;
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        title={a.statuses[option]}
-                        aria-label={a.statuses[option]}
-                        onClick={() => setStatus(student.id, option)}
-                        className={cn(
-                          "h-8 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors",
-                          active
-                            ? ACTIVE[option]
-                            : "border-border text-foreground/55 hover:bg-surface-muted hover:text-foreground",
-                        )}
-                      >
-                        {ATTENDANCE_CODE[option]}
-                      </button>
-                    );
-                  })}
+              <li key={student.id} className="px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                    {displayName(student)}
+                  </span>
+                  <div
+                    role="radiogroup"
+                    aria-label={displayName(student)}
+                    className="flex shrink-0 items-center gap-1"
+                  >
+                    {ATTENDANCE_STATUS_LIST.map((option) => {
+                      const active = mark.status === option;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          title={a.statuses[option]}
+                          aria-label={a.statuses[option]}
+                          onClick={() => setStatus(student.id, option)}
+                          className={cn(
+                            "h-8 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors",
+                            active
+                              ? ACTIVE[option]
+                              : "border-border text-foreground/55 hover:bg-surface-muted hover:text-foreground",
+                          )}
+                        >
+                          {ATTENDANCE_CODE[option]}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+                {showComment ? (
+                  <label className="mt-2 block">
+                    <span className="sr-only">{a.commentLabel}</span>
+                    <input
+                      type="text"
+                      value={mark.comment ?? ""}
+                      maxLength={ATTENDANCE_COMMENT_MAX}
+                      placeholder={a.commentPlaceholder}
+                      onChange={(event) => setComment(student.id, event.target.value)}
+                      onBlur={(event) => commitComment(student.id, event.target.value)}
+                      className="w-full rounded-lg border border-border bg-surface-muted/40 px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </label>
+                ) : null}
               </li>
             );
           })}

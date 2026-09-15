@@ -119,7 +119,12 @@ only**. One conversation per `(teacher, guardian roster key)`.
   (the same RPC the email composer uses). That RPC is admin-aware as of
   `20260914060000_message_contacts_admin.sql` — a school admin (who sees every
   class via RLS) now gets the full parent list, not an empty picker.
-- Teacher-initiated only for now.
+- Either side can start the pair. Guardians start from mobile
+  (`/parent/chat/new`) via `start_guardian_chat` — allowed only for a teacher of
+  a class one of their children attends
+  (`20260914070000_chat_guardian_initiated.sql`). The teacher's list also
+  live-refreshes on `chat_conversations` inserts, so a parent-started chat shows
+  up before the first message.
 - Parent side is built in `weeon-mobile` (`features/chat`, `/parent/chat`), also
   realtime.
 

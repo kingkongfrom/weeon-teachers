@@ -1,27 +1,35 @@
 import { notFound } from "next/navigation";
 import { GradebookWorkspace } from "@/components/grades/gradebook-workspace";
+import { ConductWorkspace } from "@/components/grades/conduct-workspace";
+import { AttendanceGroupWorkspace } from "@/components/grades/tardias-workspace";
+import { GrupoSectionTabs } from "@/components/grades/grupo-section-tabs";
 import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassExams } from "@/lib/dashboard/exams";
-import { loadClassAttendanceCounts } from "@/lib/dashboard/attendance";
+import { loadClassAttendanceCounts, loadClassTardias } from "@/lib/dashboard/attendance";
 import { loadGradebookContext } from "@/lib/dashboard/gradebook";
-import { getT } from "@/lib/i18n/server";
+import { loadClassConduct } from "@/lib/dashboard/conduct";
+import { getT, getLocale } from "@/lib/i18n/server";
 
 export default async function GrupoDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ subject?: string }>;
+  searchParams: Promise<{ subject?: string; tab?: string }>;
 }) {
   const { id } = await params;
-  const { subject } = await searchParams;
+  const { subject, tab } = await searchParams;
+  const section =
+    tab === "conducta"
+      ? "conduct"
+      : tab === "asistencia" || tab === "tardias"
+        ? "attendance"
+        : "grades";
 
   const detail = await loadTeacherGrupo(id);
   if (!detail) notFound();
 
-  // Derive the teacher's (class, subject) context so we can render the pills,
-  // and pick the selected subject (explicit, or the first available).
   const ctx = await loadGradebookContext();
   const currentClass = ctx.classes.find((c) => c.id === id);
 
@@ -37,34 +45,64 @@ export default async function GrupoDetailPage({
     selectedSubject = subjects[0]?.id ?? null;
   }
 
-  // Only the selected subject's exams are loaded server-side; switching subjects
-  // happens client-side via the panel (no full reload).
-  const exams = await loadClassExams(id, selectedSubject);
-  const attendance = await loadClassAttendanceCounts(id);
-  const t = await getT();
+  const [exams, attendance, tardias, conduct, t, locale] = await Promise.all([
+    section === "grades" ? loadClassExams(id, selectedSubject) : Promise.resolve([]),
+    section === "grades" ? loadClassAttendanceCounts(id) : Promise.resolve({}),
+    section === "attendance" ? loadClassTardias(id) : Promise.resolve([]),
+    section === "conduct" ? loadClassConduct(id) : Promise.resolve([]),
+    getT(),
+    getLocale(),
+  ]);
+
+  const subjectQuery =
+    subject ?? (selectedSubject != null ? selectedSubject : undefined);
 
   return (
     <div className="flex flex-col gap-5">
       <BackLink href="/grupos" label={t.grupos.back} />
 
-      <GradebookWorkspace
+      <GrupoSectionTabs
         classId={id}
-        groupName={detail.grupo.name}
-        students={detail.students}
-        classContext={
-          currentClass ?? {
-            id,
-            name: detail.grupo.name,
-            grade: detail.grupo.grade,
-            section: detail.grupo.section,
-            subjects: [],
-            hasLegacyExams: false,
-          }
-        }
-        initialSubjectId={selectedSubject}
-        initialExams={exams}
-        attendance={attendance}
+        active={section}
+        subjectQuery={subjectQuery}
       />
+
+      {section === "conduct" ? (
+        <ConductWorkspace
+          classId={id}
+          groupName={detail.grupo.name}
+          students={detail.students}
+          initialRecords={conduct}
+          locale={locale}
+        />
+      ) : section === "attendance" ? (
+        <AttendanceGroupWorkspace
+          classId={id}
+          groupName={detail.grupo.name}
+          students={detail.students}
+          initialRecords={tardias}
+          locale={locale}
+        />
+      ) : (
+        <GradebookWorkspace
+          classId={id}
+          groupName={detail.grupo.name}
+          students={detail.students}
+          classContext={
+            currentClass ?? {
+              id,
+              name: detail.grupo.name,
+              grade: detail.grupo.grade,
+              section: detail.grupo.section,
+              subjects: [],
+              hasLegacyExams: false,
+            }
+          }
+          initialSubjectId={selectedSubject}
+          initialExams={exams}
+          attendance={attendance}
+        />
+      )}
     </div>
   );
 }

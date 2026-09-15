@@ -61,6 +61,66 @@ export const ATTENDANCE_KIND: Record<AttendanceStatus, AttendanceKind> = {
   absence_unjustified: "absence",
 };
 
+/** Tardías and ausencias may carry an optional teacher comment. */
+export function attendanceAllowsComment(status: AttendanceStatus): boolean {
+  return status !== "present";
+}
+
+export const LATE_STATUS_LIST = ["late_justified", "late_unjustified"] as const;
+
+export type LateStatus = (typeof LATE_STATUS_LIST)[number];
+
+export function isLateStatus(status: AttendanceStatus): status is LateStatus {
+  return ATTENDANCE_KIND[status] === "late";
+}
+
+export type TardiaRecord = {
+  id: string;
+  studentId: string;
+  date: string;
+  status: LateStatus;
+  comment: string | null;
+};
+
+export type TardiaSummary = {
+  studentId: string;
+  justified: number;
+  unjustified: number;
+  total: number;
+};
+
+/** Per-student TJ / TI totals from tardía rows. */
+export function summarizeTardias(records: TardiaRecord[]): Map<string, TardiaSummary> {
+  const byStudent = new Map<string, TardiaSummary>();
+  for (const row of records) {
+    const current = byStudent.get(row.studentId) ?? {
+      studentId: row.studentId,
+      justified: 0,
+      unjustified: 0,
+      total: 0,
+    };
+    if (row.status === "late_justified") current.justified += 1;
+    else current.unjustified += 1;
+    current.total += 1;
+    byStudent.set(row.studentId, current);
+  }
+  return byStudent;
+}
+
+export type AttendanceEntry = {
+  status: AttendanceStatus;
+  comment: string | null;
+};
+
+export const ATTENDANCE_COMMENT_MAX = 500;
+
+/** Trim only leading/trailing space before persisting — never while typing. */
+export function normalizeAttendanceComment(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed.slice(0, ATTENDANCE_COMMENT_MAX);
+}
+
 export type SchoolWeekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 const WEEKDAY_BY_EN: Record<string, SchoolWeekday> = {

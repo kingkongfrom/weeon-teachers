@@ -5,14 +5,18 @@ import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
 import {
   emptyAttendanceCounts,
+  isLateStatus,
+  normalizeAttendanceComment,
   normalizeAttendanceStatus,
   type AttendanceCounts,
   type AttendanceStatus,
+  type TardiaRecord,
 } from "@/lib/attendance/model";
 
 export type AttendanceMark = {
   status: AttendanceStatus;
   lessonId: string | null;
+  comment: string | null;
 };
 
 /** Attendance already recorded for a class on a date, keyed by student id. RLS
@@ -25,11 +29,15 @@ export const loadClassAttendance = cache(
     const supabase = await createSessionClient();
     const { data, error } = await supabase
       .from("attendance_records")
-      .select("student_id, status, class_lesson_id")
+      .select("student_id, status, class_lesson_id, comment")
       .eq("class_id", classId)
       .eq("date", date);
 
-    if (error || !data) return {};
+    if (error) {
+      console.error("[attendance] load failed:", error.message, error.details);
+      return {};
+    }
+    if (!data) return {};
 
     const marks: Record<string, AttendanceMark> = {};
     for (const row of data) {
@@ -38,6 +46,7 @@ export const loadClassAttendance = cache(
       marks[row.student_id] = {
         status,
         lessonId: row.class_lesson_id,
+        comment: normalizeAttendanceComment(row.comment),
       };
     }
     return marks;
@@ -68,5 +77,42 @@ export const loadClassAttendanceCounts = cache(
       byStudent[row.student_id] = counts;
     }
     return byStudent;
+  },
+);
+
+/** Every tardía (TJ / TI) for a class — read-only log for the Grupos tab.
+ * Teachers record marks in Aula virtual → Asistencia; this aggregates them. */
+export const loadClassTardias = cache(
+  async (classId: string): Promise<TardiaRecord[]> => {
+    const session = await getTeacherSession();
+    if (!session || !classId) return [];
+
+    const supabase = await createSessionClient();
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .select("id, student_id, date, status, comment")
+      .eq("class_id", classId)
+      .in("status", ["late_justified", "late_unjustified", "late"])
+      .order("date", { ascending: false });
+
+    if (error) {
+      console.error("[attendance] tardias load failed:", error.message, error.details);
+      return [];
+    }
+    if (!data) return [];
+
+    const rows: TardiaRecord[] = [];
+    for (const row of data) {
+      const status = normalizeAttendanceStatus(row.status);
+      if (!status || !isLateStatus(status)) continue;
+      rows.push({
+        id: row.id,
+        studentId: row.student_id,
+        date: row.date,
+        status,
+        comment: normalizeAttendanceComment(row.comment),
+      });
+    }
+    return rows;
   },
 );

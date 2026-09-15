@@ -8,7 +8,7 @@ import { useT } from "@/lib/i18n/client";
 import { ClassworkPanel } from "@/components/classroom/classwork-panel";
 import { StreamPanel } from "@/components/classroom/stream-panel";
 import { AttendanceRegister } from "@/components/attendance/attendance-register";
-import type { AttendanceStatus } from "@/lib/attendance/model";
+import type { AttendanceEntry } from "@/lib/attendance/model";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
 import type { StreamPost } from "@/lib/dashboard/stream";
@@ -52,7 +52,7 @@ export function ClassTabs({
   initialTab?: string;
   attendanceDate: string;
   attendanceLessonId: string | null;
-  attendanceMarks: Record<string, AttendanceStatus>;
+  attendanceMarks: Record<string, AttendanceEntry>;
 }) {
   const t = useT();
   const VALID_TABS: TabId[] = [
