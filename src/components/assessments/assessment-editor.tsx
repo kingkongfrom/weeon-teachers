@@ -223,7 +223,10 @@ export function AssessmentEditor({
   async function handleCloseEvaluation() {
     setClosing(true);
     setError(null);
-    const res = await closeAssessment({ id: initial.id, classId: initial.classId });
+    const res = await closeAssessment({
+      assessmentId: initial.id,
+      classId: initial.classId,
+    });
     setClosing(false);
     if (!res.ok) {
       setError(res.error);
