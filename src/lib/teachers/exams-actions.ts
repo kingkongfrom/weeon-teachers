@@ -178,13 +178,41 @@ export async function saveGrade(input: {
       assignment_id: assignmentId,
       mark: clamped,
       max_marks: maxMarks,
+      status: "graded",
     },
     { onConflict: "class_id,student_id,assignment_id" },
   );
   if (error) {
     return { ok: false, error: "No se pudo guardar la nota. Intente de nuevo." };
   }
+  revalidatePath(`/grupos/${classId}`);
+  revalidatePath(`/estudiantes/${studentId}`);
   return { ok: true };
+}
+
+/** Closes a grade column: enrolled students without a mark receive 0. */
+export async function closeExamColumn(input: {
+  classId: string;
+  assignmentId: string;
+}): Promise<ExamActionResult & { zerosInserted?: number }> {
+  const parsed = removeColumnSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Solicitud no válida." };
+
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("close_assignment", {
+    p_assignment_id: parsed.data.assignmentId,
+  });
+
+  if (error) {
+    if (error.message.includes("not_allowed")) {
+      return { ok: false, error: "No tiene permiso para cerrar esta columna." };
+    }
+    return { ok: false, error: "No se pudo cerrar la columna." };
+  }
+
+  const payload = (data ?? {}) as { zeros_inserted?: number };
+  revalidatePath(`/grupos/${parsed.data.classId}`);
+  return { ok: true, zerosInserted: Number(payload.zeros_inserted ?? 0) };
 }
 
 /**
@@ -289,6 +317,7 @@ export async function restoreExamColumn(input: {
         assignment_id: assignmentId,
         mark: grade.mark,
         max_marks: grade.maxMarks,
+        status: "graded",
       })),
     );
     if (gradesError) {

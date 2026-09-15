@@ -25,6 +25,7 @@ type Row = {
   due_at: string | null;
   points_total: number | null;
   published: boolean;
+  closed_at: string | null;
   updated_at: string;
 };
 
@@ -44,6 +45,7 @@ function toSummary(row: Row): AssessmentSummary {
     dueAt: row.due_at,
     pointsTotal: row.points_total ?? computePointsTotal(content),
     published: row.published,
+    closedAt: row.closed_at,
     questionCount: content.questions.length,
     updatedAt: row.updated_at,
     submittedCount: 0,
@@ -61,7 +63,7 @@ export const loadClassAssessments = cache(
     const { data, error } = await supabase
       .from("assessments")
       .select(
-        "id, class_id, subject_id, topic_id, title, kind, instructions, content, due_at, points_total, published, updated_at",
+        "id, class_id, subject_id, topic_id, title, kind, instructions, content, due_at, points_total, published, closed_at, updated_at",
       )
       .eq("class_id", classId)
       .order("position", { ascending: true })
@@ -80,7 +82,7 @@ export const loadAssessment = cache(async (id: string): Promise<Assessment | nul
   const { data, error } = await supabase
     .from("assessments")
     .select(
-      "id, class_id, subject_id, topic_id, title, kind, instructions, content, due_at, points_total, published, updated_at",
+      "id, class_id, subject_id, topic_id, title, kind, instructions, content, due_at, points_total, published, closed_at, updated_at",
     )
     .eq("id", id)
     .maybeSingle();

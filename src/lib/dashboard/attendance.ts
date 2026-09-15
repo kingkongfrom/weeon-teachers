@@ -9,6 +9,7 @@ import {
   normalizeAttendanceComment,
   normalizeAttendanceStatus,
   type AttendanceCounts,
+  type AttendanceLogRecord,
   type AttendanceStatus,
   type TardiaRecord,
 } from "@/lib/attendance/model";
@@ -77,6 +78,42 @@ export const loadClassAttendanceCounts = cache(
       byStudent[row.student_id] = counts;
     }
     return byStudent;
+  },
+);
+
+/** Every non-present attendance mark for a class — powers report detail logs. */
+export const loadClassAttendanceLog = cache(
+  async (classId: string): Promise<AttendanceLogRecord[]> => {
+    const session = await getTeacherSession();
+    if (!session || !classId) return [];
+
+    const supabase = await createSessionClient();
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .select("id, student_id, date, status, comment")
+      .eq("class_id", classId)
+      .neq("status", "present")
+      .order("date", { ascending: false });
+
+    if (error) {
+      console.error("[attendance] log load failed:", error.message, error.details);
+      return [];
+    }
+    if (!data) return [];
+
+    const rows: AttendanceLogRecord[] = [];
+    for (const row of data) {
+      const status = normalizeAttendanceStatus(row.status);
+      if (!status || status === "present") continue;
+      rows.push({
+        id: row.id,
+        studentId: row.student_id,
+        date: row.date,
+        status,
+        comment: normalizeAttendanceComment(row.comment),
+      });
+    }
+    return rows;
   },
 );
 

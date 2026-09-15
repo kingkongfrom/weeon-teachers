@@ -2,9 +2,12 @@ import "server-only";
 
 import { createSessionClient } from "@/lib/supabase/session";
 
+export type GradeStatus = "graded" | "missing";
+
 export type ExamGrade = {
   mark: number;
   maxMarks: number;
+  status: GradeStatus;
 };
 
 export type AssignmentKind =
@@ -41,6 +44,7 @@ export type ExamColumn = {
   /** Coarse group used for weighting. */
   category: AssignmentCategory;
   assessmentId: string | null;
+  closedAt: string | null;
   grades: Record<string, ExamGrade>;
 };
 
@@ -70,7 +74,7 @@ export async function loadClassExams(
 
   let extendedQuery = supabase
     .from("assignments")
-    .select("id, title, points, category, kind, assessment_id")
+    .select("id, title, points, category, kind, assessment_id, closed_at")
     .eq("class_id", classId);
   let baseQuery = supabase
     .from("assignments")
@@ -89,7 +93,7 @@ export async function loadClassExams(
     extendedQuery.order("created_at"),
     supabase
       .from("grades")
-      .select("assignment_id, student_id, mark, max_marks")
+      .select("assignment_id, student_id, mark, max_marks, status")
       .eq("class_id", classId)
       .not("assignment_id", "is", null),
   ]);
@@ -115,6 +119,7 @@ export async function loadClassExams(
       kind,
       category: categoryFor(kind),
       assessmentId: row.assessment_id ?? null,
+      closedAt: (row as { closed_at?: string | null }).closed_at ?? null,
       grades: {},
     };
   });
@@ -125,7 +130,12 @@ export async function loadClassExams(
   for (const grade of gradesRes.data ?? []) {
     const column = byId.get(grade.assignment_id);
     if (!column) continue;
-    column.grades[grade.student_id] = { mark: grade.mark, maxMarks: grade.max_marks };
+    const status = grade.status === "missing" ? "missing" : "graded";
+    column.grades[grade.student_id] = {
+      mark: grade.mark,
+      maxMarks: grade.max_marks,
+      status,
+    };
   }
 
   return columns;

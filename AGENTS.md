@@ -27,8 +27,10 @@ section is opened. Phase 2 is **partial**: `/grupos/[id]` was rebuilt as a
 **gradebook spreadsheet** — sticky student column, typed columns
 (Trabajo / Tarea / Examen / Prueba / Proyecto) with auto labels (`CW 1`,
 `EXAM 1`…), inline keyboard editing + autosave, per-student FINAL and
-per-column averages, density toggle and CSV export — plus submit report and
-`/reportes` to list submitted snapshots. **Asistencia** is the middle tab on `/grupos/[id]` (`?tab=asistencia`): read-only
+per-column averages, density toggle and CSV export — plus **report composer**
+(`/grupos/[id]/reporte` from **Subir reporte**; snapshots grades + conduct +
+asistencia with expandable detail logs) and `/reportes` to list submitted
+reports. See `docs/reportes.md`. **Asistencia** is the middle tab on `/grupos/[id]` (`?tab=asistencia`): read-only
 TJ/TI history from `attendance_records` with a link to take attendance in aula
 virtual — see `docs/asistencia-grupos.md`. **Código de conducta** is the third
 tab (`?tab=conducta`): méritos/faltas log + per-student summary, separate from
@@ -67,8 +69,6 @@ the aula virtual needs
 `20260912220000_assessment_submissions.sql`, and
 `20260912230000_teacher_sees_submissions.sql`, `20260913000000_assessment_grading.sql`,
 and comments need `20260913150000_class_stream_comments.sql` in `weeon-tenants`.
-Not built: full reports composer.
-
 **Comunicación is built** (`/comunicacion`) as a hub with two channels:
 **Correo** — email-style threads (subject + TipTap rich body +
 **drag-&-drop attachments**) to hand-picked parents or a group's guardians, at
@@ -135,7 +135,8 @@ already ships teacher web + parent mobile).
   `/comunicacion/correo` (mailbox), `/comunicacion/nuevo` (compose email),
   `/comunicacion/correo/[threadId]` (email thread), `/comunicacion/chat`
   (realtime guardian chat), `/comunicacion/chat/[conversationId]`,
-  `/grupos`, `/grupos/[id]` (gradebook + `?tab=conducta` conduct log),
+  `/grupos`, `/grupos/[id]` (Calificaciones + `?tab=asistencia` + `?tab=conducta`;
+  see `docs/grupos.md`),
   `/horarios?week=` (weekly timetable, paged; add an
   exam/activity from a class tile), `/estudiantes/[id]` (per-student transcript — reached from aula virtual
   **Personas** or the gradebook; there is no standalone students section),
@@ -180,6 +181,8 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
 | **Agenda (schedule, upcoming events)** | `docs/agenda.md` |
 | **Comunicación (messaging)** | `docs/comunicacion.md` |
+| **Mis grupos (Calificaciones / Asistencia / Conducta)** | `docs/grupos.md` |
+| **Asistencia tab (Grupos)** | `docs/asistencia-grupos.md` |
 | **Código de conducta** | `docs/conducta.md` |
 | Student Entregar (Expo) | `../weeon-mobile/docs/aula-virtual.md` |
 | Tenancy | `weeon-tenants/docs/tenancy.md` |

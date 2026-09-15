@@ -8,6 +8,7 @@ import {
   Check,
   Download,
   Loader2,
+  Lock,
   Maximize2,
   Minimize2,
   Plus,
@@ -23,6 +24,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SubmitReport } from "@/components/grades/submit-report";
 import {
   addExamColumn,
+  closeExamColumn,
   fetchSubjectExams,
   removeExamColumn,
   restoreExamColumn,
@@ -137,6 +139,8 @@ export function GradebookWorkspace({
   const [addOpen, setAddOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ExamColumn | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [closeTarget, setCloseTarget] = useState<ExamColumn | null>(null);
+  const [closing, setClosing] = useState(false);
   const [undoColumn, setUndoColumn] = useState<ExamColumn | null>(null);
 
   const subject = classContext.subjects.find((s) => s.id === subjectId) ?? null;
@@ -209,6 +213,20 @@ export function GradebookWorkspace({
     }
     setUndoColumn(column);
     setExams((current) => current.filter((item) => item.id !== column.id));
+  }
+
+  async function handleCloseColumn() {
+    if (!closeTarget) return;
+    setClosing(true);
+    const column = closeTarget;
+    const res = await closeExamColumn({ classId, assignmentId: column.id });
+    setClosing(false);
+    setCloseTarget(null);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    await refresh();
   }
 
   async function handleUndo() {
@@ -295,7 +313,12 @@ export function GradebookWorkspace({
             <Download className="h-4 w-4" />
             {w.export}
           </button>
-          <SubmitReport classId={classId} subjectId={subjectId} subjectName={subjectName} disabled={false} />
+          <SubmitReport
+            classId={classId}
+            subjectId={subjectId}
+            subjectName={subjectName}
+            disabled={exams.length === 0}
+          />
           <button
             type="button"
             onClick={() => setAddOpen(true)}
@@ -429,6 +452,11 @@ export function GradebookWorkspace({
                           label={label}
                           dense={dense}
                           onDelete={() => setDeleteTarget(column)}
+                          onClose={
+                            column.assessmentId || column.closedAt
+                              ? undefined
+                              : () => setCloseTarget(column)
+                          }
                         />
                       </th>
                     );
@@ -541,6 +569,19 @@ export function GradebookWorkspace({
           if (!deleting) setDeleteTarget(null);
         }}
       />
+
+      <ConfirmDialog
+        open={closeTarget !== null}
+        title={w.closeColumnConfirm}
+        description={closeTarget?.title}
+        confirmLabel={w.closeColumn}
+        cancelLabel={t.gradebook.cancel}
+        pending={closing}
+        onConfirm={() => void handleCloseColumn()}
+        onCancel={() => {
+          if (!closing) setCloseTarget(null);
+        }}
+      />
     </div>
   );
 }
@@ -562,12 +603,19 @@ function GradeCell({
   dense: boolean;
   onSaved: () => void;
 }) {
-  const initial = column.grades[studentId]?.mark ?? null;
+  const t = useT();
+  const w = t.gradebook.workspace;
+  const stored = column.grades[studentId];
+  const initial = stored?.mark ?? null;
   const [text, setText] = useState(initial == null ? "" : String(initial));
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const dirty = useRef(false);
 
   const max = cellMax(column, studentId);
+  const cellTitle =
+    stored?.status === "missing"
+      ? `${column.title} — ${w.missingMark}`
+      : column.title;
   const numeric = text.trim() === "" ? null : Number(text.replace(",", "."));
   const pct = pctOf(numeric, max);
 
@@ -601,7 +649,8 @@ function GradeCell({
         data-cell={`${row}:${col}`}
         value={text}
         inputMode="decimal"
-        aria-label={`${column.title}`}
+        aria-label={cellTitle}
+        title={cellTitle}
         onChange={(event) => {
           setText(event.target.value);
           dirty.current = true;
@@ -721,11 +770,13 @@ function ColumnHeader({
   label,
   dense,
   onDelete,
+  onClose,
 }: {
   column: ExamColumn;
   label: { short: string; full: string };
   dense: boolean;
   onDelete: () => void;
+  onClose?: () => void;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
@@ -742,6 +793,22 @@ function ColumnHeader({
       >
         {dense ? label.short : label.full}
       </span>
+      {column.closedAt ? (
+        <span className="text-[9px] font-semibold uppercase tracking-wide text-foreground/45">
+          {w.closedColumn}
+        </span>
+      ) : null}
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={w.closeColumn}
+          title={w.closeColumn}
+          className="absolute left-0 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-foreground/50 opacity-0 transition-all hover:bg-surface-muted hover:text-foreground focus:opacity-100 group-hover/col:opacity-100"
+        >
+          <Lock className="h-3 w-3" />
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={onDelete}

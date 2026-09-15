@@ -82,6 +82,15 @@ export type TardiaRecord = {
   comment: string | null;
 };
 
+/** Non-present attendance row (tardías + ausencias) for logs and reports. */
+export type AttendanceLogRecord = {
+  id: string;
+  studentId: string;
+  date: string;
+  status: Exclude<AttendanceStatus, "present">;
+  comment: string | null;
+};
+
 export type TardiaSummary = {
   studentId: string;
   justified: number;

@@ -119,13 +119,16 @@ Honest snapshot — do not assume the rest exists.
     and the date picker exist only for corrections. Writes are RLS-limited to
     `teaches_class`/admin; reads to class members. Requires
     `20260912180000_attendance_ausencias.sql` in `weeon-tenants`.
-    The **gradebook** (`/grupos/[id]`) reflects it too: a read-only
-    **Asistencia** panel sits to the right of the table (a separate card, not a
-    table column) showing the four ausencia counts (`A · AJ · TI · TJ`)
+    The **gradebook** (`/grupos/[id]`, Calificaciones tab) reflects it too: a
+    read-only **Asistencia** panel sits to the right of the table (a separate
+    card, not a table column) showing the four ausencia counts (`A · AJ · TI · TJ`)
     accumulated per student across dates, aggregated from `attendance_records`
     by `loadClassAttendanceCounts`; it is numbers only (no percentage, since it
     is cumulative), class-wide, so it repeats across subject tabs, mirrors the
-    table rows one-to-one, and is exported in the CSV.
+    table rows one-to-one, and is exported in the CSV. A dedicated **Asistencia
+    tab** on the same route (`?tab=asistencia`) lists TJ/TI tardías only with a
+    bitácora and links back here to take attendance — see
+    [`docs/asistencia-grupos.md`](asistencia-grupos.md) and [`docs/grupos.md`](grupos.md).
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
 - **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over
   `assignments` (columns) + `grades` (marks). Sticky student column, typed

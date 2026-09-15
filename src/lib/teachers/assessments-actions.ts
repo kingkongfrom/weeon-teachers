@@ -301,6 +301,37 @@ export async function setAssessmentPublished(input: {
   return { ok: true, id: parsed.data.id };
 }
 
+/** Closes an assessment: students without a grade receive 0 in the gradebook. */
+export async function closeAssessment(input: {
+  classId: string;
+  assessmentId: string;
+}): Promise<AssessmentActionResult & { zerosInserted?: number }> {
+  const t = await getT();
+  const parsed = z
+    .object({ classId: z.string().uuid(), assessmentId: z.string().uuid() })
+    .safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: t.assessments.errors.generic };
+  }
+
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("close_assessment", {
+    p_assessment_id: parsed.data.assessmentId,
+  });
+
+  if (error) {
+    if (error.message.includes("not_allowed")) {
+      return { ok: false, error: t.assessments.grading.errors.notAllowed };
+    }
+    return { ok: false, error: t.assessments.errors.generic };
+  }
+
+  const payload = (data ?? {}) as { zeros_inserted?: number };
+  revalidatePath(`/aula-virtual/${parsed.data.classId}/evaluaciones/${parsed.data.assessmentId}`);
+  revalidatePath(`/grupos/${parsed.data.classId}`);
+  return { ok: true, zerosInserted: Number(payload.zeros_inserted ?? 0) };
+}
+
 export async function deleteAssessment(input: {
   id: string;
   classId: string;

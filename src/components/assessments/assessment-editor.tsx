@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Eye,
   Loader2,
+  Lock,
   Plus,
   Save,
   Trash2,
@@ -36,6 +37,7 @@ import {
   type QuestionType,
 } from "@/lib/assessments/model";
 import {
+  closeAssessment,
   deleteAssessment,
   saveAssessment,
   setAssessmentPublished,
@@ -97,6 +99,8 @@ export function AssessmentEditor({
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   const total = Math.round(computePointsTotal(draft.content));
 
@@ -216,6 +220,20 @@ export function AssessmentEditor({
     router.push(`/aula-virtual/${initial.classId}`);
   }
 
+  async function handleCloseEvaluation() {
+    setClosing(true);
+    setError(null);
+    const res = await closeAssessment({ id: initial.id, classId: initial.classId });
+    setClosing(false);
+    if (!res.ok) {
+      setError(res.error);
+      setCloseOpen(false);
+      return;
+    }
+    setCloseOpen(false);
+    router.refresh();
+  }
+
   return (
     <AssessmentImageProvider value={{ classId: initial.classId, assessmentId: initial.id }}>
       <div className="flex min-w-0 flex-col gap-5">
@@ -268,6 +286,16 @@ export function AssessmentEditor({
           >
             {initial.published ? a.unpublish : a.publish}
           </button>
+          {initial.published && !initial.closedAt ? (
+            <button
+              type="button"
+              onClick={() => setCloseOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-surface-muted"
+            >
+              <Lock className="h-4 w-4" />
+              {a.closeEvaluation}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setDeleteOpen(true)}
@@ -339,12 +367,14 @@ export function AssessmentEditor({
           <span
             className={cn(
               "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide",
-              initial.published
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                : "bg-surface-muted text-foreground/50",
+              initial.closedAt
+                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                : initial.published
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  : "bg-surface-muted text-foreground/50",
             )}
           >
-            {initial.published ? a.published : a.draft}
+            {initial.closedAt ? a.closed : initial.published ? a.published : a.draft}
           </span>
           <span className="text-xs font-semibold text-foreground/50">
             {a.pointsTotal(total)} · {a.questionCount(draft.content.questions.length)}
@@ -482,6 +512,19 @@ export function AssessmentEditor({
             document.body,
           )
         : null}
+
+      <ConfirmDialog
+        open={closeOpen}
+        title={a.closeEvaluationConfirm}
+        description={a.closeEvaluationHint}
+        confirmLabel={a.closeEvaluation}
+        cancelLabel={t.common.cancel}
+        pending={closing}
+        onConfirm={() => void handleCloseEvaluation()}
+        onCancel={() => {
+          if (!closing) setCloseOpen(false);
+        }}
+      />
 
       <ConfirmDialog
         open={deleteOpen}

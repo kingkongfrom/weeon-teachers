@@ -59,6 +59,7 @@ export type AssessmentSummary = {
   dueAt: string | null;
   pointsTotal: number;
   published: boolean;
+  closedAt: string | null;
   questionCount: number;
   updatedAt: string;
   submittedCount: number;
