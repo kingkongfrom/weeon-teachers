@@ -200,6 +200,8 @@ const es = {
     mustReviewBody:
       "Este estudiante tiene apoyos educativos registrados. Debe confirmar que los ha leído antes de continuar.",
     openReview: "Ver apoyos",
+    periodStartOpen: "Sin inicio fijo",
+    periodEndOpen: "Sin fin fijo",
     categories: {
       learning: "Aprendizaje",
       assessment: "Evaluación",
@@ -1008,6 +1010,8 @@ const en: Messages = {
     mustReviewBody:
       "This student has registered educational supports. You must confirm you have read them before continuing.",
     openReview: "View supports",
+    periodStartOpen: "No fixed start",
+    periodEndOpen: "No fixed end",
     categories: {
       learning: "Learning",
       assessment: "Assessment",

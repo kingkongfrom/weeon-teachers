@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { HandHeart, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/lib/i18n/client";
+import { schoolPeriodLabel } from "@/lib/dashboard/school-period";
 import type { EducationalSupport } from "@/lib/educational-supports/model";
 import { acknowledgeStudentEducationalSupports } from "@/lib/teachers/educational-support-actions";
 
@@ -114,7 +115,10 @@ export function EducationalSupportReviewDialog({
                       </p>
                       {item.effectiveFrom || item.effectiveUntil ? (
                         <p className="mt-2 text-xs font-medium text-foreground/45">
-                          {formatRange(item.effectiveFrom, item.effectiveUntil, locale)}
+                          {formatRange(item.effectiveFrom, item.effectiveUntil, locale, {
+                            periodStartOpen: copy.periodStartOpen,
+                            periodEndOpen: copy.periodEndOpen,
+                          })}
                         </p>
                       ) : null}
                     </li>
@@ -145,15 +149,13 @@ export function EducationalSupportReviewDialog({
   );
 }
 
-function formatRange(from: string | null, until: string | null, locale: string): string {
-  const tag = locale === "en" ? "en-US" : "es-CR";
-  const fmt = new Intl.DateTimeFormat(tag, { day: "numeric", month: "short", year: "numeric" });
-  const fromLabel = from ? fmt.format(parseIso(from)) : "…";
-  const untilLabel = until ? fmt.format(parseIso(until)) : "…";
+function formatRange(
+  from: string | null,
+  until: string | null,
+  locale: string,
+  labels: { periodStartOpen: string; periodEndOpen: string },
+): string {
+  const fromLabel = from ? schoolPeriodLabel(from, locale as "es" | "en") || from : labels.periodStartOpen;
+  const untilLabel = until ? schoolPeriodLabel(until, locale as "es" | "en") || until : labels.periodEndOpen;
   return `${fromLabel} — ${untilLabel}`;
-}
-
-function parseIso(value: string): Date {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
 }
