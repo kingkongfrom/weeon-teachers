@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
@@ -21,7 +21,14 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { TONE_PILL } from "@/lib/dashboard/tones";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { EducationalSupportBadgeButton } from "@/components/educational-supports/support-badge-button";
+import { EducationalSupportReviewDialog } from "@/components/educational-supports/support-review-dialog";
 import { SubmitReport } from "@/components/grades/submit-report";
+import type {
+  ClassEducationalSupportFlags,
+  EducationalSupport,
+} from "@/lib/educational-supports/model";
+import { fetchStudentEducationalSupports } from "@/lib/teachers/educational-support-actions";
 import {
   addExamColumn,
   closeExamColumn,
@@ -119,6 +126,7 @@ export function GradebookWorkspace({
   initialSubjectId,
   initialExams,
   attendance,
+  supportFlags = {},
 }: {
   classId: string;
   groupName: string;
@@ -127,6 +135,7 @@ export function GradebookWorkspace({
   initialSubjectId: string | null;
   initialExams: ExamColumn[];
   attendance: Record<string, AttendanceCounts>;
+  supportFlags?: ClassEducationalSupportFlags;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
@@ -142,6 +151,40 @@ export function GradebookWorkspace({
   const [closeTarget, setCloseTarget] = useState<ExamColumn | null>(null);
   const [closing, setClosing] = useState(false);
   const [undoColumn, setUndoColumn] = useState<ExamColumn | null>(null);
+  const [localFlags, setLocalFlags] = useState(supportFlags);
+  const [reviewStudent, setReviewStudent] = useState<{
+    id: string;
+    name: string;
+    supports: EducationalSupport[];
+  } | null>(null);
+
+  useEffect(() => {
+    setLocalFlags(supportFlags);
+  }, [supportFlags]);
+
+  async function openSupportReview(student: TeacherStudent) {
+    const res = await fetchStudentEducationalSupports(student.id);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setReviewStudent({
+      id: student.id,
+      name: studentName(student),
+      supports: res.supports,
+    });
+  }
+
+  function markSupportReviewed(studentId: string) {
+    setLocalFlags((prev) => {
+      const current = prev[studentId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [studentId]: { ...current, needsReview: false },
+      };
+    });
+  }
 
   const subject = classContext.subjects.find((s) => s.id === subjectId) ?? null;
   const subjectName = subject?.name ?? (classContext.subjects.length <= 1 ? null : w.title);
@@ -476,13 +519,20 @@ export function GradebookWorkspace({
                         {rowIndex + 1}
                       </td>
                       <td className={cn("sticky left-10 z-20 border-b border-r border-border bg-surface px-3", rowY)}>
-                        <Link
-                          href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}`)}`}
-                          title={studentName(student)}
-                          className="block truncate font-medium text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
-                        >
-                          {studentName(student)}
-                        </Link>
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <Link
+                            href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}`)}`}
+                            title={studentName(student)}
+                            className="min-w-0 truncate font-medium text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
+                          >
+                            {studentName(student)}
+                          </Link>
+                          <EducationalSupportBadgeButton
+                            count={localFlags[student.id]?.activeCount ?? 0}
+                            needsReview={localFlags[student.id]?.needsReview ?? false}
+                            onClick={() => void openSupportReview(student)}
+                          />
+                        </div>
                       </td>
                       {exams.map((column, colIndex) => (
                         <td key={column.id} className="border-b border-r border-border px-0.5">
@@ -494,6 +544,8 @@ export function GradebookWorkspace({
                             row={rowIndex}
                             col={colIndex}
                             dense={dense}
+                            needsReview={localFlags[student.id]?.needsReview ?? false}
+                            onRequireReview={() => void openSupportReview(student)}
                             onSaved={refresh}
                           />
                         </td>
@@ -582,6 +634,18 @@ export function GradebookWorkspace({
           if (!closing) setCloseTarget(null);
         }}
       />
+
+      <EducationalSupportReviewDialog
+        open={reviewStudent !== null}
+        studentId={reviewStudent?.id ?? ""}
+        classId={classId}
+        studentName={reviewStudent?.name ?? ""}
+        supports={reviewStudent?.supports ?? []}
+        onClose={() => setReviewStudent(null)}
+        onAcknowledged={() => {
+          if (reviewStudent) markSupportReviewed(reviewStudent.id);
+        }}
+      />
     </div>
   );
 }
@@ -593,6 +657,8 @@ function GradeCell({
   row,
   col,
   dense,
+  needsReview,
+  onRequireReview,
   onSaved,
 }: {
   classId: string;
@@ -601,6 +667,8 @@ function GradeCell({
   row: number;
   col: number;
   dense: boolean;
+  needsReview: boolean;
+  onRequireReview: () => void;
   onSaved: () => void;
 }) {
   const t = useT();
@@ -621,6 +689,10 @@ function GradeCell({
 
   async function commit() {
     if (!dirty.current) return;
+    if (needsReview) {
+      onRequireReview();
+      return;
+    }
     const mark = text.trim() === "" ? null : Number(text.replace(",", "."));
     if (mark != null && (Number.isNaN(mark) || mark < 0)) {
       setStatus("error");

@@ -60,6 +60,24 @@ Separate from grades and attendance — own table `conduct_records`.
 
 Detail: [`docs/conducta.md`](conducta.md).
 
+## Apoyos Eduativos
+
+When a student has **active institutional apoyos** (registered by admin in ERP
+expediente), each row on **Calificaciones** and **Conducta** shows a hand-heart
+badge. Teachers must open the dialog and confirm they have read the apoyos before
+saving grades or conduct entries. Badge turns purple after acknowledgment; resets
+if admin edits the apoyos.
+
+Student transcript (`/estudiantes/[id]`) shows the same apoyos **read-only** (no
+acknowledge button on that page in v1 — use Grupos).
+
+**Tier B (planned):** per-period *Registro de apoyos* checklist tied to
+`school_period_key` — see [`docs/educational-supports.md`](educational-supports.md).
+
+| Feature | Migration |
+| ------- | --------- |
+| Apoyos v1 | `20260916100000_student_educational_supports.sql` |
+
 ## MEP attendance codes (shared)
 
 Defined in `src/lib/attendance/model.ts` (language-independent codes):
@@ -81,6 +99,7 @@ School timezone for “today”: `America/Costa_Rica`.
 | Attendance register | `attendance_records` | `20260912180000_attendance_ausencias.sql` |
 | Attendance comments | `attendance_records.comment` | `20260914200000_attendance_comment.sql` |
 | Conduct | `conduct_records` | `20260915100000_conduct_records.sql` |
+| Apoyos Eduativos | `student_educational_supports`, `student_educational_support_reviews` | `20260916100000_student_educational_supports.sql` |
 
 Mobile parent read of conduct: `list_student_conduct` —
 `20260915110000_student_conduct.sql` (see `weeon-mobile/docs/conducta.md`).
@@ -95,6 +114,7 @@ Apply in **weeon-tenants** before using conduct or the mobile parent tab:
 4. `20260915120000_guardian_student_view.sql` (guardian JSON → grades/conduct)
 5. `20260915150000_class_reports_composer.sql` (report composer snapshots)
 6. `20260915160000_class_reports_detail_logs.sql` (dated conduct/asistencia logs)
+7. `20260916100000_student_educational_supports.sql` (Apoyos Eduativos badges + read-ack)
 
 Then `notify pgrst, 'reload schema'` or wait for PostgREST cache refresh.
 

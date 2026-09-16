@@ -31,7 +31,14 @@ import {
   type ConductKind,
   type ConductRecord,
 } from "@/lib/conduct/model";
+import { EducationalSupportBadgeButton } from "@/components/educational-supports/support-badge-button";
+import { EducationalSupportReviewDialog } from "@/components/educational-supports/support-review-dialog";
+import type {
+  ClassEducationalSupportFlags,
+  EducationalSupport,
+} from "@/lib/educational-supports/model";
 import { addConductRecord, deleteConductRecord } from "@/lib/teachers/conduct-actions";
+import { fetchStudentEducationalSupports } from "@/lib/teachers/educational-support-actions";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
 
 function studentName(student: TeacherStudent): string {
@@ -60,12 +67,14 @@ export function ConductWorkspace({
   students,
   initialRecords,
   locale,
+  supportFlags = {},
 }: {
   classId: string;
   groupName: string;
   students: TeacherStudent[];
   initialRecords: ConductRecord[];
   locale: string;
+  supportFlags?: ClassEducationalSupportFlags;
 }) {
   const t = useT();
   const router = useRouter();
@@ -77,10 +86,44 @@ export function ConductWorkspace({
   const [deleteTarget, setDeleteTarget] = useState<ConductRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localFlags, setLocalFlags] = useState(supportFlags);
+  const [reviewStudent, setReviewStudent] = useState<{
+    id: string;
+    name: string;
+    supports: EducationalSupport[];
+  } | null>(null);
 
   useEffect(() => {
     setRecords(initialRecords);
   }, [initialRecords]);
+
+  useEffect(() => {
+    setLocalFlags(supportFlags);
+  }, [supportFlags]);
+
+  async function openSupportReview(student: TeacherStudent) {
+    const res = await fetchStudentEducationalSupports(student.id);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setReviewStudent({
+      id: student.id,
+      name: studentName(student),
+      supports: res.supports,
+    });
+  }
+
+  function markSupportReviewed(studentId: string) {
+    setLocalFlags((prev) => {
+      const current = prev[studentId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [studentId]: { ...current, needsReview: false },
+      };
+    });
+  }
 
   const summaries = useMemo(() => summarizeConduct(records), [records]);
 
@@ -107,6 +150,13 @@ export function ConductWorkspace({
     points: number;
   }) {
     setError(null);
+    if (localFlags[payload.studentId]?.needsReview) {
+      const student = students.find((row) => row.id === payload.studentId);
+      if (student) {
+        await openSupportReview(student);
+      }
+      return false;
+    }
     const res = await addConductRecord({ classId, ...payload });
     if (!res.ok) {
       setError(res.error);
@@ -213,12 +263,19 @@ export function ConductWorkspace({
                     return (
                       <tr key={student.id} className="border-b border-border last:border-0">
                         <td className="px-4 py-2.5">
-                          <Link
-                            href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}?tab=conducta`)}`}
-                            className="font-medium text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
-                          >
-                            {studentName(student)}
-                          </Link>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <Link
+                              href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}?tab=conducta`)}`}
+                              className="min-w-0 truncate font-medium text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
+                            >
+                              {studentName(student)}
+                            </Link>
+                            <EducationalSupportBadgeButton
+                              count={localFlags[student.id]?.activeCount ?? 0}
+                              needsReview={localFlags[student.id]?.needsReview ?? false}
+                              onClick={() => void openSupportReview(student)}
+                            />
+                          </div>
                         </td>
                         <td className="px-4 py-2.5 text-center tabular-nums">
                           <span className={cn("rounded-md px-2 py-0.5 font-semibold", TONE_PILL.green)}>
@@ -340,6 +397,18 @@ export function ConductWorkspace({
         onConfirm={() => void handleDelete()}
         onCancel={() => {
           if (!deleting) setDeleteTarget(null);
+        }}
+      />
+
+      <EducationalSupportReviewDialog
+        open={reviewStudent !== null}
+        studentId={reviewStudent?.id ?? ""}
+        classId={classId}
+        studentName={reviewStudent?.name ?? ""}
+        supports={reviewStudent?.supports ?? []}
+        onClose={() => setReviewStudent(null)}
+        onAcknowledged={() => {
+          if (reviewStudent) markSupportReviewed(reviewStudent.id);
         }}
       />
     </div>

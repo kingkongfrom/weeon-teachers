@@ -35,7 +35,12 @@ TJ/TI history from `attendance_records` with a link to take attendance in aula
 virtual — see `docs/asistencia-grupos.md`. **Código de conducta** is the third
 tab (`?tab=conducta`): méritos/faltas log + per-student summary, separate from
 the grade spreadsheet (`conduct_records`, migration
-`20260915100000_conduct_records.sql`; see `docs/conducta.md`). **Asistencia
+`20260915100000_conduct_records.sql`; see `docs/conducta.md`). **Apoyos
+Eduativos (v1)** — Grupos badge + read-ack dialog before grades/conduct;
+read-only panel on `/estudiantes/[id]`; migration
+`20260916100000_student_educational_supports.sql` — see
+`docs/educational-supports.md` (Tier B period registro designed in
+`weeon-tenants`). **Asistencia
 (Libro de clase)** remains in aula virtual: a dated register over the shared
 `attendance_records` table (P / TJ / TI / AJ / A) reached from a lesson card or
 the Grupos Asistencia tab, with a read-only **Asistencia** column in the
@@ -184,6 +189,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | **Mis grupos (Calificaciones / Asistencia / Conducta)** | `docs/grupos.md` |
 | **Asistencia tab (Grupos)** | `docs/asistencia-grupos.md` |
 | **Código de conducta** | `docs/conducta.md` |
+| **Apoyos Eduativos** | `docs/educational-supports.md` (+ canonical `weeon-tenants/docs/educational-supports.md`) |
 | Student Entregar (Expo) | `../weeon-mobile/docs/aula-virtual.md` |
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |

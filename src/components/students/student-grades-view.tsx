@@ -23,6 +23,8 @@ import {
   type Tone,
 } from "@/lib/dashboard/tones";
 import { ATTENDANCE_CODE, type AttendanceCounts } from "@/lib/attendance/model";
+import { StudentEducationalSupportsPanel } from "@/components/educational-supports/student-supports-panel";
+import type { EducationalSupport } from "@/lib/educational-supports/model";
 import type {
   StudentGradeItem,
   StudentGroupReport,
@@ -94,7 +96,13 @@ function levelWord(
   return n <= 6 ? levels.elementary : levels.secondary;
 }
 
-export function StudentGradesView({ report }: { report: StudentReport }) {
+export function StudentGradesView({
+  report,
+  educationalSupports = [],
+}: {
+  report: StudentReport;
+  educationalSupports?: EducationalSupport[];
+}) {
   const t = useT();
   const locale = useLocale();
   const r = t.student.report;
@@ -126,6 +134,8 @@ export function StudentGradesView({ report }: { report: StudentReport }) {
 
   return (
     <div className="flex flex-col gap-5">
+      <StudentEducationalSupportsPanel supports={educationalSupports} />
+
       <section className="relative overflow-hidden rounded-3xl border border-border bg-surface p-5 sm:p-6">
         <div
           aria-hidden

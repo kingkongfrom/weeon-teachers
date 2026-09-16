@@ -9,6 +9,7 @@ import { loadClassExams } from "@/lib/dashboard/exams";
 import { loadClassAttendanceCounts, loadClassTardias } from "@/lib/dashboard/attendance";
 import { loadGradebookContext } from "@/lib/dashboard/gradebook";
 import { loadClassConduct } from "@/lib/dashboard/conduct";
+import { loadClassEducationalSupportFlags } from "@/lib/dashboard/educational-supports";
 import { getT, getLocale } from "@/lib/i18n/server";
 
 export default async function GrupoDetailPage({
@@ -45,11 +46,12 @@ export default async function GrupoDetailPage({
     selectedSubject = subjects[0]?.id ?? null;
   }
 
-  const [exams, attendance, tardias, conduct, t, locale] = await Promise.all([
+  const [exams, attendance, tardias, conduct, supportFlags, t, locale] = await Promise.all([
     section === "grades" ? loadClassExams(id, selectedSubject) : Promise.resolve([]),
     section === "grades" ? loadClassAttendanceCounts(id) : Promise.resolve({}),
     section === "attendance" ? loadClassTardias(id) : Promise.resolve([]),
     section === "conduct" ? loadClassConduct(id) : Promise.resolve([]),
+    loadClassEducationalSupportFlags(id),
     getT(),
     getLocale(),
   ]);
@@ -74,6 +76,7 @@ export default async function GrupoDetailPage({
           students={detail.students}
           initialRecords={conduct}
           locale={locale}
+          supportFlags={supportFlags}
         />
       ) : section === "attendance" ? (
         <AttendanceGroupWorkspace
@@ -101,6 +104,7 @@ export default async function GrupoDetailPage({
           initialSubjectId={selectedSubject}
           initialExams={exams}
           attendance={attendance}
+          supportFlags={supportFlags}
         />
       )}
     </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/layout/page-header";
 import { StudentGradesView } from "@/components/students/student-grades-view";
+import { loadStudentEducationalSupports } from "@/lib/dashboard/educational-supports";
 import { loadTeacherStudentReport } from "@/lib/dashboard/student-report";
 import { getT } from "@/lib/i18n/server";
 
@@ -24,7 +25,10 @@ export default async function StudentPage({
 }) {
   const { id } = await params;
   const { from } = await searchParams;
-  const report = await loadTeacherStudentReport(id);
+  const [report, educationalSupports] = await Promise.all([
+    loadTeacherStudentReport(id),
+    loadStudentEducationalSupports(id),
+  ]);
   if (!report) notFound();
   const t = await getT();
 
@@ -39,7 +43,7 @@ export default async function StudentPage({
   return (
     <div className="flex flex-col gap-5">
       <BackLink href={backHref} label={backLabel} />
-      <StudentGradesView report={report} />
+      <StudentGradesView report={report} educationalSupports={educationalSupports} />
     </div>
   );
 }
