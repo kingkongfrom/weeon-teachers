@@ -22,13 +22,17 @@ import { useT } from "@/lib/i18n/client";
 import { TONE_PILL } from "@/lib/dashboard/tones";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EducationalSupportBadgeButton } from "@/components/educational-supports/support-badge-button";
-import { EducationalSupportReviewDialog } from "@/components/educational-supports/support-review-dialog";
+import { EducationalSupportWorkflowDialog } from "@/components/educational-supports/support-workflow-dialog";
 import { SubmitReport } from "@/components/grades/submit-report";
 import type {
   ClassEducationalSupportFlags,
   EducationalSupport,
 } from "@/lib/educational-supports/model";
-import { fetchStudentEducationalSupports } from "@/lib/teachers/educational-support-actions";
+import { supportActionPending } from "@/lib/educational-supports/model";
+import {
+  fetchClassEducationalSupportFlags,
+  fetchStudentEducationalSupports,
+} from "@/lib/teachers/educational-support-actions";
 import {
   addExamColumn,
   closeExamColumn,
@@ -162,8 +166,14 @@ export function GradebookWorkspace({
     setLocalFlags(supportFlags);
   }, [supportFlags]);
 
+  useEffect(() => {
+    void fetchClassEducationalSupportFlags({ classId, subjectId }).then((res) => {
+      if (res.ok) setLocalFlags(res.flags);
+    });
+  }, [classId, subjectId]);
+
   async function openSupportReview(student: TeacherStudent) {
-    const res = await fetchStudentEducationalSupports(student.id);
+    const res = await fetchStudentEducationalSupports(student.id, { subjectId });
     if (!res.ok) {
       setError(res.error);
       return;
@@ -175,13 +185,16 @@ export function GradebookWorkspace({
     });
   }
 
-  function markSupportReviewed(studentId: string) {
+  function patchSupportFlags(
+    studentId: string,
+    patch: Partial<Pick<ClassEducationalSupportFlags[string], "needsReview" | "needsPeriodRegistration">>,
+  ) {
     setLocalFlags((prev) => {
       const current = prev[studentId];
       if (!current) return prev;
       return {
         ...prev,
-        [studentId]: { ...current, needsReview: false },
+        [studentId]: { ...current, ...patch },
       };
     });
   }
@@ -530,6 +543,9 @@ export function GradebookWorkspace({
                           <EducationalSupportBadgeButton
                             count={localFlags[student.id]?.activeCount ?? 0}
                             needsReview={localFlags[student.id]?.needsReview ?? false}
+                            needsPeriodRegistration={
+                              localFlags[student.id]?.needsPeriodRegistration ?? false
+                            }
                             onClick={() => void openSupportReview(student)}
                           />
                         </div>
@@ -544,7 +560,11 @@ export function GradebookWorkspace({
                             row={rowIndex}
                             col={colIndex}
                             dense={dense}
-                            needsReview={localFlags[student.id]?.needsReview ?? false}
+                            supportPending={supportActionPending({
+                              needsReview: localFlags[student.id]?.needsReview ?? false,
+                              needsPeriodRegistration:
+                                localFlags[student.id]?.needsPeriodRegistration ?? false,
+                            })}
                             onRequireReview={() => void openSupportReview(student)}
                             onSaved={refresh}
                           />
@@ -635,15 +655,21 @@ export function GradebookWorkspace({
         }}
       />
 
-      <EducationalSupportReviewDialog
+      <EducationalSupportWorkflowDialog
         open={reviewStudent !== null}
         studentId={reviewStudent?.id ?? ""}
         classId={classId}
+        subjectId={subjectId}
+        subjectName={subjectName}
         studentName={reviewStudent?.name ?? ""}
         supports={reviewStudent?.supports ?? []}
+        needsReview={localFlags[reviewStudent?.id ?? ""]?.needsReview ?? false}
+        needsPeriodRegistration={
+          localFlags[reviewStudent?.id ?? ""]?.needsPeriodRegistration ?? false
+        }
         onClose={() => setReviewStudent(null)}
-        onAcknowledged={() => {
-          if (reviewStudent) markSupportReviewed(reviewStudent.id);
+        onComplete={(patch) => {
+          if (reviewStudent) patchSupportFlags(reviewStudent.id, patch);
         }}
       />
     </div>
@@ -657,7 +683,7 @@ function GradeCell({
   row,
   col,
   dense,
-  needsReview,
+  supportPending,
   onRequireReview,
   onSaved,
 }: {
@@ -667,7 +693,7 @@ function GradeCell({
   row: number;
   col: number;
   dense: boolean;
-  needsReview: boolean;
+  supportPending: boolean;
   onRequireReview: () => void;
   onSaved: () => void;
 }) {
@@ -689,7 +715,7 @@ function GradeCell({
 
   async function commit() {
     if (!dirty.current) return;
-    if (needsReview) {
+    if (supportPending) {
       onRequireReview();
       return;
     }

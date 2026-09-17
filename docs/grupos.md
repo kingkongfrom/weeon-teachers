@@ -64,19 +64,21 @@ Detail: [`docs/conducta.md`](conducta.md).
 
 When a student has **active institutional apoyos** (registered by admin in ERP
 expediente), each row on **Calificaciones** and **Conducta** shows a hand-heart
-badge. Teachers must open the dialog and confirm they have read the apoyos before
-saving grades or conduct entries. Badge turns purple after acknowledgment; resets
-if admin edits the apoyos.
+badge. Teachers must (1) confirm they read the apoyos and (2) submit the
+**Registro de apoyos** for the current periodo lectivo before saving grades or
+conduct. Amber badge = pending read or pending registro; purple = al día for the
+period. Read-ack resets if admin edits apoyos; a new registro is required each
+period.
 
-Student transcript (`/estudiantes/[id]`) shows the same apoyos **read-only** (no
-acknowledge button on that page in v1 — use Grupos).
+Student transcript (`/estudiantes/[id]`) shows apoyos **read-only** — use Grupos
+for the workflow.
 
-**Tier B (planned):** per-period *Registro de apoyos* checklist tied to
-`school_period_key` — see [`docs/educational-supports.md`](educational-supports.md).
+Detail: [`docs/educational-supports.md`](../../weeon-tenants/docs/educational-supports.md).
 
 | Feature | Migration |
 | ------- | --------- |
 | Apoyos v1 | `20260916100000_student_educational_supports.sql` |
+| Registro Tier B | `20260917180000_educational_support_registrations.sql` |
 
 ## MEP attendance codes (shared)
 

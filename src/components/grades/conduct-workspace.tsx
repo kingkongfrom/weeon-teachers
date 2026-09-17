@@ -32,11 +32,12 @@ import {
   type ConductRecord,
 } from "@/lib/conduct/model";
 import { EducationalSupportBadgeButton } from "@/components/educational-supports/support-badge-button";
-import { EducationalSupportReviewDialog } from "@/components/educational-supports/support-review-dialog";
+import { EducationalSupportWorkflowDialog } from "@/components/educational-supports/support-workflow-dialog";
 import type {
   ClassEducationalSupportFlags,
   EducationalSupport,
 } from "@/lib/educational-supports/model";
+import { supportActionPending } from "@/lib/educational-supports/model";
 import { addConductRecord, deleteConductRecord } from "@/lib/teachers/conduct-actions";
 import { fetchStudentEducationalSupports } from "@/lib/teachers/educational-support-actions";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
@@ -102,7 +103,7 @@ export function ConductWorkspace({
   }, [supportFlags]);
 
   async function openSupportReview(student: TeacherStudent) {
-    const res = await fetchStudentEducationalSupports(student.id);
+    const res = await fetchStudentEducationalSupports(student.id, { classId });
     if (!res.ok) {
       setError(res.error);
       return;
@@ -114,13 +115,16 @@ export function ConductWorkspace({
     });
   }
 
-  function markSupportReviewed(studentId: string) {
+  function patchSupportFlags(
+    studentId: string,
+    patch: Partial<Pick<ClassEducationalSupportFlags[string], "needsReview" | "needsPeriodRegistration">>,
+  ) {
     setLocalFlags((prev) => {
       const current = prev[studentId];
       if (!current) return prev;
       return {
         ...prev,
-        [studentId]: { ...current, needsReview: false },
+        [studentId]: { ...current, ...patch },
       };
     });
   }
@@ -150,7 +154,14 @@ export function ConductWorkspace({
     points: number;
   }) {
     setError(null);
-    if (localFlags[payload.studentId]?.needsReview) {
+    const flag = localFlags[payload.studentId];
+    if (
+      flag &&
+      supportActionPending({
+        needsReview: flag.needsReview,
+        needsPeriodRegistration: flag.needsPeriodRegistration,
+      })
+    ) {
       const student = students.find((row) => row.id === payload.studentId);
       if (student) {
         await openSupportReview(student);
@@ -273,6 +284,9 @@ export function ConductWorkspace({
                             <EducationalSupportBadgeButton
                               count={localFlags[student.id]?.activeCount ?? 0}
                               needsReview={localFlags[student.id]?.needsReview ?? false}
+                              needsPeriodRegistration={
+                                localFlags[student.id]?.needsPeriodRegistration ?? false
+                              }
                               onClick={() => void openSupportReview(student)}
                             />
                           </div>
@@ -400,15 +414,20 @@ export function ConductWorkspace({
         }}
       />
 
-      <EducationalSupportReviewDialog
+      <EducationalSupportWorkflowDialog
         open={reviewStudent !== null}
         studentId={reviewStudent?.id ?? ""}
         classId={classId}
+        conduct
         studentName={reviewStudent?.name ?? ""}
         supports={reviewStudent?.supports ?? []}
+        needsReview={localFlags[reviewStudent?.id ?? ""]?.needsReview ?? false}
+        needsPeriodRegistration={
+          localFlags[reviewStudent?.id ?? ""]?.needsPeriodRegistration ?? false
+        }
         onClose={() => setReviewStudent(null)}
-        onAcknowledged={() => {
-          if (reviewStudent) markSupportReviewed(reviewStudent.id);
+        onComplete={(patch) => {
+          if (reviewStudent) patchSupportFlags(reviewStudent.id, patch);
         }}
       />
     </div>

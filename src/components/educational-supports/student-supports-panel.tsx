@@ -35,6 +35,15 @@ export function StudentEducationalSupportsPanel({
             <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/70">
               {item.description}
             </p>
+            <p className="mt-2 text-xs font-medium text-foreground/45">
+              {item.subjectScope === "all"
+                ? copy.subjectScopeAll
+                : item.subjectLabels.length === 1
+                  ? copy.subjectScopeOne.replace("{subject}", item.subjectLabels[0]!)
+                  : item.subjectLabels.length > 1
+                    ? copy.subjectScopeMany.replace("{subjects}", item.subjectLabels.join(", "))
+                    : copy.subjectScopeAll}
+            </p>
           </li>
         ))}
       </ul>

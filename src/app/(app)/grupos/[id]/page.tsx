@@ -51,7 +51,12 @@ export default async function GrupoDetailPage({
     section === "grades" ? loadClassAttendanceCounts(id) : Promise.resolve({}),
     section === "attendance" ? loadClassTardias(id) : Promise.resolve([]),
     section === "conduct" ? loadClassConduct(id) : Promise.resolve([]),
-    loadClassEducationalSupportFlags(id),
+    loadClassEducationalSupportFlags(
+      id,
+      section === "conduct"
+        ? { conduct: true }
+        : { subjectId: selectedSubject },
+    ),
     getT(),
     getLocale(),
   ]);

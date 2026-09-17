@@ -8,6 +8,7 @@ import type {
   ClassEducationalSupportFlags,
   EducationalSupport,
   EducationalSupportCategory,
+  EducationalSupportSubjectScope,
 } from "@/lib/educational-supports/model";
 
 type SupportRow = {
@@ -19,6 +20,9 @@ type SupportRow = {
   effective_from: string | null;
   effective_until: string | null;
   active: boolean;
+  subject_scope: string;
+  subject_ids: string[] | null;
+  subject_labels: string[] | null;
   created_at: string;
 };
 
@@ -26,6 +30,7 @@ type FlagRow = {
   student_id: string;
   active_count: number;
   needs_review: boolean;
+  needs_period_registration: boolean;
 };
 
 function mapSupport(row: SupportRow): EducationalSupport {
@@ -38,12 +43,18 @@ function mapSupport(row: SupportRow): EducationalSupport {
     effectiveFrom: row.effective_from,
     effectiveUntil: row.effective_until,
     active: row.active,
+    subjectScope: row.subject_scope as EducationalSupportSubjectScope,
+    subjectIds: row.subject_ids ?? [],
+    subjectLabels: row.subject_labels ?? [],
     createdAt: row.created_at,
   };
 }
 
 export const loadClassEducationalSupportFlags = cache(
-  async (classId: string): Promise<ClassEducationalSupportFlags> => {
+  async (
+    classId: string,
+    options?: { subjectId?: string | null; conduct?: boolean },
+  ): Promise<ClassEducationalSupportFlags> => {
     const session = await getTeacherSession();
     if (!session) return {};
 
@@ -53,6 +64,8 @@ export const loadClassEducationalSupportFlags = cache(
 
     const { data, error } = await supabase.rpc("list_class_educational_support_flags", {
       p_class_id: classId,
+      p_subject_id: options?.conduct ? null : (options?.subjectId ?? null),
+      p_conduct: options?.conduct ?? false,
     });
 
     if (error || !data) return {};
@@ -62,6 +75,7 @@ export const loadClassEducationalSupportFlags = cache(
       flags[row.student_id] = {
         activeCount: row.active_count,
         needsReview: row.needs_review,
+        needsPeriodRegistration: row.needs_period_registration,
       };
     }
     return flags;
