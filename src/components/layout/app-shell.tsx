@@ -23,7 +23,7 @@ export function AppShell({ children, user }: AppShellProps) {
   return (
     <div className="dashboard-shell flex min-h-screen flex-col bg-background">
       <AppHeader user={user} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-[77rem] flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8">
         {children}
       </main>
     </div>

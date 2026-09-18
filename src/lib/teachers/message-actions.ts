@@ -14,26 +14,29 @@ export type MessageActionResult =
 const docSchema = z.object({ type: z.literal("doc"), content: z.array(z.unknown()).optional() });
 
 const composeSchema = z.object({
-  subject: z.string().trim().max(160),
+  subject: z.string().trim().min(1).max(160),
   body: docSchema,
   audience: z.enum(["individual", "group"]),
   classId: z.string().uuid().nullable(),
+  recipientScope: z.enum(["parents", "students"]).nullable(),
   recipients: z
     .array(z.object({ key: z.string().trim().min(1), name: z.string().trim().max(200) }))
     .max(300),
-  allowReplies: z.boolean(),
 });
 
 export type ComposeMessageInput = z.input<typeof composeSchema>;
 
-/** Creates an email-style thread (subject + rich body) and its first message. */
+/** Creates a circular thread (subject + rich body) and its first message. */
 export async function createMessageThread(input: ComposeMessageInput): Promise<MessageActionResult> {
   const t = await getT();
   const session = await getTeacherSession();
   if (!session) return { ok: false, error: t.messages.error };
 
   const parsed = composeSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: t.messages.error };
+  if (!parsed.success) {
+    const missingSubject = parsed.error.issues.some((issue) => issue.path[0] === "subject");
+    return { ok: false, error: missingSubject ? t.messages.subjectRequired : t.messages.error };
+  }
   const value = parsed.data;
 
   if (value.audience === "individual" && value.recipients.length === 0) {
@@ -42,20 +45,26 @@ export async function createMessageThread(input: ComposeMessageInput): Promise<M
   if (value.audience === "group" && !value.classId) {
     return { ok: false, error: t.messages.noRecipients };
   }
+  if (value.audience === "group" && value.recipients.length === 0 && !value.recipientScope) {
+    return { ok: false, error: t.messages.noRecipients };
+  }
 
   const supabase = await createSessionClient();
+  const scope =
+    value.audience === "group" && value.recipients.length === 0 ? value.recipientScope : null;
   const { data, error } = await supabase.rpc("create_message_thread", {
     p_subject: value.subject,
     p_body: value.body as RichTextDoc,
     p_class_id: value.audience === "group" ? value.classId : null,
     p_audience: value.audience,
-    p_recipients: value.audience === "group" ? [] : value.recipients,
-    p_allow_replies: value.allowReplies,
+    p_recipients: value.recipients,
+    p_allow_replies: false,
+    ...(scope ? { p_recipient_scope: scope } : {}),
   });
 
   if (error || !data) return { ok: false, error: t.messages.error };
 
-  revalidatePath("/comunicacion/correo");
+  revalidatePath("/comunicacion/circulares");
   return { ok: true, threadId: data as string };
 }
 
@@ -72,7 +81,9 @@ export async function sendThreadMessage(threadId: string, body: RichTextDoc): Pr
 
   const supabase = await createSessionClient();
   const { error } = await supabase.from("messages").insert({
+    tenant_id: session.tenantId,
     thread_id: parsed.data.threadId,
+    author_profile_id: session.userId,
     body: parsed.data.body,
   });
   if (error) return { ok: false, error: t.messages.error };
@@ -82,8 +93,8 @@ export async function sendThreadMessage(threadId: string, body: RichTextDoc): Pr
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", parsed.data.threadId);
 
-  revalidatePath(`/comunicacion/correo/${parsed.data.threadId}`);
-  revalidatePath("/comunicacion/correo");
+  revalidatePath(`/comunicacion/circulares/${parsed.data.threadId}`);
+  revalidatePath("/comunicacion/circulares");
   return { ok: true, threadId: parsed.data.threadId };
 }
 
@@ -100,7 +111,7 @@ export async function markThreadRead(threadId: string): Promise<MessageActionRes
     .update({ read_at: new Date().toISOString() })
     .eq("thread_id", threadId);
 
-  revalidatePath("/comunicacion/correo");
+  revalidatePath("/comunicacion/circulares");
   return { ok: true };
 }
 
@@ -130,11 +141,52 @@ export async function setThreadFolder(
   );
   if (error) return { ok: false, error: t.messages.error };
 
-  revalidatePath("/comunicacion/correo");
+  revalidatePath("/comunicacion/circulares");
+  return { ok: true };
+}
+
+/** Permanently deletes a thread the teacher authored (recipients lose access). */
+export async function deleteMessageThread(threadId: string): Promise<MessageActionResult> {
+  const t = await getT();
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: t.messages.error };
+
+  const parsed = z.string().uuid().safeParse(threadId);
+  if (!parsed.success) return { ok: false, error: t.messages.error };
+
+  const supabase = await createSessionClient();
+  const { data: thread, error: fetchError } = await supabase
+    .from("threads")
+    .select("id, created_by")
+    .eq("id", parsed.data)
+    .maybeSingle();
+
+  if (fetchError || !thread || thread.created_by !== session.userId) {
+    return { ok: false, error: t.messages.deleteNotAllowed };
+  }
+
+  const { data: attachments } = await supabase
+    .from("message_attachments")
+    .select("storage_path")
+    .eq("thread_id", parsed.data);
+
+  const paths = (attachments ?? []).map((row) => row.storage_path).filter(Boolean);
+  if (paths.length > 0) {
+    await supabase.storage.from("message-attachments").remove(paths);
+  }
+
+  const { error } = await supabase.from("threads").delete().eq("id", parsed.data);
+  if (error) return { ok: false, error: t.messages.error };
+
+  revalidatePath("/comunicacion/circulares");
   return { ok: true };
 }
 
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
+function isUploadFile(value: FormDataEntryValue | null): value is File {
+  return typeof value === "object" && value !== null && "size" in value && "name" in value;
+}
 
 /** Uploads a file to the private bucket and records it against a thread. */
 export async function uploadMessageAttachment(formData: FormData): Promise<MessageActionResult> {
@@ -145,8 +197,8 @@ export async function uploadMessageAttachment(formData: FormData): Promise<Messa
   const threadId = String(formData.get("threadId") ?? "");
   const messageId = formData.get("messageId");
   const file = formData.get("file");
-  if (!z.string().uuid().safeParse(threadId).success || !(file instanceof File)) {
-    return { ok: false, error: t.messages.error };
+  if (!z.string().uuid().safeParse(threadId).success || !isUploadFile(file) || file.size === 0) {
+    return { ok: false, error: t.messages.attachmentUploadError };
   }
   if (file.size > MAX_ATTACHMENT_BYTES) {
     return { ok: false, error: t.messages.attachmentTooLarge };
@@ -159,9 +211,10 @@ export async function uploadMessageAttachment(formData: FormData): Promise<Messa
   const { error: uploadError } = await supabase.storage
     .from("message-attachments")
     .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
-  if (uploadError) return { ok: false, error: t.messages.error };
+  if (uploadError) return { ok: false, error: t.messages.attachmentUploadError };
 
   const { error } = await supabase.from("message_attachments").insert({
+    tenant_id: session.tenantId,
     thread_id: threadId,
     message_id: typeof messageId === "string" && messageId ? messageId : null,
     uploader_profile_id: session.userId,
@@ -170,9 +223,9 @@ export async function uploadMessageAttachment(formData: FormData): Promise<Messa
     mime_type: file.type || null,
     size_bytes: file.size,
   });
-  if (error) return { ok: false, error: t.messages.error };
+  if (error) return { ok: false, error: t.messages.attachmentUploadError };
 
-  revalidatePath(`/comunicacion/correo/${threadId}`);
-  revalidatePath("/comunicacion/correo");
+  revalidatePath(`/comunicacion/circulares/${threadId}`);
+  revalidatePath("/comunicacion/circulares");
   return { ok: true, threadId };
 }

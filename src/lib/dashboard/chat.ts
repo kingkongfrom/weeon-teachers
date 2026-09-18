@@ -3,15 +3,23 @@ import "server-only";
 import { cache } from "react";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
-import type { ChatConversationSummary, ChatContact, ChatMessageItem } from "@/lib/messages/chat-model";
+import {
+  loadGuardianChatDirectory,
+  lookupGuardianStudentContext,
+} from "@/lib/dashboard/chat-guardian-context";
+import { cleanGuardianDisplayName } from "@/lib/messages/chat-display";
+import type {
+  ChatConversationDetail,
+  ChatConversationSummary,
+  ChatContact,
+  ChatMessageItem,
+} from "@/lib/messages/chat-model";
 
-export type { ChatConversationSummary, ChatMessageItem } from "@/lib/messages/chat-model";
-
-export type ChatConversationDetail = {
-  id: string;
-  counterpartName: string;
-  messages: ChatMessageItem[];
-};
+export type {
+  ChatConversationDetail,
+  ChatConversationSummary,
+  ChatMessageItem,
+} from "@/lib/messages/chat-model";
 
 type ConversationListRow = {
   id: string;
@@ -19,25 +27,19 @@ type ConversationListRow = {
   last_body: string | null;
   last_at: string | null;
   unread: boolean | null;
+  context_label?: string | null;
+  student_name?: string | null;
 };
 
 /** Realtime channel config for the browser client (anon key is public). */
 export type ChatRealtimeConfig = { url: string; anonKey: string };
 
-/** Guardians only — the chat picker never offers students. */
+/** Guardians with a linked student in the teacher's classes (picker source). */
 export const loadChatGuardianContacts = cache(async (): Promise<ChatContact[]> => {
   const session = await getTeacherSession();
   if (!session) return [];
-  const supabase = await createSessionClient();
-  const { data, error } = await supabase.rpc("list_message_contacts");
-  if (error || !data) return [];
-  return (data as Array<{ recipient_key: string; full_name: string; kind: string; context: string }>)
-    .filter((row) => row.kind === "parent")
-    .map((row) => ({
-      key: row.recipient_key,
-      name: row.full_name || "Encargado",
-      context: row.context ?? "",
-    }));
+  const { contacts } = await loadGuardianChatDirectory(session);
+  return contacts;
 });
 
 /** Conversation list for the signed-in teacher (RPC scopes to their pairs). */
@@ -45,15 +47,50 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
   const session = await getTeacherSession();
   if (!session) return [];
   const supabase = await createSessionClient();
-  const { data, error } = await supabase.rpc("list_chat_conversations");
-  if (error || !data) return [];
-  return (data as ConversationListRow[]).map((row) => ({
-    id: row.id,
-    counterpartName: row.counterpart_name?.trim() || "Encargado",
-    lastBody: row.last_body ?? "",
-    lastAt: row.last_at ?? new Date(0).toISOString(),
-    unread: Boolean(row.unread),
-  }));
+
+  const [listRes, { map, contacts }, keysRes] = await Promise.all([
+    supabase.rpc("list_chat_conversations"),
+    loadGuardianChatDirectory(session),
+    supabase
+      .from("chat_conversations")
+      .select("id, recipient_key")
+      .eq("teacher_profile_id", session.userId),
+  ]);
+
+  if (listRes.error || !listRes.data) return [];
+
+  const recipientKeyById = new Map<string, string>();
+  for (const row of keysRes.data ?? []) {
+    recipientKeyById.set(row.id as string, row.recipient_key as string);
+  }
+
+  const contactByKeyClass = new Map(
+    contacts.map((contact) => [`${contact.key}::${contact.context}`, contact]),
+  );
+
+  return (listRes.data as ConversationListRow[])
+    .map((row) => {
+      const recipientKey = recipientKeyById.get(row.id) ?? "";
+      const fromMap = lookupGuardianStudentContext(map, recipientKey, null, null);
+      const contact =
+        [...contactByKeyClass.values()].find((item) => item.key === recipientKey) ?? null;
+
+      const classLabel =
+        row.context_label?.trim() || contact?.context || fromMap?.classLabel || "";
+      const studentName =
+        row.student_name?.trim() || contact?.studentName || fromMap?.studentName || "";
+
+      return {
+        id: row.id,
+        counterpartName: cleanGuardianDisplayName(row.counterpart_name),
+        classLabel,
+        studentName,
+        lastBody: row.last_body ?? "",
+        lastAt: row.last_at ?? new Date(0).toISOString(),
+        unread: Boolean(row.unread),
+      };
+    })
+    .filter((row) => row.studentName.trim().length > 0);
 });
 
 /** One chat: counterpart + ordered messages. Marks nothing read (the client does). */
@@ -78,7 +115,7 @@ export const loadChatConversation = cache(
     };
 
     const mine = row.teacher_profile_id === session.userId;
-    let counterpartName = row.recipient_name?.trim() || "Encargado";
+    let counterpartName = cleanGuardianDisplayName(row.recipient_name);
     if (!mine) {
       const { data: teacher } = await supabase
         .from("profiles")
@@ -87,6 +124,13 @@ export const loadChatConversation = cache(
         .maybeSingle();
       counterpartName = (teacher as { name?: string } | null)?.name?.trim() || "Docente";
     }
+
+    const { map, contacts } = await loadGuardianChatDirectory(session);
+    const contact = contacts.find((item) => item.key === row.recipient_key) ?? null;
+    const fromMap = lookupGuardianStudentContext(map, row.recipient_key, contact?.context, contact?.classId);
+
+    const classLabel = contact?.context || fromMap?.classLabel || "";
+    const studentName = contact?.studentName || fromMap?.studentName || "";
 
     const { data: messages } = await supabase
       .from("chat_messages")
@@ -97,6 +141,8 @@ export const loadChatConversation = cache(
     return {
       id: conversationId,
       counterpartName,
+      classLabel,
+      studentName,
       messages: (
         (messages ?? []) as Array<{
           id: string;

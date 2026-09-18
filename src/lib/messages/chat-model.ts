@@ -4,6 +4,8 @@
 export type ChatConversationSummary = {
   id: string;
   counterpartName: string;
+  classLabel: string;
+  studentName: string;
   lastBody: string;
   lastAt: string;
   unread: boolean;
@@ -17,9 +19,21 @@ export type ChatMessageItem = {
   authorName: string;
 };
 
+export type ChatConversationDetail = {
+  id: string;
+  counterpartName: string;
+  classLabel: string;
+  studentName: string;
+  messages: ChatMessageItem[];
+};
+
 /** A guardian the teacher may start a chat with. */
 export type ChatContact = {
   key: string;
   name: string;
+  /** Class label (e.g. "1B"). */
   context: string;
+  studentName: string;
+  /** Class uuid — used for guardian ↔ student lookup. */
+  classId?: string;
 };

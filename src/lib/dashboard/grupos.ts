@@ -18,6 +18,7 @@ export type TeacherGrupo = {
   grade: string | null;
   section: string | null;
   studentCount: number;
+  parentCount: number;
   subjects: GrupoSubject[];
 };
 
@@ -64,21 +65,39 @@ export async function loadTeacherGrupos(): Promise<TeacherGrupo[]> {
   }>;
 
   const visibleClassIds = groups.map((group) => group.id);
-  const countsById = new Map<string, number>();
+  const studentCountsById = new Map<string, number>();
+  const parentIdsByClass = new Map<string, Set<string>>();
   let subjectsByClass = new Map<string, GrupoSubject[]>();
 
   if (visibleClassIds.length > 0) {
     const [enrollRes, subjectsRes] = await Promise.all([
       supabase
         .from("enrollments")
-        .select("class_id, id")
+        .select("class_id, student_id, students(guardians)")
         .in("class_id", visibleClassIds)
         .is("dropped_at", null),
       loadTeacherSubjectsByClass(supabase, teacherIds, visibleClassIds),
     ]);
 
     for (const row of enrollRes.data ?? []) {
-      countsById.set(row.class_id, (countsById.get(row.class_id) ?? 0) + 1);
+      studentCountsById.set(row.class_id, (studentCountsById.get(row.class_id) ?? 0) + 1);
+
+      const raw = row as {
+        class_id: string;
+        students:
+          | { guardians: unknown }
+          | { guardians: unknown }[]
+          | null;
+      };
+      const student = Array.isArray(raw.students) ? raw.students[0] : raw.students;
+      const guardians = Array.isArray(student?.guardians) ? student.guardians : [];
+      const classParents = parentIdsByClass.get(raw.class_id) ?? new Set<string>();
+      for (const guardian of guardians) {
+        if (!guardian || typeof guardian !== "object") continue;
+        const id = (guardian as { id?: string }).id;
+        if (typeof id === "string" && id.trim()) classParents.add(id.trim());
+      }
+      if (classParents.size > 0) parentIdsByClass.set(raw.class_id, classParents);
     }
     subjectsByClass = subjectsRes;
   }
@@ -88,7 +107,8 @@ export async function loadTeacherGrupos(): Promise<TeacherGrupo[]> {
       name: displayGrupoName(grupo),
       grade: grupo.grade,
       section: grupo.section,
-      studentCount: countsById.get(grupo.id) ?? 0,
+      studentCount: studentCountsById.get(grupo.id) ?? 0,
+      parentCount: parentIdsByClass.get(grupo.id)?.size ?? 0,
       subjects: subjectsByClass.get(grupo.id) ?? [],
     }));
 }
@@ -116,7 +136,7 @@ export const loadTeacherGrupo = cache(
       .maybeSingle(),
     supabase
       .from("enrollments")
-      .select("student_id, students(id, first_name, last_name, second_last_name, grade)")
+      .select("student_id, students(id, first_name, last_name, second_last_name, grade, guardians)")
       .eq("class_id", classId)
       .is("dropped_at", null),
   ]);
@@ -161,6 +181,23 @@ export const loadTeacherGrupo = cache(
     `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`, "es"),
   );
 
+  const parentIds = new Set<string>();
+  for (const row of enrollmentRows) {
+    const raw = row as {
+      students:
+        | { guardians: unknown }
+        | { guardians: unknown }[]
+        | null;
+    };
+    const student = Array.isArray(raw.students) ? raw.students[0] : raw.students;
+    const guardians = Array.isArray(student?.guardians) ? student.guardians : [];
+    for (const guardian of guardians) {
+      if (!guardian || typeof guardian !== "object") continue;
+      const id = (guardian as { id?: string }).id;
+      if (typeof id === "string" && id.trim()) parentIds.add(id.trim());
+    }
+  }
+
   return {
     grupo: {
       id: grupo.id,
@@ -168,6 +205,7 @@ export const loadTeacherGrupo = cache(
       grade: grupo.grade,
       section: grupo.section,
       studentCount: students.length,
+      parentCount: parentIds.size,
       subjects,
     },
     students,

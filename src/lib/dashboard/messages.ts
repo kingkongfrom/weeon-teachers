@@ -4,8 +4,11 @@ import { cache } from "react";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
 import { docToPlainText, type RichTextDoc } from "@/lib/assessments/model";
+import { formatSentCounterpart } from "@/lib/dashboard/message-counterpart";
 
 export type MessageFolder = "inbox" | "sent" | "trash";
+
+export type MessageRecipientScope = "parents" | "students" | "custom" | null;
 
 export type MessageThreadSummary = {
   id: string;
@@ -17,6 +20,7 @@ export type MessageThreadSummary = {
   lastMessageAt: string;
   unread: boolean;
   recipientCount: number;
+  recipientScope: MessageRecipientScope;
   attachmentCount: number;
   mine: boolean;
   folder: MessageFolder;
@@ -59,6 +63,7 @@ export type MessageContact = {
   name: string;
   kind: string;
   context: string;
+  classId: string | null;
 };
 
 type NameEmbed = { name: string } | { name: string }[] | null;
@@ -66,6 +71,24 @@ type NameEmbed = { name: string } | { name: string }[] | null;
 function nameOf(embed: NameEmbed): string {
   const row = Array.isArray(embed) ? embed[0] : embed;
   return row?.name?.trim() ?? "";
+}
+
+function parseRecipientScope(value: string | null): MessageRecipientScope {
+  if (value === "parents" || value === "students" || value === "custom") return value;
+  return null;
+}
+
+/** Author's sent threads move to Recibidos once someone else replies (DB trigger + client fallback). */
+function resolveThreadFolder(
+  stored: MessageFolder | undefined,
+  mine: boolean,
+  lastAuthorId: string | null | undefined,
+  viewerId: string,
+): MessageFolder {
+  const base = stored ?? (mine ? "sent" : "inbox");
+  if (base === "trash") return "trash";
+  if (mine && lastAuthorId && lastAuthorId !== viewerId) return "inbox";
+  return base;
 }
 
 function classLabel(
@@ -86,6 +109,7 @@ type ThreadRow = {
   class_id: string | null;
   created_by: string | null;
   allow_replies: boolean;
+  recipient_scope: string | null;
   last_message_at: string;
   created_at: string;
   profiles: NameEmbed;
@@ -114,7 +138,7 @@ type MessageRow = {
 };
 
 const THREAD_COLUMNS =
-  "id, subject, audience, class_id, created_by, allow_replies, last_message_at, created_at, profiles(name), classes(name, grade, section)";
+  "id, subject, audience, class_id, created_by, allow_replies, recipient_scope, last_message_at, created_at, profiles(name), classes(name, grade, section)";
 
 /** Parents a teacher may message (RPC), for the composer's recipient picker. */
 export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => {
@@ -124,12 +148,19 @@ export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => 
   const { data, error } = await supabase.rpc("list_message_contacts");
   if (error || !data) return [];
   return (
-    data as Array<{ recipient_key: string; full_name: string; kind: string; context: string }>
+    data as Array<{
+      recipient_key: string;
+      full_name: string;
+      kind: string;
+      context: string;
+      class_id: string | null;
+    }>
   ).map((row) => ({
     key: row.recipient_key,
     name: row.full_name || "Contacto",
     kind: row.kind,
     context: row.context ?? "",
+    classId: row.class_id ?? null,
   }));
 });
 
@@ -180,14 +211,31 @@ export const loadMessageSummaries = cache(
       attachmentCount.set(row.thread_id, (attachmentCount.get(row.thread_id) ?? 0) + 1);
     }
 
+    const counterpartLabels = {
+      noRecipients: "Sin destinatarios",
+      recipientCount: (n: number) => `${n} destinatario${n === 1 ? "" : "s"}`,
+      parentCount: (n: number) => `${n} encargado${n === 1 ? "" : "s"}`,
+      studentCount: (n: number) => `${n} estudiante${n === 1 ? "" : "s"}`,
+      customCount: (n: number) => `${n} seleccionado${n === 1 ? "" : "s"}`,
+    };
+
+    const seen = new Set<string>();
     return rows
       .map((row) => {
+        if (seen.has(row.id)) return null;
+        seen.add(row.id);
+
         const threadRecipients = recipientRows.filter((item) => item.thread_id === row.id);
         const threadMessages = messageRows.filter((item) => item.thread_id === row.id);
-        const last = threadMessages[threadMessages.length - 1];
         const mine = row.created_by === session.userId;
         const state = stateByThread.get(row.id);
-        const resolvedFolder: MessageFolder = state?.folder ?? (mine ? "sent" : "inbox");
+        const last = threadMessages[threadMessages.length - 1];
+        const resolvedFolder = resolveThreadFolder(
+          state?.folder,
+          mine,
+          last?.author_profile_id,
+          session.userId,
+        );
 
         if (resolvedFolder !== folder) return null;
 
@@ -195,21 +243,36 @@ export const loadMessageSummaries = cache(
           (item) => item.profile_id === session.userId || item.recipient_key === session.userId,
         );
 
+        const audience = row.audience === "group" ? "group" : "individual";
+        const className = classLabel(row.classes);
+        const recipientNames = threadRecipients.map(
+          (item) => nameOf(item.profiles) || item.display_name || "",
+        );
+        const recipientScope = parseRecipientScope(row.recipient_scope);
+
         return {
           id: row.id,
           subject: row.subject?.trim() || "(Sin asunto)",
-          audience: row.audience === "group" ? "group" : "individual",
-          className: classLabel(row.classes),
+          audience,
+          className,
           counterpart: mine
-            ? threadRecipients
-                .map((item) => nameOf(item.profiles) || item.display_name || "")
-                .filter(Boolean)
-                .join(", ") || "Sin destinatarios"
+            ? formatSentCounterpart(
+                recipientNames,
+                audience,
+                className,
+                threadRecipients.length,
+                counterpartLabels,
+                recipientScope,
+              )
             : nameOf(row.profiles) || "Docente",
           preview: last ? docToPlainText(last.body).slice(0, 140) : "",
           lastMessageAt: row.last_message_at,
-          unread: folder === "inbox" && Boolean(myRecipient && !myRecipient.read_at),
+          unread:
+            folder === "inbox" &&
+            (Boolean(myRecipient && !myRecipient.read_at) ||
+              Boolean(mine && last && last.author_profile_id !== session.userId)),
           recipientCount: threadRecipients.length,
+          recipientScope,
           attachmentCount: attachmentCount.get(row.id) ?? 0,
           mine,
           folder: resolvedFolder,
@@ -297,6 +360,19 @@ export const loadThreadDetail = cache(
     const mine = row.created_by === session.userId;
     const last = messageRows[messageRows.length - 1];
     const stateRow = state as { folder: MessageFolder } | null;
+    const audience = row.audience === "group" ? "group" : "individual";
+    const className = classLabel(row.classes);
+    const recipientNames = recipientRows.map(
+      (item) => nameOf(item.profiles) || item.display_name || "",
+    );
+    const recipientScope = parseRecipientScope(row.recipient_scope);
+    const detailLabels = {
+      noRecipients: "Sin destinatarios",
+      recipientCount: (n: number) => `${n} destinatario${n === 1 ? "" : "s"}`,
+      parentCount: (n: number) => `${n} encargado${n === 1 ? "" : "s"}`,
+      studentCount: (n: number) => `${n} estudiante${n === 1 ? "" : "s"}`,
+      customCount: (n: number) => `${n} seleccionado${n === 1 ? "" : "s"}`,
+    };
 
     return {
       allowReplies: row.allow_replies,
@@ -304,21 +380,31 @@ export const loadThreadDetail = cache(
       summary: {
         id: row.id,
         subject: row.subject?.trim() || "(Sin asunto)",
-        audience: row.audience === "group" ? "group" : "individual",
-        className: classLabel(row.classes),
+        audience,
+        className,
         counterpart: mine
-          ? recipientRows
-              .map((item) => nameOf(item.profiles) || item.display_name || "")
-              .filter(Boolean)
-              .join(", ") || "Sin destinatarios"
+          ? formatSentCounterpart(
+              recipientNames,
+              audience,
+              className,
+              recipientRows.length,
+              detailLabels,
+              recipientScope,
+            )
           : nameOf(row.profiles) || "Docente",
         preview: last ? docToPlainText(last.body).slice(0, 140) : "",
         lastMessageAt: row.last_message_at,
         unread: false,
         recipientCount: recipientRows.length,
+        recipientScope,
         attachmentCount: attachments.length,
         mine,
-        folder: stateRow?.folder ?? (mine ? "sent" : "inbox"),
+        folder: resolveThreadFolder(
+          stateRow?.folder,
+          mine,
+          last?.author_profile_id,
+          session.userId,
+        ),
       },
       messages: messageRows.map((message) => ({
         id: message.id,

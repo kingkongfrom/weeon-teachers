@@ -1,14 +1,18 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { ChatThread } from "@/components/messages/chat-thread";
-import { loadChatConversation } from "@/lib/dashboard/chat";
+import { ChatWorkspace } from "@/components/messages/chat-workspace";
+import {
+  loadChatConversation,
+  loadChatConversations,
+  loadChatGuardianContacts,
+} from "@/lib/dashboard/chat";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { requireSupabasePublicEnv } from "@/lib/supabase/env";
 import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-/** One chat conversation. */
+/** One chat conversation inside the split workspace. */
 export default async function ChatThreadPage({
   params,
 }: {
@@ -16,26 +20,31 @@ export default async function ChatThreadPage({
 }) {
   const { conversationId } = await params;
   const t = await getT();
-  const [detail, session] = await Promise.all([
+  const session = await getTeacherSession();
+  if (!session) notFound();
+
+  const [detail, conversations, contacts] = await Promise.all([
     loadChatConversation(conversationId),
-    getTeacherSession(),
+    loadChatConversations(),
+    loadChatGuardianContacts(),
   ]);
-  if (!detail || !session) notFound();
+  if (!detail) notFound();
   const { url, anonKey } = requireSupabasePublicEnv();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <PageHeader
         title={t.messages.chatTitle}
-        description={detail.counterpartName}
-        backHref="/comunicacion/chat"
+        description={t.messages.chatDescription}
+        backHref="/comunicacion"
       />
-      <ChatThread
-        conversationId={detail.id}
-        me={session.userId}
-        counterpartName={detail.counterpartName}
-        initialMessages={detail.messages}
+      <ChatWorkspace
+        conversations={conversations}
+        contacts={contacts}
         realtime={{ url, anonKey }}
+        selectedId={conversationId}
+        selectedDetail={detail}
+        me={session.userId}
       />
     </div>
   );

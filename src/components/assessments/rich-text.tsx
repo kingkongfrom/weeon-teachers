@@ -77,11 +77,14 @@ export function RichTextEditor({
   onChange,
   placeholder,
   className,
+  editorClassName,
 }: {
   value: RichTextDoc;
   onChange: (doc: RichTextDoc) => void;
   placeholder?: string;
   className?: string;
+  /** Overrides the editable area min-height (default ~2.75rem). */
+  editorClassName?: string;
 }) {
   const t = useT();
   const imageContext = useAssessmentImageContext();
@@ -158,7 +161,10 @@ export function RichTextEditor({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: "rte-content min-h-[2.75rem] px-3 py-2 text-sm focus:outline-none",
+        class: cn(
+          "rte-content min-h-[2.75rem] px-3 py-2 text-sm focus:outline-none",
+          editorClassName,
+        ),
       },
     },
     onUpdate: ({ editor: instance }) => {

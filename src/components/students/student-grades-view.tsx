@@ -16,7 +16,7 @@ import {
   finalScoreStatus,
 } from "@/lib/dashboard/student-summary";
 import {
-  CHIP_ICON,
+  TONE_AVATAR,
   TONE_CARD,
   TONE_CYCLE,
   TONE_PILL,
@@ -319,11 +319,11 @@ function SubjectRow({
       >
         <span
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-            TONE_CARD[tone],
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white",
+            TONE_AVATAR[tone],
           )}
         >
-          <BookOpen className={cn("h-5 w-5", CHIP_ICON)} strokeWidth={2.2} />
+          <BookOpen className="h-4 w-4" strokeWidth={2.2} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-bold text-foreground">
@@ -433,11 +433,11 @@ function StatCard({
     <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4">
       <div
         className={cn(
-          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-          TONE_CARD[tone],
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm",
+          TONE_AVATAR[tone],
         )}
       >
-        <Icon className={cn("h-6 w-6", CHIP_ICON)} strokeWidth={2.2} />
+        <Icon className="h-5 w-5" strokeWidth={2.2} />
       </div>
       <div className="min-w-0">
         <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/45">

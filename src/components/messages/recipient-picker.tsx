@@ -4,34 +4,49 @@ import { useMemo, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { hubFilterChipClass } from "@/lib/dashboard/tones";
 import { useT } from "@/lib/i18n/client";
+import { contactMatchesClass } from "@/lib/dashboard/message-contacts";
 import type { MessageContact } from "@/lib/dashboard/messages";
 
-/** Modal recipient picker: search the teacher's parents and confirm a set. */
+export type RecipientKindFilter = "all" | "parent" | "student";
+
+/** Modal recipient picker: search, kind filter, optional class scope. */
 export function RecipientPicker({
   open,
   contacts,
   selected,
   onConfirm,
   onClose,
+  kindFilter = "all",
+  classId = null,
+  groupName = null,
+  title,
 }: {
   open: boolean;
   contacts: MessageContact[];
   selected: string[];
   onConfirm: (profileIds: string[]) => void;
   onClose: () => void;
+  kindFilter?: RecipientKindFilter;
+  classId?: string | null;
+  groupName?: string | null;
+  title?: string;
 }) {
   const t = useT();
 
   return (
-    <Dialog open={open} title={t.messages.addRecipient} onClose={onClose}>
+    <Dialog open={open} title={title ?? t.messages.addRecipient} onClose={onClose}>
       {open ? (
         <PickerBody
-          key="open"
+          key={`${kindFilter}-${classId ?? "all"}-${groupName ?? ""}`}
           contacts={contacts}
           selected={selected}
           onConfirm={onConfirm}
           onClose={onClose}
+          kindFilter={kindFilter}
+          classId={classId}
+          groupName={groupName}
         />
       ) : null}
     </Dialog>
@@ -43,25 +58,41 @@ function PickerBody({
   selected,
   onConfirm,
   onClose,
+  kindFilter,
+  classId,
+  groupName,
 }: {
   contacts: MessageContact[];
   selected: string[];
   onConfirm: (profileIds: string[]) => void;
   onClose: () => void;
+  kindFilter: RecipientKindFilter;
+  classId: string | null;
+  groupName: string | null;
 }) {
   const t = useT();
   const m = t.messages;
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<string[]>(selected);
+  const [activeKind, setActiveKind] = useState<RecipientKindFilter>(kindFilter);
+
+  const scoped = useMemo(() => {
+    return contacts.filter((contact) => {
+      if (classId && !contactMatchesClass(contact, classId, groupName ?? "")) return false;
+      if (activeKind === "parent") return contact.kind === "parent";
+      if (activeKind === "student") return contact.kind === "student";
+      return true;
+    });
+  }, [contacts, classId, groupName, activeKind]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    if (!term) return contacts;
-    return contacts.filter(
+    if (!term) return scoped;
+    return scoped.filter(
       (contact) =>
         contact.name.toLowerCase().includes(term) || contact.context.toLowerCase().includes(term),
     );
-  }, [contacts, query]);
+  }, [scoped, query]);
 
   function toggle(key: string) {
     setDraft((current) =>
@@ -69,8 +100,42 @@ function PickerBody({
     );
   }
 
+  function selectAll() {
+    setDraft(filtered.map((contact) => contact.key));
+  }
+
+  function clearAll() {
+    setDraft([]);
+  }
+
+  const showKindTabs = kindFilter === "all" && !classId;
+
   return (
     <div className="flex flex-col gap-3">
+      {showKindTabs ? (
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { id: "all", label: m.filterAll },
+              { id: "parent", label: m.kindParent },
+              { id: "student", label: m.kindStudent },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setActiveKind(option.id)}
+              className={cn(
+                "h-8 rounded-full px-3 text-xs font-semibold transition-colors",
+                hubFilterChipClass("purple", activeKind === option.id),
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/35" />
         <input
@@ -80,6 +145,28 @@ function PickerBody({
           autoFocus
           className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25"
         />
+      </div>
+
+      <div className="flex items-center justify-between gap-2 px-1">
+        <span className="text-xs font-medium text-foreground/50">
+          {m.selectedCount(draft.length)} · {scoped.length} {m.availableContacts}
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={selectAll}
+            className="text-xs font-semibold text-brand-500 hover:underline"
+          >
+            {m.selectAll}
+          </button>
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-xs font-semibold text-foreground/45 hover:underline"
+          >
+            {m.clearSelection}
+          </button>
+        </div>
       </div>
 
       <ul className="max-h-72 overflow-y-auto rounded-xl border border-border">
@@ -114,9 +201,7 @@ function PickerBody({
                       </span>
                       {contact.kind ? (
                         <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground/50">
-                          {contact.kind === "student"
-                            ? t.messages.kindStudent
-                            : t.messages.kindParent}
+                          {contact.kind === "student" ? m.kindStudent : m.kindParent}
                         </span>
                       ) : null}
                     </span>

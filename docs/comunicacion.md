@@ -1,15 +1,16 @@
-# Comunicación — email-style messaging (teacher web)
+# Comunicación — circulares + chat (teacher web)
 
 *Sprint 7. Teacher ↔ parents, with individual and group recipients. Schema is
-owned by `weeon-tenants`; the parent/student consumption is the next phase in
-`weeon-mobile`.*
+owned by `weeon-tenants`; families read circulares in `weeon-mobile`.*
 
 ## One line
 
 Comunicación has **two** channels, shown as two cards on `/comunicacion`:
 
-- **Correo** — email-style threads (subject + rich body + attachments) to
-  hand-picked people or a whole group's guardians.
+- **Circulares** — one-way official notices (subject + rich body + attachments)
+  to hand-picked people or a whole group's guardians/students. All sends are
+  one-way (`allow_replies = false`); families read them in the mobile app as
+  notices + local notification — not a reply mailbox.
 - **Chat** — realtime 1:1 teacher ↔ guardian conversations (iMessage-style), a
   separate data model (no subject/folders).
 
@@ -20,10 +21,11 @@ stays in the aula virtual** (class stream) — it is not part of Comunicación.
 
 | Route | Purpose |
 | --- | --- |
-| `/comunicacion` | Hub — cards for **Correo** and **Chat** |
-| `/comunicacion/correo` | Mailbox — folder `?folder=inbox\|sent\|trash` |
-| `/comunicacion/nuevo` | Compose email (recipients + subject + rich body) |
-| `/comunicacion/correo/[threadId]` | Email thread view + reply |
+| `/comunicacion` | Hub — cards for **Circulares** and **Chat** |
+| `/comunicacion/circulares` | Circular list — folder `?folder=sent\|inbox\|trash` (default **sent**) |
+| `/comunicacion/nuevo` | Compose circular (recipients + subject + rich body) |
+| `/comunicacion/circulares/[threadId]` | Circular detail (read-only for teacher; no replies) |
+| `/comunicacion/correo` | Legacy redirect → `/comunicacion/circulares` |
 | `/comunicacion/chat` | Chat list + **Nuevo chat** picker (guardians only) |
 | `/comunicacion/chat/[conversationId]` | Chat thread + composer |
 
@@ -64,9 +66,11 @@ their own row read; the author manages the recipient list.
 
 RPCs:
 
-- `create_message_thread(subject, body, class_id, audience, recipient_ids, allow_replies)`
-  — inserts the thread + recipients + first message atomically and expands a
-  group send to the class guardians' profiles.
+- `create_message_thread(subject, body, class_id, audience, recipients, allow_replies, recipient_scope)`
+  — inserts the thread + recipients + first message atomically. **Group sends**
+  require `recipient_scope` = `parents` or `students` (never both). Pass a
+  non-empty `recipients` jsonb to target a **subset** of that class (validated
+  roster keys). Individual sends pick people from `list_message_contacts`.
 - `list_message_contacts()` — parents of the teacher's students, for the picker.
 
 Migration: `20260913160000_messaging.sql`.
@@ -81,7 +85,8 @@ Migration: `20260913160000_messaging.sql`.
   Grupo), a modal **recipient picker** (`recipient-picker.tsx`: search, select,
   confirm) with selected chips, subject, the shared **`RichTextEditor`** (TipTap,
   from the assessment builder), allow-replies, and the **attachment dropzone**.
-- `components/messages/attachment-dropzone.tsx` — always-available **drag & drop**
+- `components/messages/message-body-editor.tsx` — rich body with **drag/drop or paste**
+  attachments on the message field (chips below; no separate dropzone)
   (plus click-to-browse) file staging, with chips and remove.
 - `components/messages/thread-view.tsx` — history rendered with `RichTextView`,
   the thread's **attachments** (signed URLs) as chips, and a reply composer with
@@ -102,8 +107,14 @@ only**. One conversation per `(teacher, guardian roster key)`.
   `list_chat_conversations()` for the list. `my_identity_keys()` matches the
   roster-keyed guardian. `chat_messages` is in the `supabase_realtime`
   publication.
-- Teacher web: `lib/dashboard/chat.ts` (loaders), `lib/teachers/chat-actions.ts`
-  (actions), `components/messages/chat-list.tsx` (list + picker) and
+- Teacher web: `lib/dashboard/chat.ts` (loaders),
+  `lib/dashboard/chat-guardian-context.ts` (guardian directory from enrollments —
+  filters orphan contacts without a linked student),
+  `lib/messages/chat-display.ts` + `components/messages/guardian-chat-identity.tsx`
+  (guardian name without `Encargado/a` prefix; context line `1B · Student name`),
+  `lib/teachers/chat-actions.ts` (actions),
+  `components/messages/chat-workspace.tsx` (master/detail: list + thread on one
+  screen; replaces the old stacked `chat-list.tsx`), and
   `chat-thread.tsx` (bubbles, day separators, pinned composer, live inserts).
 - **Realtime:** `lib/supabase/browser.ts` builds one `createBrowserClient` from
   the public URL + anon key, which the server route passes down (this app keeps
@@ -115,10 +126,11 @@ only**. One conversation per `(teacher, guardian roster key)`.
   resolved (or when it later changes), so subscribing before the async cookie
   session resolves joins unauthenticated and RLS drops every incoming row —
   i.e. the teacher would only see new guardian messages after a page reload.
-- Contacts come from `list_message_contacts()` filtered to `kind = 'parent'`
-  (the same RPC the email composer uses). That RPC is admin-aware as of
-  `20260914060000_message_contacts_admin.sql` — a school admin (who sees every
-  class via RLS) now gets the full parent list, not an empty picker.
+- Contacts come from `loadGuardianChatDirectory()` (enrollment-backed) rather than
+  raw RPC rows alone — parents without a linked child are excluded; each row
+  shows **group · student** on one line. Optional RPC enrichment:
+  `20260918220000_chat_guardian_display.sql` in `weeon-tenants` (apply on hosted
+  DB if not yet applied).
 - Either side can start the pair. Guardians start from mobile
   (`/parent/chat/new`) via `start_guardian_chat` — allowed only for a teacher of
   a class one of their children attends

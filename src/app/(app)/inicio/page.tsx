@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   CalendarDays,
   GraduationCap,
@@ -6,24 +5,15 @@ import {
   Presentation,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { HubModuleCard } from "@/components/dashboard/hub-module-card";
 import { FadeIn } from "@/components/motion/fade-in";
-import { ScheduleGrid } from "@/components/schedule/schedule-grid";
+import { ScheduleUpcoming } from "@/components/schedule/schedule-upcoming";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
-import { loadGroupEventsBetween } from "@/lib/dashboard/calendar";
-import { addDays, isoDate, mondayOf } from "@/lib/dashboard/week";
 import { getT } from "@/lib/i18n/server";
-import {
-  CHIP_ICON,
-  TONE_CARD,
-  TONE_INK,
-  TONE_INK_MUTED,
-  TONE_INK_FAINT,
-  type HubTone,
-} from "@/lib/dashboard/tones";
+import type { HubTone } from "@/lib/dashboard/tones";
 
 export const dynamic = "force-dynamic";
 
@@ -33,26 +23,19 @@ type DashboardModule = {
   description: string;
   icon: LucideIcon;
   tone: HubTone;
-  /** Set when the module maps to a built section; omit to show "Próximamente". */
   href?: string;
-  /** Footer metric — every built card carries its own, unique number. */
   stat?: string;
 };
 
-/**
- * Landing / hub. This is the app's home: every part of the application is
- * reached from these cards, and every section keeps a way back here.
- */
+/** Landing / hub — every section is reached from these tone cards. */
 export default async function InicioPage() {
   const session = await getTeacherSession();
   const t = await getT();
 
-  const weekStart = mondayOf(new Date());
-  const [grupos, schedule, schoolName, weekEvents] = await Promise.all([
+  const [grupos, schedule, schoolName] = await Promise.all([
     loadTeacherGrupos(),
     loadTeacherSchedule(),
     session ? loadSchoolName(session.tenantId) : Promise.resolve(null),
-    loadGroupEventsBetween(isoDate(weekStart), isoDate(addDays(weekStart, 4))),
   ]);
 
   const subjectCount = grupos.reduce((total, grupo) => total + grupo.subjects.length, 0);
@@ -106,84 +89,28 @@ export default async function InicioPage() {
         </p>
       </header>
 
-      <div className="grid auto-rows-fr gap-4 sm:grid-cols-2">
-        {modules.map((module, index) => {
-          const Icon = module.icon;
-          const upcoming = !module.href;
-          const card = (
-            <div
-              className={cn(
-                "flex h-full flex-col rounded-2xl p-5 ring-1 ring-inset transition-all",
-                TONE_CARD[module.tone],
-                TONE_INK,
-                upcoming
-                  ? "ring-black/5 dark:ring-white/10"
-                  : "ring-black/5 group-hover:brightness-[0.96] group-hover:ring-black/15 dark:group-hover:brightness-110 dark:group-hover:ring-white/20",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/45 dark:bg-white/10">
-                  <Icon className={cn("h-6 w-6", CHIP_ICON)} strokeWidth={2.2} />
-                </div>
-                <h2 className="min-w-0 text-xl font-bold leading-tight">
-                  {module.label}
-                </h2>
-              </div>
-
-              <p className={cn("mt-3 text-sm font-medium", TONE_INK_MUTED)}>
-                {module.description}
-              </p>
-
-              <div className="mt-auto pt-5">
-                {module.stat ? (
-                  <p className={cn("text-xs font-semibold", TONE_INK_FAINT)}>
-                    {module.stat}
-                  </p>
-                ) : upcoming ? (
-                  <span className="inline-flex rounded-full border border-black/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide dark:border-white/25">
-                    {t.panel.upcoming}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          );
-
-          const wrapped = module.href ? (
-            <Link href={module.href} className="group block h-full">
-              {card}
-            </Link>
-          ) : (
-            card
-          );
-
-          return (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-stretch lg:gap-10">
+        <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 sm:gap-5">
+          {modules.map((module, index) => (
             <FadeIn key={module.id} delay={0.05 + index * 0.04} className="h-full">
-              {wrapped}
+              <HubModuleCard
+                tone={module.tone}
+                icon={module.icon}
+                title={module.label}
+                description={module.description}
+                stat={module.stat}
+                upcomingLabel={!module.href ? t.panel.upcoming : undefined}
+                href={module.href}
+                className="min-h-[8.25rem] sm:min-h-[9.25rem] sm:p-6"
+              />
             </FadeIn>
-          );
-        })}
-      </div>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="brand-page-title text-lg text-foreground">
-            {t.panel.weekTitle}
-          </h2>
-          <span className="rounded-full bg-surface px-3 py-1 text-[11px] font-semibold text-foreground/55 ring-1 ring-border">
-            {t.schedule.thisWeek}
-          </span>
+          ))}
         </div>
 
-        {schedule.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">
-            <p className="text-sm font-medium text-foreground/60">
-              {t.panel.noLessons}
-            </p>
-          </div>
-        ) : (
-          <ScheduleGrid lessons={schedule} weekStart={weekStart} events={weekEvents} />
-        )}
-      </section>
+        <FadeIn delay={0.18} className="h-full lg:sticky lg:top-6 lg:self-start">
+          <ScheduleUpcoming lessons={schedule} />
+        </FadeIn>
+      </div>
     </FadeIn>
   );
 }

@@ -1,19 +1,12 @@
-import Link from "next/link";
-import { Mail, MessageCircle } from "lucide-react";
+import { MessageCircle, ScrollText } from "lucide-react";
+import { HubModuleCard } from "@/components/dashboard/hub-module-card";
 import { PageHeader } from "@/components/layout/page-header";
-import { cn } from "@/lib/utils";
-import {
-  CHIP_ICON,
-  TONE_CARD,
-  TONE_INK,
-  TONE_INK_MUTED,
-  type Tone,
-} from "@/lib/dashboard/tones";
 import { getT } from "@/lib/i18n/server";
+import type { HubTone } from "@/lib/dashboard/tones";
 
 export const dynamic = "force-dynamic";
 
-/** Comunicación hub: two ways to reach guardians — Correo and Chat. */
+/** Comunicación hub: Circulares (one-way) and Chat (two-way). */
 export default async function CommunicationPage() {
   const t = await getT();
   const m = t.messages;
@@ -21,17 +14,17 @@ export default async function CommunicationPage() {
   const cards: Array<{
     id: string;
     href: string;
-    icon: typeof Mail;
+    icon: typeof ScrollText;
     label: string;
     description: string;
-    tone: Tone;
+    tone: HubTone;
   }> = [
     {
-      id: "email",
-      href: "/comunicacion/correo",
-      icon: Mail,
-      label: m.emailTitle,
-      description: m.emailDescription,
+      id: "circulares",
+      href: "/comunicacion/circulares",
+      icon: ScrollText,
+      label: m.circularesTitle,
+      description: m.circularesDescription,
       tone: "blue",
     },
     {
@@ -40,38 +33,24 @@ export default async function CommunicationPage() {
       icon: MessageCircle,
       label: m.chatTitle,
       description: m.chatDescription,
-      tone: "purple",
+      tone: "green",
     },
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageHeader title={m.hubTitle} description={m.hubDescription} backHref="/inicio" />
-      <div className="grid auto-rows-fr gap-4 sm:grid-cols-2">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.id} href={card.href} className="group block h-full">
-              <div
-                className={cn(
-                  "flex h-full flex-col rounded-2xl p-5 ring-1 ring-inset ring-black/5 transition-all group-hover:brightness-[0.96] group-hover:ring-black/15 dark:ring-white/10 dark:group-hover:brightness-110 dark:group-hover:ring-white/20",
-                  TONE_CARD[card.tone],
-                  TONE_INK,
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/45 dark:bg-white/10">
-                    <Icon className={cn("h-6 w-6", CHIP_ICON)} strokeWidth={2.2} />
-                  </div>
-                  <h2 className="min-w-0 text-xl font-bold leading-tight">{card.label}</h2>
-                </div>
-                <p className={cn("mt-3 text-sm font-medium", TONE_INK_MUTED)}>
-                  {card.description}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 sm:gap-4">
+        {cards.map((card) => (
+          <HubModuleCard
+            key={card.id}
+            tone={card.tone}
+            icon={card.icon}
+            title={card.label}
+            description={card.description}
+            href={card.href}
+          />
+        ))}
       </div>
     </div>
   );

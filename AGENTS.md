@@ -75,9 +75,9 @@ the aula virtual needs
 `20260912230000_teacher_sees_submissions.sql`, `20260913000000_assessment_grading.sql`,
 and comments need `20260913150000_class_stream_comments.sql` in `weeon-tenants`.
 **Comunicación is built** (`/comunicacion`) as a hub with two channels:
-**Correo** — email-style threads (subject + TipTap rich body +
+**Circulares** — one-way notices (subject + TipTap rich body +
 **drag-&-drop attachments**) to hand-picked parents or a group's guardians, at
-`/comunicacion/correo`; schema `threads`/`messages`/`thread_recipients`/
+`/comunicacion/circulares`; schema `threads`/`messages`/`thread_recipients`/
 `message_attachments` (migrations `20260913160000_messaging.sql` +
 `20260913170000_message_attachments.sql`). **Chat** — realtime 1:1 teacher ↔
 guardian (guardians only), iMessage-style at `/comunicacion/chat`; schema
@@ -85,8 +85,20 @@ guardian (guardians only), iMessage-style at `/comunicacion/chat`; schema
 (the shared `list_message_contacts()` becomes admin-aware in
 `20260914060000_message_contacts_admin.sql`). See
 [`docs/comunicacion.md`](docs/comunicacion.md).
-Cc/drafts/folders and the parent/student **email** side are follow-ups (Chat
+Cc/drafts and extended parent/student surfaces are follow-ups (Chat
 already ships teacher web + parent mobile).
+
+## Teacher mobile (weeon-mobile) — extension, not a fork
+
+Teachers also sign in on **`weeon-mobile`** (Expo). That portal is a **field
+companion** to this web app: attendance on the floor, chat with guardians,
+quick circulares, schedule/calendar, gallery, push — **not** a second gradebook or
+assessment studio.
+
+**Agents:** read [`docs/teacher-mobile-extension.md`](docs/teacher-mobile-extension.md)
+and [`../weeon-mobile/docs/teacher-mobile.md`](../weeon-mobile/docs/teacher-mobile.md)
+before scoping teacher mobile work. Shared contracts (attendance, chat, mail,
+calendar) must stay aligned with this repo's loaders and RPCs.
 
 ## The five repos
 
@@ -94,8 +106,8 @@ already ships teacher web + parent mobile).
 | ---- | ---- |
 | `weeon-marketing` | Public site + trial |
 | `weeon-tenants` | School ERP + **schema owner** (`weeon-tenants/` locally) |
-| `weeon-mobile-apps` | Mobile — daily classroom; first password for all roster roles |
-| **weeon-teachers** (this repo) | Teacher web — login, grupos, later reports |
+| **`weeon-mobile`** | Mobile — student/parent daily app + **teacher field companion** |
+| **weeon-teachers** (this repo) | Teacher **web** — authoring, gradebook, aula virtual |
 | `weeon-management` | Cross-tenant Weeon Ops |
 
 ## Non-negotiable rules
@@ -112,11 +124,12 @@ already ships teacher web + parent mobile).
    `teaches_class` (homeroom `classes.teacher_profile_id` or
    `class_lessons` → `teachers.profile_id`).
 4. **First password is shared.** Teachers set it here **or** in
-   `weeon-mobile-apps`. Same `auth.users` row. Do **not** build first-password
-   UI in `weeon-tenants`. Daily classroom (live grades, notices, student/parent
-   consumption) stays on mobile, **except the dated attendance register
-   (Libro de clase)** — an intentional slice now built here (see
-   `docs/aula-virtual.md` § Asistencia).
+   **`weeon-mobile`**. Same `auth.users` row. Do **not** build first-password
+   UI in `weeon-tenants`. Student/parent consumption stays on mobile; teacher
+   **authoring** stays here. **Attendance (Libro de clase)** is built on web
+   first; teacher **mobile** will complement it for on-the-go marking (see
+   `docs/teacher-mobile-extension.md`). Student **Entregar** is student mobile
+   only.
 5. **Align brand** with admin: Geist, W-mark, gradient `#5e25cc` →
    `#2b59ff`, Spanish school-facing copy.
 6. **Never commit secrets.** `.env*` git-ignored; only `.env.example`.
@@ -130,15 +143,16 @@ already ships teacher web + parent mobile).
 - Next.js **16.3.4**, React **19**, Tailwind **v4**, `motion`, `lucide-react`,
   `@supabase/ssr`, Zod.
 - App Router under `src/app/`. Routes: `/` (login), `/crear-contrasena`,
-  `/inicio` (landing / hub with cards), `/agenda` (hub: Horarios + Próximos
+  `/inicio` (landing / hub — 2×2 module cards + today schedule widget; see
+  `docs/inicio.md`), `/agenda` (hub: Horarios + Próximos
   eventos + Calendario), `/agenda/eventos` (read-only upcoming institution
   events), `/agenda/calendario` (month/week/day/agenda calendar mirroring the
   ERP, `?view=month|week|day|agenda&date=YYYY-MM-DD`),
   `/aula-virtual` (virtual classroom section),
   `/aula-virtual/[classId]` (class workspace), `/aula-virtual/por-evaluar`
-  (cross-group grading inbox), `/comunicacion` (hub: Correo + Chat cards),
-  `/comunicacion/correo` (mailbox), `/comunicacion/nuevo` (compose email),
-  `/comunicacion/correo/[threadId]` (email thread), `/comunicacion/chat`
+  (cross-group grading inbox), `/comunicacion` (hub: Circulares + Chat cards),
+  `/comunicacion/circulares` (circular list), `/comunicacion/nuevo` (compose circular),
+  `/comunicacion/circulares/[threadId]` (circular detail), `/comunicacion/chat`
   (realtime guardian chat), `/comunicacion/chat/[conversationId]`,
   `/grupos`, `/grupos/[id]` (Calificaciones + `?tab=asistencia` + `?tab=conducta`;
   see `docs/grupos.md`),
@@ -191,6 +205,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | **Código de conducta** | `docs/conducta.md` |
 | **Apoyos Eduativos** | `docs/educational-supports.md` (+ canonical `weeon-tenants/docs/educational-supports.md`) |
 | Student Entregar (Expo) | `../weeon-mobile/docs/aula-virtual.md` |
+| **Teacher mobile (web extension)** | `docs/teacher-mobile-extension.md`, `../weeon-mobile/docs/teacher-mobile.md` |
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |
 | Usernames / first login | `weeon-tenants/docs/user-provisioning.md` |

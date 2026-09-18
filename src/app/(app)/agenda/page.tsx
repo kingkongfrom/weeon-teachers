@@ -1,21 +1,14 @@
-import Link from "next/link";
 import {
   BellRing,
   CalendarDays,
   Clock,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { HubModuleCard } from "@/components/dashboard/hub-module-card";
 import { FadeIn } from "@/components/motion/fade-in";
 import { PageHeader } from "@/components/layout/page-header";
 import { getT } from "@/lib/i18n/server";
-import {
-  CHIP_ICON,
-  TONE_CARD,
-  TONE_INK,
-  TONE_INK_MUTED,
-  type HubTone,
-} from "@/lib/dashboard/tones";
+import type { HubTone } from "@/lib/dashboard/tones";
 
 export const dynamic = "force-dynamic";
 
@@ -25,14 +18,10 @@ type AgendaModule = {
   description: string;
   icon: LucideIcon;
   tone: HubTone;
-  /** Set when the section is built; omit to show "Próximamente". */
   href?: string;
 };
 
-/**
- * Agenda hub: every scheduling surface in one place — the weekly timetable,
- * school events, and the monthly calendar. Reached from Panel general.
- */
+/** Agenda hub: timetable, school events, and monthly calendar. */
 export default async function AgendaPage() {
   const t = await getT();
 
@@ -71,56 +60,19 @@ export default async function AgendaPage() {
         backHref="/inicio"
       />
 
-      <div className="grid auto-rows-fr gap-4 sm:grid-cols-2">
-        {modules.map((module, index) => {
-          const Icon = module.icon;
-          const upcoming = !module.href;
-          const card = (
-            <div
-              className={cn(
-                "flex h-full flex-col rounded-2xl p-5 ring-1 ring-inset transition-all",
-                TONE_CARD[module.tone],
-                TONE_INK,
-                upcoming
-                  ? "ring-black/5 dark:ring-white/10"
-                  : "ring-black/5 group-hover:brightness-[0.96] group-hover:ring-black/15 dark:group-hover:brightness-110 dark:group-hover:ring-white/20",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/45 dark:bg-white/10">
-                  <Icon className={cn("h-6 w-6", CHIP_ICON)} strokeWidth={2.2} />
-                </div>
-                <h2 className="min-w-0 text-xl font-bold leading-tight">{module.label}</h2>
-              </div>
-
-              <p className={cn("mt-3 text-sm font-medium", TONE_INK_MUTED)}>
-                {module.description}
-              </p>
-
-              <div className="mt-auto pt-5">
-                {upcoming ? (
-                  <span className="inline-flex rounded-full border border-black/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide dark:border-white/25">
-                    {t.panel.upcoming}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          );
-
-          const wrapped = module.href ? (
-            <Link href={module.href} className="group block h-full">
-              {card}
-            </Link>
-          ) : (
-            card
-          );
-
-          return (
-            <FadeIn key={module.id} delay={0.05 + index * 0.04} className="h-full">
-              {wrapped}
-            </FadeIn>
-          );
-        })}
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 sm:gap-4">
+        {modules.map((module, index) => (
+          <FadeIn key={module.id} delay={0.05 + index * 0.04} className="h-full">
+            <HubModuleCard
+              tone={module.tone}
+              icon={module.icon}
+              title={module.label}
+              description={module.description}
+              upcomingLabel={!module.href ? t.panel.upcoming : undefined}
+              href={module.href}
+            />
+          </FadeIn>
+        ))}
       </div>
     </FadeIn>
   );
