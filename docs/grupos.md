@@ -8,6 +8,13 @@ history, and conduct. Entry: **Inicio → Calificaciones → grupo** or
 **Query:** `?subject=<subjectId>` (Calificaciones materia), `?tab=asistencia`,
 `?tab=conducta` (legacy `?tab=tardias` → Asistencia).
 
+## List page (`/grupos`)
+
+`GrupoCard` (`components/grupos/grupo-card.tsx`) mirrors the Aula virtual
+`ClassCard` layout: green banner header (group + year), school · section,
+subject chips, student count, footer icon shortcuts (Calificaciones · Asistencia ·
+Código de conducta). Data from `loadTeacherGrupos()` + `loadSchoolName()`.
+
 ## Three tabs (one group page)
 
 | Tab | URL | Write? | Purpose |

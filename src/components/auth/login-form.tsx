@@ -3,10 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PasswordInput } from "@/components/ui/password-input";
 import { AmbientPage } from "@/components/brand/ambient-page";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useT } from "@/lib/i18n/client";
 import {
   completeTeacherPasswordLogin,
@@ -55,71 +53,73 @@ export function LoginForm() {
 
   return (
     <AmbientPage>
-      <form
-        onSubmit={onSubmit}
-        className="login-card w-full rounded-3xl p-8 sm:p-9"
-      >
-        <h1 className="brand-page-title text-2xl">{t.auth.login.title}</h1>
-        <p className="mt-1.5 text-sm text-foreground/60">
-          {t.auth.login.description}
-        </p>
+      <div className="login-card rounded-2xl p-6 sm:p-8">
+        <h1 className="brand-display text-3xl tracking-tight text-white">
+          {t.auth.login.title}
+        </h1>
+        <p className="mt-2 text-sm">{t.auth.login.description}</p>
 
-        <label className="mt-7 block text-xs font-medium text-foreground/70">
-          {t.auth.login.userLabel}
-          <input
-            className="login-field mt-1.5 h-11 w-full rounded-xl border px-3.5 text-sm outline-none"
-            value={username}
-            onChange={(event) => {
-              setUsername(event.target.value);
-              setAskPassword(false);
-            }}
-            autoComplete="username"
-            placeholder="eduardo@weeon.school"
-            required
-          />
-        </label>
-
-        {askPassword ? (
-          <div className="mt-4">
-            <label htmlFor="password" className="block text-xs font-medium text-foreground/70">
-              {t.auth.login.passwordLabel}
+        <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="username" className="text-sm font-semibold">
+              {t.auth.login.userLabel}
             </label>
-            <PasswordInput
-              id="password"
-              wrapperClassName="mt-1.5"
-              fieldClassName="login-field h-11 w-full rounded-xl border px-3.5 text-sm outline-none"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              autoFocus
+            <input
+              id="username"
+              className="login-field h-8 rounded-lg border px-2.5 text-sm outline-none transition-all"
+              value={username}
+              onChange={(event) => {
+                setUsername(event.target.value);
+                setAskPassword(false);
+              }}
+              autoComplete="username"
+              placeholder="eduardo@weeon.school"
               required
             />
           </div>
-        ) : null}
 
-        {error ? <p className="mt-4 text-sm text-error!">{error}</p> : null}
-
-        <Button
-          type="submit"
-          className="brand-gradient btn-glow group mt-7 h-11 w-full rounded-xl border-0 text-[15px] font-semibold"
-          disabled={pending}
-        >
-          {pending
-            ? t.auth.login.submitting
-            : askPassword
-              ? t.auth.login.submitEnter
-              : t.auth.login.submitContinue}
-          {!pending ? (
-            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+          {askPassword ? (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="password" className="text-sm font-semibold">
+                {t.auth.login.passwordLabel}
+              </label>
+              <PasswordInput
+                id="password"
+                fieldClassName="login-field h-8 w-full rounded-lg border px-2.5 pr-10 text-sm outline-none transition-all"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                autoFocus
+                required
+              />
+            </div>
           ) : null}
-        </Button>
 
-        <p className="mt-5 text-center text-sm text-white/55">
-          <Link href="/forgot-password" className="-mx-1 rounded-md px-1 py-0.5 transition-colors hover:bg-white/10 hover:text-white">
+          {error ? (
+            <div className="rounded-xl border border-red-300/30 bg-red-500/15 px-4 py-3 text-sm text-red-100">
+              {error}
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="brand-gradient inline-flex h-10 w-full items-center justify-center rounded-full px-6 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-60 disabled:hover:brightness-100 disabled:active:scale-100"
+          >
+            {pending
+              ? t.auth.login.submitting
+              : askPassword
+                ? t.auth.login.submitEnter
+                : t.auth.login.submitContinue}
+          </button>
+        </form>
+
+        <p className="mt-5 text-center text-xs font-medium text-white/55">
+          <Link href="/forgot-password" className="transition-colors hover:text-white">
             {t.auth.login.forgot}
           </Link>
         </p>
-      </form>
+      </div>
     </AmbientPage>
   );
 }

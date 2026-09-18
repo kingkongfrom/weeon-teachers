@@ -259,7 +259,7 @@ export function LessonCard({
                         </Link>
                       ) : null}
                       <Link
-                        href={`/aula-virtual/${lesson.classId}`}
+                        href={`/aula-virtual/${lesson.classId}?subject=${encodeURIComponent(lesson.gradebookSubjectId)}&tab=trabajo`}
                         onClick={() => setOpen(false)}
                         className="btn-ink inline-flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold"
                       >
@@ -267,7 +267,7 @@ export function LessonCard({
                         <ArrowUpRight className="h-4 w-4" />
                       </Link>
                       <Link
-                        href={`/grupos/${lesson.classId}`}
+                        href={`/grupos/${lesson.classId}?subject=${encodeURIComponent(lesson.gradebookSubjectId)}`}
                         onClick={() => setOpen(false)}
                         className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
                       >

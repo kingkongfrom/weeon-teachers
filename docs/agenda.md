@@ -35,6 +35,11 @@ semana** section now shows the **current week's dates** like `/horarios`.
 - **Each class tile shows room and an exam/activity indicator**; clicking it opens
   a preview with the day, time, **room**, students, the **exams/activities**
   attached to that class, and **Agregar examen o actividad**.
+- Preview shortcuts preserve the **materia** from the clicked lesson
+  (`gradebookSubjectId` = `subjects.id` or `lesson:<class_lessons.id>`):
+  - **Abrir Aula Virtual** → `/aula-virtual/[classId]?subject=…&tab=trabajo`
+  - **Calificaciones** → `/grupos/[classId]?subject=…`
+  - Today only: **Abrir registro** → `/aula-virtual/[classId]?tab=asistencia&lesson=[id]`
 - Lessons come from `loadTeacherSchedule()` (recurring `class_lessons`), so
   paging through weeks pages through the semester.
 

@@ -18,6 +18,8 @@ export const WEEKDAYS: { value: Weekday; label: string; short: string }[] = [
 export type TeacherLesson = {
   id: string;
   classId: string;
+  /** Gradebook materia key — `subjects.id` or `lesson:<class_lessons.id>`. */
+  gradebookSubjectId: string;
   groupName: string;
   title: string;
   grade: string | null;
@@ -59,7 +61,7 @@ export const loadTeacherSchedule = cache(
     supabase
       .from("class_lessons")
       .select(
-        "id, class_id, title, weekday, start_time, end_time, room, color, teacher_id, classes(id, name, grade, section)",
+        "id, class_id, title, weekday, start_time, end_time, room, color, subject_id, teacher_id, classes(id, name, grade, section)",
       )
       .in("class_id", classIds)
       .in("teacher_id", teacherIds)
@@ -107,6 +109,7 @@ export const loadTeacherSchedule = cache(
     lessons.push({
       id: row.id,
       classId: klassRow.id,
+      gradebookSubjectId: row.subject_id ?? `lesson:${row.id}`,
       groupName: displayGroupName(klassRow),
       title: row.title,
       grade: klassRow.grade,

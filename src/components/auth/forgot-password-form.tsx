@@ -56,7 +56,7 @@ export function ForgotPasswordForm() {
               type="email"
               autoComplete="email"
               required
-              className="login-field h-10 w-full rounded-lg border px-3 text-sm outline-none transition-all"
+              className="login-field h-8 w-full rounded-lg border px-2.5 text-sm outline-none transition-all"
               placeholder="eduardo@weeon.school"
             />
           </div>

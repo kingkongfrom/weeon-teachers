@@ -50,7 +50,7 @@ function SetPasswordCard({ token }: { token: string }) {
             id="password"
             name="password"
             wrapperClassName="mt-1"
-            fieldClassName="login-field h-10 w-full rounded-lg border px-3 text-sm outline-none transition-all"
+            fieldClassName="login-field h-8 w-full rounded-lg border px-2.5 pr-10 text-sm outline-none transition-all"
             autoComplete="new-password"
             required
             value={password}
