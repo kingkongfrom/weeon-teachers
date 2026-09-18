@@ -1,3 +1,4 @@
+import { ATTENDANCE_TIME_ZONE, schoolWeekday } from "@/lib/attendance/model";
 import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule";
 
 /** JS `getDay()` index for each timetable weekday (Mon–Fri). */
@@ -21,6 +22,35 @@ function parseTime(value: string): { hours: number; minutes: number } {
     hours: Number.isFinite(hours) ? hours : 0,
     minutes: Number.isFinite(minutes) ? minutes : 0,
   };
+}
+
+function minutesFromMidnight(hhmm: string): number {
+  const { hours, minutes } = parseTime(hhmm);
+  return hours * 60 + minutes;
+}
+
+/** Minutes since midnight in the school's timezone (`America/Costa_Rica`). */
+function schoolLocalMinutes(now = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: ATTENDANCE_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const hourRaw = parts.find((part) => part.type === "hour")?.value ?? "0";
+  const hour = hourRaw === "24" ? 0 : Number(hourRaw);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+  return hour * 60 + minute;
+}
+
+/** True when `now` is inside the lesson's scheduled slot (school-local, Mon–Fri). */
+export function isLessonLiveNow(lesson: TeacherLesson, now = new Date()): boolean {
+  if (schoolWeekday(now) !== lesson.weekday) return false;
+  const current = schoolLocalMinutes(now);
+  const start = minutesFromMidnight(lesson.startTime);
+  const end = minutesFromMidnight(lesson.endTime);
+  if (end <= start) return current >= start;
+  return current >= start && current < end;
 }
 
 /** Next datetime this weekly slot occurs on or after `now`. */

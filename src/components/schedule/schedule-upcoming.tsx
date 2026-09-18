@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { ArrowUpRight, CalendarDays, Clock } from "lucide-react";
+import { ArrowUpRight, CalendarCheck, CalendarDays, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { schoolWeekday } from "@/lib/attendance/model";
+import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
+import { isLessonLiveNow } from "@/lib/dashboard/upcoming";
 import { TONE_CARD, TONE_INK, TONE_INK_FAINT, type Tone } from "@/lib/dashboard/tones";
 import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule";
 import { WEEKDAYS } from "@/lib/dashboard/schedule";
@@ -52,11 +54,16 @@ function isSchoolWeekday(value: string): value is Weekday {
 
 type ScheduleUpcomingProps = {
   lessons: TeacherLesson[];
+  todayEvents?: TeacherCalendarEvent[];
   className?: string;
 };
 
 /** Compact today + next classes for Panel general — full week lives on /horarios. */
-export async function ScheduleUpcoming({ lessons, className }: ScheduleUpcomingProps) {
+export async function ScheduleUpcoming({
+  lessons,
+  todayEvents = [],
+  className,
+}: ScheduleUpcomingProps) {
   const [t, locale] = await Promise.all([getT(), getLocale()]);
   const todayKey = schoolWeekday();
   const isWeekend = todayKey === "sat" || todayKey === "sun";
@@ -86,37 +93,55 @@ export async function ScheduleUpcoming({ lessons, className }: ScheduleUpcomingP
   function LessonRow({
     lesson,
     showDay = false,
+    showAttendance = false,
   }: {
     lesson: TeacherLesson;
     showDay?: boolean;
+    showAttendance?: boolean;
   }) {
     const tone = TONE_CARD[LESSON_TONE[lesson.color] ?? "blue"];
 
     return (
-      <Link
-        href={`/aula-virtual/${lesson.classId}`}
+      <div
         className={cn(
-          "flex items-center gap-3 rounded-xl p-3 ring-1 ring-inset ring-black/5 transition-all hover:brightness-[0.96] active:scale-[0.99] dark:ring-white/10 dark:hover:brightness-110",
+          "flex flex-col gap-2 rounded-xl p-3 ring-1 ring-inset ring-black/5 dark:ring-white/10",
           tone,
           TONE_INK,
         )}
       >
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{lesson.title}</p>
-          <p className={cn("truncate text-xs font-medium", TONE_INK_FAINT)}>
-            {lesson.groupName}
-            {lesson.room ? ` · ${lesson.room}` : ""}
-          </p>
-        </div>
-        <div className={cn("shrink-0 text-right text-xs font-semibold", TONE_INK_FAINT)}>
-          {showDay ? (
-            <span className="block capitalize">{weekdayLabel(lesson.weekday)}</span>
-          ) : null}
-          <span className="tabular-nums">
-            {timeLabel(lesson.startTime)}–{timeLabel(lesson.endTime)}
-          </span>
-        </div>
-      </Link>
+        <Link
+          href={`/aula-virtual/${lesson.classId}`}
+          className="flex items-center gap-3 transition-all hover:brightness-[0.96] active:scale-[0.99] dark:hover:brightness-110"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{lesson.title}</p>
+            <p className={cn("truncate text-xs font-medium", TONE_INK_FAINT)}>
+              {lesson.groupName}
+              {lesson.room ? ` · ${lesson.room}` : ""}
+            </p>
+          </div>
+          <div className={cn("shrink-0 text-right text-xs font-semibold", TONE_INK_FAINT)}>
+            {showDay ? (
+              <span className="block capitalize">{weekdayLabel(lesson.weekday)}</span>
+            ) : null}
+            <span className="tabular-nums">
+              {timeLabel(lesson.startTime)}–{timeLabel(lesson.endTime)}
+            </span>
+          </div>
+        </Link>
+        {showAttendance ? (
+          <Link
+            href={`/aula-virtual/${lesson.classId}?tab=asistencia&lesson=${lesson.id}`}
+            className={cn(
+              "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-black/10 text-xs font-semibold transition-colors hover:bg-black/15 dark:bg-white/10 dark:hover:bg-white/15",
+              TONE_INK,
+            )}
+          >
+            <CalendarCheck className="h-3.5 w-3.5" aria-hidden />
+            {t.panel.openAttendance}
+          </Link>
+        ) : null}
+      </div>
     );
   }
 
@@ -161,11 +186,37 @@ export async function ScheduleUpcoming({ lessons, className }: ScheduleUpcomingP
             <ul className="flex flex-col gap-2">
               {todayLessons.map((lesson) => (
                 <li key={lesson.id}>
-                  <LessonRow lesson={lesson} />
+                  <LessonRow lesson={lesson} showAttendance={isLessonLiveNow(lesson)} />
                 </li>
               ))}
             </ul>
           )}
+
+          {todayEvents.length > 0 ? (
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-foreground/45">
+                {t.panel.todayEventsTitle}
+              </h3>
+              <ul className="flex flex-col gap-1.5">
+                {todayEvents.map((event) => (
+                  <li
+                    key={event.id}
+                    className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                  >
+                    <span>{event.title}</span>
+                    {event.groupName ? (
+                      <span className="ml-1 font-medium opacity-75">· {event.groupName}</span>
+                    ) : null}
+                    {!event.allDay && event.startTime ? (
+                      <span className="ml-1 tabular-nums font-medium opacity-80">
+                        {timeLabel(event.startTime)}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {upcomingLessons.length > 0 ? (
             <div className="flex flex-col gap-2 border-t border-border pt-4">

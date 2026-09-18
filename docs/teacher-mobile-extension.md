@@ -28,6 +28,9 @@ Start at **[`weeon-mobile/docs/teacher-mobile.md`](../../weeon-mobile/docs/teach
 
 ## Built today on teacher mobile
 
+- **Libro de clase** (`/teacher/asistencia`) — same `attendance_records` +
+  `mark_attendance` RPC as web `saveAttendance`; see
+  [`weeon-mobile/docs/asistencia.md`](../../weeon-mobile/docs/asistencia.md)
 - Gallery capture (`/teacher/galeria`) — see
   [`weeon-mobile/docs/galeria.md`](../../weeon-mobile/docs/galeria.md)
 - Shared auth / first password — see [`weeon-mobile/docs/auth.md`](../../weeon-mobile/docs/auth.md)
@@ -36,7 +39,7 @@ Start at **[`weeon-mobile/docs/teacher-mobile.md`](../../weeon-mobile/docs/teach
 
 | Mobile target | Web source of truth |
 | ------------- | ------------------- |
-| Libro de clase (attendance) | `docs/aula-virtual.md` § Asistencia |
+| Libro de clase (attendance) | `docs/aula-virtual.md` § Asistencia — **also on mobile** `/teacher/asistencia` |
 | Chat with guardians | `docs/comunicacion.md` § Chat |
 | Correo compose / reply | `docs/comunicacion.md` § Correo |
 | Horario + upcoming events | `docs/agenda.md` |

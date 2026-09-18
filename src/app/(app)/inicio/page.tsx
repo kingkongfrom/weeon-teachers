@@ -6,9 +6,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { HubModuleCard } from "@/components/dashboard/hub-module-card";
+import { PanelAttentionStrip } from "@/components/dashboard/panel-attention";
 import { FadeIn } from "@/components/motion/fade-in";
 import { ScheduleUpcoming } from "@/components/schedule/schedule-upcoming";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { schoolToday } from "@/lib/attendance/model";
+import { loadGroupEventsBetween } from "@/lib/dashboard/calendar";
+import { loadPanelAttention } from "@/lib/dashboard/panel-attention";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
@@ -32,13 +36,17 @@ export default async function InicioPage() {
   const session = await getTeacherSession();
   const t = await getT();
 
-  const [grupos, schedule, schoolName] = await Promise.all([
+  const todayISO = schoolToday();
+  const [grupos, schedule, schoolName, attention, todayEvents] = await Promise.all([
     loadTeacherGrupos(),
     loadTeacherSchedule(),
     session ? loadSchoolName(session.tenantId) : Promise.resolve(null),
+    loadPanelAttention(),
+    loadGroupEventsBetween(todayISO, todayISO),
   ]);
 
   const subjectCount = grupos.reduce((total, grupo) => total + grupo.subjects.length, 0);
+  const unreadComms = attention.unreadChatCount + attention.unreadInboxCount;
 
   const modules: DashboardModule[] = [
     {
@@ -75,6 +83,7 @@ export default async function InicioPage() {
       icon: MessageSquare,
       tone: "green",
       href: "/comunicacion",
+      stat: unreadComms > 0 ? t.panel.unreadCount(unreadComms) : undefined,
     },
   ];
 
@@ -88,6 +97,8 @@ export default async function InicioPage() {
           {schoolName ?? t.common.fallbackSchool}
         </p>
       </header>
+
+      <PanelAttentionStrip attention={attention} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-stretch lg:gap-10">
         <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 sm:gap-5">
@@ -108,7 +119,7 @@ export default async function InicioPage() {
         </div>
 
         <FadeIn delay={0.18} className="h-full lg:sticky lg:top-6 lg:self-start">
-          <ScheduleUpcoming lessons={schedule} />
+          <ScheduleUpcoming lessons={schedule} todayEvents={todayEvents} />
         </FadeIn>
       </div>
     </FadeIn>

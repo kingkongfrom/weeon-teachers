@@ -40,6 +40,18 @@ const es = {
     weekendEmpty: "Fin de semana — sin clases.",
     upcomingTitle: "Próximas clases",
     viewFullSchedule: "Ver horario completo",
+    todayEventsTitle: "Eventos de hoy",
+    openAttendance: "Asistencia",
+    unreadCount: (n: number) => `${n} sin leer`,
+    attention: {
+      title: "Requiere atención",
+      grading: (n: number) =>
+        `${n} ${n === 1 ? "entrega por evaluar" : "entregas por evaluar"}`,
+      unreadChat: (n: number) =>
+        `${n} ${n === 1 ? "chat sin leer" : "chats sin leer"}`,
+      unreadInbox: (n: number) =>
+        `${n} ${n === 1 ? "circular sin leer" : "circulares sin leer"}`,
+    },
     noLessons: "Aún no tiene lecciones asignadas en esta semana.",
     upcoming: "Próximamente",
     classesCount: (n: number) => `${n} ${n === 1 ? "clase" : "clases"}`,
@@ -926,6 +938,15 @@ const en: Messages = {
     weekendEmpty: "Weekend — no classes.",
     upcomingTitle: "Upcoming classes",
     viewFullSchedule: "View full schedule",
+    todayEventsTitle: "Today's events",
+    openAttendance: "Attendance",
+    unreadCount: (n: number) => `${n} unread`,
+    attention: {
+      title: "Needs attention",
+      grading: (n: number) => `${n} submission${n === 1 ? "" : "s"} to grade`,
+      unreadChat: (n: number) => `${n} unread chat${n === 1 ? "" : "s"}`,
+      unreadInbox: (n: number) => `${n} unread notice${n === 1 ? "" : "s"}`,
+    },
     noLessons: "You have no lessons assigned this week.",
     upcoming: "Coming soon",
     classesCount: (n: number) => `${n} ${n === 1 ? "class" : "classes"}`,
