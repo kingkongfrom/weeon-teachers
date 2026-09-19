@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
+import { TEACHER_MESSAGES } from "@/lib/messages/paths";
 
-/** Legacy route — circulares replaced correo. */
-export default async function CorreoThreadRedirectPage({
+/** Legacy route — messaging lives under /comunicacion/mensajes. */
+export default async function LegacyCorreoThreadPage({
   params,
 }: {
   params: Promise<{ threadId: string }>;
 }) {
   const { threadId } = await params;
-  redirect(`/comunicacion/circulares/${threadId}`);
+  redirect(`${TEACHER_MESSAGES}/${threadId}`);
 }

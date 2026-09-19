@@ -14,7 +14,7 @@ today's timetable at a glance. The full week grid lives on **`/horarios`**
 | Zone | Desktop (`lg+`) | Mobile |
 | ---- | ----------------- | ------ |
 | Header | School name + **Panel general** title | Same |
-| Attention | **Requiere atención** — por evaluar, chat/circulares sin leer (hidden when none) | Same |
+| Attention | **Requiere atención** — por evaluar, chat/mensajes sin leer (hidden when none) | Same |
 | Left | 2×2 **hub module cards** | Stacked cards (1 col → 2 col `sm`) |
 | Right | **ScheduleUpcoming** — today + up to 3 later-week classes | Below cards |
 
@@ -42,7 +42,7 @@ eventos, and calendario — not duplicated on this page).
 `components/schedule/schedule-upcoming.tsx` (server component):
 
 - **Requiere atención** (`panel-attention.tsx`) — links to por evaluar, unread
-  chat, unread circulares inbox; driven by `loadPanelAttention()`.
+  chat, unread messages inbox; driven by `loadPanelAttention()`.
 - **Hoy** — lessons for the school-local weekday (`schoolWeekday()` from
   `lib/attendance/model.ts`, timezone `America/Costa_Rica`). Today's rows include
   an **Asistencia** shortcut to the Libro de clase **only while that period is

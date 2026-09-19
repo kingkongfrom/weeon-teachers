@@ -1,12 +1,13 @@
-import { MessageCircle, ScrollText } from "lucide-react";
+import { Mail, MessageCircle } from "lucide-react";
 import { HubModuleCard } from "@/components/dashboard/hub-module-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { getT } from "@/lib/i18n/server";
 import type { HubTone } from "@/lib/dashboard/tones";
+import { TEACHER_MESSAGES } from "@/lib/messages/paths";
 
 export const dynamic = "force-dynamic";
 
-/** Comunicación hub: Circulares (one-way) and Chat (two-way). */
+/** Comunicación hub: Mensajes and Chat. */
 export default async function CommunicationPage() {
   const t = await getT();
   const m = t.messages;
@@ -14,17 +15,17 @@ export default async function CommunicationPage() {
   const cards: Array<{
     id: string;
     href: string;
-    icon: typeof ScrollText;
+    icon: typeof Mail;
     label: string;
     description: string;
     tone: HubTone;
   }> = [
     {
-      id: "circulares",
-      href: "/comunicacion/circulares",
-      icon: ScrollText,
-      label: m.circularesTitle,
-      description: m.circularesDescription,
+      id: "messages",
+      href: TEACHER_MESSAGES,
+      icon: Mail,
+      label: m.hubMessagesTitle,
+      description: m.hubMessagesDescription,
       tone: "blue",
     },
     {

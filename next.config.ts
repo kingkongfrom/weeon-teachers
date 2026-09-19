@@ -1,21 +1,43 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
+const cspHeader = `
+  default-src 'self';
+  script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.dropbox.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  img-src 'self' blob: data: https://wlyrqyiqrgelsehjmtta.supabase.co;
+  connect-src 'self' https://wlyrqyiqrgelsehjmtta.supabase.co https://www.dropbox.com https://dl.dropboxusercontent.com https://*.dl.dropboxusercontent.com;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+  frame-ancestors 'none';
+  upgrade-insecure-requests;
+`
+  .replace(/\s{2,}/g, " ")
+  .trim();
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: cspHeader },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+];
+
 const nextConfig: NextConfig = {
   experimental: {
-    // Class material uploads (Aula virtual P1) go through a Server Action, so
-    // the request body limit must clear the 25 MiB bucket limit plus multipart
-    // overhead. Keep this in sync with the `class-materials` bucket.
     serverActions: {
       bodySizeLimit: "26mb",
     },
-    // Keep dynamic page segments in the client router cache for a short window,
-    // so revisiting a screen (Horarios, Grupos, Comunicación…) is instant instead
-    // of re-fetching the RSC payload on every navigation. Mutations still call
-    // `router.refresh()`, which bypasses this.
     staleTimes: {
       dynamic: 30,
       static: 300,
     },
+  },
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
   },
 };
 

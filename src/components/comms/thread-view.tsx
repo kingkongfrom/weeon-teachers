@@ -7,17 +7,21 @@ import { ChevronDown, ChevronUp, Loader2, Paperclip, RotateCcw, Trash2 } from "l
 import {
   messageTrashExit,
   messageTrashTransition,
-} from "@/components/messages/message-trash-motion";
+} from "@/components/comms/message-trash-motion";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { RichTextView } from "@/components/assessments/rich-text";
-import { TONE_PILL } from "@/lib/dashboard/tones";
+import { RichTextView } from "@/components/comms/rich-text";
+import { TONE_PILL } from "@/lib/dashboard/hub-tones";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useT } from "@/lib/i18n/use-i18n";
+import { MessageBodyEditor } from "@/components/comms/message-body-editor";
+import { Button } from "@/components/ui/button";
+import { emptyDoc, type RichTextDoc } from "@/lib/comms/model";
 import {
   deleteMessageThread,
   markThreadRead,
+  sendThreadMessage,
   setThreadFolder,
-} from "@/lib/teachers/message-actions";
+} from "@/lib/teachers/comms-actions";
 import type { MessageThreadDetail } from "@/lib/dashboard/messages";
 
 function formatDate(iso: string): string {
@@ -32,13 +36,21 @@ function formatDate(iso: string): string {
   });
 }
 
-/** One-way circular thread: header metadata + message stack. */
-export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
+/** Thread detail with optional reply composer for two-way correo. */
+export function ThreadView({
+  detail,
+  mailboxBase,
+}: {
+  detail: MessageThreadDetail;
+  mailboxBase: string;
+}) {
   const t = useT();
-  const m = t.messages;
-  const common = t.common;
   const router = useRouter();
   const [showRecipients, setShowRecipients] = useState(false);
+  const [replyBody, setReplyBody] = useState<RichTextDoc>(() => emptyDoc());
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const [replying, setReplying] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
   const [trashing, setTrashing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -59,7 +71,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
     const res = await setThreadFolder(detail.summary.id, folder);
     setMoving(false);
     if (res.ok) {
-      router.push("/comunicacion/circulares");
+      router.push(mailboxBase);
       router.refresh();
     }
   }
@@ -70,7 +82,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
     const res = await setThreadFolder(detail.summary.id, "trash");
     setMoving(false);
     if (res.ok) {
-      router.push("/comunicacion/circulares?folder=trash");
+      router.push(`${mailboxBase}?folder=trash`);
       router.refresh();
       return;
     }
@@ -84,7 +96,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
     setDeleting(false);
     if (!res.ok) return;
     setDeleteOpen(false);
-    router.push("/comunicacion/circulares?folder=trash");
+    router.push(`${mailboxBase}?folder=trash`);
     router.refresh();
   }
 
@@ -95,10 +107,10 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
   const firstMessage = detail.messages[0];
   const fromName = firstMessage
     ? firstMessage.mine
-      ? "Tú"
-      : firstMessage.authorName || "Docente"
+      ? t("comms.you")
+      : firstMessage.authorName || t("comms.authorFallback")
     : detail.summary.mine
-      ? "Tú"
+      ? t("comms.you")
       : detail.summary.counterpart;
 
   const recipientNames = detail.recipients.map((recipient) => recipient.name).filter(Boolean);
@@ -120,7 +132,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
             className="pointer-events-none fixed left-1/2 top-20 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-error/25 bg-error px-4 py-2.5 text-sm font-semibold text-white shadow-lg"
           >
             <Trash2 className="h-4 w-4" aria-hidden />
-            {m.movedToTrash}
+            {t("comms.movedToTrash")}
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -143,7 +155,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
                 className="ui-hover inline-flex h-9 items-center gap-2 rounded-xl border border-border px-3 text-sm font-semibold text-foreground/70 hover:text-foreground disabled:opacity-50"
               >
                 <RotateCcw className="h-4 w-4" />
-                {m.restoreMessage}
+                {t("comms.restoreMessage")}
               </button>
               {detail.summary.mine ? (
                 <button
@@ -153,7 +165,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
                   className="ui-hover inline-flex h-9 items-center gap-2 rounded-xl border border-error/30 px-3 text-sm font-semibold text-error hover:bg-error/10 disabled:opacity-50"
                 >
                   {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  {m.deletePermanently}
+                  {t("comms.deletePermanently")}
                 </button>
               ) : null}
             </>
@@ -165,7 +177,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
               className="ui-hover inline-flex h-9 items-center gap-2 rounded-xl border border-border px-3 text-sm font-semibold text-foreground/70 hover:text-error disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
-              {m.moveToTrash}
+              {t("comms.moveToTrash")}
             </button>
           )}
         </div>
@@ -181,7 +193,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
                     TONE_PILL.green,
                   )}
                 >
-                  {m.groupTag}
+                  {t("comms.groupTag")}
                 </span>
               ) : null}
               {detail.summary.className ? (
@@ -192,11 +204,11 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
             </div>
             <dl className="mt-3 grid gap-1.5 text-sm">
               <div className="flex flex-wrap gap-x-2">
-                <dt className="font-semibold text-foreground/50">{m.from}:</dt>
+                <dt className="font-semibold text-foreground/50">{t("comms.from")}:</dt>
                 <dd className="font-medium text-foreground">{fromName}</dd>
               </div>
               <div className="flex flex-wrap gap-x-2">
-                <dt className="font-semibold text-foreground/50">{m.toLabel}:</dt>
+                <dt className="font-semibold text-foreground/50">{t("comms.toLabel")}:</dt>
                 <dd className="min-w-0 flex-1 font-medium text-foreground">{recipientSummary}</dd>
                 {recipientNames.length > 2 ? (
                   <button
@@ -204,7 +216,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
                     onClick={() => setShowRecipients((value) => !value)}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-brand-500 hover:underline"
                   >
-                    {showRecipients ? m.hideRecipients : m.showRecipients}
+                    {showRecipients ? t("comms.hideRecipients") : t("comms.showRecipients")}
                     {showRecipients ? (
                       <ChevronUp className="h-3.5 w-3.5" />
                     ) : (
@@ -218,7 +230,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
               ) : null}
               {firstMessage ? (
                 <div className="flex flex-wrap gap-x-2">
-                  <dt className="font-semibold text-foreground/50">{m.date}:</dt>
+                  <dt className="font-semibold text-foreground/50">{t("comms.date")}:</dt>
                   <dd className="font-medium text-foreground/70">{formatDate(firstMessage.createdAt)}</dd>
                 </div>
               ) : null}
@@ -227,7 +239,9 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
 
           {detail.attachments.length > 0 ? (
             <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3">
-              <span className="w-full text-xs font-semibold text-foreground/50">{m.attachments}</span>
+              <span className="w-full text-xs font-semibold text-foreground/50">
+                {t("comms.attachments")}
+              </span>
               {detail.attachments.map((attachment) => (
                 <a
                   key={attachment.id}
@@ -255,7 +269,7 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
                 {index > 0 ? (
                   <header className="mb-2 flex flex-wrap items-center gap-2 text-xs">
                     <span className="font-semibold text-foreground">
-                      {message.mine ? "Tú" : message.authorName || "Docente"}
+                      {message.mine ? t("comms.you") : message.authorName || t("comms.authorFallback")}
                     </span>
                     <span className="text-foreground/40">{formatDate(message.createdAt)}</span>
                   </header>
@@ -265,14 +279,60 @@ export function ThreadView({ detail }: { detail: MessageThreadDetail }) {
             ))}
           </div>
         </section>
+
+        {detail.allowReplies ? (
+          <section className="rounded-2xl border border-border bg-surface p-5">
+            <h3 className="text-sm font-bold text-foreground">{t("comms.replySection")}</h3>
+            <div className="mt-3">
+              <MessageBodyEditor
+                label={t("comms.body")}
+                value={replyBody}
+                onChange={setReplyBody}
+                placeholder={t("comms.replyPlaceholder")}
+                editorClassName="min-h-[8rem]"
+                files={replyFiles}
+                onFilesChange={setReplyFiles}
+                disabled={replying}
+              />
+            </div>
+            {replyError ? (
+              <p className="mt-2 rounded-lg bg-error/10 px-3 py-2 text-sm font-medium text-error">
+                {replyError}
+              </p>
+            ) : null}
+            <div className="mt-4 flex justify-end">
+              <Button
+                disabled={replying}
+                onClick={() => {
+                  void (async () => {
+                    setReplying(true);
+                    setReplyError(null);
+                    const res = await sendThreadMessage(detail.summary.id, replyBody);
+                    if (!res.ok) {
+                      setReplyError(res.error);
+                      setReplying(false);
+                      return;
+                    }
+                    setReplyBody(emptyDoc());
+                    setReplyFiles([]);
+                    setReplying(false);
+                    router.refresh();
+                  })();
+                }}
+              >
+                {replying ? t("comms.sending") : t("comms.sendReply")}
+              </Button>
+            </div>
+          </section>
+        ) : null}
       </motion.div>
 
       <ConfirmDialog
         open={deleteOpen}
-        title={m.deletePermanentlyConfirm}
-        description={m.deletePermanentlyBody}
-        confirmLabel={m.deletePermanently}
-        cancelLabel={common.cancel}
+        title={t("comms.deletePermanentlyConfirm")}
+        description={t("comms.deletePermanentlyBody")}
+        confirmLabel={t("comms.deletePermanently")}
+        cancelLabel={t("common.cancel")}
         pending={deleting}
         onConfirm={() => void confirmDelete()}
         onCancel={() => {

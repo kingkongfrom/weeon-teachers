@@ -1,19 +1,28 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { BackLinkSkeleton } from "@/components/ui/page-loading-skeletons";
 
 export default function CalendarioLoading() {
   return (
     <div className="flex flex-col gap-6">
+      <BackLinkSkeleton />
       <div className="flex flex-col gap-1">
-        <Skeleton className="h-9 w-28 rounded-lg" />
-        <Skeleton className="mt-1 h-9 w-44 sm:h-10" />
-        <Skeleton className="h-4 w-64" />
+        <Skeleton className="h-9 w-44 sm:h-10" />
+        <Skeleton className="h-4 w-64 max-w-full" />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-surface p-3 sm:px-4">
-        <Skeleton className="h-9 w-56 rounded-lg" />
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3 sm:px-4">
         <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-56 rounded-lg" />
-          <Skeleton className="h-8 w-40 rounded-lg" />
+          <Skeleton className="h-9 w-9 rounded-lg" />
+          <Skeleton className="h-9 w-16 rounded-lg" />
+          <Skeleton className="h-9 w-9 rounded-lg" />
+          <Skeleton className="ml-1 h-6 w-40" />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-16 rounded-full" />
+          ))}
+          <Skeleton className="h-8 w-24 rounded-full" />
+          <Skeleton className="h-9 w-44 rounded-lg" />
         </div>
       </div>
 

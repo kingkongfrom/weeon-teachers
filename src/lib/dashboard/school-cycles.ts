@@ -23,3 +23,20 @@ export function schoolCycleName(grade: string, locale: Locale = "es"): string {
   if (cycle === "secundaria") return locale === "en" ? "High school" : "Secundaria";
   return "";
 }
+
+/** Split grades into primaria (1–6) and secundaria (7–12). */
+export function partitionGradesByCycle(grades: string[]): {
+  primary: string[];
+  secondary: string[];
+} {
+  const primary: string[] = [];
+  const secondary: string[] = [];
+  for (const grade of grades) {
+    const cycle = schoolCycleForGrade(grade);
+    if (cycle === "primaria") primary.push(grade);
+    else if (cycle === "secundaria") secondary.push(grade);
+  }
+  primary.sort((a, b) => Number(a) - Number(b));
+  secondary.sort((a, b) => Number(a) - Number(b));
+  return { primary, secondary };
+}

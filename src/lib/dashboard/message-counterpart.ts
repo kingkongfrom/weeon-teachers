@@ -1,6 +1,6 @@
 /** Compact mailbox row labels for Para / De columns. */
 
-export type MessageRecipientScope = "parents" | "students" | "custom" | null;
+export type MessageRecipientScope = "parents" | "students" | "teachers" | "custom" | null;
 
 export function formatSentCounterpart(
   names: string[],
@@ -12,6 +12,7 @@ export function formatSentCounterpart(
     recipientCount: (n: number) => string;
     parentCount: (n: number) => string;
     studentCount: (n: number) => string;
+    teacherCount: (n: number) => string;
     customCount: (n: number) => string;
   },
   recipientScope: MessageRecipientScope = null,
@@ -23,6 +24,7 @@ export function formatSentCounterpart(
     if (count <= 0) return labels.noRecipients;
     if (recipientScope === "parents") return `${prefix}${labels.parentCount(count)}`;
     if (recipientScope === "students") return `${prefix}${labels.studentCount(count)}`;
+    if (recipientScope === "teachers") return `${prefix}${labels.teacherCount(count)}`;
     if (recipientScope === "custom") return `${prefix}${labels.customCount(count)}`;
     return `${prefix}${labels.recipientCount(count)}`;
   }

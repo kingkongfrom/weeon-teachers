@@ -75,9 +75,9 @@ the aula virtual needs
 `20260912230000_teacher_sees_submissions.sql`, `20260913000000_assessment_grading.sql`,
 and comments need `20260913150000_class_stream_comments.sql` in `weeon-tenants`.
 **Comunicación is built** (`/comunicacion`) as a hub with two channels:
-**Circulares** — one-way notices (subject + TipTap rich body +
-**drag-&-drop attachments**) to hand-picked parents or a group's guardians, at
-`/comunicacion/circulares`; schema `threads`/`messages`/`thread_recipients`/
+**Mensajes** — school mail (subject + TipTap rich body +
+**drag-&-drop attachments**, optional replies) to hand-picked parents or a
+group's guardians, at `/comunicacion/mensajes`; schema `threads`/`messages`/`thread_recipients`/
 `message_attachments` (migrations `20260913160000_messaging.sql` +
 `20260913170000_message_attachments.sql`). **Chat** — realtime 1:1 teacher ↔
 guardian (guardians only), iMessage-style at `/comunicacion/chat`; schema
@@ -92,7 +92,7 @@ already ships teacher web + parent mobile).
 
 Teachers also sign in on **`weeon-mobile`** (Expo). That portal is a **field
 companion** to this web app: attendance on the floor, chat with guardians,
-quick circulares, schedule/calendar, gallery, push — **not** a second gradebook or
+quick messages, schedule/calendar, gallery, push — **not** a second gradebook or
 assessment studio.
 
 **Agents:** read [`docs/teacher-mobile-extension.md`](docs/teacher-mobile-extension.md)
@@ -119,10 +119,13 @@ calendar) must stay aligned with this repo's loaders and RPCs.
    `roster_accounts`, …). Confirm columns in `weeon-tenants`
    `lib/supabase/database.types.ts`. Additive migrations only, in
    **weeon-tenants**.
-3. **Tenant isolation.** Every academic row is scoped by `tenant_id`.
-   Teachers never see another school. Grupos are further limited by
-   `teaches_class` (homeroom `classes.teacher_profile_id` or
-   `class_lessons` → `teachers.profile_id`).
+3. **Tenant isolation and assignment segregation.** Every academic row is
+   scoped by `tenant_id`. Teachers never see another school. Grupos are further
+   limited by `teaches_class` (homeroom `classes.teacher_profile_id` or
+   `class_lessons.teacher_id`). **Horarios / schedule widgets** must filter to
+   assigned slots only (`loadTeacherSchedule` → `teacher_id IN
+   teacher_roster_ids()`), not every period RLS returns for a grupo. See
+   `docs/agenda.md` § Horarios — assignment scope.
 4. **First password is shared.** Teachers set it here **or** in
    **`weeon-mobile`**. Same `auth.users` row. Do **not** build first-password
    UI in `weeon-tenants`. Student/parent consumption stays on mobile; teacher
@@ -150,9 +153,9 @@ calendar) must stay aligned with this repo's loaders and RPCs.
   ERP, `?view=month|week|day|agenda&date=YYYY-MM-DD`),
   `/aula-virtual` (virtual classroom section),
   `/aula-virtual/[classId]` (class workspace), `/aula-virtual/por-evaluar`
-  (cross-group grading inbox), `/comunicacion` (hub: Circulares + Chat cards),
-  `/comunicacion/circulares` (circular list), `/comunicacion/nuevo` (compose circular),
-  `/comunicacion/circulares/[threadId]` (circular detail), `/comunicacion/chat`
+  (cross-group grading inbox), `/comunicacion` (hub: Mensajes + Chat cards),
+  `/comunicacion/mensajes` (message list), `/comunicacion/nuevo` (compose message),
+  `/comunicacion/mensajes/[threadId]` (thread detail), `/comunicacion/chat`
   (realtime guardian chat), `/comunicacion/chat/[conversationId]`,
   `/grupos`, `/grupos/[id]` (Calificaciones + `?tab=asistencia` + `?tab=conducta`;
   see `docs/grupos.md`),

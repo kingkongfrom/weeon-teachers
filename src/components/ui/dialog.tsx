@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
  * App-styled modal — bottom sheet on mobile, centered card on desktop. Portaled
@@ -15,12 +16,14 @@ export function Dialog({
   onClose,
   children,
   footer,
+  panelClassName,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  panelClassName?: string;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -56,7 +59,10 @@ export function Dialog({
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-3xl bg-surface shadow-2xl sm:rounded-3xl"
+            className={cn(
+              "relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-3xl bg-surface shadow-2xl sm:rounded-3xl",
+              panelClassName,
+            )}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}

@@ -36,7 +36,7 @@ export async function PanelAttentionStrip({ attention, className }: PanelAttenti
     attention.unreadInboxCount > 0
       ? {
           key: "inbox",
-          href: "/comunicacion/circulares?folder=inbox",
+          href: "/comunicacion/mensajes?folder=inbox",
           icon: Inbox,
           label: t.panel.attention.unreadInbox(attention.unreadInboxCount),
           tone: "border-sky-200 bg-sky-50/80 text-sky-900 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-100 dark:hover:bg-sky-950/45",

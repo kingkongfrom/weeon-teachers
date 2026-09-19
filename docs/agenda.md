@@ -43,6 +43,34 @@ semana** section now shows the **current week's dates** like `/horarios`.
 - Lessons come from `loadTeacherSchedule()` (recurring `class_lessons`), so
   paging through weeks pages through the semester.
 
+### Horarios — assignment scope (non-negotiable)
+
+The school ERP publishes the **full grupo horario** (every materia, every
+period). **Teacher Horarios shows only this teacher’s assigned slots** — not
+every period in grupos where they have gradebook or homeroom access.
+
+| Surface | Loader | Filter |
+| ------- | ------ | ------ |
+| Student mobile `/student/schedule` | `listMyLessons()` | RLS: enrolled grupos → **all** periods in those classes |
+| Teacher web `/horarios` | `loadTeacherSchedule()` | `class_lessons.teacher_id IN teacher_roster_ids()` |
+| Teacher mobile `/teacher/horario`, **Hoy**, asistencia | `listAssignedLessons()` | Same filter as web |
+
+Implementation: `src/lib/dashboard/schedule.ts` resolves roster ids via
+`loadTeacherRosterIds()` / RPC `teacher_roster_ids()`, then queries
+`class_lessons` with `.in("teacher_id", teacherIds)`.
+
+**Why two layers?** RLS `class_lessons_member_select` uses `teaches_class()` —
+homeroom or any assigned slot can **read** the whole grupo timetable (gradebook,
+aula virtual, calendar). **Display** for “my schedule” must still follow
+**assignment** (`teacher_id`), or a docente de grado would appear to teach
+every materia in 1B when only some rows assign them. Segregation is core to the
+product; see [`weeon-tenants/docs/data-access.md`](../../weeon-tenants/docs/data-access.md)
+and [`../../weeon-mobile/docs/teacher-mobile.md`](../../weeon-mobile/docs/teacher-mobile.md)
+§ Isolation & scope.
+
+Unassigned slots (`teacher_id` null) do not appear until the school admin
+assigns a docente on the grupo horario in the ERP.
+
 ## Próximos eventos — read only
 
 - `loadUpcomingEvents()` (`lib/dashboard/calendar.ts`): direct RLS `select` on

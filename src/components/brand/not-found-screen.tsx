@@ -11,13 +11,14 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 /**
  * 404 screen matching the admin: staggered Motion entrance (logo → eyebrow →
  * title → body → actions), the gradient wordmark, and the navy `not-found-bg`
- * field with brand blobs.
+ * field with brand blobs. Fixed to the viewport so the backdrop is not clipped
+ * when this screen renders inside {@link AppShell}'s max-width column.
  */
 export function NotFoundScreen() {
   const t = useT();
   const locale = useLocale();
   return (
-    <main className="not-found-bg relative flex min-h-screen flex-1 flex-col">
+    <main className="not-found-bg fixed inset-0 z-[100] flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto">
       <div className="not-found-bg-blobs" aria-hidden>
         <span className="not-found-blob not-found-blob-purple" />
         <span className="not-found-blob not-found-blob-cyan" />

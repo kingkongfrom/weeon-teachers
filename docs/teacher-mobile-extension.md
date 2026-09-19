@@ -14,6 +14,12 @@ parents, quick mail, schedule/calendar, gallery capture, and notifications.
 
 - Do **not** assume teachers only use web; mobile will call the **same** RPCs
   and RLS paths you add here.
+- **Teacher schedule = assigned slots only** (`loadTeacherSchedule` /
+  `class_lessons.teacher_id`). Mobile must use `listAssignedLessons()`, not the
+  student `listMyLessons()` path. RLS read scope ≠ Horario display scope — see
+  [`agenda.md`](agenda.md) § Horarios — assignment scope and
+  [`../../weeon-mobile/docs/teacher-mobile.md`](../../weeon-mobile/docs/teacher-mobile.md)
+  § Isolation & scope.
 - When you change a **shared contract** (attendance shape, chat RPC, message
   compose payload, calendar event read), update
   [`../../weeon-mobile/docs/teacher-mobile.md`](../../weeon-mobile/docs/teacher-mobile.md)
@@ -42,7 +48,7 @@ Start at **[`weeon-mobile/docs/teacher-mobile.md`](../../weeon-mobile/docs/teach
 | Libro de clase (attendance) | `docs/aula-virtual.md` § Asistencia — **also on mobile** `/teacher/asistencia` |
 | Chat with guardians | `docs/comunicacion.md` § Chat |
 | Correo compose / reply | `docs/comunicacion.md` § Correo |
-| Horario + upcoming events | `docs/agenda.md` |
+| Horario + upcoming events | `docs/agenda.md` — **`listAssignedLessons()`** on mobile, same `teacher_id` filter as web |
 
 Parent **Chat** on mobile is already live; teacher **Chat** on mobile is the
 natural next step using the same `chat_*` schema and Realtime patterns as web

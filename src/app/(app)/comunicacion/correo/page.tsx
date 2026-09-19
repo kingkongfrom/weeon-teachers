@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
+import { TEACHER_MESSAGES } from "@/lib/messages/paths";
 
-/** Legacy route — circulares replaced correo. */
-export default async function CorreoRedirectPage({
+/** Legacy route — messaging lives under /comunicacion/mensajes. */
+export default async function LegacyCorreoPage({
   searchParams,
 }: {
   searchParams: Promise<{ folder?: string }>;
 }) {
   const { folder } = await searchParams;
   const query = folder ? `?folder=${encodeURIComponent(folder)}` : "";
-  redirect(`/comunicacion/circulares${query}`);
+  redirect(`${TEACHER_MESSAGES}${query}`);
 }

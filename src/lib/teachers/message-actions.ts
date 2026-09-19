@@ -6,6 +6,12 @@ import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { getT } from "@/lib/i18n/server";
 import type { RichTextDoc } from "@/lib/assessments/model";
+import { TEACHER_MESSAGES } from "@/lib/messages/paths";
+
+function revalidateMessagePaths(threadId?: string) {
+  revalidatePath(TEACHER_MESSAGES);
+  if (threadId) revalidatePath(`${TEACHER_MESSAGES}/${threadId}`);
+}
 
 export type MessageActionResult =
   | { ok: true; threadId?: string }
@@ -22,11 +28,12 @@ const composeSchema = z.object({
   recipients: z
     .array(z.object({ key: z.string().trim().min(1), name: z.string().trim().max(200) }))
     .max(300),
+  allowReplies: z.boolean(),
 });
 
 export type ComposeMessageInput = z.input<typeof composeSchema>;
 
-/** Creates a circular thread (subject + rich body) and its first message. */
+/** Creates a message thread (subject + rich body) and its first message. */
 export async function createMessageThread(input: ComposeMessageInput): Promise<MessageActionResult> {
   const t = await getT();
   const session = await getTeacherSession();
@@ -58,13 +65,13 @@ export async function createMessageThread(input: ComposeMessageInput): Promise<M
     p_class_id: value.audience === "group" ? value.classId : null,
     p_audience: value.audience,
     p_recipients: value.recipients,
-    p_allow_replies: false,
+    p_allow_replies: value.allowReplies,
     ...(scope ? { p_recipient_scope: scope } : {}),
   });
 
   if (error || !data) return { ok: false, error: t.messages.error };
 
-  revalidatePath("/comunicacion/circulares");
+  revalidateMessagePaths(data as string);
   return { ok: true, threadId: data as string };
 }
 
@@ -93,8 +100,7 @@ export async function sendThreadMessage(threadId: string, body: RichTextDoc): Pr
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", parsed.data.threadId);
 
-  revalidatePath(`/comunicacion/circulares/${parsed.data.threadId}`);
-  revalidatePath("/comunicacion/circulares");
+  revalidateMessagePaths(parsed.data.threadId);
   return { ok: true, threadId: parsed.data.threadId };
 }
 
@@ -111,7 +117,7 @@ export async function markThreadRead(threadId: string): Promise<MessageActionRes
     .update({ read_at: new Date().toISOString() })
     .eq("thread_id", threadId);
 
-  revalidatePath("/comunicacion/circulares");
+  revalidateMessagePaths();
   return { ok: true };
 }
 
@@ -141,7 +147,7 @@ export async function setThreadFolder(
   );
   if (error) return { ok: false, error: t.messages.error };
 
-  revalidatePath("/comunicacion/circulares");
+  revalidateMessagePaths();
   return { ok: true };
 }
 
@@ -178,7 +184,7 @@ export async function deleteMessageThread(threadId: string): Promise<MessageActi
   const { error } = await supabase.from("threads").delete().eq("id", parsed.data);
   if (error) return { ok: false, error: t.messages.error };
 
-  revalidatePath("/comunicacion/circulares");
+  revalidateMessagePaths();
   return { ok: true };
 }
 
@@ -225,7 +231,6 @@ export async function uploadMessageAttachment(formData: FormData): Promise<Messa
   });
   if (error) return { ok: false, error: t.messages.attachmentUploadError };
 
-  revalidatePath(`/comunicacion/circulares/${threadId}`);
-  revalidatePath("/comunicacion/circulares");
+  revalidateMessagePaths(threadId);
   return { ok: true, threadId };
 }

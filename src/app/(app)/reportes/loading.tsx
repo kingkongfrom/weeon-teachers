@@ -1,34 +1,37 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { BackLinkSkeleton } from "@/components/ui/page-loading-skeletons";
 
 export default function ReportesLoading() {
   return (
     <div className="flex flex-col gap-6">
+      <BackLinkSkeleton />
       <div className="flex flex-col gap-1">
-        <Skeleton className="h-9 w-28 rounded-lg" />
-        <Skeleton className="mt-1 h-9 w-44 sm:h-10" />
+        <Skeleton className="h-9 w-44 sm:h-10" />
         <Skeleton className="h-4 w-56" />
       </div>
 
-      <div className="flex flex-col gap-5">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="w-fit overflow-hidden rounded-2xl border border-border bg-surface">
-            <div className="flex items-center gap-3 border-b border-border bg-background px-5 py-3">
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-4 w-20" />
+      <article className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className="h-6 w-32 rounded-full" />
+          <Skeleton className="h-5 w-24 rounded-full" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="ml-auto h-5 w-16 rounded-full" />
             </div>
-            <div className="p-5">
-              {Array.from({ length: 6 }).map((__, j) => (
-                <div key={j} className="flex items-center gap-6 border-b border-border/60 py-3">
-                  <Skeleton className="h-4 w-40" />
-                  <Skeleton className="h-4 w-10" />
-                  <Skeleton className="h-4 w-10" />
-                  <Skeleton className="h-4 w-12" />
-                </div>
+            <div className="space-y-2 p-4">
+              {Array.from({ length: 4 }).map((__, j) => (
+                <Skeleton key={j} className="h-4 w-full max-w-lg" />
               ))}
             </div>
           </div>
         ))}
-      </div>
+      </article>
     </div>
   );
 }
