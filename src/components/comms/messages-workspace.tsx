@@ -113,11 +113,16 @@ export function MessagesWorkspace({
   const [localLabels, setLocalLabels] = useState(labels);
   const [draggingLabelId, setDraggingLabelId] = useState<string | null>(null);
   const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setLocalLabels(labels);
   }, [labels]);
+
+  useEffect(() => {
+    setRefreshing(false);
+  }, [threads, labels, folder, labelId, unreadInbox]);
 
   useEffect(() => {
     setLocalMailboxSettings(mailboxSettings);
@@ -430,10 +435,16 @@ export function MessagesWorkspace({
         </button>
         <button
           type="button"
-          onClick={() => router.refresh()}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground/60"
+          disabled={refreshing}
+          onClick={() => {
+            setRefreshing(true);
+            router.refresh();
+          }}
+          title={t("comms.refreshList")}
+          aria-label={t("comms.refreshList")}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground/60 disabled:opacity-60"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
         </button>
       </div>
 
