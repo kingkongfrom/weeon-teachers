@@ -36,8 +36,9 @@ Ported from `weeon-tenants/components/comms/*` (2026-09-19). Teacher scope:
 - **Multi bulk:** several section checkboxes in one send → one thread, deduped
   roster keys (`recipientsFromBulkSelections` in `lib/comms/recipient-catalog.ts`).
 - **Compose:** To/Cc, subject, TipTap toolbar (`components/comms/rich-text.tsx`),
-  **Permitir respuestas**, attachments via bottom dropzone + **Dropbox**
-  (`NEXT_PUBLIC_DROPBOX_APP_KEY`, API `POST /api/comms/dropbox-import`).
+  **Permitir respuestas**, attachments via bottom dropzone + **Google Drive** +
+  **Dropbox** (`NEXT_PUBLIC_GOOGLE_DRIVE_*`, `NEXT_PUBLIC_DROPBOX_APP_KEY`;
+  APIs `POST /api/comms/google-drive-import`, `POST /api/comms/dropbox-import`).
   No duplicate “Content / Attach file” row on the body (`inlineEmbeds={false}`).
 - **Mailbox:** search, unread filter, favorites, custom folders (labels), drag to
   folder, signature + auto-reply settings dialogs.
@@ -75,8 +76,15 @@ Realtime 1:1 teacher ↔ guardian. See prior sections in git history; loaders in
 ## Env
 
 ```env
-NEXT_PUBLIC_DROPBOX_APP_KEY=   # same platform app as tenants; add teachers.weeon.school to Chooser domains
+NEXT_PUBLIC_DROPBOX_APP_KEY=
+NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID=
+NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY=
+NEXT_PUBLIC_GOOGLE_DRIVE_APP_ID=
 ```
+
+Same platform credentials as `weeon-tenants`. Add **teachers.weeon.school** to
+Dropbox Chooser domains and Google OAuth JS origins / API key referrers before
+production deploy on teacher web.
 
 CSP allowlists Dropbox in `next.config.ts`.
 

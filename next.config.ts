@@ -4,11 +4,12 @@ const isDev = process.env.NODE_ENV === "development";
 
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.dropbox.com;
+  script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.dropbox.com https://accounts.google.com https://apis.google.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
-  img-src 'self' blob: data: https://wlyrqyiqrgelsehjmtta.supabase.co;
-  connect-src 'self' https://wlyrqyiqrgelsehjmtta.supabase.co https://www.dropbox.com https://dl.dropboxusercontent.com https://*.dl.dropboxusercontent.com;
+  img-src 'self' blob: data: https://wlyrqyiqrgelsehjmtta.supabase.co https://*.google.com https://*.gstatic.com;
+  connect-src 'self' https://wlyrqyiqrgelsehjmtta.supabase.co https://www.dropbox.com https://dl.dropboxusercontent.com https://*.dl.dropboxusercontent.com https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://apis.google.com;
+  frame-src https://accounts.google.com https://docs.google.com https://drive.google.com;
   object-src 'none';
   base-uri 'self';
   form-action 'self';

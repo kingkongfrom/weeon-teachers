@@ -46,6 +46,8 @@ export const commsEs = {
   "comms.documents.cloudNotConfigured": "Importación desde la nube no disponible. Contacte a soporte Weeon.",
   "comms.documents.cloudImportFailed": "No se pudo importar el archivo desde la nube.",
   "comms.documents.dropboxImportFailed": "No se pudo descargar el archivo desde Dropbox. Intente de nuevo o use Mi dispositivo.",
+  "comms.documents.googleDriveImportFailed":
+    "No se pudo descargar el archivo desde Google Drive. Intente de nuevo o use Mi dispositivo.",
   "comms.documents.dropboxFolderNotSupported": "Seleccione un archivo, no una carpeta de Dropbox.",
   "comms.documents.cloudAuthFailed": "No se pudo conectar con Google Drive. Intente de nuevo.",
   "comms.documents.notifyRecipients": "Notificar a los destinatarios",
@@ -346,6 +348,8 @@ export const commsEn: Record<CommsMessageKey, string> = {
   "comms.documents.cloudNotConfigured": "Cloud import is unavailable. Contact Weeon support.",
   "comms.documents.cloudImportFailed": "Couldn't import the file from cloud storage.",
   "comms.documents.dropboxImportFailed": "Couldn't download the file from Dropbox. Try again or use My device.",
+  "comms.documents.googleDriveImportFailed":
+    "Couldn't download the file from Google Drive. Try again or use My device.",
   "comms.documents.dropboxFolderNotSupported": "Pick a file, not a Dropbox folder.",
   "comms.documents.cloudAuthFailed": "Couldn't connect to Google Drive. Try again.",
   "comms.documents.notifyRecipients": "Notify recipients",
