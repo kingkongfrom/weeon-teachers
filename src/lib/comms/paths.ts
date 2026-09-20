@@ -4,6 +4,8 @@ export const COMMS_MESSAGES = `${COMUNICACION_BASE}/mensajes`;
 export const COMMS_COMPOSE = `${COMUNICACION_BASE}/nuevo`;
 export const COMMS_MESSAGE_COMPOSE_SLUG = "nuevo";
 export const COMMS_CHAT = `${COMUNICACION_BASE}/chat`;
+/** Realtime school admin ↔ teacher (separate from guardian chat). */
+export const COMMS_ADMIN_CHAT = `${COMUNICACION_BASE}/chat-admin`;
 
 /** @deprecated Legacy circulars URL */
 export const COMMS_CIRCULARES = `${COMUNICACION_BASE}/circulares`;

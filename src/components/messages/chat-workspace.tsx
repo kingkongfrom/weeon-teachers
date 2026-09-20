@@ -7,8 +7,14 @@ import { Loader2, MessageCircle, Plus, Search } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
-import { getAuthedRealtimeClient, type RealtimeConfig } from "@/lib/supabase/browser";
+import {
+  bindRealtimeAuthRefresh,
+  getAuthedRealtimeClient,
+  type RealtimeConfig,
+} from "@/lib/supabase/browser";
+import { startTeacherAdminChat } from "@/lib/teachers/admin-teacher-chat-actions";
 import { startChatConversation } from "@/lib/teachers/chat-actions";
+import { COMMS_CHAT } from "@/lib/comms/paths";
 import { ChatThread } from "@/components/messages/chat-thread";
 import { GuardianChatIdentity } from "@/components/messages/guardian-chat-identity";
 import { TONE_AVATAR } from "@/lib/dashboard/tones";
@@ -29,14 +35,25 @@ function relativeTime(iso: string): string {
   return `${Math.round(hours / 24)} d`;
 }
 
-function NewChatButton({ label, onClick }: { label: string; onClick: () => void }) {
+function NewChatButton({
+  label,
+  onClick,
+  tone = "green",
+  disabled = false,
+}: {
+  label: string;
+  onClick: () => void;
+  tone?: "green" | "blue";
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        "inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-xl text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]",
-        TONE_AVATAR.green,
+        "inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-xl text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60",
+        tone === "blue" ? TONE_AVATAR.blue : TONE_AVATAR.green,
       )}
     >
       <Plus className="h-4 w-4" aria-hidden />
@@ -67,6 +84,26 @@ export function ChatWorkspace({
   const { url: realtimeUrl, anonKey: realtimeAnonKey } = realtime;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [listQuery, setListQuery] = useState("");
+  const [adminStarting, setAdminStarting] = useState(false);
+  const [adminStartError, setAdminStartError] = useState<string | null>(null);
+
+  async function openAdminChat() {
+    setAdminStartError(null);
+    setAdminStarting(true);
+    try {
+      const res = await startTeacherAdminChat();
+      if (!res.ok || !res.conversationId) {
+        setAdminStartError(res.ok ? m.chatAdminStartError : res.error);
+        return;
+      }
+      router.push(`${COMMS_CHAT}/${res.conversationId}`);
+      router.refresh();
+    } catch {
+      setAdminStartError(m.chatAdminStartError);
+    } finally {
+      setAdminStarting(false);
+    }
+  }
 
   const filteredConversations = useMemo(() => {
     const term = listQuery.trim().toLowerCase();
@@ -75,17 +112,20 @@ export function ChatWorkspace({
       (row) =>
         row.counterpartName.toLowerCase().includes(term) ||
         row.classLabel.toLowerCase().includes(term) ||
-        row.studentName.toLowerCase().includes(term),
+        row.studentName.toLowerCase().includes(term) ||
+        (row.channel === "admin" && m.chatAdminSubtitle.toLowerCase().includes(term)),
     );
-  }, [conversations, listQuery]);
+  }, [conversations, listQuery, m.chatAdminSubtitle]);
 
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let cleanup: (() => void) | null = null;
+    let cleanupChannel: (() => void) | null = null;
+    let unbindAuth: (() => void) | null = null;
     void (async () => {
       const supabase = await getAuthedRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
       if (!active) return;
+      unbindAuth = bindRealtimeAuthRefresh(supabase);
       const channel = supabase
         .channel("chat-list")
         .on(
@@ -104,15 +144,48 @@ export function ChatWorkspace({
             timer = setTimeout(() => router.refresh(), 800);
           },
         )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "admin_teacher_chat_messages" },
+          () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => router.refresh(), 800);
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "admin_teacher_chat_conversations" },
+          () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => router.refresh(), 800);
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "chat_conversations" },
+          () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => router.refresh(), 300);
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "admin_teacher_chat_conversations" },
+          () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => router.refresh(), 300);
+          },
+        )
         .subscribe();
-      cleanup = () => {
+      cleanupChannel = () => {
         void supabase.removeChannel(channel);
       };
     })();
     return () => {
       active = false;
       if (timer) clearTimeout(timer);
-      cleanup?.();
+      unbindAuth?.();
+      cleanupChannel?.();
     };
   }, [realtimeUrl, realtimeAnonKey, router]);
 
@@ -131,6 +204,15 @@ export function ChatWorkspace({
           >
             <div className="shrink-0 space-y-1.5 border-b border-border px-3 py-2">
               <NewChatButton label={m.chatNew} onClick={() => setPickerOpen(true)} />
+              <NewChatButton
+                label={m.chatAdminNew}
+                tone="blue"
+                disabled={adminStarting}
+                onClick={() => void openAdminChat()}
+              />
+              {adminStartError ? (
+                <p className="px-1 text-[11px] font-medium text-error">{adminStartError}</p>
+              ) : null}
               {conversations.length > 0 ? (
                 <label className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1">
                   <Search className="h-3.5 w-3.5 shrink-0 text-foreground/40" />
@@ -173,23 +255,39 @@ export function ChatWorkspace({
                           <span
                             className={cn(
                               "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
-                              TONE_AVATAR.green,
+                              conversation.channel === "admin" ? TONE_AVATAR.blue : TONE_AVATAR.green,
                             )}
                           >
                             {guardianInitial(conversation.counterpartName)}
                           </span>
                           <span className="min-w-0 flex-1">
                             <div className="flex items-start gap-2">
-                              <GuardianChatIdentity
-                                name={conversation.counterpartName}
-                                classLabel={conversation.classLabel}
-                                studentName={conversation.studentName}
-                                variant="list"
-                                className={cn(
-                                  "flex-1",
-                                  conversation.unread && "[&>span:first-child]:font-bold",
-                                )}
-                              />
+                              {conversation.channel === "admin" ? (
+                                <span className="min-w-0 flex-1">
+                                  <span
+                                    className={cn(
+                                      "block truncate text-sm text-foreground",
+                                      conversation.unread ? "font-bold" : "font-semibold",
+                                    )}
+                                  >
+                                    {conversation.counterpartName}
+                                  </span>
+                                  <span className="mt-0.5 block truncate text-[11px] font-medium text-foreground/45">
+                                    {m.chatAdminSubtitle}
+                                  </span>
+                                </span>
+                              ) : (
+                                <GuardianChatIdentity
+                                  name={conversation.counterpartName}
+                                  classLabel={conversation.classLabel}
+                                  studentName={conversation.studentName}
+                                  variant="list"
+                                  className={cn(
+                                    "flex-1",
+                                    conversation.unread && "[&>span:first-child]:font-bold",
+                                  )}
+                                />
+                              )}
                               <span className="shrink-0 pt-0.5 text-[10px] font-medium text-foreground/40">
                                 {relativeTime(conversation.lastAt)}
                               </span>
@@ -225,6 +323,7 @@ export function ChatWorkspace({
               <ChatThread
                 embedded
                 conversationId={selectedDetail.id}
+                channel={selectedDetail.channel}
                 me={me}
                 counterpartName={selectedDetail.counterpartName}
                 classLabel={selectedDetail.classLabel}
@@ -241,17 +340,34 @@ export function ChatWorkspace({
                   <p className="text-sm font-semibold text-foreground">{m.chatTitle}</p>
                   <p className="text-xs font-medium text-foreground/50">{m.chatSelectPrompt}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPickerOpen(true)}
-                  className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]",
-                    TONE_AVATAR.green,
-                  )}
-                >
-                  <Plus className="h-4 w-4" aria-hidden />
-                  {m.chatNew}
-                </button>
+                <div className="flex w-full max-w-xs flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpen(true)}
+                    className={cn(
+                      "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]",
+                      TONE_AVATAR.green,
+                    )}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                    {m.chatNew}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={adminStarting}
+                    onClick={() => void openAdminChat()}
+                    className={cn(
+                      "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-60",
+                      TONE_AVATAR.blue,
+                    )}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                    {m.chatAdminNew}
+                  </button>
+                </div>
+                {adminStartError ? (
+                  <p className="mt-2 max-w-xs text-xs font-medium text-error">{adminStartError}</p>
+                ) : null}
               </div>
             )}
           </section>

@@ -21,6 +21,38 @@ export function docHasContent(doc: RichTextDoc | null | undefined): boolean {
   return docToPlainText(doc).length > 0;
 }
 
+/** CSS class on signature blocks when rendered or edited (tighter line height). */
+export const SIGNATURE_BLOCK_CLASS = "rte-signature";
+
+function tagSignatureBlocks(blocks: RichTextNode[]): RichTextNode[] {
+  return blocks.map((node) => tagSignatureBlock(node));
+}
+
+function tagSignatureBlock(node: RichTextNode): RichTextNode {
+  const withChildren = node.content
+    ? { ...node, content: node.content.map(tagSignatureBlock) }
+    : node;
+
+  if (
+    node.type === "paragraph" ||
+    node.type === "heading" ||
+    node.type === "bulletList" ||
+    node.type === "orderedList" ||
+    node.type === "blockquote"
+  ) {
+    const prior =
+      typeof withChildren.attrs?.class === "string" ? withChildren.attrs.class.trim() : "";
+    const merged = prior.includes(SIGNATURE_BLOCK_CLASS)
+      ? prior
+      : prior
+        ? `${prior} ${SIGNATURE_BLOCK_CLASS}`
+        : SIGNATURE_BLOCK_CLASS;
+    return { ...withChildren, attrs: { ...withChildren.attrs, class: merged } };
+  }
+
+  return withChildren;
+}
+
 /** Append signature block after the message body (composer / replies). */
 export function appendSignature(
   body: RichTextDoc,
@@ -28,7 +60,7 @@ export function appendSignature(
 ): RichTextDoc {
   if (!signature || !docHasContent(signature)) return body;
   const bodyBlocks = body.content ?? [];
-  const signatureBlocks = signature.content ?? [];
+  const signatureBlocks = tagSignatureBlocks(signature.content ?? []);
   return {
     type: "doc",
     content: [...bodyBlocks, { type: "paragraph" }, ...signatureBlocks],

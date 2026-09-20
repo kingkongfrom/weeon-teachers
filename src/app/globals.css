@@ -667,6 +667,35 @@ body {
   line-height: 1.6;
   color: var(--foreground);
 }
+
+/* Signature editor + appended signature blocks — tighter than message body */
+.rte-content.rte-content-signature,
+.rte-content .rte-signature {
+  line-height: 1.35;
+}
+.rte-content.rte-content-signature p,
+.rte-content p.rte-signature {
+  margin: 0 0 0.2rem;
+}
+.rte-content.rte-content-signature h1,
+.rte-content h1.rte-signature {
+  margin: 0.35rem 0 0.15rem;
+}
+.rte-content.rte-content-signature h2,
+.rte-content h2.rte-signature {
+  margin: 0.3rem 0 0.15rem;
+}
+.rte-content.rte-content-signature h3,
+.rte-content h3.rte-signature {
+  margin: 0.25rem 0 0.1rem;
+}
+.rte-content.rte-content-signature ul,
+.rte-content.rte-content-signature ol,
+.rte-content ul.rte-signature,
+.rte-content ol.rte-signature {
+  margin: 0.1rem 0 0.25rem;
+}
+
 .rte-content p {
   margin: 0 0 0.5rem;
 }

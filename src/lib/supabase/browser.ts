@@ -41,6 +41,21 @@ export function getRealtimeClient(config: RealtimeConfig) {
  */
 export async function getAuthedRealtimeClient(config: RealtimeConfig) {
   const supabase = getRealtimeClient(config);
-  await supabase.realtime.setAuth();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  await supabase.realtime.setAuth(session?.access_token ?? null);
   return supabase;
+}
+
+/** Keep Realtime JWT aligned with cookie session refreshes during a subscription. */
+export function bindRealtimeAuthRefresh(
+  supabase: ReturnType<typeof getRealtimeClient>,
+): () => void {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    void supabase.realtime.setAuth(session?.access_token ?? null);
+  });
+  return () => subscription.unsubscribe();
 }

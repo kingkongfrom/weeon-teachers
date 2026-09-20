@@ -5,12 +5,15 @@ messages in `weeon-mobile`.*
 
 ## One line
 
-Comunicación has **two** channels on `/comunicacion`:
+Comunicación has **three** channels on `/comunicacion`:
 
 - **Mensajes** — same mailbox UX as the school ERP (`weeon-tenants`): Para/Cc,
   bulk group picker, rich body, Dropbox + bottom attachment zone, folders,
   favorites, custom labels, signature, optional replies.
-- **Chat** — realtime 1:1 teacher ↔ guardian (separate model, no subject).
+- **Chat encargados** — realtime 1:1 teacher ↔ guardian (`chat_*` tables).
+- **Chat administración** — realtime school admin ↔ teacher
+  (`admin_teacher_chat_*`). Either side can open the thread; unified in
+  `/comunicacion/chat` with encargados.
 
 Panel general **Comunicación** → `/comunicacion`. **Novedades** stays in aula
 virtual — not part of Comunicación.
@@ -24,7 +27,8 @@ virtual — not part of Comunicación.
 | `/comunicacion/nuevo` | Unified compose (`UnifiedMessageComposer`) |
 | `/comunicacion/mensajes/[threadId]` | Thread detail + reply when `allow_replies` |
 | `/comunicacion/circulares`, `/comunicacion/correo` | Legacy redirects → `/comunicacion/mensajes` |
-| `/comunicacion/chat`, `/comunicacion/chat/[conversationId]` | Guardian chat |
+| `/comunicacion/chat`, `/comunicacion/chat/[conversationId]` | Guardian + admin chat (one inbox) |
+| `/comunicacion/chat-admin/*` | Redirect → `/comunicacion/chat` |
 
 ## Mensajes (parity with tenants)
 
@@ -68,10 +72,18 @@ message_mailbox_settings, `p_broadcast_filter` on group sends).
 Apply migrations through **`20260920140000_school_documents.sql`** (and the
 `20260919*` chain) on hosted `weeon-school` before production QA.
 
-## Chat (unchanged)
+## Chat encargados
 
-Realtime 1:1 teacher ↔ guardian. See prior sections in git history; loaders in
-`lib/dashboard/chat.ts`, UI `components/messages/chat-workspace.tsx`.
+Realtime 1:1 teacher ↔ guardian. Loaders in `lib/dashboard/chat.ts`, UI
+`components/messages/chat-workspace.tsx`.
+
+## Chat administración
+
+Same tables/RPCs as ERP **Chat docentes** (`weeon-tenants`). Teachers use
+**Escribir a administración** in `chat-workspace.tsx` → RPC
+`start_teacher_admin_chat()`. Loaders `lib/dashboard/admin-teacher-chat.ts`,
+actions `lib/teachers/admin-teacher-chat-actions.ts`, merged list in
+`lib/dashboard/chat.ts`.
 
 ## Env
 

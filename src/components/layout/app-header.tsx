@@ -2,13 +2,20 @@ import Link from "next/link";
 import { SettingsDrawer } from "@/components/layout/settings-drawer";
 import { LogoCompact, LogoMark } from "@/components/brand/logo";
 import type { AppUser } from "@/components/layout/app-shell";
+import type { RealtimeConfig } from "@/lib/supabase/browser";
 
 /**
  * App-wide top bar. The brand lockup stays pinned to the upper-left on every
  * route (and links back to the landing). The way home for each screen lives
  * with that page's header, not here. No sidebar, no hamburger.
  */
-export function AppHeader({ user }: { user: AppUser | null }) {
+export function AppHeader({
+  user,
+  supabasePublic,
+}: {
+  user: AppUser | null;
+  supabasePublic: RealtimeConfig;
+}) {
   return (
     <header className="header-hairline sticky top-0 z-30 flex h-16 items-center gap-2 bg-surface/75 px-3 backdrop-blur-xl sm:px-6 lg:px-8">
       <Link
@@ -27,7 +34,7 @@ export function AppHeader({ user }: { user: AppUser | null }) {
       <div className="flex-1" />
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <SettingsDrawer user={user} />
+        <SettingsDrawer user={user} supabasePublic={supabasePublic} />
       </div>
     </header>
   );

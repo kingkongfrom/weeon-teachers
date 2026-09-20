@@ -64,6 +64,32 @@ export async function sendChatMessage(
   return { ok: true, conversationId, messageId: data as string };
 }
 
+/** Permanently deletes a teacher ↔ guardian chat (both sides). */
+export async function deleteChatConversation(
+  conversationId: string,
+): Promise<ChatActionResult> {
+  const t = await getT();
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: t.messages.chatLoadError };
+
+  const parsed = z.string().uuid().safeParse(conversationId);
+  if (!parsed.success) return { ok: false, error: t.messages.chatLoadError };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("delete_chat_conversation", {
+    p_conversation_id: parsed.data,
+  });
+  if (error) {
+    return {
+      ok: false,
+      error: error.message?.trim() || t.messages.chatDeleteError,
+    };
+  }
+
+  revalidatePath("/comunicacion/chat");
+  return { ok: true, conversationId: parsed.data };
+}
+
 /** Marks the teacher's side of the conversation read. */
 export async function markChatRead(conversationId: string): Promise<void> {
   const session = await getTeacherSession();

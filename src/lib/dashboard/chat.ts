@@ -7,6 +7,7 @@ import {
   loadGuardianChatDirectory,
   lookupGuardianStudentContext,
 } from "@/lib/dashboard/chat-guardian-context";
+import { loadAdminTeacherChatConversations, loadAdminTeacherChatDetail } from "@/lib/dashboard/admin-teacher-chat";
 import { cleanGuardianDisplayName } from "@/lib/messages/chat-display";
 import type {
   ChatConversationDetail,
@@ -42,14 +43,15 @@ export const loadChatGuardianContacts = cache(async (): Promise<ChatContact[]> =
   return contacts;
 });
 
-/** Conversation list for the signed-in teacher (RPC scopes to their pairs). */
+/** Guardian + school-admin conversations for the signed-in teacher. */
 export const loadChatConversations = cache(async (): Promise<ChatConversationSummary[]> => {
   const session = await getTeacherSession();
   if (!session) return [];
   const supabase = await createSessionClient();
 
-  const [listRes, { map, contacts }, keysRes] = await Promise.all([
+  const [listRes, adminConversations, { map, contacts }, keysRes] = await Promise.all([
     supabase.rpc("list_chat_conversations"),
+    loadAdminTeacherChatConversations(),
     loadGuardianChatDirectory(session),
     supabase
       .from("chat_conversations")
@@ -57,19 +59,18 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
       .eq("teacher_profile_id", session.userId),
   ]);
 
-  if (listRes.error || !listRes.data) return [];
+  const guardianRows: ChatConversationSummary[] = [];
+  if (listRes.data && !listRes.error) {
+    const recipientKeyById = new Map<string, string>();
+    for (const row of keysRes.data ?? []) {
+      recipientKeyById.set(row.id as string, row.recipient_key as string);
+    }
 
-  const recipientKeyById = new Map<string, string>();
-  for (const row of keysRes.data ?? []) {
-    recipientKeyById.set(row.id as string, row.recipient_key as string);
-  }
+    const contactByKeyClass = new Map(
+      contacts.map((contact) => [`${contact.key}::${contact.context}`, contact]),
+    );
 
-  const contactByKeyClass = new Map(
-    contacts.map((contact) => [`${contact.key}::${contact.context}`, contact]),
-  );
-
-  return (listRes.data as ConversationListRow[])
-    .map((row) => {
+    for (const row of listRes.data as ConversationListRow[]) {
       const recipientKey = recipientKeyById.get(row.id) ?? "";
       const fromMap = lookupGuardianStudentContext(map, recipientKey, null, null);
       const contact =
@@ -80,24 +81,61 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
       const studentName =
         row.student_name?.trim() || contact?.studentName || fromMap?.studentName || "";
 
-      return {
+      if (studentName.trim().length === 0) continue;
+
+      guardianRows.push({
         id: row.id,
+        channel: "guardian",
         counterpartName: cleanGuardianDisplayName(row.counterpart_name),
         classLabel,
         studentName,
         lastBody: row.last_body ?? "",
         lastAt: row.last_at ?? new Date(0).toISOString(),
         unread: Boolean(row.unread),
-      };
-    })
-    .filter((row) => row.studentName.trim().length > 0);
+      });
+    }
+  }
+
+  const adminRows: ChatConversationSummary[] = adminConversations.map((row) => ({
+    id: row.id,
+    channel: "admin" as const,
+    counterpartName: row.counterpartName,
+    classLabel: "",
+    studentName: "",
+    lastBody: row.preview,
+    lastAt: row.lastMessageAt,
+    unread: row.unread,
+  }));
+
+  return [...guardianRows, ...adminRows].sort(
+    (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
+  );
 });
 
-/** One chat: counterpart + ordered messages. Marks nothing read (the client does). */
+/** One chat: guardian or school-admin thread. Marks nothing read (the client does). */
 export const loadChatConversation = cache(
   async (conversationId: string): Promise<ChatConversationDetail | null> => {
     const session = await getTeacherSession();
     if (!session) return null;
+
+    const adminDetail = await loadAdminTeacherChatDetail(conversationId);
+    if (adminDetail) {
+      return {
+        id: adminDetail.id,
+        channel: "admin",
+        counterpartName: adminDetail.counterpartName,
+        classLabel: "",
+        studentName: "",
+        messages: adminDetail.messages.map((message) => ({
+          id: message.id,
+          body: message.body,
+          createdAt: message.createdAt,
+          mine: message.mine,
+          authorName: message.mine ? session.name : adminDetail.counterpartName,
+        })),
+      };
+    }
+
     const supabase = await createSessionClient();
 
     const { data: conversation, error } = await supabase
@@ -140,6 +178,7 @@ export const loadChatConversation = cache(
 
     return {
       id: conversationId,
+      channel: "guardian",
       counterpartName,
       classLabel,
       studentName,

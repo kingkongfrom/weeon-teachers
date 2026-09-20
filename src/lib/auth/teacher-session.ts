@@ -10,6 +10,7 @@ export type TeacherSession = {
   name: string;
   role: "teacher" | "admin";
   accountStatus: string;
+  avatarStoragePath: string | null;
 };
 
 export const getTeacherSession = cache(
@@ -22,7 +23,7 @@ export const getTeacherSession = cache(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("tenant_id, role, username, name, account_status")
+    .select("tenant_id, role, username, name, account_status, avatar_storage_path")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -38,6 +39,10 @@ export const getTeacherSession = cache(
     name: (profile.name as string) || (role === "admin" ? "Administración" : "Docente"),
     role,
     accountStatus: (profile.account_status as string) || "active",
+    avatarStoragePath:
+      typeof profile.avatar_storage_path === "string" && profile.avatar_storage_path.length > 0
+        ? profile.avatar_storage_path
+        : null,
   };
   },
 );

@@ -397,6 +397,11 @@ function alignmentStyle(node: RichTextNode): CSSProperties | undefined {
   return undefined;
 }
 
+function nodeBlockClass(node: RichTextNode): string | undefined {
+  const cls = node.attrs?.class;
+  return typeof cls === "string" && cls.trim() ? cls : undefined;
+}
+
 function renderNodes(nodes: RichTextNode[]): ReactNode {
   return nodes.map((node, index) => renderNode(node, index));
 }
@@ -405,7 +410,7 @@ function renderNode(node: RichTextNode, key: number): ReactNode {
   switch (node.type) {
     case "paragraph":
       return (
-        <p key={key} style={alignmentStyle(node)}>
+        <p key={key} style={alignmentStyle(node)} className={nodeBlockClass(node)}>
           {renderInline(node.content)}
         </p>
       );
@@ -413,30 +418,34 @@ function renderNode(node: RichTextNode, key: number): ReactNode {
       const level = Number(node.attrs?.level ?? 2);
       if (level === 1) {
         return (
-          <h1 key={key} style={alignmentStyle(node)}>
+          <h1 key={key} style={alignmentStyle(node)} className={nodeBlockClass(node)}>
             {renderInline(node.content)}
           </h1>
         );
       }
       if (level === 3) {
         return (
-          <h3 key={key} style={alignmentStyle(node)}>
+          <h3 key={key} style={alignmentStyle(node)} className={nodeBlockClass(node)}>
             {renderInline(node.content)}
           </h3>
         );
       }
       return (
-        <h2 key={key} style={alignmentStyle(node)}>
+        <h2 key={key} style={alignmentStyle(node)} className={nodeBlockClass(node)}>
           {renderInline(node.content)}
         </h2>
       );
     }
     case "bulletList":
-      return <ul key={key}>{renderNodes(node.content ?? [])}</ul>;
+      return (
+        <ul key={key} className={nodeBlockClass(node)}>
+          {renderNodes(node.content ?? [])}
+        </ul>
+      );
     case "orderedList": {
       const start = Number(node.attrs?.start ?? 1);
       return (
-        <ol key={key} start={start !== 1 ? start : undefined}>
+        <ol key={key} start={start !== 1 ? start : undefined} className={nodeBlockClass(node)}>
           {renderNodes(node.content ?? [])}
         </ol>
       );
@@ -444,7 +453,11 @@ function renderNode(node: RichTextNode, key: number): ReactNode {
     case "listItem":
       return <li key={key}>{renderNodes(node.content ?? [])}</li>;
     case "blockquote":
-      return <blockquote key={key}>{renderNodes(node.content ?? [])}</blockquote>;
+      return (
+        <blockquote key={key} className={nodeBlockClass(node)}>
+          {renderNodes(node.content ?? [])}
+        </blockquote>
+      );
     case "codeBlock":
       return (
         <pre key={key}>

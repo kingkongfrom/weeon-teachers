@@ -1,8 +1,11 @@
 /** Shared chat types (client + server). Kept out of `server-only` modules so
  * client components can import them freely. */
 
+export type ChatChannel = "guardian" | "admin";
+
 export type ChatConversationSummary = {
   id: string;
+  channel: ChatChannel;
   counterpartName: string;
   classLabel: string;
   studentName: string;
@@ -21,6 +24,7 @@ export type ChatMessageItem = {
 
 export type ChatConversationDetail = {
   id: string;
+  channel: ChatChannel;
   counterpartName: string;
   classLabel: string;
   studentName: string;

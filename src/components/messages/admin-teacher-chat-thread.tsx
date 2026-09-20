@@ -1,33 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowUp, Loader2, MessageCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUp, Loader2, MessageCircle } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
-import { GuardianChatIdentity } from "@/components/messages/guardian-chat-identity";
 import { TONE_AVATAR } from "@/lib/dashboard/tones";
 import { guardianInitial } from "@/lib/messages/chat-display";
+import { COMMS_ADMIN_CHAT } from "@/lib/comms/paths";
 import { useT } from "@/lib/i18n/client";
 import {
   bindRealtimeAuthRefresh,
   getAuthedRealtimeClient,
   type RealtimeConfig,
 } from "@/lib/supabase/browser";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { COMMS_CHAT } from "@/lib/comms/paths";
 import {
-  deleteChatConversation,
-  markChatRead,
-  sendChatMessage,
-} from "@/lib/teachers/chat-actions";
-import {
-  deleteAdminTeacherChat,
   markAdminTeacherChatRead,
   sendAdminTeacherChatMessage,
 } from "@/lib/teachers/admin-teacher-chat-actions";
-import type { ChatChannel, ChatMessageItem } from "@/lib/messages/chat-model";
+import type { AdminTeacherChatMessage } from "@/lib/dashboard/admin-teacher-chat";
 
 function dayKey(iso: string): string {
   const date = new Date(iso);
@@ -51,50 +42,37 @@ function dayLabel(iso: string, today: string, yesterday: string): string {
   return date.toLocaleDateString("es-CR", { day: "numeric", month: "long" });
 }
 
-/** Same side and close in time → one visual run (like iMessage). */
-function sameGroup(previous: ChatMessageItem | undefined, message: ChatMessageItem): boolean {
+function sameGroup(
+  previous: AdminTeacherChatMessage | undefined,
+  message: AdminTeacherChatMessage,
+): boolean {
   if (!previous || previous.mine !== message.mine) return false;
   const gap = new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime();
   return Math.abs(gap) < 4 * 60 * 1000;
 }
 
-/** iMessage-style 1:1 thread with grouped bubbles and a pinned composer. */
-export function ChatThread({
+/** Realtime thread — school admin ↔ teacher. */
+export function AdminTeacherChatThread({
   conversationId,
-  channel = "guardian",
   me,
   counterpartName,
-  classLabel = "",
-  studentName = "",
   initialMessages,
   realtime,
   embedded = false,
 }: {
   conversationId: string;
-  channel?: ChatChannel;
   me: string;
   counterpartName: string;
-  classLabel?: string;
-  studentName?: string;
-  initialMessages: ChatMessageItem[];
+  initialMessages: AdminTeacherChatMessage[];
   realtime: RealtimeConfig;
-  /** When true, fills a split-pane workspace (no outer card chrome). */
   embedded?: boolean;
 }) {
-  const isAdminChat = channel === "admin";
-  const messageTable = isAdminChat ? "admin_teacher_chat_messages" : "chat_messages";
-  const conversationTable = isAdminChat
-    ? "admin_teacher_chat_conversations"
-    : "chat_conversations";
   const t = useT();
   const m = t.messages;
-  const router = useRouter();
   const { url: realtimeUrl, anonKey: realtimeAnonKey } = realtime;
-  const [messages, setMessages] = useState<ChatMessageItem[]>(initialMessages);
+  const [messages, setMessages] = useState<AdminTeacherChatMessage[]>(initialMessages);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [otherTyping, setOtherTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -107,9 +85,8 @@ export function ChatThread({
   }, [conversationId, initialMessages]);
 
   useEffect(() => {
-    if (isAdminChat) void markAdminTeacherChatRead(conversationId);
-    else void markChatRead(conversationId);
-  }, [conversationId, isAdminChat]);
+    void markAdminTeacherChatRead(conversationId);
+  }, [conversationId]);
 
   useEffect(() => {
     let active = true;
@@ -120,24 +97,23 @@ export function ChatThread({
       if (!active) return;
       unbindAuth = bindRealtimeAuthRefresh(supabase);
       const channel = supabase
-        .channel(`${messageTable}:${conversationId}`)
+        .channel(`admin-teacher-chat:${conversationId}`)
         .on(
           "postgres_changes",
           {
             event: "INSERT",
             schema: "public",
-            table: messageTable,
+            table: "admin_teacher_chat_messages",
             filter: `conversation_id=eq.${conversationId}`,
           },
           (payload: { new: Record<string, unknown> }) => {
             const row = payload.new as {
               id?: string;
               body?: string;
-              author_profile_id?: string | null;
+              author_profile_id?: string;
               created_at?: string;
             };
             if (!row.id || typeof row.body !== "string") return;
-            const mine = row.author_profile_id === me;
             setMessages((prev) =>
               prev.some((item) => item.id === row.id)
                 ? prev
@@ -147,8 +123,7 @@ export function ChatThread({
                       id: row.id as string,
                       body: row.body as string,
                       createdAt: row.created_at ?? new Date().toISOString(),
-                      mine,
-                      authorName: mine ? m.chatYou : counterpartName,
+                      mine: row.author_profile_id === me,
                     },
                   ],
             );
@@ -164,7 +139,7 @@ export function ChatThread({
       unbindAuth?.();
       cleanupChannel?.();
     };
-  }, [conversationId, messageTable, realtimeUrl, realtimeAnonKey, me, counterpartName, m.chatYou]);
+  }, [conversationId, realtimeUrl, realtimeAnonKey, me]);
 
   useEffect(() => {
     let active = true;
@@ -175,42 +150,7 @@ export function ChatThread({
       if (!active) return;
       unbindAuth = bindRealtimeAuthRefresh(supabase);
       const channel = supabase
-        .channel(`${conversationTable}:delete:${conversationId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "DELETE",
-            schema: "public",
-            table: conversationTable,
-            filter: `id=eq.${conversationId}`,
-          },
-          () => {
-            router.push(COMMS_CHAT);
-            router.refresh();
-          },
-        )
-        .subscribe();
-      cleanupChannel = () => {
-        void supabase.removeChannel(channel);
-      };
-    })();
-    return () => {
-      active = false;
-      unbindAuth?.();
-      cleanupChannel?.();
-    };
-  }, [conversationId, conversationTable, realtimeUrl, realtimeAnonKey, router]);
-
-  useEffect(() => {
-    let active = true;
-    let cleanupChannel: (() => void) | null = null;
-    let unbindAuth: (() => void) | null = null;
-    void (async () => {
-      const supabase = await getAuthedRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
-      if (!active) return;
-      unbindAuth = bindRealtimeAuthRefresh(supabase);
-      const channel = supabase
-        .channel(`chat-typing:${conversationId}`, { config: { broadcast: { self: false } } })
+        .channel(`admin-teacher-typing:${conversationId}`, { config: { broadcast: { self: false } } })
         .on("broadcast", { event: "typing" }, () => {
           setOtherTyping(true);
           if (clearTypingRef.current) clearTimeout(clearTypingRef.current);
@@ -248,9 +188,7 @@ export function ChatThread({
     setSending(true);
     setError(null);
     try {
-      const res = isAdminChat
-        ? await sendAdminTeacherChatMessage(conversationId, value)
-        : await sendChatMessage(conversationId, value);
+      const res = await sendAdminTeacherChatMessage(conversationId, value);
       if (!res.ok) {
         setError(res.error);
         return;
@@ -268,7 +206,6 @@ export function ChatThread({
                   body: value,
                   createdAt: new Date().toISOString(),
                   mine: true,
-                  authorName: m.chatYou,
                 },
               ],
         );
@@ -277,27 +214,6 @@ export function ChatThread({
       setError(m.chatLoadError);
     } finally {
       setSending(false);
-    }
-  }
-
-  async function confirmDelete() {
-    setDeleting(true);
-    setError(null);
-    try {
-      const res = isAdminChat
-        ? await deleteAdminTeacherChat(conversationId)
-        : await deleteChatConversation(conversationId);
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
-      setDeleteOpen(false);
-      router.push(COMMS_CHAT);
-      router.refresh();
-    } catch {
-      setError(m.chatDeleteError);
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -310,9 +226,9 @@ export function ChatThread({
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         {embedded ? (
           <Link
-            href="/comunicacion/chat"
+            href={COMMS_ADMIN_CHAT}
             className="ui-hover inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/60 lg:hidden"
-            aria-label={m.chatTitle}
+            aria-label={m.chatAdminTitle}
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -320,34 +236,15 @@ export function ChatThread({
         <span
           className={cn(
             "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
-            isAdminChat ? TONE_AVATAR.blue : TONE_AVATAR.green,
+            TONE_AVATAR.blue,
           )}
         >
           {guardianInitial(counterpartName)}
         </span>
-        {isAdminChat ? (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{counterpartName}</p>
-            <p className="truncate text-[11px] font-medium text-foreground/45">{m.chatAdminSubtitle}</p>
-          </div>
-        ) : (
-          <GuardianChatIdentity
-            name={counterpartName}
-            classLabel={classLabel}
-            studentName={studentName}
-            variant="header"
-            className="min-w-0 flex-1"
-          />
-        )}
-        <button
-          type="button"
-          onClick={() => setDeleteOpen(true)}
-          disabled={deleting}
-          aria-label={m.chatDelete}
-          className="ui-hover inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/45 hover:text-error disabled:opacity-40"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">{counterpartName}</p>
+          <p className="truncate text-[11px] font-medium text-foreground/45">{m.chatAdminSubtitle}</p>
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2">
@@ -476,16 +373,6 @@ export function ChatThread({
           </button>
         </div>
       </div>
-
-      <ConfirmDialog
-        open={deleteOpen}
-        title={m.chatDeleteConfirm}
-        confirmLabel={t.grades.confirmYes}
-        cancelLabel={t.common.cancel}
-        pending={deleting}
-        onConfirm={() => void confirmDelete()}
-        onCancel={() => setDeleteOpen(false)}
-      />
     </div>
   );
 }

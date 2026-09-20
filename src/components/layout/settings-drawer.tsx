@@ -2,33 +2,66 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Globe, LogOut, Moon, X } from "lucide-react";
+import { Camera, Check, Globe, Loader2, LogOut, Moon, X } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
+import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
 import { Switch } from "@/components/ui/switch";
 import { useTheme, setTheme } from "@/lib/theme/theme-store";
 import { LOCALES } from "@/lib/i18n/config";
 import { useLocale, useSetLocale, useT } from "@/lib/i18n/client";
 import { signOutTeacher } from "@/lib/auth/actions";
 import type { AppUser } from "@/components/layout/app-shell";
+import type { RealtimeConfig } from "@/lib/supabase/browser";
+import { prepareProfileAvatarFromFile } from "@/lib/profile/profile-avatar-image";
+import {
+  profileAvatarErrorKey,
+  signProfileAvatarUrl,
+  uploadProfileAvatarClient,
+} from "@/lib/profile/profile-avatar-client";
 
 /**
  * Mobile-style settings drawer. Tapping the header avatar slides a full-height
  * panel in from the right (backdrop, Escape, body-scroll lock) with the teacher,
  * the institution, language, dark mode, and sign out.
- *
- * The overlay is portaled to <body>: the header has `backdrop-blur`, which would
- * otherwise become the containing block for `position: fixed` and trap the panel.
  */
-export function SettingsDrawer({ user }: { user: AppUser | null }) {
+export function SettingsDrawer({
+  user,
+  supabasePublic,
+}: {
+  user: AppUser | null;
+  supabasePublic: RealtimeConfig;
+}) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const locale = useLocale();
   const setLocale = useSetLocale();
   const t = useT();
   const theme = useTheme();
   const isDark = theme === "dark";
-  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!user?.avatarStoragePath) {
+      setAvatarUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    void signProfileAvatarUrl(supabasePublic, user.avatarStoragePath).then((url) => {
+      if (!cancelled) setAvatarUrl(url);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.avatarStoragePath, supabasePublic]);
 
   useEffect(() => {
     if (!open) return;
@@ -48,7 +81,7 @@ export function SettingsDrawer({ user }: { user: AppUser | null }) {
 
   if (!user) return null;
 
-  const initials = initialsOf(user.name);
+  const { tenantId, userId } = user;
   const roleLabel = user.role === "admin" ? t.drawer.roleAdmin : t.drawer.roleTeacher;
   const localeLabel =
     LOCALES.find((option) => option.value === locale)?.label ?? "Español";
@@ -58,20 +91,57 @@ export function SettingsDrawer({ user }: { user: AppUser | null }) {
     setLangOpen(false);
   }
 
+  async function onPhotoSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || uploading) return;
+
+    setPhotoNotice(null);
+    setUploading(true);
+    try {
+      const prepared = await prepareProfileAvatarFromFile(file);
+      const result = await uploadProfileAvatarClient(
+        supabasePublic,
+        tenantId,
+        userId,
+        prepared,
+      );
+      if (!result.ok) {
+        const key = profileAvatarErrorKey(result.error);
+        setPhotoNotice(t.drawer[key]);
+        return;
+      }
+      const url = await signProfileAvatarUrl(supabasePublic, result.storagePath);
+      setAvatarUrl(url);
+      setPhotoNotice(t.drawer.profilePhotoUpdated);
+      router.refresh();
+    } catch {
+      setPhotoNotice(t.drawer.profilePhotoError);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="h-9 w-9 overflow-hidden rounded-xl brand-gradient outline-none ring-offset-2 ring-offset-surface transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
+        className="outline-none ring-offset-2 ring-offset-surface transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={t.drawer.ariaAccount}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <span className="flex h-full w-full items-center justify-center text-xs font-bold text-white">
-          {initials}
-        </span>
+        <ProfileAvatarDisplay name={user.name} imageUrl={avatarUrl} size="sm" />
       </button>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(event) => void onPhotoSelected(event)}
+      />
 
       {typeof document !== "undefined"
         ? createPortal(
@@ -112,10 +182,26 @@ export function SettingsDrawer({ user }: { user: AppUser | null }) {
                     </div>
 
                     <div className="flex-1 overflow-y-auto px-5 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl brand-gradient text-lg font-bold text-white">
-                          {initials}
-                        </div>
+                      <div className="flex flex-col items-center gap-4 text-center">
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="relative outline-none ring-offset-2 ring-offset-surface transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                          aria-label={t.drawer.profilePhoto}
+                        >
+                          <ProfileAvatarDisplay
+                            name={user.name}
+                            imageUrl={avatarUrl}
+                            size="lg"
+                          />
+                          {uploading ? (
+                            <span className="absolute inset-0 flex items-center justify-center rounded-[1.35rem] bg-black/35">
+                              <Loader2 className="h-7 w-7 animate-spin text-white" />
+                            </span>
+                          ) : null}
+                        </button>
+
                         <div className="min-w-0">
                           <p className="truncate text-lg font-bold text-foreground">
                             {user.name}
@@ -126,6 +212,12 @@ export function SettingsDrawer({ user }: { user: AppUser | null }) {
                         </div>
                       </div>
 
+                      {photoNotice ? (
+                        <p className="mt-4 text-center text-sm font-medium text-foreground/70">
+                          {photoNotice}
+                        </p>
+                      ) : null}
+
                       <div className="mt-5 flex items-center gap-3 rounded-2xl bg-surface-muted px-4 py-3">
                         <LogoMark className="h-8 w-8 shrink-0" />
                         <p className="truncate text-sm font-semibold text-foreground">
@@ -133,16 +225,24 @@ export function SettingsDrawer({ user }: { user: AppUser | null }) {
                         </p>
                       </div>
 
-                      <div className="mt-7 flex items-center justify-between gap-4">
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted disabled:opacity-60"
+                      >
+                        <Camera className="h-5 w-5 text-foreground/70" />
+                        <span className="flex-1 text-left">{t.drawer.profilePhoto}</span>
+                      </button>
+
+                      <div className="mt-3 flex items-center justify-between gap-4">
                         <span className="flex items-center gap-3 text-sm font-medium text-foreground">
                           <Moon className="h-5 w-5 text-foreground/70" />
                           {t.drawer.darkMode}
                         </span>
                         <Switch
                           checked={isDark}
-                          onChange={(checked) =>
-                            setTheme(checked ? "dark" : "light")
-                          }
+                          onChange={(checked) => setTheme(checked ? "dark" : "light")}
                           label={t.drawer.darkMode}
                         />
                       </div>
@@ -211,11 +311,4 @@ export function SettingsDrawer({ user }: { user: AppUser | null }) {
         : null}
     </>
   );
-}
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.charAt(0) ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : "";
-  return (first + last).toUpperCase() || "W";
 }
