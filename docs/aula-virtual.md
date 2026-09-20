@@ -128,13 +128,14 @@ Honest snapshot — do not assume the rest exists.
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
 - **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over
   `assignments` (columns) + `grades` (marks). Sticky student column (full name,
-  never truncated), typed columns (Trabajo de clase / Tarea / Proyecto / Examen /
+  never truncated), typed columns (Trabajo en clase / Tarea / Proyecto / Examen /
   Prueba) with auto labels (`TRAB 1`, `EXAM 1`…) and **auto column titles**
   (`Tarea 2`) — the add-column dialog asks only for points and type, not a title.
   Inline keyboard editing + autosave, tinted **pill** cells, per-student FINAL and
-  per-column averages, a **Compact / Expanded** density toggle (dense narrows the
-  columns; expanded widens them and shows the full kind label — `Tarea 1` instead
-  of `TAR 1`), CSV export (no attendance columns), and undo on delete.
+  per-column averages, a **three-step density** toggle — **Compacto** `TRAB 1` →
+  **Normal** `Trabajo 1` → **Ampliada** `Trabajo en clase 1` — each step widening
+  the columns, CSV export (no attendance columns), and undo on delete. The route
+  `loading.tsx` mirrors this grid (two-row header, default-density widths).
   **Header grouping:** columns are rendered **sorted by type** and the header has
   two sticky rows — an upper **group row** labelled once per type (so a type is
   never repeated) and a labels row. Cell colours use the shared **marketing

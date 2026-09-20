@@ -55,6 +55,11 @@ const KIND_ORDER: AssignmentKind[] = [
   "quiz",
 ];
 
+/** Column density. Each step widens the columns and lengthens the labels:
+ * compact → `TRAB 1`, cozy → `Trabajo 1`, expanded → `Trabajo en clase 1`. */
+type Density = "compact" | "cozy" | "expanded";
+const DENSITY_ORDER: Density[] = ["compact", "cozy", "expanded"];
+
 /** Calificaciones module accent (purple tone) for text-level highlights. */
 const ACCENT_TEXT = "text-[#7c3aed] dark:text-[#b9a3f7]";
 
@@ -146,7 +151,8 @@ export function GradebookWorkspace({
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const [dense, setDense] = useState(true);
+  const [density, setDensity] = useState<Density>("cozy");
+  const dense = density === "compact";
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ExamColumn | null>(null);
@@ -205,6 +211,14 @@ export function GradebookWorkspace({
   // visible on a subject that has no columns yet.
   const rowY = dense ? "py-0.5" : "py-1.5";
   const headY = dense ? "py-1.5" : "py-2";
+  // Column width grows with density so the label can carry more of the name.
+  const colWidth = dense
+    ? "w-[2.75rem]"
+    : density === "cozy"
+      ? "w-[5.5rem]"
+      : "w-[9rem]";
+  const colTop = dense ? "top-8" : "top-9";
+  const colHeadH = dense ? "h-8" : "h-10";
 
   const visibleStudents = students.filter((student) =>
     studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
@@ -218,13 +232,17 @@ export function GradebookWorkspace({
 
   // Auto label per column: short code + sequence among that type (CW 1) for the
   // compact view, and the full kind name (Classwork 1) for the expanded view.
-  const labels = new Map<string, { short: string; full: string }>();
+  const labels = new Map<
+    string,
+    { short: string; medium: string; full: string }
+  >();
   const counters = new Map<AssignmentKind, number>();
   for (const column of orderedExams) {
     const next = (counters.get(column.kind) ?? 0) + 1;
     counters.set(column.kind, next);
     labels.set(column.id, {
       short: `${w.kindShort[column.kind]} ${next}`,
+      medium: `${w.kindMedium[column.kind]} ${next}`,
       full: `${w.kinds[column.kind]} ${next}`,
     });
   }
@@ -361,12 +379,20 @@ export function GradebookWorkspace({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => setDense((value) => !value)}
+            onClick={() =>
+              setDensity(
+                DENSITY_ORDER[(DENSITY_ORDER.indexOf(density) + 1) % DENSITY_ORDER.length],
+              )
+            }
             title={w.density}
             className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover"
           >
-            {dense ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-            {dense ? w.expanded : w.dense}
+            {density === "expanded" ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+            {density === "compact" ? w.dense : density === "cozy" ? w.cozy : w.expanded}
           </button>
           <button
             type="button"
@@ -517,6 +543,7 @@ export function GradebookWorkspace({
                   {orderedExams.map((column) => {
                     const label = labels.get(column.id) ?? {
                       short: column.title,
+                      medium: column.title,
                       full: column.title,
                     };
                     return (
@@ -524,13 +551,15 @@ export function GradebookWorkspace({
                         key={column.id}
                         className={cn(
                           "sticky z-30 border-b border-r border-border bg-surface px-1 text-center align-middle",
-                          dense ? "top-8 h-8 w-[2.75rem]" : "top-9 h-10 w-[5rem]",
+                          colTop,
+                          colHeadH,
+                          colWidth,
                         )}
                       >
                         <ColumnHeader
                           column={column}
                           label={label}
-                          dense={dense}
+                          density={density}
                           onDelete={() => setDeleteTarget(column)}
                           onClose={
                             column.assessmentId || column.closedAt
@@ -805,18 +834,19 @@ function GradeCell({
 function ColumnHeader({
   column,
   label,
-  dense,
+  density,
   onDelete,
   onClose,
 }: {
   column: ExamColumn;
-  label: { short: string; full: string };
-  dense: boolean;
+  label: { short: string; medium: string; full: string };
+  density: Density;
   onDelete: () => void;
   onClose?: () => void;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
+  const compact = density === "compact";
 
   return (
     <div className="group/col relative flex w-full flex-col items-center gap-1">
@@ -824,10 +854,10 @@ function ColumnHeader({
         title={column.title || w.kinds[column.kind]}
         className={cn(
           "max-w-full whitespace-nowrap px-1 text-center font-bold leading-tight text-foreground/55",
-          dense ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
+          compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
         )}
       >
-        {dense ? label.short : label.full}
+        {compact ? label.short : density === "cozy" ? label.medium : label.full}
       </span>
       {column.closedAt ? (
         <span className="text-[9px] font-semibold uppercase tracking-wide text-foreground/45">

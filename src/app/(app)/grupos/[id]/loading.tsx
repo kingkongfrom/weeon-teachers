@@ -1,7 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { BackLinkSkeleton, GrupoSectionTabsSkeleton } from "@/components/ui/page-loading-skeletons";
 
-const GRID_COLUMNS = "40px 208px repeat(5, 76px) 84px";
+// Mirrors the gradebook grid: # · student · 5 grade columns · FINAL, at the
+// default (cozy) density — 40px · 216px · 5×88px · 72px.
+const GRID_COLUMNS = "40px 216px repeat(5, 88px) 72px";
 const COLUMNS = 5;
 const ROWS = 9;
 
@@ -39,40 +41,102 @@ export default function GrupoDetailLoading() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-        <div className="grid border-b border-border bg-surface" style={{ gridTemplateColumns: GRID_COLUMNS }}>
-          <div className="px-2 py-3" />
-          <div className="flex items-center border-l border-border px-3 py-3">
+        {/* Header: group row + labels row, with # / student / FINAL spanning both */}
+        <div
+          className="grid border-b border-border"
+          style={{ gridTemplateColumns: GRID_COLUMNS, gridTemplateRows: "36px 40px" }}
+        >
+          <div
+            className="border-r border-border bg-surface"
+            style={{ gridRow: "1 / span 2" }}
+          />
+          <div
+            className="flex items-center border-r border-border bg-surface px-3"
+            style={{ gridRow: "1 / span 2" }}
+          >
             <Skeleton className="h-3.5 w-24" />
           </div>
+
+          <div
+            className="flex items-center justify-center border-l border-border bg-surface-muted"
+            style={{ gridColumn: "3 / span 3", gridRow: 1 }}
+          >
+            <Skeleton className="h-3 w-16" />
+          </div>
+          <div
+            className="flex items-center justify-center border-l border-border bg-surface-muted"
+            style={{ gridColumn: "6 / span 2", gridRow: 1 }}
+          >
+            <Skeleton className="h-3 w-12" />
+          </div>
+
           {Array.from({ length: COLUMNS }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-1.5 border-l border-border px-1 py-2">
-              <Skeleton className="h-4 w-14 rounded" />
-              <Skeleton className="h-2.5 w-8" />
+            <div
+              key={i}
+              className="flex items-center justify-center border-l border-border bg-surface"
+              style={{ gridColumn: i + 3, gridRow: 2 }}
+            >
+              <Skeleton className="h-3 w-10" />
             </div>
           ))}
-          <div className="flex items-center justify-center border-l border-border px-3 py-3">
-            <Skeleton className="h-3.5 w-12" />
+
+          <div
+            className="flex items-center justify-center border-l border-border bg-surface"
+            style={{ gridColumn: 8, gridRow: "1 / span 2" }}
+          >
+            <Skeleton className="h-3.5 w-10" />
           </div>
         </div>
 
         {Array.from({ length: ROWS }).map((_, row) => (
-          <div key={row} className="grid border-b border-border/70" style={{ gridTemplateColumns: GRID_COLUMNS }}>
-            <div className="flex items-center justify-center px-2 py-2">
+          <div
+            key={row}
+            className="grid h-9 border-b border-border/70"
+            style={{ gridTemplateColumns: GRID_COLUMNS }}
+          >
+            <div className="flex items-center justify-center">
               <Skeleton className="h-3 w-3" />
             </div>
-            <div className="flex items-center border-l border-border px-3 py-2">
+            <div className="flex items-center border-l border-border px-3">
               <Skeleton className="h-4 w-40" />
             </div>
             {Array.from({ length: COLUMNS }).map((_, col) => (
-              <div key={col} className="flex items-center justify-center border-l border-border/60 px-1 py-2">
-                {col === 0 && row === 8 ? null : <Skeleton className="h-4 w-9 rounded" />}
+              <div
+                key={col}
+                className="flex items-center justify-center border-l border-border/60"
+              >
+                {col === 0 && row === ROWS - 1 ? null : (
+                  <Skeleton className="h-5 w-9 rounded-md" />
+                )}
               </div>
             ))}
-            <div className="flex items-center justify-center border-l border-border px-3 py-2">
-              <Skeleton className="h-5 w-12 rounded-md" />
+            <div className="flex items-center justify-center border-l border-border">
+              <Skeleton className="h-5 w-9 rounded-md" />
             </div>
           </div>
         ))}
+
+        {/* PROM. row */}
+        <div
+          className="grid h-10 border-t border-border bg-surface-muted"
+          style={{ gridTemplateColumns: GRID_COLUMNS }}
+        >
+          <div className="border-r border-border" />
+          <div className="flex items-center border-r border-border px-3">
+            <Skeleton className="h-3 w-10" />
+          </div>
+          {Array.from({ length: COLUMNS }).map((_, col) => (
+            <div
+              key={col}
+              className="flex items-center justify-center border-l border-border/60"
+            >
+              <Skeleton className="h-5 w-9 rounded-md" />
+            </div>
+          ))}
+          <div className="flex items-center justify-center border-l border-border">
+            <Skeleton className="h-5 w-9 rounded-md" />
+          </div>
+        </div>
       </div>
     </div>
   );

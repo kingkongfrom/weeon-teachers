@@ -857,7 +857,14 @@ const es = {
       finalGrade: "Nota final",
       legend: (threshold: number) => `Aprueba con ${threshold}% o más`,
       kinds: {
-        classwork: "Trabajo de clase",
+        classwork: "Trabajo en clase",
+        homework: "Tarea",
+        exam: "Examen",
+        quiz: "Prueba",
+        project: "Proyecto",
+      },
+      kindMedium: {
+        classwork: "Trabajo",
         homework: "Tarea",
         exam: "Examen",
         quiz: "Prueba",
@@ -876,6 +883,7 @@ const es = {
       },
       density: "Densidad de la tabla",
       dense: "Compacto",
+      cozy: "Normal",
       expanded: "Ampliada",
     },
     summary: {
@@ -1761,6 +1769,13 @@ const en: Messages = {
         quiz: "Quiz",
         project: "Project",
       },
+      kindMedium: {
+        classwork: "Classwork",
+        homework: "Homework",
+        exam: "Exam",
+        quiz: "Quiz",
+        project: "Project",
+      },
       kindShort: {
         classwork: "CW",
         homework: "HW",
@@ -1774,6 +1789,7 @@ const en: Messages = {
       },
       density: "Table density",
       dense: "Compact",
+      cozy: "Standard",
       expanded: "Expanded",
     },
     summary: {
