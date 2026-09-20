@@ -480,7 +480,7 @@ export function ChatThread({
       <ConfirmDialog
         open={deleteOpen}
         title={m.chatDeleteConfirm}
-        confirmLabel={t.grades.confirmYes}
+        confirmLabel={t.gradebook.confirmYes}
         cancelLabel={t.common.cancel}
         pending={deleting}
         onConfirm={() => void confirmDelete()}

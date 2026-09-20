@@ -1,5 +1,6 @@
 "use client";
 
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
 
 import { authCookieOptions } from "@/lib/supabase/auth-cookie";
@@ -54,7 +55,7 @@ export function bindRealtimeAuthRefresh(
 ): () => void {
   const {
     data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event, session) => {
+  } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
     void supabase.realtime.setAuth(session?.access_token ?? null);
   });
   return () => subscription.unsubscribe();
