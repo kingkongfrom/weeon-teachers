@@ -40,10 +40,15 @@ Page loader: `src/app/(app)/grupos/[id]/page.tsx`
 - **Component:** `src/components/grades/gradebook-workspace.tsx`
 - **Data:** `assignments` (columns) + `grades` (cells), per `subject_id` tab from
   `class_lessons`.
-- **Asistencia panel:** read-only cumulative **A · AJ · TI · TJ** counts per
-  student (all dates), loaded by `loadClassAttendanceCounts()` — same source
-  table as the Asistencia tab, different presentation (four codes vs tardías only).
-- **CSV export** includes the Asistencia column.
+- **Grades only:** the gradebook shows no attendance — the old read-only
+  Asistencia panel and its CSV column were removed. Ausencias live in the
+  Asistencia tab (`?tab=asistencia`).
+- **Header:** two sticky rows — an upper **group per column type** (columns are
+  sorted by type, so a type is never repeated) and a labels row. Cells are
+  tinted pills using the shared marketing palette (green ≥ 70, amber 50–69,
+  rose < 50, purple FINAL). Columns are auto-titled `Tipo n`; the dialog asks
+  only for points and type.
+- **CSV export** covers students × grade columns + FINAL (no attendance).
 
 Full gradebook behaviour: [`docs/aula-virtual.md`](aula-virtual.md) § Gradebook.
 
@@ -53,7 +58,6 @@ Full gradebook behaviour: [`docs/aula-virtual.md`](aula-virtual.md) § Gradebook
 | ------- | ----- | ---- |
 | **Libro de clase** (dated register) | `/aula-virtual/[classId]?tab=asistencia` | **Write** P / TJ / TI / AJ / A for one day |
 | **Grupos → Asistencia** | `/grupos/[id]?tab=asistencia` | **Read** accumulated TJ/TI log + summary |
-| **Gradebook panel** | `/grupos/[id]` (Calificaciones tab) | **Read** A/AJ/TI/TJ totals per student |
 
 Teachers always **record** attendance in aula virtual (or from a lesson card →
 `?tab=asistencia&lesson=<id>`). The Grupos tab never duplicates

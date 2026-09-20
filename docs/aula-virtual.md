@@ -119,25 +119,28 @@ Honest snapshot — do not assume the rest exists.
     and the date picker exist only for corrections. Writes are RLS-limited to
     `teaches_class`/admin; reads to class members. Requires
     `20260912180000_attendance_ausencias.sql` in `weeon-tenants`.
-    The **gradebook** (`/grupos/[id]`, Calificaciones tab) reflects it too: a
-    read-only **Asistencia** panel sits to the right of the table (a separate
-    card, not a table column) showing the four ausencia counts (`A · AJ · TI · TJ`)
-    accumulated per student across dates, aggregated from `attendance_records`
-    by `loadClassAttendanceCounts`; it is numbers only (no percentage, since it
-    is cumulative), class-wide, so it repeats across subject tabs, mirrors the
-    table rows one-to-one, and is exported in the CSV. A dedicated **Asistencia
-    tab** on the same route (`?tab=asistencia`) lists TJ/TI tardías only with a
-    bitácora and links back here to take attendance — see
+    Ausencias are **not** shown in the gradebook — the gradebook is
+    **grades-only** (the old read-only Asistencia panel and its CSV column were
+    removed). A dedicated **Asistencia tab** on the same route
+    (`?tab=asistencia`) lists TJ/TI tardías with a bitácora and links back here
+    to take attendance — see
     [`docs/asistencia-grupos.md`](asistencia-grupos.md) and [`docs/grupos.md`](grupos.md).
   - **Calificaciones** — link into the existing gradebook (`/grupos/[id]`).
 - **Gradebook** — `/grupos/[id]`: the `GradebookWorkspace` spreadsheet over
-  `assignments` (columns) + `grades` (marks). Sticky student column, typed
-  columns (Trabajo/Tarea/Examen/Prueba/Proyecto) with auto labels (`CW 1`,
-  `EXAM 1`…), inline keyboard editing + autosave, color-coded cells, per-student
-  FINAL and per-column averages, a **Compact / Expanded** density toggle (dense
-  narrows the columns to the marks; expanded widens them and shows the full kind
-  label — `Classwork 1` instead of `CW 1`), CSV export, and undo on delete.
-  `assignments.category` groups columns (classwork/evaluation) for weighting.
+  `assignments` (columns) + `grades` (marks). Sticky student column (full name,
+  never truncated), typed columns (Trabajo de clase / Tarea / Proyecto / Examen /
+  Prueba) with auto labels (`TRAB 1`, `EXAM 1`…) and **auto column titles**
+  (`Tarea 2`) — the add-column dialog asks only for points and type, not a title.
+  Inline keyboard editing + autosave, tinted **pill** cells, per-student FINAL and
+  per-column averages, a **Compact / Expanded** density toggle (dense narrows the
+  columns; expanded widens them and shows the full kind label — `Tarea 1` instead
+  of `TAR 1`), CSV export (no attendance columns), and undo on delete.
+  **Header grouping:** columns are rendered **sorted by type** and the header has
+  two sticky rows — an upper **group row** labelled once per type (so a type is
+  never repeated) and a labels row. Cell colours use the shared **marketing
+  palette** (green ≥ 70, amber 50–69, rose < 50, purple for FINAL).
+  `assignments.category` (classwork/evaluation) remains the coarse group used for
+  weighting.
   **Grading math:** each mark reduces to a percentage via
   `grades.max_marks` → column `assignments.points` → 100; FINAL is the
   unweighted mean of column percentages (pass ≥ 70) — category weighting is a
@@ -486,15 +489,14 @@ Two surfaces, one flow:
 3. **Gradebook matrix** — the overview/adjust surface: students × columns with
    sticky header + student column, inline editing with keyboard navigation
    (Enter/Tab/arrows), live per-student average and per-column average, a
-   **FINAL** column, category grouping (Trabajo de clase / Evaluaciones), and CSV
-   export.
+   **FINAL** column, an upper header group per column type (columns sorted by
+   type), and CSV export.
 
 **Why it beats the WOOT IT grid** (the reference screenshot): modern branded UI
 instead of an Excel clone; columns **auto-created from the assessments** the
 teacher already authored; the same columns are editable directly (no Excel
-round-trip); a read-only cumulative **Asistencia** panel beside the table
-(numbers only — mobile owns daily capture, teacher web owns corrections); and
-grading happens in the context of the student's actual answers.
+round-trip); the matrix groups columns once per type instead of repeating group
+headers; and grading happens in the context of the student's actual answers.
 
 ### Schema additions (additive, `weeon-tenants`)
 

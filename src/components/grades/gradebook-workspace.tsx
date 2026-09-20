@@ -44,32 +44,16 @@ import {
 import type { AssignmentKind, ExamColumn } from "@/lib/dashboard/exams";
 import type { ClassOption } from "@/lib/dashboard/gradebook";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
-import {
-  ATTENDANCE_CODE,
-  emptyAttendanceCounts,
-  type AttendanceCounts,
-  type AttendanceStatus,
-} from "@/lib/attendance/model";
-
-/** Ausencia types shown in the gradebook summary, most severe first. */
-const ABSENCE_ORDER: AttendanceStatus[] = [
-  "absence_unjustified",
-  "absence_justified",
-  "late_unjustified",
-  "late_justified",
-];
-
 const PASS = 70;
 
-/** Color per column type so a Tarea reads differently from an Examen —
- * badges read from the shared tone palette. */
-const KIND_STYLES: Record<AssignmentKind, string> = {
-  classwork: TONE_PILL.blue,
-  homework: TONE_PILL.green,
-  exam: TONE_PILL.purple,
-  quiz: TONE_PILL.yellow,
-  project: TONE_PILL.rose,
-};
+/** Display order of the header groups: each type forms one contiguous group. */
+const KIND_ORDER: AssignmentKind[] = [
+  "classwork",
+  "homework",
+  "project",
+  "exam",
+  "quiz",
+];
 
 /** Calificaciones module accent (purple tone) for text-level highlights. */
 const ACCENT_TEXT = "text-[#7c3aed] dark:text-[#b9a3f7]";
@@ -104,15 +88,32 @@ function columnAverage(column: ExamColumn, students: TeacherStudent[]): number |
   return average(students.map((student) => columnPct(column, student.id)));
 }
 
+/* Grade tints — the same palette the marketing site shows for the gradebook
+   (see weeon-marketing/docs/design-tokens.md). Solid enough to read as pills. */
+const TINT_PASS = "bg-[#abe3dc] text-[#0f4c47] dark:bg-[#0f2f2c] dark:text-[#6ee7d7]";
+const TINT_WARN = "bg-[#fdeecd] text-[#92400e] dark:bg-[#3a2a12] dark:text-[#fde68a]";
+const TINT_FAIL = "bg-[#fbdee7] text-[#9f1239] dark:bg-[#3a1622] dark:text-[#fda4af]";
+/** FINAL column is always the purple tone, regardless of the value. */
+const TINT_FINAL = "bg-[#e6defb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]";
+
 function tintFor(pct: number | null): string {
   if (pct == null) return "";
-  /* Readable tints: a clear colour wash so passing, warning and failing
-     averages are distinguishable at a glance, not just by the numbers. */
-  if (pct >= PASS)
-    return "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
-  if (pct >= 50)
-    return "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
-  return "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200";
+  if (pct >= PASS) return TINT_PASS;
+  if (pct >= 50) return TINT_WARN;
+  return TINT_FAIL;
+}
+
+/** Consecutive columns of the same type share one header group cell. */
+function buildGroups(
+  columns: ExamColumn[],
+): { key: string; kind: AssignmentKind; count: number }[] {
+  const groups: { key: string; kind: AssignmentKind; count: number }[] = [];
+  for (const column of columns) {
+    const last = groups[groups.length - 1];
+    if (last && last.kind === column.kind) last.count += 1;
+    else groups.push({ key: column.id, kind: column.kind, count: 1 });
+  }
+  return groups;
 }
 
 function studentName(student: TeacherStudent): string {
@@ -129,7 +130,6 @@ export function GradebookWorkspace({
   classContext,
   initialSubjectId,
   initialExams,
-  attendance,
   supportFlags = {},
 }: {
   classId: string;
@@ -138,7 +138,6 @@ export function GradebookWorkspace({
   classContext: ClassOption;
   initialSubjectId: string | null;
   initialExams: ExamColumn[];
-  attendance: Record<string, AttendanceCounts>;
   supportFlags?: ClassEducationalSupportFlags;
 }) {
   const t = useT();
@@ -211,17 +210,31 @@ export function GradebookWorkspace({
     studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
   );
 
+  // Columns are displayed sorted by type, so every type is a single group and a
+  // header cell never repeats. Order within a type is preserved (stable sort).
+  const orderedExams = [...exams].sort(
+    (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
+  );
+
   // Auto label per column: short code + sequence among that type (CW 1) for the
   // compact view, and the full kind name (Classwork 1) for the expanded view.
   const labels = new Map<string, { short: string; full: string }>();
   const counters = new Map<AssignmentKind, number>();
-  for (const column of exams) {
+  for (const column of orderedExams) {
     const next = (counters.get(column.kind) ?? 0) + 1;
     counters.set(column.kind, next);
     labels.set(column.id, {
       short: `${w.kindShort[column.kind]} ${next}`,
       full: `${w.kinds[column.kind]} ${next}`,
     });
+  }
+
+  const groups = buildGroups(orderedExams);
+
+  /** Auto title for a new column: type + its sequence among that type. */
+  function nextTitleFor(kind: AssignmentKind): string {
+    const count = exams.filter((column) => column.kind === kind).length;
+    return `${w.kinds[kind]} ${count + 1}`;
   }
 
   const overall = average(
@@ -314,19 +327,14 @@ export function GradebookWorkspace({
   function exportCsv() {
     const header = [
       t.gradebook.headers.student,
-      ...exams.map((column) => column.title),
-      ...ABSENCE_ORDER.map((status) => ATTENDANCE_CODE[status]),
+      ...orderedExams.map((column) => column.title),
       w.final,
     ];
-    const rows = visibleStudents.map((student) => {
-      const counts = attendance[student.id] ?? emptyAttendanceCounts();
-      return [
-        studentName(student),
-        ...exams.map((column) => column.grades[student.id]?.mark ?? ""),
-        ...ABSENCE_ORDER.map((status) => counts[status]),
-        studentAverage(exams, student.id) ?? "",
-      ];
-    });
+    const rows = visibleStudents.map((student) => [
+      studentName(student),
+      ...orderedExams.map((column) => column.grades[student.id]?.mark ?? ""),
+      studentAverage(orderedExams, student.id) ?? "",
+    ]);
     const csv = [header, ...rows]
       .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
       .join("\n");
@@ -421,29 +429,17 @@ export function GradebookWorkspace({
         </label>
         <div className="flex items-center gap-3 text-xs font-semibold">
           <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/50" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#abe3dc] ring-1 ring-[#7dd3c7]" />
             ≥ {PASS}%
           </span>
           <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-500/50" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#fdeecd] ring-1 ring-[#f5d88a]" />
             50–69%
           </span>
           <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-rose-500/60" /> &lt; 50%
+            <span className="h-2.5 w-2.5 rounded-full bg-[#fbdee7] ring-1 ring-[#f0b8c8]" /> &lt; 50%
           </span>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-foreground/50">
-        <span className="font-bold uppercase tracking-wide text-foreground/40">
-          {t.attendance.column}
-        </span>
-        {ABSENCE_ORDER.map((status) => (
-          <span key={status} className="inline-flex items-center gap-1.5">
-            <span className="font-bold text-foreground/70">{ATTENDANCE_CODE[status]}</span>
-            {t.attendance.statuses[status]}
-          </span>
-        ))}
       </div>
 
       {error ? (
@@ -473,8 +469,7 @@ export function GradebookWorkspace({
           {w.noStudents}
         </p>
       ) : (
-        <div className="flex flex-wrap items-start gap-4">
-          <div className="relative min-w-0 flex-1 overflow-auto rounded-2xl border border-border bg-surface">
+        <div className="relative min-w-0 overflow-auto rounded-2xl border border-border bg-surface">
             {loading ? (
               <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface/60 backdrop-blur-[1px]">
                 <Loader2 className={cn("h-6 w-6 animate-spin", ACCENT_TEXT)} />
@@ -483,14 +478,43 @@ export function GradebookWorkspace({
 
             <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
               <thead>
-                <tr className={dense ? "h-8" : "h-10"}>
-                  <th className={cn("sticky left-0 top-0 z-40 w-10 border-b border-r border-border bg-surface px-2 text-center text-xs font-bold text-foreground/40", headY)}>
+                {/* Group row — consecutive columns of the same category */}
+                <tr>
+                  <th
+                    rowSpan={2}
+                    className={cn("sticky left-0 top-0 z-50 w-10 border-b border-r border-border bg-surface px-2 text-center text-xs font-bold text-foreground/40", headY)}
+                  >
                     #
                   </th>
-                  <th className={cn("sticky left-10 top-0 z-40 min-w-[13rem] border-b border-r border-border bg-surface px-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
+                  <th
+                    rowSpan={2}
+                    className={cn("sticky left-10 top-0 z-50 w-[13.5rem] border-b border-r border-border bg-surface px-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}
+                  >
                     {t.gradebook.headers.student}
                   </th>
-                  {exams.map((column) => {
+                  {groups.map((group) => (
+                    <th
+                      key={group.key}
+                      colSpan={group.count}
+                      className={cn(
+                        "sticky top-0 z-40 border-b border-l border-border bg-surface-muted px-2 text-center text-[10px] font-bold uppercase leading-none tracking-[0.14em] text-foreground/55",
+                        dense ? "h-8" : "h-9",
+                      )}
+                    >
+                      {w.kinds[group.kind]}
+                    </th>
+                  ))}
+                  <th
+                    rowSpan={2}
+                    className={cn("sticky right-0 top-0 z-50 w-[4.5rem] border-b border-l border-border bg-surface px-2 text-center text-xs font-bold uppercase tracking-wide", ACCENT_TEXT, headY)}
+                  >
+                    {w.final}
+                  </th>
+                </tr>
+
+                {/* Column labels row */}
+                <tr>
+                  {orderedExams.map((column) => {
                     const label = labels.get(column.id) ?? {
                       short: column.title,
                       full: column.title,
@@ -499,8 +523,8 @@ export function GradebookWorkspace({
                       <th
                         key={column.id}
                         className={cn(
-                          "sticky top-0 z-30 border-b border-r border-border bg-surface px-1 py-1.5 text-center align-bottom",
-                          dense ? "w-[3.5rem]" : "w-[7.5rem]",
+                          "sticky z-30 border-b border-r border-border bg-surface px-1 text-center align-middle",
+                          dense ? "top-8 h-8 w-[2.75rem]" : "top-9 h-10 w-[5rem]",
                         )}
                       >
                         <ColumnHeader
@@ -517,9 +541,6 @@ export function GradebookWorkspace({
                       </th>
                     );
                   })}
-                  <th className={cn("sticky right-0 top-0 z-40 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center text-xs font-bold uppercase tracking-wide", ACCENT_TEXT, headY)}>
-                    {w.final}
-                  </th>
                 </tr>
               </thead>
 
@@ -536,7 +557,7 @@ export function GradebookWorkspace({
                           <Link
                             href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}`)}`}
                             title={studentName(student)}
-                            className="min-w-0 truncate font-medium text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
+                            className="font-medium leading-tight text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
                           >
                             {studentName(student)}
                           </Link>
@@ -550,7 +571,7 @@ export function GradebookWorkspace({
                           />
                         </div>
                       </td>
-                      {exams.map((column, colIndex) => (
+                      {orderedExams.map((column, colIndex) => (
                         <td key={column.id} className="border-b border-r border-border px-0.5">
                           <GradeCell
                             key={`${column.id}:${student.id}`}
@@ -570,9 +591,9 @@ export function GradebookWorkspace({
                           />
                         </td>
                       ))}
-                      <td className={cn("sticky right-0 z-20 w-[5.5rem] border-b border-l border-border bg-surface px-3 text-center", rowY)}>
-                        <span className={cn("inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none", tintFor(final) || "text-foreground/40")}>
-                          {final == null ? "—" : `${final}%`}
+                      <td className={cn("sticky right-0 z-20 w-[4.5rem] border-b border-l border-border bg-surface px-2 text-center", rowY)}>
+                        <span className={cn("inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none tabular-nums", final == null ? "text-foreground/40" : TINT_FINAL)}>
+                          {final == null ? "—" : final}
                         </span>
                       </td>
                     </tr>
@@ -586,31 +607,27 @@ export function GradebookWorkspace({
                   <td className={cn("sticky bottom-0 left-10 z-40 border-r border-t border-border bg-surface-muted px-3 text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
                     {w.columnAverage}
                   </td>
-                  {exams.map((column) => {
+                  {orderedExams.map((column) => {
                     const avg = columnAverage(column, visibleStudents);
                     return (
                       <td
                         key={column.id}
                         className="sticky bottom-0 z-30 border-r border-t border-border bg-surface-muted px-1 py-1 text-center text-xs font-bold"
                       >
-                        <span className={cn("rounded px-1.5 py-0.5", tintFor(avg) || "text-foreground/40")}>
-                          {avg == null ? "—" : `${avg}%`}
+                        <span className={cn("inline-block rounded-md px-2 py-0.5 font-bold tabular-nums", avg == null ? "text-foreground/40" : tintFor(avg))}>
+                          {avg == null ? "—" : avg}
                         </span>
                       </td>
                     );
                   })}
-                  <td className={cn("sticky bottom-0 right-0 z-40 w-[5.5rem] border-l border-t border-border bg-surface-muted px-3 text-center text-xs font-bold", ACCENT_TEXT, headY)}>
-                    {overall == null ? "—" : `${overall}%`}
+                  <td className={cn("sticky bottom-0 right-0 z-40 w-[4.5rem] border-l border-t border-border bg-surface-muted px-2 text-center text-xs font-bold", headY)}>
+                    <span className={cn("inline-block rounded-md px-2 py-0.5 tabular-nums", overall == null ? "text-foreground/40" : TINT_FINAL)}>
+                      {overall == null ? "—" : overall}
+                    </span>
                   </td>
                 </tr>
               </tfoot>
             </table>
-          </div>
-          <AttendancePanel
-            students={visibleStudents}
-            attendance={attendance}
-            dense={dense}
-          />
         </div>
       )}
 
@@ -622,6 +639,7 @@ export function GradebookWorkspace({
                   key="add-column"
                   onCreate={handleCreate}
                   onClose={() => setAddOpen(false)}
+                  titleFor={nextTitleFor}
                 />
               ) : null}
             </AnimatePresence>,
@@ -768,97 +786,18 @@ function GradeCell({
           }
         }}
         className={cn(
-          "w-full rounded-md border border-transparent bg-transparent px-1 text-center font-medium tabular-nums text-foreground outline-none transition-colors focus:border-brand-400 focus:bg-surface",
-          dense ? "h-7 min-w-[2.25rem] text-[13px]" : "h-8 min-w-[3.25rem] text-sm",
-          status === "error" ? "border-error/60 text-error" : tintFor(pct),
+          "w-full rounded-md border border-transparent px-1 text-center font-semibold tabular-nums outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-400/40",
+          dense ? "h-7 min-w-[1.75rem] text-[13px]" : "h-8 min-w-[2.5rem] text-sm",
+          status === "error"
+            ? "border-error/60 text-error"
+            : pct == null
+              ? "text-foreground"
+              : tintFor(pct),
         )}
       />
       {status === "saving" ? (
         <Loader2 className="absolute right-1 top-1.5 h-3 w-3 animate-spin text-foreground/40" />
       ) : null}
-    </div>
-  );
-}
-
-/** Absence counts escalate visually: 1-2 amber, 3+ rose, 0 stays muted. */
-function absenceTint(count: number): string {
-  if (count <= 0) return "text-foreground/70";
-  if (count >= 3) return "bg-rose-500/15 text-rose-700 dark:text-rose-300";
-  return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
-}
-
-/** Read-only attendance cell: the four ausencia counts accumulated across every
- * recorded date. Numbers only — the rate is not shown because it is cumulative. */
-function AttendanceCell({ counts }: { counts?: AttendanceCounts }) {
-  const t = useT();
-  const resolved = counts ?? emptyAttendanceCounts();
-  return (
-    <div className="flex items-center justify-center divide-x divide-border text-[11px] font-semibold tabular-nums">
-      {ABSENCE_ORDER.map((status) => (
-        <span
-          key={status}
-          title={t.attendance.statuses[status]}
-          className="inline-flex items-center gap-0.5 px-1.5 first:pl-0 last:pr-0"
-        >
-          <span className="font-bold text-foreground/55">{ATTENDANCE_CODE[status]}</span>
-          <span
-            className={cn(
-              "min-w-[1rem] rounded px-1 text-center font-bold",
-              absenceTint(resolved[status]),
-            )}
-          >
-            {resolved[status]}
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/** Read-only attendance panel: the cumulative ausencia counts per student, in a
- * detached card next to the gradebook. Row heights mirror the table (`h-8`/`h-9`
- * body, taller header/footer) so the two columns line up. */
-function AttendancePanel({
-  students,
-  attendance,
-  dense,
-}: {
-  students: TeacherStudent[];
-  attendance: Record<string, AttendanceCounts>;
-  dense: boolean;
-}) {
-  const t = useT();
-  const headH = dense ? "h-8" : "h-10";
-  const rowH = dense ? "h-8" : "h-9";
-  const footH = dense ? "h-8" : "h-10";
-
-  return (
-    <div className="flex w-[13rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface">
-      <div
-        className={cn(
-          "flex items-center justify-center border-b border-border px-2 text-center text-xs font-bold uppercase tracking-wide text-foreground/50",
-          headH,
-        )}
-      >
-        {t.attendance.column}
-      </div>
-      <div className="flex flex-1 flex-col">
-        {students.map((student) => (
-          <div
-            key={student.id}
-            className={cn(
-              "flex items-center justify-center border-b border-border px-2",
-              rowH,
-            )}
-          >
-            <AttendanceCell counts={attendance[student.id]} />
-          </div>
-        ))}
-      </div>
-      <div
-        className={cn("border-t border-border bg-surface-muted", footH)}
-        aria-hidden
-      />
     </div>
   );
 }
@@ -884,9 +823,8 @@ function ColumnHeader({
       <span
         title={column.title || w.kinds[column.kind]}
         className={cn(
-          "max-w-full whitespace-nowrap rounded px-1.5 py-0.5 text-center text-[10px] font-bold leading-tight",
-          KIND_STYLES[column.kind],
-          dense ? "uppercase tracking-wide" : "normal-case",
+          "max-w-full whitespace-nowrap px-1 text-center font-bold leading-tight text-foreground/55",
+          dense ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
         )}
       >
         {dense ? label.short : label.full}
@@ -923,16 +861,17 @@ function ColumnHeader({
 function AddColumnDialog({
   onCreate,
   onClose,
+  titleFor,
 }: {
   onCreate: (title: string, points: number | null, kind: AssignmentKind) => Promise<boolean>;
   onClose: () => void;
+  titleFor: (kind: AssignmentKind) => string;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
-  const kinds: AssignmentKind[] = ["classwork", "homework", "exam", "quiz", "project"];
-  const [title, setTitle] = useState("");
+  const kinds: AssignmentKind[] = ["homework", "exam", "quiz", "classwork", "project"];
   const [points, setPoints] = useState("100");
-  const [kind, setKind] = useState<AssignmentKind>("classwork");
+  const [kind, setKind] = useState<AssignmentKind>("homework");
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -940,7 +879,7 @@ function AddColumnDialog({
     setPending(true);
     const parsed = points.trim() === "" ? null : Number(points.replace(",", "."));
     const ok = await onCreate(
-      title.trim(),
+      titleFor(kind),
       parsed == null || Number.isNaN(parsed) ? null : parsed,
       kind,
     );
@@ -983,39 +922,36 @@ function AddColumnDialog({
         </div>
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-foreground/70">{w.columnTitle}</span>
+            <span className="text-xs font-semibold text-foreground/70">{w.columnPoints}</span>
             <input
               autoFocus
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              maxLength={120}
+              value={points}
+              onChange={(event) => setPoints(event.target.value)}
+              inputMode="numeric"
               className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-950"
             />
           </label>
-          <div className="flex gap-3">
-            <label className="flex flex-1 flex-col gap-1.5">
-              <span className="text-xs font-semibold text-foreground/70">{w.columnPoints}</span>
-              <input
-                value={points}
-                onChange={(event) => setPoints(event.target.value)}
-                inputMode="numeric"
-                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-950"
-              />
-            </label>
-            <label className="flex flex-1 flex-col gap-1.5">
-              <span className="text-xs font-semibold text-foreground/70">{w.columnKind}</span>
-              <select
-                value={kind}
-                onChange={(event) => setKind(event.target.value as AssignmentKind)}
-                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400"
-              >
-                {kinds.map((option) => (
-                  <option key={option} value={option}>
-                    {w.kinds[option]}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold text-foreground/70">{w.columnKind}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {kinds.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setKind(option)}
+                  aria-pressed={kind === option}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                    kind === option
+                      ? "border-transparent bg-brand-600 text-white"
+                      : "border-border text-foreground/65 hover:text-foreground",
+                  )}
+                >
+                  {w.kinds[option]}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-foreground/50">{titleFor(kind)}</p>
           </div>
           <div className="mt-1 flex justify-end gap-2">
             <button

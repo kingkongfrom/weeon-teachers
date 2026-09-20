@@ -870,6 +870,10 @@ const es = {
         quiz: "PRUE",
         project: "PROY",
       },
+      groups: {
+        classwork: "Tareas",
+        evaluation: "Exámenes",
+      },
       density: "Densidad de la tabla",
       dense: "Compacto",
       expanded: "Ampliada",
@@ -1763,6 +1767,10 @@ const en: Messages = {
         exam: "EXAM",
         quiz: "QUIZ",
         project: "PROJ",
+      },
+      groups: {
+        classwork: "Assignments",
+        evaluation: "Exams",
       },
       density: "Table density",
       dense: "Compact",
