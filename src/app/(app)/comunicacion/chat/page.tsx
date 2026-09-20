@@ -2,7 +2,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ChatWorkspace } from "@/components/messages/chat-workspace";
 import { loadChatConversations, loadChatGuardianContacts } from "@/lib/dashboard/chat";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
-import { requireSupabasePublicEnv } from "@/lib/supabase/env";
+import { loadBrowserRealtimeConfig } from "@/lib/supabase/realtime-session";
 import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export default async function ChatListPage() {
     loadChatConversations(),
     loadChatGuardianContacts(),
   ]);
-  const { url, anonKey } = requireSupabasePublicEnv();
+  const realtime = await loadBrowserRealtimeConfig();
 
   return (
     <div className="flex flex-col gap-4">
@@ -27,7 +27,7 @@ export default async function ChatListPage() {
       <ChatWorkspace
         conversations={conversations}
         contacts={contacts}
-        realtime={{ url, anonKey }}
+        realtime={realtime}
         selectedId={null}
         selectedDetail={null}
         me={session?.userId ?? ""}

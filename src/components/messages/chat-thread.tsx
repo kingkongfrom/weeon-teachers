@@ -4,17 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowUp, Loader2, MessageCircle, Trash2 } from "lucide-react";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import { GuardianChatIdentity } from "@/components/messages/guardian-chat-identity";
 import { TONE_AVATAR } from "@/lib/dashboard/tones";
+import { mergeChatMessages } from "@/lib/comms/chat-live-messages";
+import {
+  connectAdminTeacherChatLive,
+  connectGuardianChatLive,
+  type ChatLiveHandle,
+} from "@/lib/comms/chat-realtime";
 import { guardianInitial } from "@/lib/messages/chat-display";
 import { useT } from "@/lib/i18n/client";
-import {
-  bindRealtimeAuthRefresh,
-  getAuthedRealtimeClient,
-  type RealtimeConfig,
-} from "@/lib/supabase/browser";
+import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { COMMS_CHAT } from "@/lib/comms/paths";
 import {
@@ -82,14 +83,9 @@ export function ChatThread({
   embedded?: boolean;
 }) {
   const isAdminChat = channel === "admin";
-  const messageTable = isAdminChat ? "admin_teacher_chat_messages" : "chat_messages";
-  const conversationTable = isAdminChat
-    ? "admin_teacher_chat_conversations"
-    : "chat_conversations";
   const t = useT();
   const m = t.messages;
   const router = useRouter();
-  const { url: realtimeUrl, anonKey: realtimeAnonKey } = realtime;
   const [messages, setMessages] = useState<ChatMessageItem[]>(initialMessages);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -98,13 +94,17 @@ export function ChatThread({
   const [error, setError] = useState<string | null>(null);
   const [otherTyping, setOtherTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  const typingChannelRef = useRef<RealtimeChannel | null>(null);
+  const liveHandleRef = useRef<ChatLiveHandle | null>(null);
   const clearTypingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSentRef = useRef(0);
 
   useEffect(() => {
     setMessages(initialMessages);
-  }, [conversationId, initialMessages]);
+  }, [conversationId]);
+
+  useEffect(() => {
+    setMessages((previous) => mergeChatMessages(previous, initialMessages));
+  }, [initialMessages]);
 
   useEffect(() => {
     if (isAdminChat) void markAdminTeacherChatRead(conversationId);
@@ -113,129 +113,53 @@ export function ChatThread({
 
   useEffect(() => {
     let active = true;
-    let cleanupChannel: (() => void) | null = null;
-    let unbindAuth: (() => void) | null = null;
+    let cleanup: (() => void) | null = null;
+    const connect = isAdminChat ? connectAdminTeacherChatLive : connectGuardianChatLive;
     void (async () => {
-      const supabase = await getAuthedRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
-      if (!active) return;
-      unbindAuth = bindRealtimeAuthRefresh(supabase);
-      const channel = supabase
-        .channel(`${messageTable}:${conversationId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: messageTable,
-            filter: `conversation_id=eq.${conversationId}`,
-          },
-          (payload: { new: Record<string, unknown> }) => {
-            const row = payload.new as {
-              id?: string;
-              body?: string;
-              author_profile_id?: string | null;
-              created_at?: string;
-            };
-            if (!row.id || typeof row.body !== "string") return;
-            const mine = row.author_profile_id === me;
-            setMessages((prev) =>
-              prev.some((item) => item.id === row.id)
-                ? prev
-                : [
-                    ...prev,
-                    {
-                      id: row.id as string,
-                      body: row.body as string,
-                      createdAt: row.created_at ?? new Date().toISOString(),
-                      mine,
-                      authorName: mine ? m.chatYou : counterpartName,
-                    },
-                  ],
-            );
-          },
-        )
-        .subscribe();
-      cleanupChannel = () => {
-        void supabase.removeChannel(channel);
-      };
-    })();
-    return () => {
-      active = false;
-      unbindAuth?.();
-      cleanupChannel?.();
-    };
-  }, [conversationId, messageTable, realtimeUrl, realtimeAnonKey, me, counterpartName, m.chatYou]);
-
-  useEffect(() => {
-    let active = true;
-    let cleanupChannel: (() => void) | null = null;
-    let unbindAuth: (() => void) | null = null;
-    void (async () => {
-      const supabase = await getAuthedRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
-      if (!active) return;
-      unbindAuth = bindRealtimeAuthRefresh(supabase);
-      const channel = supabase
-        .channel(`${conversationTable}:delete:${conversationId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "DELETE",
-            schema: "public",
-            table: conversationTable,
-            filter: `id=eq.${conversationId}`,
-          },
-          () => {
-            router.push(COMMS_CHAT);
-            router.refresh();
-          },
-        )
-        .subscribe();
-      cleanupChannel = () => {
-        void supabase.removeChannel(channel);
-      };
-    })();
-    return () => {
-      active = false;
-      unbindAuth?.();
-      cleanupChannel?.();
-    };
-  }, [conversationId, conversationTable, realtimeUrl, realtimeAnonKey, router]);
-
-  useEffect(() => {
-    let active = true;
-    let cleanupChannel: (() => void) | null = null;
-    let unbindAuth: (() => void) | null = null;
-    void (async () => {
-      const supabase = await getAuthedRealtimeClient({ url: realtimeUrl, anonKey: realtimeAnonKey });
-      if (!active) return;
-      unbindAuth = bindRealtimeAuthRefresh(supabase);
-      const channel = supabase
-        .channel(`chat-typing:${conversationId}`, { config: { broadcast: { self: false } } })
-        .on("broadcast", { event: "typing" }, () => {
+      const connection = await connect(conversationId, realtime, {
+        onMessage: (payload) => {
+          const mine = payload.authorProfileId === me;
+          const incoming: ChatMessageItem = {
+            id: payload.id,
+            body: payload.body,
+            createdAt: payload.createdAt,
+            mine,
+            authorName: mine ? m.chatYou : counterpartName,
+          };
+          setMessages((prev) => mergeChatMessages(prev, [incoming]));
+        },
+        onTyping: () => {
           setOtherTyping(true);
           if (clearTypingRef.current) clearTimeout(clearTypingRef.current);
           clearTypingRef.current = setTimeout(() => setOtherTyping(false), 3500);
-        })
-        .subscribe();
-      typingChannelRef.current = channel;
-      cleanupChannel = () => {
-        typingChannelRef.current = null;
-        void supabase.removeChannel(channel);
+        },
+        onDeleted: () => {
+          router.push(COMMS_CHAT);
+          router.refresh();
+        },
+      });
+      if (!active) {
+        connection.cleanup();
+        return;
+      }
+      liveHandleRef.current = connection.handle;
+      cleanup = () => {
+        liveHandleRef.current = null;
+        connection.cleanup();
       };
     })();
     return () => {
       active = false;
       if (clearTypingRef.current) clearTimeout(clearTypingRef.current);
-      unbindAuth?.();
-      cleanupChannel?.();
+      cleanup?.();
     };
-  }, [conversationId, realtimeUrl, realtimeAnonKey]);
+  }, [conversationId, isAdminChat, realtime, me, counterpartName, m.chatYou, router]);
 
   function notifyTyping() {
     const now = Date.now();
     if (now - lastSentRef.current < 1500) return;
     lastSentRef.current = now;
-    typingChannelRef.current?.send({ type: "broadcast", event: "typing", payload: { at: now } });
+    liveHandleRef.current?.notifyTyping();
   }
 
   useEffect(() => {
@@ -258,20 +182,21 @@ export function ChatThread({
       setText("");
       if (res.messageId) {
         const id = res.messageId;
-        setMessages((prev) =>
-          prev.some((item) => item.id === id)
-            ? prev
-            : [
-                ...prev,
-                {
-                  id,
-                  body: value,
-                  createdAt: new Date().toISOString(),
-                  mine: true,
-                  authorName: m.chatYou,
-                },
-              ],
-        );
+        const createdAt = new Date().toISOString();
+        const outgoing: ChatMessageItem = {
+          id,
+          body: value,
+          createdAt,
+          mine: true,
+          authorName: m.chatYou,
+        };
+        setMessages((prev) => mergeChatMessages(prev, [outgoing]));
+        liveHandleRef.current?.broadcastMessage({
+          id,
+          body: value,
+          createdAt,
+          authorProfileId: me,
+        });
       }
     } catch {
       setError(m.chatLoadError);

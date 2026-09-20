@@ -5,7 +5,11 @@ import { createBrowserClient } from "@supabase/ssr";
 
 import { authCookieOptions } from "@/lib/supabase/auth-cookie";
 
-export type RealtimeConfig = { url: string; anonKey: string };
+export type RealtimeConfig = {
+  url: string;
+  anonKey: string;
+  accessToken?: string | null;
+};
 
 let client: ReturnType<typeof createBrowserClient> | null = null;
 let clientKey = "";
@@ -42,10 +46,14 @@ export function getRealtimeClient(config: RealtimeConfig) {
  */
 export async function getAuthedRealtimeClient(config: RealtimeConfig) {
   const supabase = getRealtimeClient(config);
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  await supabase.realtime.setAuth(session?.access_token ?? null);
+  let token = config.accessToken ?? null;
+  if (!token) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    token = session?.access_token ?? null;
+  }
+  await supabase.realtime.setAuth(token);
   return supabase;
 }
 
