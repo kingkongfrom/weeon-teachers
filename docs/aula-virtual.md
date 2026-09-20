@@ -131,6 +131,10 @@ Honest snapshot — do not assume the rest exists.
   never truncated), typed columns (Trabajo en clase / Tarea / Proyecto / Examen /
   Prueba) with auto labels (`TRAB 1`, `EXAM 1`…) and **auto column titles**
   (`Tarea 2`) — the add-column dialog asks only for points and type, not a title.
+  Every surface in the matrix (header, tooltips, the close/delete confirmations,
+  the undo banner and the CSV header) shows the **derived label**, never the
+  stored `assignments.title`, so legacy or assessment-authored titles can't
+  disagree with the column type.
   Inline keyboard editing + autosave, tinted **pill** cells, per-student FINAL and
   per-column averages, a **three-step density** toggle — **Compacto** `TRAB 1` →
   **Normal** `Trabajo 1` → **Ampliada** `Trabajo en clase 1` — each step widening

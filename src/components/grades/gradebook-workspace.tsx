@@ -345,7 +345,7 @@ export function GradebookWorkspace({
   function exportCsv() {
     const header = [
       t.gradebook.headers.student,
-      ...orderedExams.map((column) => column.title),
+      ...orderedExams.map((column) => labels.get(column.id)?.medium ?? column.title),
       w.final,
     ];
     const rows = visibleStudents.map((student) => [
@@ -477,7 +477,7 @@ export function GradebookWorkspace({
       {undoColumn ? (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-muted/60 px-4 py-2 text-sm">
           <span className="font-medium text-foreground/70">
-            {w.deleteColumn}: {undoColumn.title}
+            {w.deleteColumn}: {labels.get(undoColumn.id)?.medium ?? undoColumn.title}
           </span>
           <button
             type="button"
@@ -606,6 +606,7 @@ export function GradebookWorkspace({
                             key={`${column.id}:${student.id}`}
                             classId={classId}
                             column={column}
+                            label={labels.get(column.id)?.medium ?? column.title}
                             studentId={student.id}
                             row={rowIndex}
                             col={colIndex}
@@ -679,7 +680,11 @@ export function GradebookWorkspace({
       <ConfirmDialog
         open={deleteTarget !== null}
         title={w.deleteColumnConfirm}
-        description={deleteTarget?.title}
+        description={
+          deleteTarget
+            ? labels.get(deleteTarget.id)?.medium ?? deleteTarget.title
+            : undefined
+        }
         confirmLabel={t.gradebook.delete}
         cancelLabel={t.gradebook.cancel}
         pending={deleting}
@@ -692,7 +697,11 @@ export function GradebookWorkspace({
       <ConfirmDialog
         open={closeTarget !== null}
         title={w.closeColumnConfirm}
-        description={closeTarget?.title}
+        description={
+          closeTarget
+            ? labels.get(closeTarget.id)?.medium ?? closeTarget.title
+            : undefined
+        }
         confirmLabel={w.closeColumn}
         cancelLabel={t.gradebook.cancel}
         pending={closing}
@@ -726,6 +735,7 @@ export function GradebookWorkspace({
 function GradeCell({
   classId,
   column,
+  label,
   studentId,
   row,
   col,
@@ -736,6 +746,7 @@ function GradeCell({
 }: {
   classId: string;
   column: ExamColumn;
+  label: string;
   studentId: string;
   row: number;
   col: number;
@@ -754,9 +765,7 @@ function GradeCell({
 
   const max = cellMax(column, studentId);
   const cellTitle =
-    stored?.status === "missing"
-      ? `${column.title} — ${w.missingMark}`
-      : column.title;
+    stored?.status === "missing" ? `${label} — ${w.missingMark}` : label;
   const numeric = text.trim() === "" ? null : Number(text.replace(",", "."));
   const pct = pctOf(numeric, max);
 
@@ -851,7 +860,7 @@ function ColumnHeader({
   return (
     <div className="group/col relative flex w-full flex-col items-center gap-1">
       <span
-        title={column.title || w.kinds[column.kind]}
+        title={label.medium}
         className={cn(
           "max-w-full whitespace-nowrap px-1 text-center font-bold leading-tight text-foreground/55",
           compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
