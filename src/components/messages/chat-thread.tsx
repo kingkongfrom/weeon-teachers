@@ -139,7 +139,7 @@ export function ChatThread({
         },
       });
       if (!active) {
-        connection.cleanup();
+        await connection.cleanup();
         return;
       }
       liveHandleRef.current = connection.handle;

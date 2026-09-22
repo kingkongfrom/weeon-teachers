@@ -6,6 +6,7 @@ import { Check, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Tooltip } from "@/components/ui/tooltip";
 import { saveAttendance } from "@/lib/teachers/attendance-actions";
 import {
   ATTENDANCE_CODE,
@@ -280,23 +281,23 @@ export function AttendanceRegister({
                     {ATTENDANCE_STATUS_LIST.map((option) => {
                       const active = mark.status === option;
                       return (
-                        <button
-                          key={option}
-                          type="button"
-                          role="radio"
-                          aria-checked={active}
-                          title={a.statuses[option]}
-                          aria-label={a.statuses[option]}
-                          onClick={() => setStatus(student.id, option)}
-                          className={cn(
-                            "h-8 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors",
-                            active
-                              ? ACTIVE[option]
-                              : "border-border text-foreground/55 hover:bg-surface-muted hover:text-foreground",
-                          )}
-                        >
-                          {ATTENDANCE_CODE[option]}
-                        </button>
+                        <Tooltip key={option} content={a.statuses[option]}>
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            aria-label={a.statuses[option]}
+                            onClick={() => setStatus(student.id, option)}
+                            className={cn(
+                              "h-8 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors",
+                              active
+                                ? ACTIVE[option]
+                                : "border-border text-foreground/55 hover:bg-surface-muted hover:text-foreground",
+                            )}
+                          >
+                            {ATTENDANCE_CODE[option]}
+                          </button>
+                        </Tooltip>
                       );
                     })}
                   </div>

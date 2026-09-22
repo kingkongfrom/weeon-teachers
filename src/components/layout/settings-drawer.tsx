@@ -127,12 +127,20 @@ export function SettingsDrawer({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="outline-none ring-offset-2 ring-offset-surface transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex max-w-[14rem] items-center gap-5 rounded-xl py-0.5 pl-0.5 pr-1 outline-none ring-offset-2 ring-offset-surface transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring sm:max-w-xs sm:pr-2"
         aria-label={t.drawer.ariaAccount}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <ProfileAvatarDisplay name={user.name} imageUrl={avatarUrl} size="sm" />
+        <span className="min-w-0 flex-1 text-right">
+          <span className="block truncate text-sm font-semibold leading-tight text-foreground">
+            {user.name}
+          </span>
+          <span className="mt-0.5 block truncate text-xs leading-tight text-foreground/55">
+            {user.tenantName ?? t.common.fallbackSchool}
+          </span>
+        </span>
+        <ProfileAvatarDisplay name={user.name} imageUrl={avatarUrl} size="header" />
       </button>
 
       <input

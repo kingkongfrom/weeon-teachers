@@ -1,6 +1,6 @@
 "use client";
 
-import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import type { AuthChangeEvent, RealtimeChannel, Session } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
 
 import { authCookieOptions } from "@/lib/supabase/auth-cookie";
@@ -55,6 +55,43 @@ export async function getAuthedRealtimeClient(config: RealtimeConfig) {
   }
   await supabase.realtime.setAuth(token);
   return supabase;
+}
+
+/** Remove a prior subscription on `topic` so new `.on()` bindings can run before `subscribe()`. */
+export async function detachRealtimeTopic(
+  supabase: ReturnType<typeof getRealtimeClient>,
+  topic: string,
+): Promise<void> {
+  const fullTopic = `realtime:${topic}`;
+  const existing = supabase.getChannels().find((channel: RealtimeChannel) => channel.topic === fullTopic);
+  if (existing) {
+    await supabase.removeChannel(existing);
+  }
+}
+
+const realtimeTopicTail = new Map<string, Promise<unknown>>();
+
+/** Serialize connect/cleanup for one Realtime topic (Strict Mode + async auth races). */
+export async function withRealtimeTopicLock<T>(
+  topic: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const wait = realtimeTopicTail.get(topic) ?? Promise.resolve();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const chained = wait.catch(() => undefined).then(() => gate);
+  realtimeTopicTail.set(topic, chained);
+  await wait.catch(() => undefined);
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (realtimeTopicTail.get(topic) === chained) {
+      realtimeTopicTail.delete(topic);
+    }
+  }
 }
 
 /** Keep Realtime JWT aligned with cookie session refreshes during a subscription. */

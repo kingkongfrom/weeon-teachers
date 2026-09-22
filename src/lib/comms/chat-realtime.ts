@@ -2,7 +2,9 @@
 
 import {
   bindRealtimeAuthRefresh,
+  detachRealtimeTopic,
   getAuthedRealtimeClient,
+  withRealtimeTopicLock,
   type RealtimeConfig,
 } from "@/lib/supabase/browser";
 
@@ -41,62 +43,67 @@ async function connectChatLive(
     onTyping?: () => void;
     onDeleted?: () => void;
   },
-): Promise<{ handle: ChatLiveHandle; cleanup: () => void }> {
-  const supabase = await getAuthedRealtimeClient(realtime);
-  const unbindAuth = bindRealtimeAuthRefresh(supabase);
+): Promise<{ handle: ChatLiveHandle; cleanup: () => Promise<void> }> {
+  const topic = `${roomPrefix}:${conversationId}`;
 
-  const channel = supabase
-    .channel(`${roomPrefix}:${conversationId}`, { config: { broadcast: { self: false } } })
-    .on("broadcast", { event: "message" }, (event: { payload: Partial<ChatLivePayload> }) => {
-      const payload = event.payload as Partial<ChatLivePayload>;
-      if (!payload?.id || !payload.body) return;
-      handlers.onMessage({
-        id: payload.id,
-        body: payload.body,
-        createdAt: payload.createdAt ?? new Date().toISOString(),
-        authorProfileId: payload.authorProfileId ?? "",
-      });
-    })
-    .on("broadcast", { event: "typing" }, () => handlers.onTyping?.())
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: messageTable,
-        filter: `conversation_id=eq.${conversationId}`,
-      },
-      (payload: { new: Record<string, unknown> }) => {
-        const message = rowToPayload(payload.new);
-        if (message) handlers.onMessage(message);
-      },
-    )
-    .on(
-      "postgres_changes",
-      {
-        event: "DELETE",
-        schema: "public",
-        table: conversationTable,
-        filter: `id=eq.${conversationId}`,
-      },
-      () => handlers.onDeleted?.(),
-    )
-    .subscribe();
+  return withRealtimeTopicLock(topic, async () => {
+    const supabase = await getAuthedRealtimeClient(realtime);
+    const unbindAuth = bindRealtimeAuthRefresh(supabase);
+    await detachRealtimeTopic(supabase, topic);
 
-  return {
-    handle: {
-      broadcastMessage: (message) => {
-        void channel.send({ type: "broadcast", event: "message", payload: message });
+    const channel = supabase
+      .channel(topic, { config: { broadcast: { self: false } } })
+      .on("broadcast", { event: "message" }, (event: { payload: Partial<ChatLivePayload> }) => {
+        const payload = event.payload as Partial<ChatLivePayload>;
+        if (!payload?.id || !payload.body) return;
+        handlers.onMessage({
+          id: payload.id,
+          body: payload.body,
+          createdAt: payload.createdAt ?? new Date().toISOString(),
+          authorProfileId: payload.authorProfileId ?? "",
+        });
+      })
+      .on("broadcast", { event: "typing" }, () => handlers.onTyping?.())
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: messageTable,
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload: { new: Record<string, unknown> }) => {
+          const message = rowToPayload(payload.new);
+          if (message) handlers.onMessage(message);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: conversationTable,
+          filter: `id=eq.${conversationId}`,
+        },
+        () => handlers.onDeleted?.(),
+      )
+      .subscribe();
+
+    return {
+      handle: {
+        broadcastMessage: (message) => {
+          void channel.send({ type: "broadcast", event: "message", payload: message });
+        },
+        notifyTyping: () => {
+          void channel.send({ type: "broadcast", event: "typing", payload: { at: Date.now() } });
+        },
       },
-      notifyTyping: () => {
-        void channel.send({ type: "broadcast", event: "typing", payload: { at: Date.now() } });
+      cleanup: async () => {
+        unbindAuth();
+        await detachRealtimeTopic(supabase, topic);
       },
-    },
-    cleanup: () => {
-      unbindAuth();
-      void supabase.removeChannel(channel);
-    },
-  };
+    };
+  });
 }
 
 export function connectAdminTeacherChatLive(
