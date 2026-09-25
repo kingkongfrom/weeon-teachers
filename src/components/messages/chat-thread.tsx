@@ -112,11 +112,6 @@ export function ChatThread({
   }, [conversationId, isAdminChat]);
 
   useEffect(() => {
-    const timer = setInterval(() => router.refresh(), 3000);
-    return () => clearInterval(timer);
-  }, [conversationId, router]);
-
-  useEffect(() => {
     let active = true;
     let cleanup: (() => void) | null = null;
     const connect = isAdminChat ? connectAdminTeacherChatLive : connectGuardianChatLive;

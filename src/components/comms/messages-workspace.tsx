@@ -50,6 +50,8 @@ import {
 import type { MessageDraftSummary } from "@/lib/comms/message-draft";
 import type { MessageFolder, MessageLabel, MessageThreadSummary } from "@/lib/dashboard/messages";
 import type { MessageMailboxSettings } from "@/lib/dashboard/message-mailbox-settings";
+import { useMailRealtimeRefresh } from "@/lib/comms/mail-realtime";
+import type { RealtimeConfig } from "@/lib/supabase/browser";
 
 function formatListTime(iso: string): string {
   const date = new Date(iso);
@@ -92,6 +94,7 @@ export function MessagesWorkspace({
   unreadInbox,
   favoriteCount,
   mailboxSettings,
+  realtime = null,
 }: {
   folder: MessageFolder | "draft";
   labelId: string | null;
@@ -101,9 +104,11 @@ export function MessagesWorkspace({
   unreadInbox: number;
   favoriteCount: number;
   mailboxSettings: MessageMailboxSettings;
+  realtime?: RealtimeConfig | null;
 }) {
   const t = useT();
   const router = useRouter();
+  useMailRealtimeRefresh(realtime, folder !== "draft");
   const [removedThreadIds, setRemovedThreadIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);

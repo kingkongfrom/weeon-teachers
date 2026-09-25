@@ -4,6 +4,7 @@ import { MessagesWorkspace } from "@/components/comms/messages-workspace";
 import type { MessageDraftSummary } from "@/lib/comms/message-draft";
 import type { MessageFolder, MessageLabel, MessageThreadSummary } from "@/lib/dashboard/messages";
 import type { MessageMailboxSettings } from "@/lib/dashboard/message-mailbox-settings";
+import type { RealtimeConfig } from "@/lib/supabase/browser";
 
 export function MessagesPageClient({
   folder,
@@ -14,6 +15,7 @@ export function MessagesPageClient({
   unreadInbox,
   favoriteCount,
   mailboxSettings,
+  realtime,
 }: {
   folder: MessageFolder | "draft";
   labelId: string | null;
@@ -23,6 +25,7 @@ export function MessagesPageClient({
   unreadInbox: number;
   favoriteCount: number;
   mailboxSettings: MessageMailboxSettings;
+  realtime: RealtimeConfig;
 }) {
   return (
     <MessagesWorkspace
@@ -34,6 +37,7 @@ export function MessagesPageClient({
       unreadInbox={unreadInbox}
       favoriteCount={favoriteCount}
       mailboxSettings={mailboxSettings}
+      realtime={realtime}
     />
   );
 }

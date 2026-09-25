@@ -116,11 +116,6 @@ export function ChatWorkspace({
   }, [conversations, listQuery, m.chatAdminSubtitle]);
 
   useEffect(() => {
-    const timer = setInterval(() => router.refresh(), 4000);
-    return () => clearInterval(timer);
-  }, [router]);
-
-  useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let cleanupChannel: (() => void) | null = null;

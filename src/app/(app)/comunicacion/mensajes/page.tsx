@@ -11,6 +11,7 @@ import { loadMessageDrafts } from "@/lib/dashboard/message-drafts";
 import { loadMessageMailboxSettings } from "@/lib/dashboard/message-mailbox-settings";
 import { getLocale } from "@/lib/i18n/server";
 import { tComms } from "@/lib/i18n/translate-comms";
+import { loadBrowserRealtimeConfig } from "@/lib/supabase/realtime-session";
 
 export const dynamic = "force-dynamic";
 
@@ -40,14 +41,16 @@ export default async function MensajesPage({
   const labelId = parseLabelId(labelParam);
   const folder = labelId ? "sent" : parseFolder(folderParam);
 
-  const [threads, drafts, unreadInbox, favoriteCount, labels, mailboxSettings] = await Promise.all([
-    folder === "draft" ? Promise.resolve([]) : loadMessageSummaries(folder, null, labelId),
-    loadMessageDrafts(),
-    loadCommsUnreadCount(),
-    loadCommsFavoriteCount(),
-    loadMessageLabels(),
-    loadMessageMailboxSettings(),
-  ]);
+  const [threads, drafts, unreadInbox, favoriteCount, labels, mailboxSettings, realtime] =
+    await Promise.all([
+      folder === "draft" ? Promise.resolve([]) : loadMessageSummaries(folder, null, labelId),
+      loadMessageDrafts(),
+      loadCommsUnreadCount(),
+      loadCommsFavoriteCount(),
+      loadMessageLabels(),
+      loadMessageMailboxSettings(),
+      loadBrowserRealtimeConfig(),
+    ]);
 
   return (
     <MessagesPageClient
@@ -59,6 +62,7 @@ export default async function MensajesPage({
       unreadInbox={unreadInbox}
       favoriteCount={favoriteCount}
       mailboxSettings={mailboxSettings}
+      realtime={realtime}
     />
   );
 }

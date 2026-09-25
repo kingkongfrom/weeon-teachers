@@ -11,6 +11,7 @@ import {
 } from "@/lib/dashboard/sidebar-state";
 import { cn } from "@/lib/utils";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
+import { TeacherAcademicRealtime } from "@/lib/comms/teacher-academic-realtime";
 
 export type AppUser = {
   userId: string;
@@ -35,6 +36,7 @@ export function AppShell({ children, user, supabasePublic }: AppShellProps) {
 
   return (
     <div className="dashboard-shell min-h-screen bg-background">
+      <TeacherAcademicRealtime realtime={supabasePublic} />
       {navOpen ? (
         <button
           type="button"
