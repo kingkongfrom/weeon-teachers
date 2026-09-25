@@ -48,7 +48,7 @@ export function LogoCompact({ className = "", ...props }: LogoProps) {
         <EeSmileArc className="left-[27%] right-[35%] -bottom-[0.12em] h-[0.22em]" />
       </span>
       <span className="ml-1 inline-flex flex-col items-start">
-        <span className="font-bold leading-none tracking-tight text-foreground">
+        <span className="font-bold leading-none tracking-tight logo-school">
           School
         </span>
         <span className="mt-[0.18em] text-[0.5em] font-semibold uppercase leading-none tracking-[0.16em] text-foreground/55">

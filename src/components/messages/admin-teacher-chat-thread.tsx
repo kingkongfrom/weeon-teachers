@@ -314,18 +314,13 @@ export function AdminTeacherChatThread({
           {otherTyping ? (
             <div className="mt-1 flex justify-start">
               <div
-                className="flex items-center gap-1 rounded-2xl border border-border/60 bg-surface-muted px-3 py-2.5"
+                className="flex items-center gap-2 rounded-2xl border border-border/60 bg-surface-muted px-3 py-2"
                 aria-label={m.chatTyping}
               >
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/40" />
-                <span
-                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/40"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <span
-                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/40"
-                  style={{ animationDelay: "300ms" }}
-                />
+                <span className="text-[11px] font-medium text-foreground/55">{m.chatTyping}</span>
+                <span className="weeon-typing-dot" />
+                <span className="weeon-typing-dot [animation-delay:150ms]" />
+                <span className="weeon-typing-dot [animation-delay:300ms]" />
               </div>
             </div>
           ) : null}

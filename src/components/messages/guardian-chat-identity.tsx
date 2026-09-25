@@ -8,6 +8,8 @@ type GuardianChatIdentityProps = {
   name: string;
   classLabel?: string | null;
   studentName?: string | null;
+  /** Role shown before the class line in the new-chat picker. */
+  roleLabel?: string | null;
   /** `list` = sidebar row; `header` = thread top; `picker` = modal row. */
   variant?: "list" | "header" | "picker";
   className?: string;
@@ -18,11 +20,13 @@ export function GuardianChatIdentity({
   name,
   classLabel,
   studentName,
+  roleLabel,
   variant = "list",
   className,
 }: GuardianChatIdentityProps) {
   const displayName = cleanGuardianDisplayName(name);
   const contextLine = formatGuardianContextLine(classLabel, studentName);
+  const subtitle = [roleLabel?.trim(), contextLine].filter(Boolean).join(" · ");
 
   return (
     <span className={cn("min-w-0", className)}>
@@ -36,9 +40,9 @@ export function GuardianChatIdentity({
       >
         {displayName}
       </span>
-      {contextLine ? (
+      {subtitle ? (
         <span className="mt-0.5 block truncate text-[11px] font-medium text-foreground/45">
-          {contextLine}
+          {subtitle}
         </span>
       ) : null}
     </span>

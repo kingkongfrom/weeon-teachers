@@ -25,6 +25,8 @@ import type {
   ChatConversationSummary,
 } from "@/lib/messages/chat-model";
 
+const ADMIN_CHAT_KEY = "__admin__";
+
 function relativeTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
@@ -84,12 +86,10 @@ export function ChatWorkspace({
   const { url: realtimeUrl, anonKey: realtimeAnonKey } = realtime;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [listQuery, setListQuery] = useState("");
-  const [adminStarting, setAdminStarting] = useState(false);
   const [adminStartError, setAdminStartError] = useState<string | null>(null);
 
   async function openAdminChat() {
     setAdminStartError(null);
-    setAdminStarting(true);
     try {
       const res = await startTeacherAdminChat();
       if (!res.ok || !res.conversationId) {
@@ -100,8 +100,6 @@ export function ChatWorkspace({
       router.refresh();
     } catch {
       setAdminStartError(m.chatAdminStartError);
-    } finally {
-      setAdminStarting(false);
     }
   }
 
@@ -116,6 +114,11 @@ export function ChatWorkspace({
         (row.channel === "admin" && m.chatAdminSubtitle.toLowerCase().includes(term)),
     );
   }, [conversations, listQuery, m.chatAdminSubtitle]);
+
+  useEffect(() => {
+    const timer = setInterval(() => router.refresh(), 4000);
+    return () => clearInterval(timer);
+  }, [router]);
 
   useEffect(() => {
     let active = true;
@@ -204,12 +207,6 @@ export function ChatWorkspace({
           >
             <div className="shrink-0 space-y-1.5 border-b border-border px-3 py-2">
               <NewChatButton label={m.chatNew} onClick={() => setPickerOpen(true)} />
-              <NewChatButton
-                label={m.chatAdminNew}
-                tone="blue"
-                disabled={adminStarting}
-                onClick={() => void openAdminChat()}
-              />
               {adminStartError ? (
                 <p className="px-1 text-[11px] font-medium text-error">{adminStartError}</p>
               ) : null}
@@ -340,31 +337,17 @@ export function ChatWorkspace({
                   <p className="text-sm font-semibold text-foreground">{m.chatTitle}</p>
                   <p className="text-xs font-medium text-foreground/50">{m.chatSelectPrompt}</p>
                 </div>
-                <div className="flex w-full max-w-xs flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPickerOpen(true)}
-                    className={cn(
-                      "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]",
-                      TONE_AVATAR.green,
-                    )}
-                  >
-                    <Plus className="h-4 w-4" aria-hidden />
-                    {m.chatNew}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={adminStarting}
-                    onClick={() => void openAdminChat()}
-                    className={cn(
-                      "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-60",
-                      TONE_AVATAR.blue,
-                    )}
-                  >
-                    <Plus className="h-4 w-4" aria-hidden />
-                    {m.chatAdminNew}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(true)}
+                  className={cn(
+                    "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]",
+                    TONE_AVATAR.green,
+                  )}
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  {m.chatNew}
+                </button>
                 {adminStartError ? (
                   <p className="mt-2 max-w-xs text-xs font-medium text-error">{adminStartError}</p>
                 ) : null}
@@ -376,9 +359,23 @@ export function ChatWorkspace({
 
       <ChatPicker
         open={pickerOpen}
-        contacts={contacts}
+        contacts={[
+          {
+            key: ADMIN_CHAT_KEY,
+            name: m.chatAdminSubtitle,
+            context: "",
+            studentName: "",
+            kind: "admin",
+          },
+          ...contacts,
+        ]}
         onClose={() => setPickerOpen(false)}
         onPick={async (contact) => {
+          if (contact.key === ADMIN_CHAT_KEY) {
+            setPickerOpen(false);
+            await openAdminChat();
+            return;
+          }
           const res = await startChatConversation(contact.key, contact.name);
           if (res.ok) {
             setPickerOpen(false);
@@ -468,7 +465,7 @@ function ChatPickerBody({
                 <span
                   className={cn(
                     "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
-                    TONE_AVATAR.green,
+                    contact.key === ADMIN_CHAT_KEY ? TONE_AVATAR.blue : TONE_AVATAR.green,
                   )}
                 >
                   {guardianInitial(contact.name)}
@@ -477,6 +474,15 @@ function ChatPickerBody({
                   name={contact.name}
                   classLabel={contact.context}
                   studentName={contact.studentName}
+                  roleLabel={
+                    contact.kind === "student"
+                      ? m.chatRoleStudent
+                      : contact.kind === "admin" || contact.key === ADMIN_CHAT_KEY
+                        ? m.chatRoleAdmin
+                        : contact.kind === "parent"
+                          ? m.chatRoleParent
+                          : undefined
+                  }
                   variant="picker"
                   className="min-w-0 flex-1"
                 />

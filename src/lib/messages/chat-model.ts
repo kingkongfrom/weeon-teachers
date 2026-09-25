@@ -31,7 +31,7 @@ export type ChatConversationDetail = {
   messages: ChatMessageItem[];
 };
 
-/** A guardian the teacher may start a chat with. */
+/** Someone the teacher may start a chat with. */
 export type ChatContact = {
   key: string;
   name: string;
@@ -40,4 +40,6 @@ export type ChatContact = {
   studentName: string;
   /** Class uuid — used for guardian ↔ student lookup. */
   classId?: string;
+  /** Who this row is. Omitted on older guardian-only rows. */
+  kind?: "admin" | "parent" | "student";
 };

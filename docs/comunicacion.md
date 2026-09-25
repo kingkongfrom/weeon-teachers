@@ -10,10 +10,8 @@ Comunicación has **three** channels on `/comunicacion`:
 - **Mensajes** — same mailbox UX as the school ERP (`weeon-tenants`): Para/Cc,
   bulk group picker, rich body, Dropbox + bottom attachment zone, folders,
   favorites, custom labels, signature, optional replies.
-- **Chat encargados** — realtime 1:1 teacher ↔ guardian (`chat_*` tables).
-- **Chat administración** — realtime school admin ↔ teacher
-  (`admin_teacher_chat_*`). Either side can open the thread; unified in
-  `/comunicacion/chat` with encargados.
+- **Chat** — one inbox for administración, encargados, and estudiantes.
+  Roster contacts use `chat_*`; administración uses `admin_teacher_chat_*`.
 
 Panel general **Comunicación** → `/comunicacion`. **Novedades** stays in aula
 virtual — not part of Comunicación.
@@ -72,18 +70,15 @@ message_mailbox_settings, `p_broadcast_filter` on group sends).
 Apply migrations through **`20260920140000_school_documents.sql`** (and the
 `20260919*` chain) on hosted `weeon-school` before production QA.
 
-## Chat encargados
+## Chat
 
-Realtime 1:1 teacher ↔ guardian. Loaders in `lib/dashboard/chat.ts`, UI
+One inbox. **Nuevo chat** lists Administración, Encargados, and Estudiantes
+from `list_message_contacts`. Loaders in `lib/dashboard/chat.ts`, UI
 `components/messages/chat-workspace.tsx`.
 
-## Chat administración
-
-Same tables/RPCs as ERP **Chat docentes** (`weeon-tenants`). Teachers use
-**Escribir a administración** in `chat-workspace.tsx` → RPC
-`start_teacher_admin_chat()`. Loaders `lib/dashboard/admin-teacher-chat.ts`,
-actions `lib/teachers/admin-teacher-chat-actions.ts`, merged list in
-`lib/dashboard/chat.ts`.
+Administración uses `start_teacher_admin_chat` and the `admin_teacher_chat_*`
+tables (same contract as the school ERP). Encargados and estudiantes use
+`chat_*` via `start_chat_conversation`.
 
 ## Env
 

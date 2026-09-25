@@ -35,11 +35,47 @@ type ConversationListRow = {
 /** Realtime channel config for the browser client (anon key is public). */
 export type ChatRealtimeConfig = { url: string; anonKey: string };
 
-/** Guardians with a linked student in the teacher's classes (picker source). */
+/** Administración, encargados, and students the teacher can start a chat with. */
 export const loadChatGuardianContacts = cache(async (): Promise<ChatContact[]> => {
   const session = await getTeacherSession();
   if (!session) return [];
-  const { contacts } = await loadGuardianChatDirectory(session);
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("list_message_contacts");
+  if (error || !data) return [];
+
+  const seen = new Set<string>();
+  const contacts: ChatContact[] = [];
+  for (const row of data as Array<{
+    recipient_key: string;
+    full_name: string;
+    kind: string;
+    context: string | null;
+    student_name?: string | null;
+  }>) {
+    if (row.kind !== "parent" && row.kind !== "student") continue;
+    const key = row.recipient_key?.trim();
+    const name = row.full_name?.trim();
+    if (!key || !name) continue;
+    const context = row.context?.trim() ?? "";
+    const studentName =
+      row.kind === "student" ? "" : (row.student_name?.trim() ?? "");
+    const dedupe = `${row.kind}::${context}::${studentName}::${name.toLowerCase()}`;
+    if (seen.has(dedupe)) continue;
+    seen.add(dedupe);
+    contacts.push({
+      key,
+      name,
+      context,
+      studentName,
+      kind: row.kind,
+    });
+  }
+
+  contacts.sort((a, b) => {
+    const byClass = a.context.localeCompare(b.context, "es");
+    if (byClass !== 0) return byClass;
+    return a.name.localeCompare(b.name, "es");
+  });
   return contacts;
 });
 
@@ -79,7 +115,11 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
       const classLabel =
         row.context_label?.trim() || contact?.context || fromMap?.classLabel || "";
       const studentName =
-        row.student_name?.trim() || contact?.studentName || fromMap?.studentName || "";
+        row.student_name?.trim() ||
+        contact?.studentName ||
+        fromMap?.studentName ||
+        row.counterpart_name?.trim() ||
+        "";
 
       if (studentName.trim().length === 0) continue;
 

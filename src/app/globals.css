@@ -197,6 +197,14 @@ a.btn-ink:hover {
   color: #2b59ff;
 }
 
+.logo-school {
+  color: #111111;
+}
+
+.dark .logo-school {
+  color: #ffffff;
+}
+
 /* Interaction language — neutral chrome, brand primary.
    .ui-hover: whisper-light wash · .ui-active: soft pressed shadow ·
    .btn-ink: brand-gradient primary (was the old monochrome pill). */
@@ -226,6 +234,17 @@ a.btn-ink:hover {
 
 .btn-ink:hover {
   background-color: #0e7490;
+}
+
+/* Login stays solid blue. App actions stay teal. */
+.login-bg button.brand-gradient,
+.login-bg a.brand-gradient {
+  background-color: #2b59ff;
+}
+
+.login-bg button.brand-gradient:hover,
+.login-bg a.brand-gradient:hover {
+  background-color: #2448d4;
 }
 
 .btn-ink:active {
@@ -471,7 +490,7 @@ a.btn-ink:hover {
 }
 
 .login-bg .login-lockup .login-school {
-  color: rgb(255 255 255 / 0.72);
+  color: #fff;
 }
 
 .login-card {
@@ -833,4 +852,25 @@ a.btn-ink:hover {
   text-decoration: underline wavy #e11d48;
   text-decoration-skip-ink: none;
   text-underline-offset: 3px;
+}
+
+@keyframes weeon-typing {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.weeon-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 45%, transparent);
+  animation: weeon-typing 1s ease-in-out infinite;
 }
