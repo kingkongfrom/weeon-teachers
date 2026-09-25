@@ -116,9 +116,16 @@ export function summarizeTardias(records: TardiaRecord[]): Map<string, TardiaSum
   return byStudent;
 }
 
+export type GuardianDecision = "pending" | "accepted" | "rejected";
+
 export type AttendanceEntry = {
   status: AttendanceStatus;
   comment: string | null;
+  recordId?: string | null;
+  guardianNote?: string | null;
+  guardianAttachmentUrl?: string | null;
+  guardianAttachmentPath?: string | null;
+  guardianDecision?: GuardianDecision | null;
 };
 
 export const ATTENDANCE_COMMENT_MAX = 500;

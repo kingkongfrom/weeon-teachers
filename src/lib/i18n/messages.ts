@@ -63,6 +63,8 @@ const es = {
         `${n} ${n === 1 ? "chat sin leer" : "chats sin leer"}`,
       unreadInbox: (n: number) =>
         `${n} ${n === 1 ? "mensaje sin leer" : "mensajes sin leer"}`,
+      justifications: (n: number) =>
+        `${n} ${n === 1 ? "justificación por revisar" : "justificaciones por revisar"}`,
     },
     noLessons: "Aún no tiene lecciones asignadas en esta semana.",
     upcoming: "Próximamente",
@@ -705,8 +707,18 @@ const es = {
     },
     commentLabel: "Comentario",
     commentPlaceholder: "Motivo o nota (opcional)",
+    guardianNote: "Encargado",
+    acceptJustification: "Aceptar",
+    rejectJustification: "Rechazar",
+    justificationAccepted: "Justificación aceptada",
+    justificationRejected: "Justificación rechazada",
+    inboxTitle: "Justificaciones",
+    inboxHint: "El encargado envió un motivo. Acepte para marcar la asistencia como justificada, o rechácela.",
+    inboxEmpty: "No hay justificaciones pendientes.",
+    openInRegister: "Ver en el libro",
     errors: {
       save: "No se pudo guardar la asistencia.",
+      decide: "No se pudo registrar la decisión.",
     },
     groupView: {
       subtitle: "Historial de tardías del grupo (TJ / TI)",
@@ -1002,6 +1014,8 @@ const en: Messages = {
       grading: (n: number) => `${n} submission${n === 1 ? "" : "s"} to grade`,
       unreadChat: (n: number) => `${n} unread chat${n === 1 ? "" : "s"}`,
       unreadInbox: (n: number) => `${n} unread message${n === 1 ? "" : "s"}`,
+      justifications: (n: number) =>
+        `${n} justification${n === 1 ? "" : "s"} to review`,
     },
     noLessons: "You have no lessons assigned this week.",
     upcoming: "Coming soon",
@@ -1640,8 +1654,18 @@ const en: Messages = {
     },
     commentLabel: "Comment",
     commentPlaceholder: "Reason or note (optional)",
+    guardianNote: "Guardian",
+    acceptJustification: "Accept",
+    rejectJustification: "Reject",
+    justificationAccepted: "Justification accepted",
+    justificationRejected: "Justification rejected",
+    inboxTitle: "Justifications",
+    inboxHint: "A guardian sent a reason. Accept to mark attendance as justified, or reject it.",
+    inboxEmpty: "No justifications waiting.",
+    openInRegister: "Open in the register",
     errors: {
       save: "Couldn't save attendance.",
+      decide: "Could not save the decision.",
     },
     groupView: {
       subtitle: "Group tardy history (TJ / TI)",

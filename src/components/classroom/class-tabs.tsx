@@ -39,6 +39,7 @@ export function ClassTabs({
   attendanceDate,
   attendanceLessonId,
   attendanceMarks,
+  pendingJustifications = 0,
 }: {
   classId: string;
   teacherName: string;
@@ -53,6 +54,7 @@ export function ClassTabs({
   attendanceDate: string;
   attendanceLessonId: string | null;
   attendanceMarks: Record<string, AttendanceEntry>;
+  pendingJustifications?: number;
 }) {
   const t = useT();
   const VALID_TABS: TabId[] = [
@@ -96,7 +98,14 @@ export function ClassTabs({
                   : "text-foreground/55 hover:text-foreground",
               )}
             >
-              {label}
+              <span className="inline-flex items-center gap-1.5">
+                {label}
+                {id === "asistencia" && pendingJustifications > 0 ? (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                    {pendingJustifications > 9 ? "9+" : pendingJustifications}
+                  </span>
+                ) : null}
+              </span>
               {active ? (
                 <span
                   aria-hidden

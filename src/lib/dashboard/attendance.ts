@@ -15,9 +15,14 @@ import {
 } from "@/lib/attendance/model";
 
 export type AttendanceMark = {
+  recordId: string;
   status: AttendanceStatus;
   lessonId: string | null;
   comment: string | null;
+  guardianNote?: string | null;
+  guardianAttachmentUrl?: string | null;
+  guardianAttachmentPath?: string | null;
+  guardianDecision?: "pending" | "accepted" | "rejected" | null;
 };
 
 /** Attendance already recorded for a class on a date, keyed by student id. RLS
@@ -30,7 +35,9 @@ export const loadClassAttendance = cache(
     const supabase = await createSessionClient();
     const { data, error } = await supabase
       .from("attendance_records")
-      .select("student_id, status, class_lesson_id, comment")
+      .select(
+        "id, student_id, status, class_lesson_id, comment, guardian_note, guardian_attachment_path, guardian_decision",
+      )
       .eq("class_id", classId)
       .eq("date", date);
 
@@ -44,10 +51,28 @@ export const loadClassAttendance = cache(
     for (const row of data) {
       const status = normalizeAttendanceStatus(row.status);
       if (!status) continue;
+      let guardianAttachmentUrl: string | null = null;
+      const attachmentPath =
+        typeof row.guardian_attachment_path === "string" ? row.guardian_attachment_path.trim() : "";
+      if (attachmentPath) {
+        const signed = await supabase.storage
+          .from("attendance-justifications")
+          .createSignedUrl(attachmentPath, 60 * 60);
+        guardianAttachmentUrl = signed.data?.signedUrl ?? null;
+      }
+      const decision = row.guardian_decision;
       marks[row.student_id] = {
+        recordId: row.id,
         status,
         lessonId: row.class_lesson_id,
         comment: normalizeAttendanceComment(row.comment),
+        guardianNote: normalizeAttendanceComment(row.guardian_note),
+        guardianAttachmentUrl,
+        guardianAttachmentPath: attachmentPath || null,
+        guardianDecision:
+          decision === "pending" || decision === "accepted" || decision === "rejected"
+            ? decision
+            : null,
       };
     }
     return marks;

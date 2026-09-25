@@ -78,3 +78,43 @@ export async function saveAttendance(input: {
   revalidatePath(`/aula-virtual/${parsed.data.classId}`);
   return { ok: true };
 }
+
+const decisionSchema = z.object({
+  recordId: z.string().uuid(),
+  decision: z.enum(["accepted", "rejected"]),
+});
+
+/** Accept flips the mark to justified. Reject keeps it and clears the alert. */
+export async function decideAttendanceJustification(
+  recordId: string,
+  decision: "accepted" | "rejected",
+): Promise<AttendanceActionResult> {
+  const t = await getT();
+  const parsed = decisionSchema.safeParse({ recordId, decision });
+  if (!parsed.success) return { ok: false, error: t.attendance.errors.decide };
+
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: t.attendance.errors.decide };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("decide_attendance_justification", {
+    p_record_id: parsed.data.recordId,
+    p_decision: parsed.data.decision,
+  });
+
+  if (error) {
+    console.error("[attendance] decision failed:", error.code, error.message);
+    return { ok: false, error: t.attendance.errors.decide };
+  }
+
+  const { data: row } = await supabase
+    .from("attendance_records")
+    .select("class_id")
+    .eq("id", parsed.data.recordId)
+    .maybeSingle();
+
+  revalidatePath("/inicio");
+  revalidatePath("/aula-virtual/justificaciones");
+  if (row?.class_id) revalidatePath(`/aula-virtual/${row.class_id}`);
+  return { ok: true };
+}

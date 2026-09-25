@@ -8,6 +8,7 @@ import { useT } from "@/lib/i18n/client";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Tooltip } from "@/components/ui/tooltip";
 import { saveAttendance } from "@/lib/teachers/attendance-actions";
+import { JustificationDecision } from "@/components/attendance/justification-decision";
 import {
   ATTENDANCE_CODE,
   ATTENDANCE_COMMENT_MAX,
@@ -265,7 +266,7 @@ export function AttendanceRegister({
       ) : (
         <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface">
           {students.map((student) => {
-            const mark = marks[student.id] ?? { status: "present", comment: null };
+            const mark = marks[student.id] ?? { status: "present", comment: null, guardianNote: null };
             const showComment = attendanceAllowsComment(mark.status);
             return (
               <li key={student.id} className="px-4 py-3">
@@ -315,6 +316,43 @@ export function AttendanceRegister({
                       className="w-full rounded-lg border border-border bg-surface-muted/40 px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                     />
                   </label>
+                ) : null}
+                {mark.guardianNote || mark.guardianAttachmentUrl ? (
+                  <div className="mt-2 space-y-2">
+                    {mark.guardianNote ? (
+                      <p className="text-sm text-foreground/70">
+                        <span className="font-semibold">{a.guardianNote}: </span>
+                        {mark.guardianNote}
+                      </p>
+                    ) : null}
+                    {mark.guardianAttachmentUrl ? (
+                      mark.guardianAttachmentPath?.endsWith(".pdf") ? (
+                        <a
+                          href={mark.guardianAttachmentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-semibold text-brand-600"
+                        >
+                          PDF
+                        </a>
+                      ) : (
+                        <a href={mark.guardianAttachmentUrl} target="_blank" rel="noreferrer">
+                          <img
+                            src={mark.guardianAttachmentUrl}
+                            alt={a.guardianNote}
+                            className="h-24 w-24 rounded-lg object-cover"
+                          />
+                        </a>
+                      )
+                    ) : null}
+                    {mark.guardianDecision === "pending" && mark.recordId ? (
+                      <JustificationDecision recordId={mark.recordId} />
+                    ) : mark.guardianDecision === "accepted" ? (
+                      <p className="text-xs font-semibold text-emerald-700">{a.justificationAccepted}</p>
+                    ) : mark.guardianDecision === "rejected" ? (
+                      <p className="text-xs font-semibold text-foreground/50">{a.justificationRejected}</p>
+                    ) : null}
+                  </div>
                 ) : null}
               </li>
             );

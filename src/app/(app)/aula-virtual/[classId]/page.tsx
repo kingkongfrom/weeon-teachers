@@ -11,6 +11,7 @@ import { loadClassTurnIns } from "@/lib/dashboard/submissions";
 import { loadClassStream } from "@/lib/dashboard/stream";
 import { loadClassTopics } from "@/lib/dashboard/topics";
 import { loadClassAttendance } from "@/lib/dashboard/attendance";
+import { loadJustificationInbox } from "@/lib/dashboard/justification-inbox";
 import { normalizeAttendanceDate } from "@/lib/attendance/model";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
@@ -41,7 +42,7 @@ export default async function AulaVirtualClassPage({
     lesson && /^[0-9a-fA-F-]{36}$/.test(lesson) ? lesson : null;
 
   const { grupo, students } = detail;
-  const [session, materials, rawAssessments, stream, topics, attendanceMarks, turnIns] =
+  const [session, materials, rawAssessments, stream, topics, attendanceMarks, turnIns, pendingJustifications] =
     await Promise.all([
       getTeacherSession(),
       loadClassMaterials(classId),
@@ -50,6 +51,7 @@ export default async function AulaVirtualClassPage({
       loadClassTopics(classId),
       loadClassAttendance(classId, attendanceDate),
       loadClassTurnIns(classId, students),
+      loadJustificationInbox().then((rows) => rows.filter((row) => row.classId === classId).length),
     ]);
   const schoolName = session ? await loadSchoolName(session.tenantId) : null;
   const t = await getT();
@@ -115,9 +117,18 @@ export default async function AulaVirtualClassPage({
         attendanceMarks={Object.fromEntries(
           Object.entries(attendanceMarks).map(([studentId, mark]) => [
             studentId,
-            { status: mark.status, comment: mark.comment },
+            {
+              status: mark.status,
+              comment: mark.comment,
+              recordId: mark.recordId,
+              guardianNote: mark.guardianNote,
+              guardianAttachmentUrl: mark.guardianAttachmentUrl,
+              guardianAttachmentPath: mark.guardianAttachmentPath,
+              guardianDecision: mark.guardianDecision,
+            },
           ]),
         )}
+        pendingJustifications={pendingJustifications}
       />
     </div>
   );

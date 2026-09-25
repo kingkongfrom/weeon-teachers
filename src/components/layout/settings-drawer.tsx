@@ -243,12 +243,12 @@ export function SettingsDrawer({
 
                       <div className="mt-3 flex items-center gap-3 rounded-2xl bg-surface-muted px-4 py-3">
                         {logoSrc ? (
-                          <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-white">
+                          <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={logoSrc}
                               alt={user.tenantName ?? t.common.fallbackSchool}
-                              className="h-full w-full object-contain"
+                              className="h-full w-full origin-center scale-[1.14] object-cover"
                             />
                           </span>
                         ) : (
