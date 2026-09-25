@@ -20,7 +20,7 @@ function EeSmileArc({ className = "" }: { className?: string }) {
     >
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#5e25cc" />
+          <stop offset="0" stopColor="#2b59ff" />
           <stop offset="1" stopColor="#2b59ff" />
         </linearGradient>
       </defs>
@@ -67,7 +67,7 @@ export function LogoMark({ className = "", ...props }: LogoProps) {
       <svg viewBox="0 0 32 32" className="h-full w-full" role="img" aria-label="Weeon">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#5e25cc" />
+            <stop offset="0" stopColor="#2b59ff" />
             <stop offset="1" stopColor="#2b59ff" />
           </linearGradient>
         </defs>

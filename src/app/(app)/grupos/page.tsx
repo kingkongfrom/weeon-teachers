@@ -23,7 +23,6 @@ export default async function GruposPage() {
       <PageHeader
         title={t.grupos.title}
         description={t.grupos.description}
-        backHref="/inicio"
       />
 
       {grupos.length === 0 ? (

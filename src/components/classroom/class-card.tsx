@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { FolderOpen, Megaphone, Users } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { FolderOpen, Megaphone, Presentation, Users } from "lucide-react";
 import { SubjectChips } from "@/components/grupos/subject-chips";
-import { CLASS_BANNER } from "@/lib/dashboard/class-banner";
 import { getT } from "@/lib/i18n/server";
 import type { TeacherGrupo } from "@/lib/dashboard/grupos";
+import { cn } from "@/lib/utils";
+import { AULA_TEAL } from "@/lib/dashboard/tones";
 
 export async function ClassCard({
   grupo,
@@ -36,11 +36,22 @@ export async function ClassCard({
   ] as const;
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-brand-200 dark:hover:border-border-strong">
+    <article className={cn("group flex flex-col overflow-hidden rounded-3xl border border-border", AULA_TEAL.card)}>
       <Link href={`/aula-virtual/${grupo.id}`} className="block">
-        <div className={cn("relative bg-gradient-to-br px-4 py-3", CLASS_BANNER)}>
-          <p className="line-clamp-2 text-lg font-bold leading-snug">{grupo.name}</p>
-          <p className="mt-0.5 text-xs font-semibold opacity-70">{year}</p>
+        <div className="flex items-start gap-3 px-4 py-3">
+          <span
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white",
+              AULA_TEAL.avatar,
+            )}
+            aria-hidden
+          >
+            <Presentation className="h-5 w-5" strokeWidth={2.2} />
+          </span>
+          <div className="min-w-0">
+            <p className={cn("line-clamp-2 text-lg font-bold leading-snug", AULA_TEAL.label)}>{grupo.name}</p>
+            <p className="mt-0.5 text-xs font-semibold text-foreground/55">{year}</p>
+          </div>
         </div>
         <div className="px-4 pt-3">
           <p className="truncate text-xs font-medium text-foreground/50">

@@ -6,6 +6,8 @@ import {
 import { isoDate, weekDates } from "@/lib/dashboard/week";
 import { getT } from "@/lib/i18n/server";
 import { LessonCard } from "@/components/schedule/lesson-card";
+import { hubTonePill, type Tone } from "@/lib/dashboard/tones";
+import { cn } from "@/lib/utils";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 
 /**
@@ -24,6 +26,7 @@ export async function ScheduleGrid({
 }) {
   const t = await getT();
   const dates = weekStart ? weekDates(weekStart) : null;
+  const dayTones: Tone[] = ["blue", "purple", "yellow", "green", "rose"];
 
   const byDay = new Map<Weekday, TeacherLesson[]>();
   for (const day of WEEKDAYS) byDay.set(day.value, []);
@@ -38,13 +41,20 @@ export async function ScheduleGrid({
         const date = dates?.[index];
         const dateISO = date ? isoDate(date) : null;
         const dayEvents = dateISO ? events.filter((event) => event.date === dateISO) : [];
+        const dayPill = hubTonePill(dayTones[index] ?? "blue");
         return (
           <section
             key={day.value}
             className="flex flex-col gap-3 rounded-2xl bg-surface p-4 ring-1 ring-inset ring-black/5 dark:ring-white/10"
           >
-            <div className="flex items-baseline justify-between gap-2">
-              <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/70">
+            <div className="flex items-center justify-between gap-2">
+              <h3
+                className={cn(
+                  "rounded-lg px-2 py-1 text-sm font-bold uppercase tracking-wide",
+                  dayPill.wash,
+                  dayPill.label,
+                )}
+              >
                 {t.schedule.weekdays[index]}
               </h3>
               {date ? (

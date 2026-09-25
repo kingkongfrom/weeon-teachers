@@ -21,7 +21,6 @@ export default async function ReportesPage() {
         description={
           reports.length === 0 ? t.reportes.descriptionEmpty : t.reportes.description
         }
-        backHref="/inicio"
       />
 
       {reports.length === 0 ? (

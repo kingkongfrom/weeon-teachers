@@ -24,8 +24,8 @@ export function PageTitleBlockSkeleton({
 /** Matches {@link HubModuleCard} tone tile anatomy. */
 export function HubModuleCardSkeleton() {
   return (
-    <div className="flex h-full min-h-[8.25rem] flex-col gap-2.5 rounded-2xl border border-border bg-surface p-5 sm:min-h-[9.25rem] sm:gap-3">
-      <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+    <div className="flex h-full min-h-[8.25rem] flex-col gap-2.5 rounded-3xl border border-border bg-surface p-5 sm:min-h-[9.25rem] sm:gap-3">
+      <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
       <div className="mt-auto min-w-0 space-y-2">
         <Skeleton className="h-5 w-28" />
         <Skeleton className="h-4 w-full max-w-[14rem]" />

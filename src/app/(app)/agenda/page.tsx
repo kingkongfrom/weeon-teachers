@@ -57,7 +57,6 @@ export default async function AgendaPage() {
       <PageHeader
         title={t.agenda.title}
         description={t.agenda.description}
-        backHref="/inicio"
       />
 
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 sm:gap-4">

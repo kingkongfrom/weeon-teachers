@@ -2,14 +2,12 @@
 
 export type HubTone = "blue" | "purple" | "yellow" | "green";
 
+/** Card body stays white. Tone shows up as the ring, title, and icon chip. */
 export const HUB_TONE_CARD: Record<HubTone, string> = {
-  blue: "bg-gradient-to-br from-[#d8e9fb] to-[#c0d9f7] dark:from-[#16273f] dark:to-[#122035]",
-  purple:
-    "bg-gradient-to-br from-[#e6defb] to-[#d6c9f6] dark:from-[#241b45] dark:to-[#1d1738]",
-  yellow:
-    "bg-gradient-to-br from-[#fdeecd] to-[#f9dda0] dark:from-[#3a2a12] dark:to-[#2f230e]",
-  green:
-    "bg-gradient-to-br from-[#c9f0ec] to-[#abe3dc] dark:from-[#0f2f2c] dark:to-[#0c2624]",
+  blue: "bg-surface",
+  purple: "bg-surface",
+  yellow: "bg-surface",
+  green: "bg-surface",
 };
 
 export const HUB_TONE_INK = "text-[#10201d] dark:text-[#e6eef7]";
@@ -58,12 +56,12 @@ const HUB_TONE_COUNT_IDLE: Record<HubTone, string> = {
   green: "bg-[#c9f0ec] text-[#115e59] dark:bg-[#0f2f2c] dark:text-[#6ee7d7]/85",
 };
 
-/** Saturated gradient for roster initials (white text). */
+/** Flat marketing icon chips (white glyph). */
 export const HUB_TONE_AVATAR: Record<HubTone, string> = {
-  blue: "bg-gradient-to-br from-[#5b9fd9] to-[#2563b0] dark:from-[#3b82c4] dark:to-[#1e4a7a]",
-  purple: "bg-gradient-to-br from-[#a78bfa] to-[#7c3aed] dark:from-[#8b6fd4] dark:to-[#5b21b6]",
-  yellow: "bg-gradient-to-br from-[#fbbf24] to-[#d97706] dark:from-[#d4a017] dark:to-[#b45309]",
-  green: "bg-gradient-to-br from-[#2dd4bf] to-[#0f766e] dark:from-[#14b8a6] dark:to-[#115e59]",
+  blue: "bg-[#2563b0]",
+  purple: "bg-[#7c3aed]",
+  yellow: "bg-[#d97706]",
+  green: "bg-[#0f766e]",
 };
 
 export function peopleTabPill(tab: PeopleTabId) {

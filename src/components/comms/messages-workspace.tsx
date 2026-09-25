@@ -35,6 +35,7 @@ import {
   messageTrashTransition,
 } from "@/components/comms/message-trash-motion";
 import { AutoReplyDialog } from "@/components/comms/auto-reply-dialog";
+import { MailboxReadingPane } from "@/components/comms/mailbox-reading-pane";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
 import { NewFolderDialog } from "@/components/comms/new-folder-dialog";
 import { SignatureDialog } from "@/components/comms/signature-dialog";
@@ -46,6 +47,7 @@ import {
   setThreadLabel,
   toggleThreadFavorite,
 } from "@/lib/teachers/comms-actions";
+import type { MessageDraftSummary } from "@/lib/comms/message-draft";
 import type { MessageFolder, MessageLabel, MessageThreadSummary } from "@/lib/dashboard/messages";
 import type { MessageMailboxSettings } from "@/lib/dashboard/message-mailbox-settings";
 
@@ -65,6 +67,14 @@ function formatListTime(iso: string): string {
 
 const LABEL_REORDER_MIME = "application/x-weeon-label-reorder";
 
+const AVATAR_COLORS = ["bg-[#0f766e]", "bg-[#2563b0]", "bg-[#7c3aed]", "bg-[#d97706]", "bg-[#e11d48]"];
+
+function avatarColor(name: string): string {
+  let hash = 0;
+  for (const char of name) hash += char.charCodeAt(0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? AVATAR_COLORS[0];
+}
+
 const TAG_TONE: Record<string, string> = {
   amber: "bg-amber-100 text-amber-900",
   green: "bg-emerald-100 text-emerald-800",
@@ -78,14 +88,16 @@ export function MessagesWorkspace({
   labelId,
   labels,
   threads,
+  drafts = [],
   unreadInbox,
   favoriteCount,
   mailboxSettings,
 }: {
-  folder: MessageFolder;
+  folder: MessageFolder | "draft";
   labelId: string | null;
   labels: MessageLabel[];
   threads: MessageThreadSummary[];
+  drafts?: MessageDraftSummary[];
   unreadInbox: number;
   favoriteCount: number;
   mailboxSettings: MessageMailboxSettings;
@@ -121,10 +133,6 @@ export function MessagesWorkspace({
   }, [labels]);
 
   useEffect(() => {
-    setRefreshing(false);
-  }, [threads, labels, folder, labelId, unreadInbox]);
-
-  useEffect(() => {
     setLocalMailboxSettings(mailboxSettings);
   }, [mailboxSettings]);
 
@@ -151,6 +159,11 @@ export function MessagesWorkspace({
       });
   }, [threads, removedThreadIds, query, unreadOnly]);
 
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const openId = localThreads.some((row) => row.id === selectedId)
+    ? selectedId
+    : (localThreads[0]?.id ?? null);
+
   const folders: Array<{
     id: MessageFolder | "drafts";
     label: string;
@@ -167,6 +180,12 @@ export function MessagesWorkspace({
       count: unreadInbox,
     },
     {
+      id: "sent",
+      label: t("comms.folderSent"),
+      icon: Send,
+      href: COMMS_MESSAGES,
+    },
+    {
       id: "favorite",
       label: t("comms.folderFavorites"),
       icon: Star,
@@ -174,16 +193,11 @@ export function MessagesWorkspace({
       count: favoriteCount,
     },
     {
-      id: "sent",
-      label: t("comms.folderSent"),
-      icon: Send,
-      href: COMMS_MESSAGES,
-    },
-    {
       id: "drafts",
       label: t("comms.folderDrafts"),
       icon: Mail,
-      disabled: true,
+      href: `${COMMS_MESSAGES}?folder=drafts`,
+      count: drafts.length,
     },
     {
       id: "trash",
@@ -370,7 +384,7 @@ export function MessagesWorkspace({
   });
 
   return (
-    <div className="relative flex w-fit max-w-full flex-col gap-4">
+    <div className="relative flex w-full flex-col gap-3">
       <AnimatePresence>
         {notice ? (
           <motion.div
@@ -385,73 +399,78 @@ export function MessagesWorkspace({
         ) : null}
       </AnimatePresence>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setSidebarOpen((current) => !current)}
-          className={cn(
-            "inline-flex h-10 w-10 items-center justify-center rounded-xl lg:hidden",
-            messagesTone.primaryButton,
-          )}
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <Link
-          href={COMMS_COMPOSE}
-          className={cn(
-            "inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold",
-            messagesTone.primaryButton,
-          )}
-        >
-          <PenSquare className="h-4 w-4" />
-          {t("comms.composeMessage")}
-        </Link>
-        <div className="relative min-w-[180px] flex-1 sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/35" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("comms.searchMessages")}
-            className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-brand-400"
-          />
+      <div className="flex items-center">
+        <div className="flex w-56 shrink-0 items-center gap-2 px-2">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((current) => !current)}
+            className={cn(
+              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl lg:hidden",
+              messagesTone.primaryButton,
+            )}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <Link
+            href={COMMS_COMPOSE}
+            className="inline-flex h-10 w-full items-center gap-2.5 rounded-xl bg-[#0891B2] px-3 text-sm font-semibold text-white hover:bg-[#0e7490]"
+          >
+            <PenSquare className="h-4 w-4" />
+            {t("comms.composeMessage")}
+          </Link>
         </div>
-        <button
-          type="button"
-          onClick={() => setUnreadOnly((current) => !current)}
-          className={cn(
-            "inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold",
-            unreadOnly ? messagesTone.unreadFilterActive : "border-border text-foreground/70",
-          )}
-        >
-          <Mail className="h-4 w-4" />
-          {t("comms.unreadOnly")}
-        </button>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground/60"
-        >
-          <Printer className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          disabled={refreshing}
-          onClick={() => {
-            setRefreshing(true);
-            router.refresh();
-          }}
-          title={t("comms.refreshList")}
-          aria-label={t("comms.refreshList")}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground/60 disabled:opacity-60"
-        >
-          <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-        </button>
+        <div className="flex w-[22rem] shrink-0 items-center">
+          <div className="relative w-[80%] shrink-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/35" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("comms.searchMessages")}
+              className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-brand-400"
+            />
+          </div>
+          <div className="ml-2 flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setUnreadOnly((current) => !current)}
+              aria-pressed={unreadOnly}
+              className={cn(
+                "inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold",
+                unreadOnly ? messagesTone.unreadFilterActive : "border-border text-foreground/70",
+              )}
+            >
+              <Mail className="h-4 w-4" />
+              {t("comms.unreadOnly")}
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground/60"
+            >
+              <Printer className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              disabled={refreshing}
+              onClick={() => {
+                setRefreshing(true);
+                router.refresh();
+                window.setTimeout(() => setRefreshing(false), 800);
+              }}
+              title={t("comms.refreshList")}
+              aria-label={t("comms.refreshList")}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground/60 disabled:opacity-60"
+            >
+              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="flex w-fit max-w-full flex-col gap-5 lg:flex-row lg:items-start">
+      <div className="flex h-[calc(100dvh-8rem)] min-h-[28rem] w-full overflow-x-auto rounded-2xl border border-border bg-surface">
         <aside
           className={cn(
-            "flex w-full shrink-0 flex-col gap-1 lg:w-60",
+            "flex w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border px-2 py-3",
             !sidebarOpen && "hidden lg:flex",
           )}
         >
@@ -460,7 +479,10 @@ export function MessagesWorkspace({
           </p>
           {folders.map((item) => {
             const Icon = item.icon;
-            const active = !item.disabled && !labelId && item.id === folder;
+            const active =
+              !item.disabled &&
+              !labelId &&
+              (item.id === "drafts" ? folder === "draft" : item.id === folder);
             const body = (
               <>
                 <Icon className="h-4 w-4" />
@@ -496,7 +518,7 @@ export function MessagesWorkspace({
                 href={item.href}
                 className={cn(
                   "inline-flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-                  active ? messagesTone.activeNav : "text-foreground/70 hover:bg-surface-muted/60 hover:text-foreground",
+                  active ? "bg-[#0891B2] text-white" : "text-foreground/70 hover:bg-surface-muted/60 hover:text-foreground",
                   dropTarget === item.id &&
                     item.id === "trash" &&
                     "ring-2 ring-error/40 bg-error/5",
@@ -647,19 +669,48 @@ export function MessagesWorkspace({
           ) : null}
         </aside>
 
-        <section className="min-w-0 w-full max-w-5xl shrink-0 rounded-2xl border border-border bg-surface lg:w-[60rem]">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground/70">
-              <span>{t("comms.selectAll")}</span>
-              {!labelId && folder === "inbox" && unreadInbox > 0 ? (
-                <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", messagesTone.accentMuted)}>
-                  {t("comms.unreadCount", { n: unreadInbox })}
-                </span>
-              ) : null}
+        <section className="flex w-[22rem] shrink-0 flex-col overflow-y-auto border-r border-border">
+          {!labelId && folder === "inbox" && unreadInbox > 0 ? (
+            <div className="border-b border-border px-4 py-3">
+              <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", messagesTone.accentMuted)}>
+                {t("comms.unreadCount", { n: unreadInbox })}
+              </span>
             </div>
-          </div>
+          ) : null}
 
-          {localThreads.length === 0 ? (
+          {folder === "draft" ? (
+            drafts.length === 0 ? (
+              <div className="px-6 py-16 text-center">
+                <p className="text-sm font-semibold text-foreground">{t("comms.emptyDrafts")}</p>
+                <p className="mx-auto mt-1 max-w-sm text-xs font-medium text-foreground/50">
+                  {t("comms.emptyDraftsBody")}
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {drafts.map((draft) => (
+                  <li key={draft.id}>
+                    <Link
+                      href={`${COMMS_COMPOSE}?draft=${draft.id}`}
+                      className="flex items-start gap-3 px-4 py-3.5 hover:bg-surface-muted/35"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-foreground">
+                          {draft.subject.trim() || t("comms.draftNoSubject")}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-foreground/45">
+                          {draft.preview || t("comms.emptyDraftsBody")}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-xs text-foreground/45">
+                        {formatListTime(draft.updatedAt)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : localThreads.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <p className="text-sm font-semibold text-foreground">
                 {folder === "favorite" ? t("comms.emptyFavorites") : t("comms.emptyMessages")}
@@ -691,9 +742,20 @@ export function MessagesWorkspace({
                       busyId === thread.id && "bg-error/5",
                     )}
                   >
-                    <Link
-                      href={`${COMMS_MESSAGES}/${thread.id}`}
-                      className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-surface-muted/35"
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedId(thread.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelectedId(thread.id);
+                        }
+                      }}
+                      className={cn(
+                        "flex w-full cursor-pointer items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-muted/35",
+                        openId === thread.id && "bg-[#0891B2]/10",
+                      )}
                     >
                       <span
                         className={cn(
@@ -703,8 +765,8 @@ export function MessagesWorkspace({
                       />
                       <span
                         className={cn(
-                          "mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-                          messagesTone.avatar,
+                          "mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
+                          avatarColor(thread.authorName ?? thread.counterpart),
                         )}
                       >
                         {(thread.authorName ?? thread.counterpart).slice(0, 1).toUpperCase()}
@@ -774,7 +836,7 @@ export function MessagesWorkspace({
                           </span>
                         ) : null}
                       </span>
-                    </Link>
+                    </div>
                     {folder === "trash" && thread.mine ? (
                       <button
                         type="button"
@@ -790,6 +852,7 @@ export function MessagesWorkspace({
             </motion.ul>
           )}
         </section>
+        <MailboxReadingPane threadId={openId} />
       </div>
 
       <NewFolderDialog

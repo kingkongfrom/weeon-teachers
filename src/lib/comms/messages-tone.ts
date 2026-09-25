@@ -4,7 +4,7 @@ import { HUB_TONE_AVATAR, hubFilterChipClass, hubTonePill } from "@/lib/dashboar
 const green = hubTonePill("green");
 
 export const messagesTone = {
-  primaryButton: `${HUB_TONE_AVATAR.green} text-white shadow-sm transition-all hover:brightness-105`,
+  primaryButton: "bg-[#0891B2] text-white shadow-sm transition-colors hover:bg-[#0e7490]",
   activeNav: hubFilterChipClass("green", true),
   accentText: "text-[#0f766e] dark:text-[#14b8a6]",
   accentMuted: green.countIdle,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -26,7 +26,13 @@ import { messagesTone } from "@/lib/comms/messages-tone";
 import { docToPlainText, emptyDoc, type RichTextDoc } from "@/lib/comms/model";
 import type { CommsGroupWithGrade } from "@/lib/comms/broadcast-filter";
 import { recipientsFromBulkSelections } from "@/lib/comms/recipient-catalog";
-import { createMessageThread, uploadMessageAttachment } from "@/lib/teachers/comms-actions";
+import type { MessageDraftRecord } from "@/lib/comms/message-draft";
+import {
+  createMessageThread,
+  deleteMessageDraft,
+  saveMessageDraft,
+  uploadMessageAttachment,
+} from "@/lib/teachers/comms-actions";
 import type { MessageContact } from "@/lib/dashboard/messages";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
@@ -41,24 +47,62 @@ function selectionLabel(selection: PickerSelection): string {
 export function UnifiedMessageComposer({
   contacts,
   groups,
+  initialDraft = null,
 }: {
   contacts: MessageContact[];
   groups: CommsGroupWithGrade[];
+  initialDraft?: MessageDraftRecord | null;
 }) {
   const t = useT();
   const router = useRouter();
-  const [toSelected, setToSelected] = useState<PickerSelection[]>([]);
-  const [ccSelected, setCcSelected] = useState<Array<{ key: string; name: string }>>([]);
+  const [toSelected, setToSelected] = useState<PickerSelection[]>(
+    () => (initialDraft?.toSelected ?? []) as PickerSelection[],
+  );
+  const [ccSelected, setCcSelected] = useState<Array<{ key: string; name: string }>>(
+    () => initialDraft?.ccSelected ?? [],
+  );
   const [pickerTarget, setPickerTarget] = useState<"to" | "cc" | null>(null);
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState<RichTextDoc>(() => emptyDoc());
+  const [subject, setSubject] = useState(initialDraft?.subject ?? "");
+  const [body, setBody] = useState<RichTextDoc>(() => initialDraft?.body ?? emptyDoc());
   const [files, setFiles] = useState<File[]>([]);
-  const [allowReplies, setAllowReplies] = useState(false);
+  const [allowReplies, setAllowReplies] = useState(initialDraft?.allowReplies ?? false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const sentRef = useRef(false);
+  const skipDraftRef = useRef(false);
+  const draftIdRef = useRef<string | null>(initialDraft?.id ?? null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const snapRef = useRef({ subject, body, toSelected, ccSelected, allowReplies });
+  snapRef.current = { subject, body, toSelected, ccSelected, allowReplies };
+
+  const persistRef = useRef<(snap?: typeof snapRef.current) => Promise<void>>(async () => {});
+  persistRef.current = async (snap = snapRef.current) => {
+    if (skipDraftRef.current || sentRef.current) return;
+    const res = await saveMessageDraft({
+      id: draftIdRef.current,
+      subject: snap.subject,
+      body: snap.body,
+      toSelected: snap.toSelected,
+      ccSelected: snap.ccSelected,
+      allowReplies: snap.allowReplies,
+    });
+    if (res.ok) draftIdRef.current = res.id;
+  };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void persistRef.current();
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [subject, body, toSelected, ccSelected, allowReplies]);
+
+  useEffect(
+    () => () => {
+      void persistRef.current();
+    },
+    [],
+  );
 
   const remainingAttachmentSlots = MAX_ATTACHMENTS - files.length;
 
@@ -194,6 +238,7 @@ export function UnifiedMessageComposer({
     }
 
     sentRef.current = true;
+    if (draftIdRef.current) void deleteMessageDraft(draftIdRef.current);
     router.replace(`${COMMS_MESSAGES}/${threadId}`);
     setSending(false);
   }
@@ -214,7 +259,12 @@ export function UnifiedMessageComposer({
           </Link>
           <button
             type="button"
-            onClick={() => router.push(COMMS_MESSAGES)}
+            onClick={() => {
+              skipDraftRef.current = true;
+              const id = draftIdRef.current;
+              if (id) void deleteMessageDraft(id);
+              router.push(COMMS_MESSAGES);
+            }}
             className="ui-hover inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-error/80 hover:text-error"
           >
             <Trash2 className="h-4 w-4" />
@@ -222,9 +272,10 @@ export function UnifiedMessageComposer({
           </button>
           <button
             type="button"
-            disabled
-            title={t("comms.comingSoon")}
-            className="inline-flex h-9 cursor-not-allowed items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground/30"
+            onClick={() => {
+              void persistRef.current().then(() => router.push(`${COMMS_MESSAGES}?folder=drafts`));
+            }}
+            className="ui-hover inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground/70 hover:text-foreground"
           >
             <Save className="h-4 w-4" />
             {t("comms.saveDraft")}

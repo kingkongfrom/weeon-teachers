@@ -41,9 +41,8 @@ export function LoginLockup({
         >
           <defs>
             <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" style={{ stopColor: "var(--brand-start)" }} />
-              <stop offset="0.42" style={{ stopColor: "var(--brand-mid)" }} />
-              <stop offset="1" style={{ stopColor: "var(--brand-end)" }} />
+              <stop offset="0" stopColor="#2b59ff" />
+              <stop offset="1" stopColor="#2b59ff" />
             </linearGradient>
           </defs>
           <path

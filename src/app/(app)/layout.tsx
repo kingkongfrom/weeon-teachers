@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
-import { loadSchoolName } from "@/lib/dashboard/school";
+import { loadSchoolLogoUrl, loadSchoolName } from "@/lib/dashboard/school";
 import { requireSupabasePublicEnv } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect("/crear-contrasena");
   }
 
-  const tenantName = await loadSchoolName(session.tenantId);
+  const [tenantName, logoUrl] = await Promise.all([
+    loadSchoolName(session.tenantId),
+    loadSchoolLogoUrl(session.tenantId),
+  ]);
   const supabasePublic = requireSupabasePublicEnv();
 
   return (
@@ -29,6 +32,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         role: session.role,
         username: session.username,
         tenantName,
+        logoUrl,
         avatarStoragePath: session.avatarStoragePath,
       }}
     >

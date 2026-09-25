@@ -1,10 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { BackLinkSkeleton, HubModuleCardSkeleton } from "@/components/ui/page-loading-skeletons";
+import { HubModuleCardSkeleton } from "@/components/ui/page-loading-skeletons";
 
 export default function AgendaLoading() {
   return (
     <div className="flex flex-col gap-6">
-      <BackLinkSkeleton />
       <div className="flex flex-col gap-1">
         <Skeleton className="h-9 w-40 sm:h-10" />
         <Skeleton className="h-4 w-72 max-w-full" />

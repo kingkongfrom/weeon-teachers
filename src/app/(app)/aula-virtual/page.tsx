@@ -32,7 +32,6 @@ export default async function AulaVirtualPage() {
       <PageHeader
         title={t.aulaVirtual.title}
         description={t.aulaVirtual.description}
-        backHref="/inicio"
       />
 
       {inbox.length > 0 ? (

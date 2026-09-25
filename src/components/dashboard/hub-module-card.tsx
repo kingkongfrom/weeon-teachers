@@ -16,7 +16,7 @@ type HubModuleCardProps = {
   className?: string;
 };
 
-/** Hub shortcut tile — matches weeon-tenants module grid (tone chip + gradient icon). */
+/** Hub shortcut tile — white card, flat chip, colored title, thin tone ring. */
 export function HubModuleCard({
   tone,
   icon: Icon,
@@ -32,7 +32,7 @@ export function HubModuleCard({
   const card = (
     <div
       className={cn(
-        "flex h-full min-h-[8.5rem] flex-col gap-2.5 rounded-2xl border p-5 transition-all sm:min-h-[9rem] sm:gap-3",
+        "flex h-full min-h-[8.5rem] flex-col gap-2.5 rounded-3xl border border-border p-5 transition-all sm:min-h-[9rem] sm:gap-3",
         pill.active,
         href ? "hover:opacity-95 active:scale-[0.99]" : "",
         className,
@@ -40,7 +40,7 @@ export function HubModuleCard({
     >
       <span
         className={cn(
-          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm",
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white",
           TONE_AVATAR[tone],
         )}
         aria-hidden

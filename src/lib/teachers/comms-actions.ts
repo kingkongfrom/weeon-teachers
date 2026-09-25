@@ -609,3 +609,67 @@ export async function saveMessageMailboxSettings(
   revalidatePath(COMMS_MESSAGES);
   return { ok: true };
 }
+
+export async function fetchThreadDetail(threadId: string) {
+  const { loadThreadDetail } = await import("@/lib/dashboard/messages");
+  return loadThreadDetail(threadId);
+}
+
+const draftSchema = z.object({
+  id: z.string().uuid().nullable(),
+  subject: z.string().max(160),
+  body: docSchema,
+  toSelected: z.array(z.unknown()).max(80),
+  ccSelected: z.array(z.object({ key: z.string().max(200), name: z.string().max(200) })).max(80),
+  allowReplies: z.boolean(),
+});
+
+export type SaveDraftResult = { ok: true; id: string | null } | { ok: false; error: string };
+
+export async function saveMessageDraft(input: z.infer<typeof draftSchema>): Promise<SaveDraftResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+  const parsed = draftSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: await tRequest("comms.error") };
+  const value = parsed.data;
+  const subject = value.subject.trim();
+  const empty =
+    subject.length === 0 &&
+    value.toSelected.length === 0 &&
+    value.ccSelected.length === 0 &&
+    !JSON.stringify(value.body).includes('"text"');
+  if (empty) {
+    if (value.id) {
+      await session.actor.from("message_drafts").delete().eq("id", value.id);
+    }
+    revalidatePath(COMMS_MESSAGES);
+    return { ok: true, id: null };
+  }
+  const row = { subject, payload: value as never };
+  if (value.id) {
+    const { error } = await session.actor.from("message_drafts").update(row).eq("id", value.id);
+    if (error) return { ok: false, error: await tRequest("comms.error") };
+    revalidatePath(COMMS_MESSAGES);
+    return { ok: true, id: value.id };
+  }
+  const { data, error } = await session.actor
+    .from("message_drafts")
+    .insert(row)
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false, error: await tRequest("comms.error") };
+  revalidatePath(COMMS_MESSAGES);
+  return { ok: true, id: data.id };
+}
+
+export async function deleteMessageDraft(id: string): Promise<CommsActionResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+  if (!z.string().uuid().safeParse(id).success) {
+    return { ok: false, error: await tRequest("comms.error") };
+  }
+  const { error } = await session.actor.from("message_drafts").delete().eq("id", id);
+  if (error) return { ok: false, error: await tRequest("comms.error") };
+  revalidatePath(COMMS_MESSAGES);
+  return { ok: true };
+}

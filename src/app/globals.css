@@ -6,7 +6,7 @@
   color-scheme: light;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
-  --background: #f3f6f5;
+  --background: #f8fafc;
   --foreground: #10201d;
 
   /* Brand palette: refined indigo with teal accent */
@@ -32,7 +32,7 @@
   --surface-muted: #e5edeb;
   --border: #dde7e4;
   --border-strong: #c3d2ce;
-  --ring: #6366f1;
+  --ring: #0891b2;
 
   --accent: #0891b2;
   --accent-light: #cffafe;
@@ -53,14 +53,14 @@
 
 .dark {
   color-scheme: dark;
-  /* Dark palette — "Noche": tamed slate-dusk field, clearly lifted, flat */
-  --background: #232a41;
-  --foreground: #e6eef7;
-  --surface: #2d3550;
-  --surface-elevated: #363f5e;
-  --surface-muted: #1d2438;
-  --border: #414b6e;
-  --border-strong: #545f88;
+  /* Dark palette — same dusk slate as the school ERP. */
+  --background: #1c2230;
+  --foreground: #e8edf5;
+  --surface: #262d3c;
+  --surface-elevated: #333c4f;
+  --surface-muted: #222838;
+  --border: #3a4356;
+  --border-strong: #505a73;
   --ring: #8b9cff;
   --accent: #22d3ee;
   --accent-light: #164e63;
@@ -118,6 +118,39 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Thin pill scrollbars — page, panels, and dialogs. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 16%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--foreground) 36%, transparent);
+  background-clip: padding-box;
+}
+
 /* Hide the native scrollbar on horizontally scrollable strips (tab bars, chip
    rows) while keeping the scroll gesture. */
 .no-scrollbar {
@@ -129,6 +162,10 @@ body {
   display: none;
 }
 
+a {
+  text-decoration: none;
+}
+
 .brand-gradient {
   background-image: linear-gradient(
     90deg,
@@ -138,16 +175,26 @@ body {
   );
 }
 
+button.brand-gradient,
+a.brand-gradient,
+button.btn-ink,
+a.btn-ink {
+  background-image: none;
+  background-color: #0891b2;
+  filter: none;
+}
+
+button.brand-gradient:hover,
+a.brand-gradient:hover,
+button.btn-ink:hover,
+a.btn-ink:hover {
+  background-color: #0e7490;
+  filter: none;
+}
+
 .brand-text {
-  background-image: linear-gradient(
-    90deg,
-    var(--brand-start) 0%,
-    var(--brand-mid) 42%,
-    var(--brand-end) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background-image: none;
+  color: #2b59ff;
 }
 
 /* Interaction language — neutral chrome, brand primary.
@@ -169,20 +216,16 @@ body {
 }
 
 .btn-ink {
-  background-image: linear-gradient(
-    90deg,
-    var(--brand-start) 0%,
-    var(--brand-mid) 42%,
-    var(--brand-end) 100%
-  );
+  background-image: none;
+  background-color: #0891b2;
   color: #ffffff;
   transition:
-    filter 160ms ease,
+    background-color 160ms ease,
     transform 120ms ease;
 }
 
 .btn-ink:hover {
-  filter: brightness(1.07);
+  background-color: #0e7490;
 }
 
 .btn-ink:active {
@@ -216,7 +259,9 @@ body {
 }
 
 .dark .dashboard-shell {
-  background-image: none;
+  background-image:
+    radial-gradient(58% 42% at 100% 0%, rgb(79 70 229 / 0.07), transparent 58%),
+    radial-gradient(50% 40% at 0% 100%, rgb(8 145 178 / 0.05), transparent 60%);
 }
 
 /* Primary gradient buttons: brand glow + inset top light. */

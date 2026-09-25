@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { MessageBodyEditor } from "@/components/comms/message-body-editor";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog } from "@/components/ui/dialog";
 import { docHasContent, type RichTextDoc } from "@/lib/comms/model";
 import { messagesTone } from "@/lib/comms/messages-tone";
@@ -123,24 +124,22 @@ export function AutoReplyDialog({
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5">
             <span className="text-sm font-semibold text-foreground">{t("comms.autoReplyStart")}</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-brand-400"
+            <DatePicker
+              fullWidth
+              value={startDate || null}
+              onChange={(next) => setStartDate(next ?? "")}
             />
-          </label>
-          <label className="flex flex-col gap-1.5">
+          </div>
+          <div className="flex flex-col gap-1.5">
             <span className="text-sm font-semibold text-foreground">{t("comms.autoReplyEnd")}</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-              className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-brand-400"
+            <DatePicker
+              fullWidth
+              value={endDate || null}
+              onChange={(next) => setEndDate(next ?? "")}
             />
-          </label>
+          </div>
         </div>
 
         <MessageBodyEditor

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { schoolWeekday } from "@/lib/attendance/model";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 import { isLessonLiveNow } from "@/lib/dashboard/upcoming";
-import { TONE_CARD, TONE_INK, TONE_INK_FAINT, type Tone } from "@/lib/dashboard/tones";
+import { hubTonePill, type Tone } from "@/lib/dashboard/tones";
 import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule";
 import { WEEKDAYS } from "@/lib/dashboard/schedule";
 import { getLocale, getT } from "@/lib/i18n/server";
@@ -99,28 +99,22 @@ export async function ScheduleUpcoming({
     showDay?: boolean;
     showAttendance?: boolean;
   }) {
-    const tone = TONE_CARD[LESSON_TONE[lesson.color] ?? "blue"];
+    const pill = hubTonePill(LESSON_TONE[lesson.color] ?? "blue");
 
     return (
-      <div
-        className={cn(
-          "flex flex-col gap-2 rounded-xl p-3 ring-1 ring-inset ring-black/5 dark:ring-white/10",
-          tone,
-          TONE_INK,
-        )}
-      >
+      <div className={cn("flex flex-col gap-2 rounded-xl p-3", pill.wash)}>
         <Link
           href={`/aula-virtual/${lesson.classId}`}
-          className="flex items-center gap-3 transition-all hover:brightness-[0.96] active:scale-[0.99] dark:hover:brightness-110"
+          className="flex items-center gap-3 transition-opacity hover:opacity-95 active:scale-[0.99]"
         >
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{lesson.title}</p>
-            <p className={cn("truncate text-xs font-medium", TONE_INK_FAINT)}>
+            <p className={cn("truncate text-sm font-semibold", pill.label)}>{lesson.title}</p>
+            <p className="truncate text-xs font-medium text-foreground/55">
               {lesson.groupName}
               {lesson.room ? ` · ${lesson.room}` : ""}
             </p>
           </div>
-          <div className={cn("shrink-0 text-right text-xs font-semibold", TONE_INK_FAINT)}>
+          <div className="shrink-0 text-right text-xs font-semibold text-foreground/55">
             {showDay ? (
               <span className="block capitalize">{weekdayLabel(lesson.weekday)}</span>
             ) : null}
@@ -133,8 +127,7 @@ export async function ScheduleUpcoming({
           <Link
             href={`/aula-virtual/${lesson.classId}?tab=asistencia&lesson=${lesson.id}`}
             className={cn(
-              "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-black/10 text-xs font-semibold transition-colors hover:bg-black/15 dark:bg-white/10 dark:hover:bg-white/15",
-              TONE_INK,
+              "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-foreground/5 text-xs font-semibold text-foreground/80 transition-colors hover:bg-foreground/10",
             )}
           >
             <CalendarCheck className="h-3.5 w-3.5" aria-hidden />

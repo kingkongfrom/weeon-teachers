@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Presentation, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AULA_TEAL } from "@/lib/dashboard/tones";
 import { ClassTabs } from "@/components/classroom/class-tabs";
 import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
@@ -12,9 +14,7 @@ import { loadClassAttendance } from "@/lib/dashboard/attendance";
 import { normalizeAttendanceDate } from "@/lib/attendance/model";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
-import { CLASS_BANNER } from "@/lib/dashboard/class-banner";
 import { getT } from "@/lib/i18n/server";
-import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -75,20 +75,28 @@ export default async function AulaVirtualClassPage({
     <div className="flex min-w-0 flex-col gap-5">
       <BackLink href="/aula-virtual" label={t.classroom.back} />
 
-      <section
-        className={cn(
-          "relative overflow-hidden rounded-2xl bg-gradient-to-br p-6",
-          CLASS_BANNER,
-        )}
-      >
-        <h1 className="brand-page-title text-3xl font-bold sm:text-4xl">{grupo.name}</h1>
-        <p className="mt-1 text-sm font-medium opacity-70">
-          {schoolName ?? t.common.fallbackSchool} · {year}
-        </p>
-        <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold opacity-75">
-          <Users className="h-3.5 w-3.5" />
-          {t.grupos.studentsCount(grupo.studentCount)}
-        </p>
+      <section className={cn("relative overflow-hidden rounded-3xl border border-border p-6", AULA_TEAL.card)}>
+        <div className="flex items-start gap-4">
+          <span
+            className={cn(
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white",
+              AULA_TEAL.avatar,
+            )}
+            aria-hidden
+          >
+            <Presentation className="h-6 w-6" strokeWidth={2.2} />
+          </span>
+          <div className="min-w-0">
+            <h1 className={cn("brand-page-title text-3xl font-bold sm:text-4xl", AULA_TEAL.label)}>{grupo.name}</h1>
+            <p className="mt-1 text-sm font-medium text-foreground/55">
+              {schoolName ?? t.common.fallbackSchool} · {year}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-foreground/55">
+              <Users className="h-3.5 w-3.5" />
+              {t.grupos.studentsCount(grupo.studentCount)}
+            </p>
+          </div>
+        </div>
       </section>
 
       <ClassTabs

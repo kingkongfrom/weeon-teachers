@@ -22,12 +22,7 @@ import { schoolCycleName } from "@/lib/dashboard/school-cycles";
 import { schoolWeekday } from "@/lib/attendance/model";
 import { EventFormDialog } from "@/components/agenda/event-form-dialog";
 import type { LessonChoice } from "@/lib/agenda/lesson-choice";
-import {
-  TONE_CARD,
-  TONE_INK,
-  TONE_INK_FAINT,
-  type Tone,
-} from "@/lib/dashboard/tones";
+import { hubTonePill, type Tone } from "@/lib/dashboard/tones";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 import type { TeacherLesson } from "@/lib/dashboard/schedule";
 
@@ -76,7 +71,7 @@ export function LessonCard({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [eventOpen, setEventOpen] = useState(false);
-  const tone = TONE_CARD[LESSON_TONE[lesson.color] ?? "blue"];
+  const pill = hubTonePill(LESSON_TONE[lesson.color] ?? "blue");
   const cycle = lesson.grade ? schoolCycleName(lesson.grade, locale) : "";
   const isToday = schoolWeekday() === lesson.weekday;
   const canAddEvent = Boolean(dateISO);
@@ -106,23 +101,17 @@ export function LessonCard({
         onClick={() => setOpen(true)}
         aria-label={`${lesson.title} · ${lesson.groupName}`}
         className={cn(
-          "flex w-full flex-col gap-1 rounded-xl p-3 text-left ring-1 ring-inset ring-black/5 transition-all hover:brightness-[0.96] active:scale-[0.99] dark:ring-white/10 dark:hover:brightness-110",
-          tone,
-          TONE_INK,
+          "flex w-full flex-col gap-1 rounded-xl p-3 text-left transition-all hover:opacity-95 active:scale-[0.99]",
+          pill.wash,
         )}
       >
         <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-sm font-semibold">{lesson.title}</span>
-          <span
-            className={cn(
-              "shrink-0 text-[11px] font-semibold tabular-nums",
-              TONE_INK_FAINT,
-            )}
-          >
+          <span className={cn("truncate text-sm font-semibold", pill.label)}>{lesson.title}</span>
+          <span className="shrink-0 text-[11px] font-semibold tabular-nums text-foreground/55">
             {timeLabel(lesson.startTime)}
           </span>
         </div>
-        <span className={cn("flex items-center gap-1 text-[11px] font-medium", TONE_INK_FAINT)}>
+        <span className="flex items-center gap-1 text-[11px] font-medium text-foreground/55">
           {lesson.groupName}
           {lesson.room ? (
             <>
@@ -178,8 +167,8 @@ export function LessonCard({
                       </button>
                     </div>
 
-                    <div className={cn("rounded-2xl p-4", tone, TONE_INK)}>
-                      <p className="text-lg font-bold leading-snug">{lesson.title}</p>
+                    <div className={cn("rounded-2xl p-4", pill.wash)}>
+                      <p className={cn("text-lg font-bold leading-snug", pill.label)}>{lesson.title}</p>
                       <p className="mt-0.5 text-sm font-medium opacity-75">
                         {lesson.groupName}
                         {cycle ? ` · ${cycle}` : ""}

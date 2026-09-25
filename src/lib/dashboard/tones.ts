@@ -8,16 +8,22 @@ export type HubTone = "blue" | "purple" | "yellow" | "green";
 /** Hub tones plus rose for schedule / gradebook chips. */
 export type Tone = HubTone | "rose";
 
-/** Soft card/banner tint: subtle top-left gradient in light, jewel well in dark. */
+/** Card body stays white. Tone shows up as the ring, title, and icon chip. */
 export const TONE_CARD: Record<Tone, string> = {
-  blue: "bg-gradient-to-br from-[#d8e9fb] to-[#c0d9f7] dark:from-[#16273f] dark:to-[#122035]",
-  purple:
-    "bg-gradient-to-br from-[#e6defb] to-[#d6c9f6] dark:from-[#241b45] dark:to-[#1d1738]",
-  yellow:
-    "bg-gradient-to-br from-[#fdeecd] to-[#f9dda0] dark:from-[#3a2a12] dark:to-[#2f230e]",
-  green:
-    "bg-gradient-to-br from-[#c9f0ec] to-[#abe3dc] dark:from-[#0f2f2c] dark:to-[#0c2624]",
-  rose: "bg-gradient-to-br from-[#fbdee7] to-[#f6c9d8] dark:from-[#3a1622] dark:to-[#2e121c]",
+  blue: "bg-surface",
+  purple: "bg-surface",
+  yellow: "bg-surface",
+  green: "bg-surface",
+  rose: "bg-surface",
+};
+
+/** About 8% of the tone mixed into the surface — schedule blocks. */
+const TONE_WASH: Record<Tone, string> = {
+  blue: "bg-[color-mix(in_srgb,#2563b0_8%,var(--surface))]",
+  purple: "bg-[color-mix(in_srgb,#7c3aed_8%,var(--surface))]",
+  yellow: "bg-[color-mix(in_srgb,#d97706_8%,var(--surface))]",
+  green: "bg-[color-mix(in_srgb,#0f766e_8%,var(--surface))]",
+  rose: "bg-[color-mix(in_srgb,#e11d48_8%,var(--surface))]",
 };
 
 const TONE_PILL_RING: Record<Tone, string> = {
@@ -52,13 +58,22 @@ const TONE_COUNT_IDLE: Record<Tone, string> = {
   rose: "bg-[#fbdee7] text-[#9f1239] dark:bg-[#3a1622] dark:text-[#fda4af]/85",
 };
 
-/** Saturated gradient for hub icons and roster initials (white glyph). */
+/** Soft wash for timetable blocks — a little color, not a full card fill. */
+export const TONE_WELL: Record<Tone, string> = {
+  blue: "bg-[#d8e9fb] text-[#2563eb]",
+  purple: "bg-[#e6defb] text-[#7c3aed]",
+  yellow: "bg-[#fdeecd] text-[#b45309]",
+  green: "bg-[#c9f0ec] text-[#0f766e]",
+  rose: "bg-[#fbdee7] text-[#e11d48]",
+};
+
+/** Flat marketing icon chips (white glyph). */
 export const TONE_AVATAR: Record<Tone, string> = {
-  blue: "bg-gradient-to-br from-[#5b9fd9] to-[#2563b0] dark:from-[#3b82c4] dark:to-[#1e4a7a]",
-  purple: "bg-gradient-to-br from-[#a78bfa] to-[#7c3aed] dark:from-[#8b6fd4] dark:to-[#5b21b6]",
-  yellow: "bg-gradient-to-br from-[#fbbf24] to-[#d97706] dark:from-[#d4a017] dark:to-[#b45309]",
-  green: "bg-gradient-to-br from-[#2dd4bf] to-[#0f766e] dark:from-[#14b8a6] dark:to-[#115e59]",
-  rose: "bg-gradient-to-br from-[#fb7185] to-[#e11d48] dark:from-[#f43f5e] dark:to-[#be123c]",
+  blue: "bg-[#2563b0]",
+  purple: "bg-[#7c3aed]",
+  yellow: "bg-[#d97706]",
+  green: "bg-[#0f766e]",
+  rose: "bg-[#e11d48]",
 };
 
 /** @deprecated Use tone-matched `TONE_AVATAR` chips instead. */
@@ -81,6 +96,7 @@ export const TONE_INK_FAINT = "text-[#55635f] dark:text-[#e6eef7]/60";
 export function hubTonePill(tone: Tone) {
   return {
     active: `${TONE_CARD[tone]} ${TONE_PILL_RING[tone]}`,
+    wash: `${TONE_WASH[tone]} ${TONE_PILL_RING[tone]}`,
     label: TONE_PILL_LABEL[tone],
     countOnActive: TONE_PILL_COUNT[tone],
     countIdle: TONE_COUNT_IDLE[tone],
@@ -106,3 +122,10 @@ export const TONE_PILL: Record<Tone, string> = {
 
 /** Per-item tone rotation for lists of cards (grupos, student subjects). */
 export const TONE_CYCLE: Tone[] = ["blue", "purple", "green", "yellow", "rose"];
+
+/** Aula virtual class cards — same chip / title / ring, one teal. */
+export const AULA_TEAL = {
+  card: "bg-surface shadow-sm ring-1 ring-[#7dd3e8]/80 dark:ring-[#155e75]/80",
+  label: "text-[#0e7490] dark:text-[#67e8f9]",
+  avatar: "bg-[#0891B2]",
+} as const;

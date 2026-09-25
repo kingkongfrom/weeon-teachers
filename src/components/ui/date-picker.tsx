@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,11 +39,34 @@ export function DatePicker({
   const [viewOverride, setViewOverride] = useState<Date | null>(null);
   const view = viewOverride ?? monthStart(selected ?? new Date());
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const width = 304;
+      const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+      setCoords({ top: rect.bottom + 6, left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setOpen(false);
     }
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
@@ -90,6 +114,7 @@ export function DatePicker({
   return (
     <div ref={rootRef} className={cn("relative", fullWidth && "w-full", className)}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={toggleOpen}
         className={cn(
@@ -104,14 +129,18 @@ export function DatePicker({
         {triggerLabel ?? placeholder ?? d.placeholder}
       </button>
 
-      <AnimatePresence>
-        {open ? (
+      {typeof document !== "undefined"
+        ? createPortal(
+            <AnimatePresence>
+        {open && coords ? (
           <motion.div
+            ref={popoverRef}
             initial={{ opacity: 0, y: -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 top-11 z-[110] w-[19rem] rounded-2xl border border-border bg-surface p-3 shadow-2xl"
+            style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 200 }}
+            className="w-[19rem] rounded-2xl border border-border bg-surface p-3 shadow-2xl"
             role="dialog"
             aria-label={d.placeholder}
           >
@@ -198,7 +227,10 @@ export function DatePicker({
             </div>
           </motion.div>
         ) : null}
-      </AnimatePresence>
+            </AnimatePresence>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

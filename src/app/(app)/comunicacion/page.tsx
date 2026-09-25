@@ -40,7 +40,7 @@ export default async function CommunicationPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title={m.hubTitle} description={m.hubDescription} backHref="/inicio" />
+      <PageHeader title={m.hubTitle} description={m.hubDescription} />
       <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 sm:gap-4">
         {cards.map((card) => (
           <HubModuleCard
