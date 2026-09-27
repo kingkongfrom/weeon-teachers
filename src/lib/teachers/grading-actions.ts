@@ -82,7 +82,9 @@ function mapGradeError(
 ): string {
   if (raw.includes("not_allowed")) return errors.notAllowed;
   if (raw.includes("tenant_read_only")) {
-    return "La prueba de este colegio terminó. El acceso es de solo lectura.";
+    // Neutral on purpose: teachers are not told why the school's access is
+    // limited (payment or an ops hold is between Weeon and the school admin).
+    return "El acceso de edición de este colegio está temporalmente deshabilitado.";
   }
   if (raw.includes("submission_not_found") || raw.includes("assessment_not_found")) {
     return errors.generic;

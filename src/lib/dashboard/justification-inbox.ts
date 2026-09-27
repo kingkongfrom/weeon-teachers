@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cache } from "react";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
 import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
@@ -21,7 +20,7 @@ export type JustificationInboxItem = {
 };
 
 /** Parent justifications the teacher has not accepted or rejected yet. */
-export const loadJustificationInbox = cache(async (): Promise<JustificationInboxItem[]> => {
+export async function loadJustificationInbox(): Promise<JustificationInboxItem[]> {
   const session = await getTeacherSession();
   if (!session) return [];
 
@@ -89,4 +88,4 @@ export const loadJustificationInbox = cache(async (): Promise<JustificationInbox
     });
   }
   return items;
-});
+}

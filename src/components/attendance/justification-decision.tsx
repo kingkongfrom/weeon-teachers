@@ -6,7 +6,13 @@ import { useT } from "@/lib/i18n/client";
 import { decideAttendanceJustification } from "@/lib/teachers/attendance-actions";
 
 /** Accept marks the row justified. Reject keeps the unjustified mark. */
-export function JustificationDecision({ recordId }: { recordId: string }) {
+export function JustificationDecision({
+  recordId,
+  onDecided,
+}: {
+  recordId: string;
+  onDecided?: (recordId: string, decision: "accepted" | "rejected") => void;
+}) {
   const t = useT();
   const a = t.attendance;
   const router = useRouter();
@@ -22,6 +28,7 @@ export function JustificationDecision({ recordId }: { recordId: string }) {
       setError(result.error);
       return;
     }
+    onDecided?.(recordId, decision);
     router.refresh();
   }
 

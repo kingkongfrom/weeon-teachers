@@ -71,12 +71,14 @@ export function AttendanceRegister({
   lessonId,
   students,
   initialMarks,
+  onJustificationDecided,
 }: {
   classId: string;
   date: string;
   lessonId: string | null;
   students: AttendanceStudent[];
   initialMarks: Record<string, AttendanceEntry>;
+  onJustificationDecided?: () => void;
 }) {
   const t = useT();
   const a = t.attendance;
@@ -96,13 +98,6 @@ export function AttendanceRegister({
     setMarks(updated);
     return next;
   }
-
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-      if (pending.current.size > 0) void flush();
-    };
-  }, []);
 
   async function flush() {
     if (timer.current) {
@@ -125,6 +120,33 @@ export function AttendanceRegister({
     setSaveState(res.ok ? "saved" : "error");
     if (pending.current.size > 0) scheduleFlush();
   }
+
+  function applyJustificationDecision(recordId: string, decision: "accepted" | "rejected") {
+    onJustificationDecided?.();
+    const next = { ...marksRef.current };
+    for (const [studentId, mark] of Object.entries(next)) {
+      if (mark.recordId !== recordId) continue;
+      const status =
+        decision === "accepted"
+          ? mark.status === "late_unjustified"
+            ? "late_justified"
+            : mark.status === "absence_unjustified"
+              ? "absence_justified"
+              : mark.status
+          : mark.status;
+      next[studentId] = { ...mark, status, guardianDecision: decision };
+      break;
+    }
+    marksRef.current = next;
+    setMarks(next);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+      if (pending.current.size > 0) void flush();
+    };
+  }, []);
 
   function scheduleFlush() {
     if (timer.current) clearTimeout(timer.current);
@@ -346,7 +368,10 @@ export function AttendanceRegister({
                       )
                     ) : null}
                     {mark.guardianDecision === "pending" && mark.recordId ? (
-                      <JustificationDecision recordId={mark.recordId} />
+                      <JustificationDecision
+                        recordId={mark.recordId}
+                        onDecided={applyJustificationDecision}
+                      />
                     ) : mark.guardianDecision === "accepted" ? (
                       <p className="text-xs font-semibold text-emerald-700">{a.justificationAccepted}</p>
                     ) : mark.guardianDecision === "rejected" ? (

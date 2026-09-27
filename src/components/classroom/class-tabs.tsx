@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, ChevronRight, GraduationCap, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -67,6 +67,15 @@ export function ClassTabs({
   const [tab, setTab] = useState<TabId>(
     VALID_TABS.includes(initialTab as TabId) ? (initialTab as TabId) : "novedades",
   );
+  const [justificationBadge, setJustificationBadge] = useState(pendingJustifications);
+
+  useEffect(() => {
+    setJustificationBadge(pendingJustifications);
+  }, [pendingJustifications]);
+
+  function onJustificationDecided() {
+    setJustificationBadge((count) => Math.max(0, count - 1));
+  }
   const tabs: { id: TabId; label: string }[] = [
     { id: "novedades", label: t.classroom.tabs.novedades },
     { id: "trabajo", label: t.classroom.tabs.trabajo },
@@ -100,9 +109,9 @@ export function ClassTabs({
             >
               <span className="inline-flex items-center gap-1.5">
                 {label}
-                {id === "asistencia" && pendingJustifications > 0 ? (
+                {id === "asistencia" && justificationBadge > 0 ? (
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                    {pendingJustifications > 9 ? "9+" : pendingJustifications}
+                    {justificationBadge > 9 ? "9+" : justificationBadge}
                   </span>
                 ) : null}
               </span>
@@ -175,6 +184,7 @@ export function ClassTabs({
             lessonId={attendanceLessonId}
             students={students}
             initialMarks={attendanceMarks}
+            onJustificationDecided={onJustificationDecided}
           />
         ) : null}
 

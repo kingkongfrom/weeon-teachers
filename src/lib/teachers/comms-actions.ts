@@ -49,7 +49,7 @@ export type ComposeMessageInput = z.input<typeof composeSchema>;
 function mapCommsRpcError(message: string | undefined, code?: string): string | null {
   if (!message) return null;
   if (message.includes("tenant_read_only")) {
-    return "La institución está en modo solo lectura; no se pueden enviar circulares.";
+    return "El acceso de edición de esta institución está temporalmente deshabilitado.";
   }
   if (message.includes("not_authenticated")) {
     return "Sesión expirada. Vuelva a iniciar sesión.";

@@ -114,6 +114,7 @@ export async function decideAttendanceJustification(
     .maybeSingle();
 
   revalidatePath("/inicio");
+  revalidatePath("/aula-virtual");
   revalidatePath("/aula-virtual/justificaciones");
   if (row?.class_id) revalidatePath(`/aula-virtual/${row.class_id}`);
   return { ok: true };
