@@ -26,6 +26,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ACTION_NAV_LINK } from "@/lib/ui/action-button";
 import { useT } from "@/lib/i18n/use-i18n";
 import { COMMS_COMPOSE, COMMS_MESSAGES } from "@/lib/comms/paths";
 import { messagesTone } from "@/lib/comms/messages-tone";
@@ -511,7 +512,7 @@ export function MessagesWorkspace({
                 <span
                   key={item.id}
                   title={t("comms.comingSoon")}
-                  className="inline-flex cursor-not-allowed items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground/30"
+                  className={cn(ACTION_NAV_LINK, "cursor-not-allowed text-foreground/30")}
                 >
                   {body}
                 </span>
@@ -522,7 +523,7 @@ export function MessagesWorkspace({
                 key={item.id}
                 href={item.href}
                 className={cn(
-                  "inline-flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                  ACTION_NAV_LINK,
                   active ? "bg-[#0891B2] text-white" : "text-foreground/70 hover:bg-surface-muted/60 hover:text-foreground",
                   dropTarget === item.id &&
                     item.id === "trash" &&
@@ -637,7 +638,10 @@ export function MessagesWorkspace({
           <button
             type="button"
             onClick={() => setSignatureOpen(true)}
-            className="inline-flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted/60 hover:text-foreground"
+            className={cn(
+              ACTION_NAV_LINK,
+              "w-full text-foreground/70 hover:bg-surface-muted/60 hover:text-foreground",
+            )}
           >
             <Signature className="h-4 w-4" />
             <span className="flex-1 text-left">{t("comms.signatureTitle")}</span>

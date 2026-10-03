@@ -17,6 +17,9 @@ import {
   fetchEducationalSupportRegistration,
   saveEducationalSupportRegistration,
 } from "@/lib/teachers/educational-support-actions";
+import { actionButtonPrimaryClass } from "@/lib/ui/action-button";
+
+const primaryButtonClass = actionButtonPrimaryClass("w-full bg-brand-600 hover:bg-brand-700");
 
 type AppliedField =
   | "appliedPersonal"
@@ -406,9 +409,6 @@ export function EducationalSupportWorkflowDialog({
     document.body,
   );
 }
-
-const primaryButtonClass =
-  "inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50";
 
 function textareaClass(readOnly: boolean): string {
   return cn(

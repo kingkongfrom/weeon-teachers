@@ -180,7 +180,7 @@ export function MaterialsPanel({
             setPendingFile(null);
             setOpen(true);
           }}
-          className="btn-ink inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
+          className="btn-ink gap-1.5"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />
           {tPanel.add}
@@ -596,7 +596,7 @@ function UploadDialog({
             <button
               type="submit"
               disabled={pending}
-              className="btn-ink inline-flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold"
+              className="btn-ink gap-1.5"
             >
               {pending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

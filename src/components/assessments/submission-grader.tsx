@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { actionButtonSecondaryClass } from "@/lib/ui/action-button";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { RichTextView } from "@/components/assessments/rich-text";
 import {
@@ -263,7 +264,7 @@ export function SubmissionGrader({
               type="button"
               onClick={() => void save(true)}
               disabled={saving}
-              className="btn-ink inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
+              className="btn-ink gap-2 disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {saving ? g.saving : g.saveAndReturn}
@@ -272,7 +273,10 @@ export function SubmissionGrader({
               type="button"
               onClick={() => void save(false)}
               disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold text-foreground/75 transition-colors hover:bg-surface-muted disabled:opacity-60"
+              className={cn(
+                actionButtonSecondaryClass(),
+                "text-foreground/75 disabled:opacity-60",
+              )}
             >
               {g.save}
             </button>

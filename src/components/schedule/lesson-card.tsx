@@ -231,7 +231,7 @@ export function LessonCard({
                             setOpen(false);
                             setEventOpen(true);
                           }}
-                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
+                          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-border px-4 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
                         >
                           <CalendarPlus className="h-4 w-4" />
                           {a.addButton}
@@ -241,7 +241,7 @@ export function LessonCard({
                         <Link
                           href={`/aula-virtual/${lesson.classId}?tab=asistencia&lesson=${lesson.id}`}
                           onClick={() => setOpen(false)}
-                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
+                          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
                         >
                           <CalendarCheck className="h-4 w-4" />
                           {t.attendance.openRegister}
@@ -250,7 +250,7 @@ export function LessonCard({
                       <Link
                         href={`/aula-virtual/${lesson.classId}?subject=${encodeURIComponent(lesson.gradebookSubjectId)}&tab=trabajo`}
                         onClick={() => setOpen(false)}
-                        className="btn-ink inline-flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold"
+                        className="btn-ink gap-1.5 px-4"
                       >
                         {t.schedule.openClass}
                         <ArrowUpRight className="h-4 w-4" />
@@ -258,7 +258,7 @@ export function LessonCard({
                       <Link
                         href={`/grupos/${lesson.classId}?subject=${encodeURIComponent(lesson.gradebookSubjectId)}`}
                         onClick={() => setOpen(false)}
-                        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
+                        className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-border px-4 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
                       >
                         <GraduationCap className="h-4 w-4" />
                         {t.classroom.tabs.calificaciones}

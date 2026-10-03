@@ -72,14 +72,14 @@ export function NotFoundScreen() {
         >
           <Link
             href="/inicio"
-            className="brand-gradient group inline-flex h-12 items-center justify-center gap-2 rounded-full px-8 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-95"
+            className="brand-gradient group inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-95"
           >
             <Home className="h-4 w-4" />
             {t.notFound.goHome}
           </Link>
           <Link
             href="/"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-foreground/25 px-8 text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/5"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-foreground/25 px-4 text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/5"
           >
             <ShieldAlert className="h-4 w-4" />
             {t.notFound.viewHome}

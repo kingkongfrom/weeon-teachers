@@ -315,7 +315,7 @@ function PickerBody({
           onClose();
         }}
         className={cn(
-          "inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold active:scale-[0.98]",
+          "inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold active:scale-[0.98]",
           messagesTone.primaryButton,
         )}
       >

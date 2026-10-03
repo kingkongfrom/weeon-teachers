@@ -149,7 +149,7 @@ export function ClassworkPanel({
               type="button"
               onClick={() => void submitTopic()}
               disabled={pending || name.trim().length === 0}
-              className="btn-ink inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold"
+              className="btn-ink btn-ink-compact gap-1"
             >
               {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
               {t.topics.create}
