@@ -3,8 +3,8 @@
 Teacher **web** app for Weeon School — desktop workflows that do not belong
 in the school ERP or the mobile clients.
 
-Production origin: [https://teachers.weeon.school](https://teachers.weeon.school)
-(not deployed yet). Schema and tenancy are owned by
+Production origin: [https://teachers.weeon.school](https://teachers.weeon.school).
+Schema and tenancy are owned by
 [`weeon-tenants`](https://github.com/kingkongfrom/weeon-tenants). Daily
 classroom use stays on
 [`weeon-mobile-apps`](https://github.com/kingkongfrom/weeon-mobile-apps).
