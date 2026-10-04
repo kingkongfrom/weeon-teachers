@@ -59,6 +59,21 @@ export async function submitClassReport(input: {
 
   const supabase = await createSessionClient();
 
+  const { data: periodLocked, error: lockCheckError } = await supabase.rpc(
+    "report_period_is_locked",
+    { p_tenant: session.tenantId, p_period: built.period },
+  );
+  if (lockCheckError && lockCheckError.code !== "PGRST202") {
+    return { ok: false, error: "No se pudo verificar el periodo." };
+  }
+  if (periodLocked === true) {
+    return {
+      ok: false,
+      error:
+        "Este periodo está cerrado por la administración. No puede volver a enviar el reporte.",
+    };
+  }
+
   const { error } = await supabase.from("class_reports").upsert(
     {
       class_id: parsed.data.classId,
@@ -78,7 +93,17 @@ export async function submitClassReport(input: {
     { onConflict: "class_id,subject_id,teacher_profile_id,period" },
   );
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    const msg = error.message ?? "";
+    if (/report_period|row-level security|violates row-level/i.test(msg)) {
+      return {
+        ok: false,
+        error:
+          "Este periodo está cerrado por la administración. No puede volver a enviar el reporte.",
+      };
+    }
+    return { ok: false, error: msg };
+  }
 
   revalidatePath("/reportes");
   revalidatePath(`/grupos/${parsed.data.classId}`);
