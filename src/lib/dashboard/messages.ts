@@ -100,6 +100,12 @@ function nameOf(embed: NameEmbed): string {
   return row?.name?.trim() ?? "";
 }
 
+/** Guardian profiles still store the placeholder first name. The thread shows the name only. */
+function personName(embed: NameEmbed, displayName?: string | null): string {
+  const raw = nameOf(embed) || displayName?.trim() || "";
+  return raw.replace(/^Encargado\/a\s*/i, "").replace(/^Encargado\s+/i, "").trim();
+}
+
 function parseRecipientScope(value: string | null): MessageRecipientScope {
   if (value === "parents" || value === "students" || value === "teachers" || value === "custom") {
     return value;
@@ -408,7 +414,7 @@ export const loadMessageSummaries = cache(
         const audience = row.audience === "group" ? "group" : "individual";
         const className = classLabel(row.classes);
         const recipientNames = threadRecipients.map(
-          (item) => nameOf(item.profiles) || item.display_name || "",
+          (item) => personName(item.profiles, item.display_name),
         );
         const recipientScope = parseRecipientScope(row.recipient_scope);
         const listMeta = buildListMeta(row, threadRecipients, mine, last);
@@ -498,7 +504,7 @@ export const loadCircularSentHistory = cache(
       const audienceKind = row.audience === "group" ? "group" : "individual";
       const className = classLabel(row.classes);
       const recipientNames = threadRecipients.map(
-        (item) => nameOf(item.profiles) || item.display_name || "",
+        (item) => personName(item.profiles, item.display_name),
       );
       const recipientScope = parseRecipientScope(row.recipient_scope);
       const listMeta = buildListMeta(row, threadRecipients, true, last);
@@ -621,7 +627,7 @@ export const loadThreadDetail = cache(
     const audience = row.audience === "group" ? "group" : "individual";
     const className = classLabel(row.classes);
     const recipientNames = recipientRows.map(
-      (item) => nameOf(item.profiles) || item.display_name || "",
+      (item) => personName(item.profiles, item.display_name),
     );
     const recipientScope = parseRecipientScope(row.recipient_scope);
     const listMeta = buildListMeta(
@@ -677,7 +683,7 @@ export const loadThreadDetail = cache(
       })),
       recipients: recipientRows.map((recipient) => ({
         profileId: recipient.profile_id ?? recipient.recipient_key ?? "",
-        name: nameOf(recipient.profiles) || recipient.display_name || "",
+        name: personName(recipient.profiles, recipient.display_name),
         role: recipient.role,
         readAt: recipient.read_at,
       })),

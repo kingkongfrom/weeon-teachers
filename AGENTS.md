@@ -17,7 +17,7 @@ and `../docs/`.*
 
 **weeon-teachers** is the desktop web app for **teachers**. Production origin:
 `https://teachers.weeon.school`. It is **not** the school ERP (`weeon-tenants`),
-**not** the Flutter app (`weeon-mobile-apps`), and **not** Weeon Ops
+**not** the mobile app (`weeon-mobile`), and **not** Weeon Ops
 (`weeon-management`).
 
 Phase 1 is wired: username or email login, first password (same Auth user as
@@ -39,8 +39,7 @@ the grade spreadsheet (`conduct_records`, migration
 Eduativos (v1)** — Grupos badge + read-ack dialog before grades/conduct;
 read-only panel on `/estudiantes/[id]`; migration
 `20260916100000_student_educational_supports.sql` — see
-`docs/educational-supports.md` (Tier B period registro designed in
-`weeon-tenants`). **Asistencia
+`docs/educational-supports.md` (period registro is live in Grupos). **Asistencia
 (Libro de clase)** remains in aula virtual: a dated register over the shared
 `attendance_records` table (P / TJ / TI / AJ / A) reached from a lesson card or
 the Grupos Asistencia tab, with a read-only **Asistencia** column in the
@@ -212,6 +211,5 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |
 | Usernames / first login | `weeon-tenants/docs/user-provisioning.md` |
-| Mobile contracts | `weeon-mobile-apps/plans/weeon-tenants.md` |
 
 Follow the Next.js agent-rules block above: do not remove it from diffs.

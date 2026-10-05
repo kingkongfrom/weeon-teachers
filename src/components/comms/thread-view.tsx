@@ -9,6 +9,7 @@ import {
   messageTrashTransition,
 } from "@/components/comms/message-trash-motion";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { RecipientReadList } from "@/components/comms/recipient-read-list";
 import { RichTextView } from "@/components/comms/rich-text";
 import { TONE_PILL } from "@/lib/dashboard/hub-tones";
 import { cn } from "@/lib/utils";
@@ -210,7 +211,7 @@ export function ThreadView({
               <div className="flex flex-wrap gap-x-2">
                 <dt className="font-semibold text-foreground/50">{t("comms.toLabel")}:</dt>
                 <dd className="min-w-0 flex-1 font-medium text-foreground">{recipientSummary}</dd>
-                {recipientNames.length > 2 ? (
+                {!detail.summary.mine && recipientNames.length > 2 ? (
                   <button
                     type="button"
                     onClick={() => setShowRecipients((value) => !value)}
@@ -225,7 +226,11 @@ export function ThreadView({
                   </button>
                 ) : null}
               </div>
-              {showRecipients && recipientNames.length > 2 ? (
+              {detail.summary.mine ? (
+                <dd className="basis-full">
+                  <RecipientReadList recipients={detail.recipients} />
+                </dd>
+              ) : showRecipients && recipientNames.length > 2 ? (
                 <dd className="text-xs leading-relaxed text-foreground/60">{recipientNames.join(", ")}</dd>
               ) : null}
               {firstMessage ? (

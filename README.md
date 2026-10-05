@@ -7,7 +7,7 @@ Production origin: [https://teachers.weeon.school](https://teachers.weeon.school
 Schema and tenancy are owned by
 [`weeon-tenants`](https://github.com/kingkongfrom/weeon-tenants). Daily
 classroom use stays on
-[`weeon-mobile-apps`](https://github.com/kingkongfrom/weeon-mobile-apps).
+[`weeon-mobile`](https://github.com/kingkongfrom/weeon-mobile).
 Workspace map: `../AGENTS.md`.
 
 ## Status
@@ -74,8 +74,8 @@ npm run build
 
 1. This is the **teacher web** surface only.
 2. Use the shared Supabase project and admin-owned tables — additive schema
-   in `weeon-tenants`, safe for Flutter.
-3. First password for teachers lives here **and** in `weeon-mobile-apps`,
+   in `weeon-tenants`, safe for `weeon-mobile`.
+3. First password for teachers lives here **and** in `weeon-mobile`,
    not in the school ERP.
 4. Align brand with `weeon-tenants` (W-mark, purple→blue gradient).
 5. Read `AGENTS.md` and `node_modules/next/dist/docs/` before Next-specific

@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { inferAttachmentMimeType, isAllowedAttachmentMime } from "@/lib/comms/attachment-mime";
 import { appendSignature, type RichTextDoc } from "@/lib/comms/model";
 import { stripEmbedUrls } from "@/lib/comms/rich-text-embeds";
+import { requestMessageNotice } from "@/lib/comms/request-message-notice";
 import { COMMS_MESSAGES } from "@/lib/comms/paths";
 import { finalizeCommsEmbeds } from "@/lib/dashboard/comms-embed-actions";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
@@ -158,6 +160,11 @@ export async function createMessageThread(
 
   const threadId = data as string;
   await finalizeCommsEmbeds(threadId);
+  const { data: auth } = await session.actor.auth.getSession();
+  const accessToken = auth.session?.access_token;
+  after(() => {
+    void requestMessageNotice(accessToken, { threadId });
+  });
 
   revalidatePath(COMMS_MESSAGES);
   return { ok: true, threadId };
@@ -197,6 +204,14 @@ export async function sendThreadMessage(
     .eq("id", parsed.data.threadId);
 
   await finalizeCommsEmbeds(parsed.data.threadId, inserted.id as string);
+  const { data: auth } = await session.actor.auth.getSession();
+  const accessToken = auth.session?.access_token;
+  after(() => {
+    void requestMessageNotice(accessToken, {
+      threadId: parsed.data.threadId,
+      messageId: inserted.id as string,
+    });
+  });
 
   revalidatePath(`${COMMS_MESSAGES}/${parsed.data.threadId}`);
   revalidatePath(COMMS_MESSAGES);

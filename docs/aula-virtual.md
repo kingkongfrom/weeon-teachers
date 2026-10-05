@@ -36,7 +36,7 @@ phases.
 | Classroom **UI + authoring** (this doc) | `weeon-teachers` |
 | **Schema / RLS / Storage**, additive only | `weeon-tenants` |
 | Attendance **register** (Libro de clase, this doc) | `weeon-teachers` |
-| Daily consumption (live grades, notices, student fill/submit) | `weeon-mobile` (Expo; Flutter `weeon-mobile-apps` is the predecessor) |
+| Daily consumption (live grades, notices, student fill/submit) | `weeon-mobile` |
 | School structure (classes, subjects, enrollments, staff) | `weeon-tenants` (admin) |
 
 Product decision: authoring of announcements, classwork, materials, **and the
@@ -273,7 +273,7 @@ the key unification below.
 
 ### Migrations (in `weeon-tenants` only)
 
-All `tenant_id`-scoped, additive, and safe for Flutter. **P1 is implemented** in
+All `tenant_id`-scoped and additive. **P1 is implemented** in
 `supabase/migrations/20260911130000_class_materials.sql`; the rest are proposals
 to settle in a `weeon-tenants` ADR/migration before coding.
 
@@ -350,7 +350,7 @@ The reason to build our own rather than copy pixel-for-pixel:
    schedules are first-class, not bolted on.
 4. **Tenant isolation by default.** RLS is the gate; no ad-hoc sharing links
    that leak across schools.
-5. **Spanish-first, mobile-parity.** The same objects render in `weeon-mobile-apps`.
+5. **Spanish-first, mobile-parity.** The same objects render in `weeon-mobile`.
 6. **Less baggage.** No Drive/Meet gravity; attachments are optional and Meet
    (if ever) is a link, not a dependency.
 7. **One palette, one language.** Classroom's UI is neutral; ours is branded and
@@ -403,7 +403,7 @@ source of truth**; a PDF is only an export.
 Schema (additive): **`assessments` only** for P5a. `submission_answers` arrived
 with P5b and its `score`/`feedback` columns with P5c.
 
-Why JSON, not HTML or PDF: cross-platform (Flutter renders the same model),
+Why JSON, not HTML or PDF: the teacher web and the Expo app render the same model,
 XSS-safe, offline-friendly, and free of PDF fidelity/XFA risk.
 
 ### Grammar & spelling check (P5a.1)
@@ -579,5 +579,5 @@ types are refreshed in this repo.
 - Schema / RLS / live tables — `../weeon-tenants/docs/data-access.md`,
   `../weeon-tenants/docs/tenancy.md`
 - Module catalog — `../weeon-tenants/docs/modules.md` § Virtual Classroom
-- Mobile contracts — `../weeon-mobile-apps/plans/weeon-tenants.md`
+- Mobile fill/submit — `../weeon-mobile/docs/aula-virtual.md`
 - Student player (Expo) — `../weeon-mobile/docs/aula-virtual.md`

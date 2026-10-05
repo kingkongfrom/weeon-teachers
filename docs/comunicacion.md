@@ -37,6 +37,7 @@ Ported from `weeon-tenants/components/comms/*` (2026-09-19). Teacher scope:
   school-wide broadcast lanes.
 - **Multi bulk:** several section checkboxes in one send → one thread, deduped
   roster keys (`recipientsFromBulkSelections` in `lib/comms/recipient-catalog.ts`).
+- **Quién leyó:** a message this teacher sent shows **{n} de {total} leyeron**. Each name is **Leyó** or **Sin abrir**. `read_at` is set when that person opens the thread in the app or on the web. The email notice does not count.
 - **Compose:** To/Cc, subject, TipTap toolbar (`components/comms/rich-text.tsx`),
   **Permitir respuestas**, attachments via bottom dropzone + **Google Drive** +
   **Dropbox** (`NEXT_PUBLIC_GOOGLE_DRIVE_*`, `NEXT_PUBLIC_DROPBOX_APP_KEY`;
@@ -60,6 +61,10 @@ Ported from `weeon-tenants/components/comms/*` (2026-09-19). Teacher scope:
 
 Legacy `components/messages/mailbox-workspace.tsx` and `message-composer.tsx`
 were removed; **chat** still uses `components/messages/chat-*.tsx`.
+
+## Email notice
+
+After `createMessageThread` or `sendThreadMessage` in `lib/teachers/comms-actions.ts`, the server calls `POST {WEEON_APP_ORIGIN}/api/comms/message-notice` with the teacher’s session. The school ERP mails the same short notice it sends for an admin circular (first 180 characters; the thread stays in Mensajes). A mail failure does not block the send. Contract: `weeon-tenants/docs/email-delivery-strategy.md`.
 
 ## Data model (weeon-tenants)
 
