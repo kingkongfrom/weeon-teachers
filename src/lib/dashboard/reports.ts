@@ -3,32 +3,18 @@ import "server-only";
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
-import { collectReportStudentIds } from "@/lib/reports/grades";
 import type {
   ReportAssignmentMeta,
   ReportAttendanceLogEntry,
   ReportAttendanceSnapshot,
   ReportConductLogEntry,
   ReportConductSnapshot,
-  ReportDraft,
   ReportGradesSnapshot,
-  SubmittedReportExtras,
 } from "@/lib/reports/model";
+import type { SubmittedReport } from "@/lib/reports/submitted-view";
 
-export type SubmittedReport = {
-  classId: string;
-  groupName: string;
-  subjectId: string | null;
-  subjectName: string | null;
-  period: string;
-  submittedAt: string;
-  updatedAt: string;
-  grades: ReportGradesSnapshot;
-  studentNames: Record<string, string>;
-  assignmentTitles: Record<string, string>;
-  gradedStudents: number;
-  totalStudents: number;
-} & SubmittedReportExtras;
+export type { SubmittedReport } from "@/lib/reports/submitted-view";
+export { submittedReportAsDraft } from "@/lib/reports/submitted-view";
 
 type ReportQueryRow = {
   class_id: string;
@@ -50,35 +36,6 @@ type ReportQueryRow = {
     | Array<{ id: string; name: string | null; grade: string | null; section: string | null }>
     | null;
 };
-
-/** Adapts a stored report for the shared preview sections. */
-export function submittedReportAsDraft(report: SubmittedReport): ReportDraft {
-  const studentIds = collectReportStudentIds(report).sort((a, b) =>
-    (report.studentNames[a] ?? a).localeCompare(report.studentNames[b] ?? b, "es"),
-  );
-
-  return {
-    classId: report.classId,
-    groupName: report.groupName,
-    subjectId: report.subjectId,
-    subjectName: report.subjectName,
-    period: report.period,
-    grades: report.grades,
-    assignmentTitles: report.assignmentTitles,
-    assignmentsMeta: report.assignmentsMeta,
-    studentNames: report.studentNames,
-    studentIds,
-    conduct: report.conduct,
-    conductLog: report.conductLog,
-    attendance: report.attendance,
-    attendanceLog: report.attendanceLog,
-    summary: {
-      gradedStudents: report.gradedStudents,
-      totalStudents: report.totalStudents,
-      ...(report.teacherNotes ? { teacherNotes: report.teacherNotes } : {}),
-    },
-  };
-}
 
 /**
  * Loads the reports the signed-in teacher has submitted, newest first. RLS

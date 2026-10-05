@@ -597,10 +597,19 @@ const es = {
   },
   reportes: {
     title: "Reportes",
-    description: "Reportes de calificaciones, conducta y asistencia subidos.",
+    description:
+      "Informes enviados a administración. Abra uno para ver calificaciones; conducta y asistencia van en el paquete archivado.",
     descriptionEmpty: "Los reportes que suba aparecerán aquí.",
     empty:
       "Aún no ha subido reportes. Desde un grupo, use «Subir reporte» para revisar y publicar el reporte aquí.",
+    listTitle: "Informes enviados",
+    listHint: "Una fila por materia. Ver abre calificaciones; el resto del paquete queda colapsado.",
+    listColPeriod: "Periodo",
+    listColSubject: "Materia",
+    listColSubmitted: "Enviado",
+    listColDetail: "Detalle",
+    listView: "Ver",
+    listHide: "Ocultar",
     updated: "Actualizado",
     noGrades: "Este reporte no tiene calificaciones.",
     student: "Estudiante",
@@ -662,6 +671,16 @@ const es = {
     absenceCount: (n: number) => (n === 1 ? "1 ausencia" : `${n} ausencias`),
     lateKind: "Tardía",
     absenceKind: "Ausencia",
+    packHint:
+      "Al subir, administración recibe calificaciones y el resumen de conducta y asistencia de este periodo en un solo informe. Revise las secciones colapsadas antes de enviar.",
+    snapshotBundleTitle: "Conducta y asistencia incluidas en el envío",
+    snapshotBundleEmpty: "Sin registros de conducta ni asistencia en el periodo",
+    snapshotConductShort: (merits: number, demerits: number) =>
+      `${merits} méritos · ${demerits} faltas`,
+    snapshotAttendanceShort: (late: number, absence: number) =>
+      `${late} tardías · ${absence} ausencias en registro`,
+    archiveLiveHint: "Para seguir registrando, use el grupo (no este archivo).",
+    archiveOpenGroup: "Abrir grupo",
   },
   horarios: {
     title: "Horarios",
@@ -1549,10 +1568,19 @@ const en: Messages = {
   },
   reportes: {
     title: "Reports",
-    description: "Submitted grade, conduct, and attendance reports.",
+    description:
+      "Reports sent to school admin. Open one for grades; conduct and attendance stay in the archived bundle.",
     descriptionEmpty: "Reports you submit will appear here.",
     empty:
       "You haven't submitted any reports yet. From a group, use \"Submit report\" to review and publish here.",
+    listTitle: "Submitted reports",
+    listHint: "One row per subject. View opens grades; the rest of the bundle stays collapsed.",
+    listColPeriod: "Period",
+    listColSubject: "Subject",
+    listColSubmitted: "Submitted",
+    listColDetail: "Detail",
+    listView: "View",
+    listHide: "Hide",
     updated: "Updated",
     noGrades: "This report has no grades.",
     student: "Student",
@@ -1614,6 +1642,16 @@ const en: Messages = {
     absenceCount: (n: number) => (n === 1 ? "1 absence" : `${n} absences`),
     lateKind: "Tardy",
     absenceKind: "Absence",
+    packHint:
+      "Submitting sends grades plus conduct and attendance summaries for this period in one package. Expand collapsed sections before you submit.",
+    snapshotBundleTitle: "Conduct and attendance included in this submission",
+    snapshotBundleEmpty: "No conduct or attendance records in this period",
+    snapshotConductShort: (merits: number, demerits: number) =>
+      `${merits} merits · ${demerits} demerits`,
+    snapshotAttendanceShort: (late: number, absence: number) =>
+      `${late} tardies · ${absence} absences logged`,
+    archiveLiveHint: "To keep recording, use the group — not this archive.",
+    archiveOpenGroup: "Open group",
   },
   horarios: {
     title: "Schedule",

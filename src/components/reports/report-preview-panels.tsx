@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { BarChart3, CalendarDays, Clock, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,14 +55,107 @@ function attendanceTone(status: AttendanceStatus): string {
   return TONE_PILL.rose;
 }
 
-export function ReportPreviewPanels({ draft }: { draft: ReportDraft }) {
+export type ReportPreviewVariant = "composer" | "archive";
+
+export function ReportPreviewPanels({
+  draft,
+  variant = "composer",
+}: {
+  draft: ReportDraft;
+  variant?: ReportPreviewVariant;
+}) {
   return (
     <div className="flex flex-col gap-4">
       <ReportGradesPanel draft={draft} />
-      <ReportConductPanel draft={draft} />
-      <ReportAttendancePanel draft={draft} />
+      {variant === "composer" ? (
+        <>
+          <ReportConductPanel draft={draft} presentation="collapsible" />
+          <ReportAttendancePanel draft={draft} presentation="collapsible" />
+        </>
+      ) : (
+        <ReportArchiveSnapshotPanel draft={draft} />
+      )}
     </div>
   );
+}
+
+type PanelPresentation = "section" | "collapsible" | "embedded";
+
+function ReportArchiveSnapshotPanel({ draft }: { draft: ReportDraft }) {
+  const t = useT();
+  const c = t.composer;
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <ReportExpandable
+        title={c.snapshotBundleTitle}
+        subtitle={snapshotBundleSubtitle(draft, c)}
+        defaultOpen={false}
+      >
+        <ReportConductPanel draft={draft} presentation="embedded" />
+        <div className="my-5 border-t border-border/70" aria-hidden />
+        <ReportAttendancePanel draft={draft} presentation="embedded" />
+      </ReportExpandable>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-surface-muted/15 px-5 py-3">
+        <p className="text-xs font-medium text-foreground/50">{c.archiveLiveHint}</p>
+        <Link
+          href={`/grupos/${draft.classId}`}
+          className="text-xs font-semibold text-brand-700 hover:underline dark:text-brand-300"
+        >
+          {c.archiveOpenGroup}
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function snapshotBundleSubtitle(
+  draft: ReportDraft,
+  c: ReturnType<typeof useT>["composer"],
+): string {
+  const conduct = conductTotals(draft);
+  const late = draft.attendanceLog.filter((r) => isLateAttendanceStatus(r.status)).length;
+  const absence = draft.attendanceLog.filter((r) => isAbsenceAttendanceStatus(r.status)).length;
+  const parts: string[] = [];
+  if (conduct.merits + conduct.demerits > 0 || draft.conductLog.length > 0) {
+    parts.push(c.snapshotConductShort(conduct.merits, conduct.demerits));
+  }
+  if (late + absence > 0 || draft.attendanceLog.length > 0) {
+    parts.push(c.snapshotAttendanceShort(late, absence));
+  }
+  return parts.length > 0 ? parts.join(" · ") : c.snapshotBundleEmpty;
+}
+
+function conductTotals(draft: ReportDraft): { merits: number; demerits: number } {
+  let merits = 0;
+  let demerits = 0;
+  for (const row of Object.values(draft.conduct)) {
+    merits += row.meritCount;
+    demerits += row.demeritCount;
+  }
+  return { merits, demerits };
+}
+
+function conductSummaryLine(
+  draft: ReportDraft,
+  c: ReturnType<typeof useT>["composer"],
+): string {
+  const { merits, demerits } = conductTotals(draft);
+  if (merits === 0 && demerits === 0 && draft.conductLog.length === 0) {
+    return c.noConduct;
+  }
+  return c.snapshotConductShort(merits, demerits);
+}
+
+function attendanceSummaryLine(
+  draft: ReportDraft,
+  c: ReturnType<typeof useT>["composer"],
+): string {
+  const late = draft.attendanceLog.filter((r) => isLateAttendanceStatus(r.status)).length;
+  const absence = draft.attendanceLog.filter((r) => isAbsenceAttendanceStatus(r.status)).length;
+  if (late === 0 && absence === 0 && draft.attendanceLog.length === 0) {
+    return c.noAttendance;
+  }
+  return c.snapshotAttendanceShort(late, absence);
 }
 
 function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
@@ -228,7 +322,13 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
   );
 }
 
-function ReportConductPanel({ draft }: { draft: ReportDraft }) {
+function ReportConductPanel({
+  draft,
+  presentation = "section",
+}: {
+  draft: ReportDraft;
+  presentation?: PanelPresentation;
+}) {
   const t = useT();
   const c = t.composer;
   const locale = useLocale();
@@ -238,20 +338,11 @@ function ReportConductPanel({ draft }: { draft: ReportDraft }) {
     [draft.conductLog],
   );
 
-  return (
-    <ReportSectionCard
-      icon={<Shield className="h-4 w-4" strokeWidth={2.2} />}
-      title={c.conductTitle}
-      chips={
-        draft.conductLog.length > 0
-          ? [c.itemCount(draft.conductLog.length)]
-          : undefined
-      }
-    >
-      {rows.length === 0 ? (
-        <p className="px-5 py-6 text-sm font-medium text-foreground/50">{c.noConduct}</p>
-      ) : (
-        <>
+  const body =
+    rows.length === 0 ? (
+      <p className="px-5 py-6 text-sm font-medium text-foreground/50">{c.noConduct}</p>
+    ) : (
+      <>
           <div className="overflow-x-auto">
             <table className="w-fit min-w-full border-collapse text-sm">
               <thead>
@@ -376,13 +467,50 @@ function ReportConductPanel({ draft }: { draft: ReportDraft }) {
               </ul>
             </ReportExpandable>
           ) : null}
-        </>
-      )}
+      </>
+    );
+
+  if (presentation === "embedded") {
+    return <div>{body}</div>;
+  }
+
+  if (presentation === "collapsible") {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <ReportExpandable
+          title={c.conductTitle}
+          subtitle={conductSummaryLine(draft, c)}
+          badge={
+            draft.conductLog.length > 0 ? c.itemCount(draft.conductLog.length) : undefined
+          }
+          defaultOpen={false}
+        >
+          {body}
+        </ReportExpandable>
+      </section>
+    );
+  }
+
+  return (
+    <ReportSectionCard
+      icon={<Shield className="h-4 w-4" strokeWidth={2.2} />}
+      title={c.conductTitle}
+      chips={
+        draft.conductLog.length > 0 ? [c.itemCount(draft.conductLog.length)] : undefined
+      }
+    >
+      {body}
     </ReportSectionCard>
   );
 }
 
-function ReportAttendancePanel({ draft }: { draft: ReportDraft }) {
+function ReportAttendancePanel({
+  draft,
+  presentation = "section",
+}: {
+  draft: ReportDraft;
+  presentation?: PanelPresentation;
+}) {
   const t = useT();
   const c = t.composer;
   const locale = useLocale();
@@ -407,23 +535,11 @@ function ReportAttendancePanel({ draft }: { draft: ReportDraft }) {
     isAbsenceAttendanceStatus(r.status),
   ).length;
 
-  return (
-    <ReportSectionCard
-      icon={<Clock className="h-4 w-4" strokeWidth={2.2} />}
-      title={c.attendanceTitle}
-      chips={
-        draft.attendanceLog.length > 0
-          ? [
-              lateCount > 0 ? c.lateCount(lateCount) : null,
-              absenceCount > 0 ? c.absenceCount(absenceCount) : null,
-            ].filter(Boolean) as string[]
-          : undefined
-      }
-    >
-      {summaryRows.length === 0 ? (
-        <p className="px-5 py-6 text-sm font-medium text-foreground/50">{c.noAttendance}</p>
-      ) : (
-        <>
+  const body =
+    summaryRows.length === 0 ? (
+      <p className="px-5 py-6 text-sm font-medium text-foreground/50">{c.noAttendance}</p>
+    ) : (
+      <>
           <div className="overflow-x-auto">
             <table className="w-fit min-w-full border-collapse text-sm">
               <thead>
@@ -541,8 +657,46 @@ function ReportAttendancePanel({ draft }: { draft: ReportDraft }) {
               )}
             </ReportExpandable>
           ) : null}
-        </>
-      )}
+      </>
+    );
+
+  if (presentation === "embedded") {
+    return <div>{body}</div>;
+  }
+
+  if (presentation === "collapsible") {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <ReportExpandable
+          title={c.attendanceTitle}
+          subtitle={attendanceSummaryLine(draft, c)}
+          badge={
+            draft.attendanceLog.length > 0
+              ? c.itemCount(draft.attendanceLog.length)
+              : undefined
+          }
+          defaultOpen={false}
+        >
+          {body}
+        </ReportExpandable>
+      </section>
+    );
+  }
+
+  return (
+    <ReportSectionCard
+      icon={<Clock className="h-4 w-4" strokeWidth={2.2} />}
+      title={c.attendanceTitle}
+      chips={
+        draft.attendanceLog.length > 0
+          ? [
+              lateCount > 0 ? c.lateCount(lateCount) : null,
+              absenceCount > 0 ? c.absenceCount(absenceCount) : null,
+            ].filter(Boolean) as string[]
+          : undefined
+      }
+    >
+      {body}
     </ReportSectionCard>
   );
 }

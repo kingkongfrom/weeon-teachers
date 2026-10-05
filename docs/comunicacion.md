@@ -64,7 +64,7 @@ were removed; **chat** still uses `components/messages/chat-*.tsx`.
 
 ## Email notice
 
-After `createMessageThread` or `sendThreadMessage` in `lib/teachers/comms-actions.ts`, the server calls `POST {WEEON_APP_ORIGIN}/api/comms/message-notice` with the teacher’s session. The school ERP mails the same short notice it sends for an admin circular (first 180 characters; the thread stays in Mensajes). A mail failure does not block the send. Contract: `weeon-tenants/docs/email-delivery-strategy.md`.
+After `createMessageThread` or `sendThreadMessage` in `lib/teachers/comms-actions.ts`, the server calls `POST {WEEON_APP_ORIGIN}/api/comms/message-notice` with the teacher’s session. The school ERP mails the same short notice it sends for an admin circular (first 180 characters; the thread stays in Mensajes). A mail failure does not block the send. Contract: `weeon-tenants/docs/email-delivery-strategy.md`. **Production verified Oct 2026** (recipient real inbox + `message_email_deliveries`).
 
 ## Data model (weeon-tenants)
 

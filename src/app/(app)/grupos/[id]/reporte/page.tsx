@@ -49,9 +49,12 @@ export default async function ReportComposerPage({
         <p className="text-xs font-medium text-foreground/45">
           {t.composer.summaryLine(draft.summary.gradedStudents, draft.summary.totalStudents)}
         </p>
+        <p className="mt-2 max-w-prose text-xs leading-relaxed text-foreground/50">
+          {t.composer.packHint}
+        </p>
       </header>
 
-      <ReportPreviewPanels draft={draft} />
+      <ReportPreviewPanels draft={draft} variant="composer" />
       <ReportComposerSubmit classId={draft.classId} subjectId={draft.subjectId} />
     </div>
   );
