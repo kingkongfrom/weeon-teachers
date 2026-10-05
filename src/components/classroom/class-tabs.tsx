@@ -73,9 +73,6 @@ export function ClassTabs({
     setJustificationBadge(pendingJustifications);
   }, [pendingJustifications]);
 
-  function onJustificationDecided() {
-    setJustificationBadge((count) => Math.max(0, count - 1));
-  }
   const tabs: { id: TabId; label: string }[] = [
     { id: "novedades", label: t.classroom.tabs.novedades },
     { id: "trabajo", label: t.classroom.tabs.trabajo },
@@ -177,15 +174,35 @@ export function ClassTabs({
         ) : null}
 
         {tab === "asistencia" ? (
-          <AttendanceRegister
-            key={attendanceDate}
-            classId={classId}
-            date={attendanceDate}
-            lessonId={attendanceLessonId}
-            students={students}
-            initialMarks={attendanceMarks}
-            onJustificationDecided={onJustificationDecided}
-          />
+          <div className="flex flex-col gap-4">
+            {justificationBadge > 0 ? (
+              <Link
+                href="/aula-virtual/justificaciones"
+                className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 transition-colors hover:bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/35 dark:hover:bg-amber-950/50"
+              >
+                <span className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-red-500 px-2 text-xs font-bold text-white">
+                  {justificationBadge > 9 ? "9+" : justificationBadge}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                    {t.attendance.inboxTitle}
+                  </p>
+                  <p className="text-xs font-medium text-amber-900/80 dark:text-amber-200/80">
+                    {t.panel.attention.justifications(justificationBadge)}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-amber-800/60 dark:text-amber-300/60" />
+              </Link>
+            ) : null}
+            <AttendanceRegister
+              key={attendanceDate}
+              classId={classId}
+              date={attendanceDate}
+              lessonId={attendanceLessonId}
+              students={students}
+              initialMarks={attendanceMarks}
+            />
+          </div>
         ) : null}
 
         {tab === "calificaciones" ? (

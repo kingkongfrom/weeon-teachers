@@ -5,23 +5,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { JustificationDecision } from "@/components/attendance/justification-decision";
 import type { JustificationInboxItem } from "@/lib/dashboard/justification-inbox";
+import { useLocale, useT } from "@/lib/i18n/client";
 
 /** Pending justifications — drops each row as soon as the teacher decides. */
-export function JustificationInboxList({
-  items,
-  locale,
-  labels,
-}: {
-  items: JustificationInboxItem[];
-  locale: string;
-  labels: {
-    guardianNote: string;
-    openInRegister: string;
-    inboxEmpty: string;
-    statuses: Record<string, string>;
-  };
-}) {
+export function JustificationInboxList({ items }: { items: JustificationInboxItem[] }) {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useT();
+  const a = t.attendance;
   const [visible, setVisible] = useState(items);
 
   useEffect(() => {
@@ -34,7 +25,7 @@ export function JustificationInboxList({
   }
 
   if (visible.length === 0) {
-    return <p className="text-sm font-medium text-foreground/60">{labels.inboxEmpty}</p>;
+    return <p className="text-sm font-medium text-foreground/60">{a.inboxEmpty}</p>;
   }
 
   return (
@@ -45,16 +36,25 @@ export function JustificationInboxList({
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">{item.studentName}</p>
               <p className="mt-0.5 text-xs font-medium text-foreground/50">
-                {[labels.statuses[item.status], formatDay(item.date, locale), item.groupName]
+                {[
+                  a.statuses[item.status as keyof typeof a.statuses],
+                  a.inboxAbsenceOn(formatDay(item.date, locale)),
+                  item.groupName,
+                ]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
+              {item.sentAt ? (
+                <p className="mt-0.5 text-xs font-medium text-foreground/45">
+                  {a.inboxSubmittedOn(formatSentAt(item.sentAt, locale))}
+                </p>
+              ) : null}
             </div>
             <Link
               href={`/aula-virtual/${item.classId}?tab=asistencia&date=${item.date}`}
               className="text-xs font-semibold text-brand-600"
             >
-              {labels.openInRegister}
+              {a.openInRegister}
             </Link>
           </div>
           <p className="mt-3 text-sm text-foreground/80">{item.note}</p>
@@ -72,7 +72,7 @@ export function JustificationInboxList({
               <a href={item.attachmentUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block">
                 <img
                   src={item.attachmentUrl}
-                  alt={labels.guardianNote}
+                  alt={a.guardianNote}
                   className="h-24 w-24 rounded-lg object-cover"
                 />
               </a>
@@ -94,5 +94,17 @@ function formatDay(iso: string, locale: string): string {
     day: "numeric",
     month: "short",
     year: "numeric",
+  }).format(date);
+}
+
+function formatSentAt(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-CR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(date);
 }

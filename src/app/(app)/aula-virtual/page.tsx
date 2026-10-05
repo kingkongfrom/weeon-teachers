@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, ClipboardCheck, Plus } from "lucide-react";
+import { ChevronRight, ClipboardCheck, FileCheck, Plus } from "lucide-react";
 import { FadeIn } from "@/components/motion/fade-in";
 import { PageHeader } from "@/components/layout/page-header";
 import { ClassCard } from "@/components/classroom/class-card";
@@ -7,6 +7,7 @@ import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
 import { loadGradingInbox } from "@/lib/dashboard/grading-inbox";
+import { loadJustificationInbox } from "@/lib/dashboard/justification-inbox";
 import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +20,11 @@ export default async function AulaVirtualPage() {
   const session = await getTeacherSession();
   const t = await getT();
 
-  const [grupos, schoolName, inbox] = await Promise.all([
+  const [grupos, schoolName, inbox, justifications] = await Promise.all([
     loadTeacherGrupos(),
     session ? loadSchoolName(session.tenantId) : Promise.resolve(null),
     loadGradingInbox(),
+    loadJustificationInbox(),
   ]);
 
   const year = new Date().getFullYear();
@@ -51,6 +53,24 @@ export default async function AulaVirtualPage() {
             </p>
           </div>
           <ChevronRight className="h-4 w-4 shrink-0 text-amber-700/60 dark:text-amber-300/60" />
+        </Link>
+      ) : null}
+
+      {justifications.length > 0 ? (
+        <Link
+          href="/aula-virtual/justificaciones"
+          className="flex items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50/70 px-4 py-3 transition-colors hover:bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/30 dark:hover:bg-sky-950/50"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
+            <FileCheck className="h-5 w-5" strokeWidth={2.2} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-sky-950 dark:text-sky-100">{t.attendance.inboxTitle}</p>
+            <p className="text-xs font-medium text-sky-900/80 dark:text-sky-200/80">
+              {t.panel.attention.justifications(justifications.length)}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-sky-800/60 dark:text-sky-300/60" />
         </Link>
       ) : null}
 

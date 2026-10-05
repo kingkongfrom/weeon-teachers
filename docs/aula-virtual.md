@@ -119,6 +119,14 @@ Honest snapshot — do not assume the rest exists.
     and the date picker exist only for corrections. Writes are RLS-limited to
     `teaches_class`/admin; reads to class members. Requires
     `20260912180000_attendance_ausencias.sql` in `weeon-tenants`.
+    **Guardian justifications** (note + optional PDF/photo on
+    `attendance_records`) are reviewed only on
+    **`/aula-virtual/justificaciones`** — not inline on the daily register
+    (the encargado may submit days after the absence). Pending items surface on
+    **Inicio**, **Aula virtual**, and the class **Asistencia** tab badge; accept/reject
+    runs `decide_attendance_justification`. Push kind
+    `attendance_justification` (migration `20261005160000_*`) notifies teachers
+    with a registered Expo token.
     Ausencias are **not** shown in the gradebook — the gradebook is
     **grades-only** (the old read-only Asistencia panel and its CSV column were
     removed). A dedicated **Asistencia tab** on the same route

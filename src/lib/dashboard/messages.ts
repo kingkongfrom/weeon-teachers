@@ -353,7 +353,7 @@ export const loadMessageSummaries = cache(
         session.actor.from("message_attachments").select("thread_id").in("thread_id", ids),
         session.actor
           .from("message_thread_state")
-          .select("thread_id, folder, label_id, is_favorite")
+          .select("thread_id, folder, label_id, is_favorite, read_through")
           .eq("owner_profile_id", session.userId)
           .in("thread_id", ids),
       ]);
@@ -365,6 +365,7 @@ export const loadMessageSummaries = cache(
       folder: StoredMessageFolder;
       label_id: string | null;
       is_favorite: boolean;
+      read_through: string | null;
     }>;
     const stateByThread = new Map(stateRows.map((row) => [row.thread_id, row]));
 
@@ -411,6 +412,16 @@ export const loadMessageSummaries = cache(
           (item) => item.profile_id === session.userId || item.recipient_key === session.userId,
         );
 
+        const readThroughMs = state?.read_through ? Date.parse(state.read_through) : NaN;
+        const threadLastMs = row.last_message_at ? Date.parse(row.last_message_at) : NaN;
+        const authorUnread =
+          mine &&
+          last &&
+          last.author_profile_id !== session.userId &&
+          (!Number.isFinite(readThroughMs) ||
+            !Number.isFinite(threadLastMs) ||
+            readThroughMs < threadLastMs);
+
         const audience = row.audience === "group" ? "group" : "individual";
         const className = classLabel(row.classes);
         const recipientNames = threadRecipients.map(
@@ -439,8 +450,7 @@ export const loadMessageSummaries = cache(
           lastMessageAt: row.last_message_at,
           unread:
             folder === "inbox" &&
-            (Boolean(myRecipient && !myRecipient.read_at) ||
-              Boolean(mine && last && last.author_profile_id !== session.userId)),
+            (Boolean(myRecipient && !myRecipient.read_at) || authorUnread),
           recipientCount: threadRecipients.length,
           recipientScope,
           attachmentCount: attachmentCount.get(row.id) ?? 0,

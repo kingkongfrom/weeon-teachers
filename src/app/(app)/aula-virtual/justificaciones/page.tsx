@@ -2,14 +2,13 @@ import { FileCheck } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { JustificationInboxList } from "@/components/attendance/justification-inbox-list";
 import { loadJustificationInbox } from "@/lib/dashboard/justification-inbox";
-import { getLocale, getT } from "@/lib/i18n/server";
+import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 /** Pending parent justifications for the teacher's classes. */
 export default async function JustificacionesPage() {
   const t = await getT();
-  const locale = await getLocale();
   const a = t.attendance;
   const items = await loadJustificationInbox();
 
@@ -25,16 +24,7 @@ export default async function JustificacionesPage() {
           <p className="text-sm font-medium text-foreground/60">{a.inboxEmpty}</p>
         </div>
       ) : (
-        <JustificationInboxList
-          items={items}
-          locale={locale}
-          labels={{
-            guardianNote: a.guardianNote,
-            openInRegister: a.openInRegister,
-            inboxEmpty: a.inboxEmpty,
-            statuses: a.statuses,
-          }}
-        />
+        <JustificationInboxList items={items} />
       )}
     </div>
   );

@@ -713,9 +713,14 @@ const es = {
     justificationAccepted: "Justificación aceptada",
     justificationRejected: "Justificación rechazada",
     inboxTitle: "Justificaciones",
-    inboxHint: "El encargado envió un motivo. Acepte para marcar la asistencia como justificada, o rechácela.",
+    inboxHint:
+      "Solicitudes del encargado para justificar una falta o tardía. Pueden llegar días después de la fecha de la falta. Revise el motivo y el adjunto aquí — no en el libro del día.",
     inboxEmpty: "No hay justificaciones pendientes.",
-    openInRegister: "Ver en el libro",
+    inboxAbsenceOn: (date: string) => `Falta del ${date}`,
+    inboxSubmittedOn: (date: string) => `Enviado el ${date}`,
+    registerJustificationPending: "Hay una justificación del encargado por revisar.",
+    registerReviewJustifications: "Abrir Justificaciones",
+    openInRegister: "Ver falta en el libro",
     errors: {
       save: "No se pudo guardar la asistencia.",
       decide: "No se pudo registrar la decisión.",
@@ -1660,9 +1665,14 @@ const en: Messages = {
     justificationAccepted: "Justification accepted",
     justificationRejected: "Justification rejected",
     inboxTitle: "Justifications",
-    inboxHint: "A guardian sent a reason. Accept to mark attendance as justified, or reject it.",
+    inboxHint:
+      "Guardian requests to justify an absence or late mark. They may arrive days after the absence date. Review the note and attachment here — not on the daily register.",
+    inboxAbsenceOn: (date: string) => `Absence on ${date}`,
+    inboxSubmittedOn: (date: string) => `Submitted ${date}`,
+    registerJustificationPending: "A guardian justification is waiting for review.",
+    registerReviewJustifications: "Open Justifications",
     inboxEmpty: "No justifications waiting.",
-    openInRegister: "Open in the register",
+    openInRegister: "Open absence in register",
     errors: {
       save: "Couldn't save attendance.",
       decide: "Could not save the decision.",

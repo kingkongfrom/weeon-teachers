@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type MouseEvent,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -15,7 +23,6 @@ import {
   Menu,
   Paperclip,
   PenSquare,
-  Signature,
   Plus,
   Printer,
   RefreshCw,
@@ -28,7 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ACTION_NAV_LINK } from "@/lib/ui/action-button";
 import { useT } from "@/lib/i18n/use-i18n";
-import { COMMS_COMPOSE, COMMS_MESSAGES } from "@/lib/comms/paths";
+import { COMMS_COMPOSE, COMMS_MESSAGES, COMMS_SETTINGS } from "@/lib/comms/paths";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import {
   messageTrashExit,
@@ -36,12 +43,13 @@ import {
   messageTrashTransition,
 } from "@/components/comms/message-trash-motion";
 import { AutoReplyDialog } from "@/components/comms/auto-reply-dialog";
+import { MailboxDraftReadingPane } from "@/components/comms/mailbox-draft-reading-pane";
 import { MailboxReadingPane } from "@/components/comms/mailbox-reading-pane";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
 import { NewFolderDialog } from "@/components/comms/new-folder-dialog";
-import { SignatureDialog } from "@/components/comms/signature-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
+  deleteMessageDraft,
   deleteMessageThread,
   reorderMessageLabels,
   setThreadFolder,
@@ -120,7 +128,6 @@ export function MessagesWorkspace({
   const [foldersExpanded, setFoldersExpanded] = useState(true);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
-  const [signatureOpen, setSignatureOpen] = useState(false);
   const [autoReplyOpen, setAutoReplyOpen] = useState(false);
   const [localMailboxSettings, setLocalMailboxSettings] = useState(mailboxSettings);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -132,7 +139,15 @@ export function MessagesWorkspace({
   const [draggingLabelId, setDraggingLabelId] = useState<string | null>(null);
   const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [localDrafts, setLocalDrafts] = useState(drafts);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  const [draftDeleteTarget, setDraftDeleteTarget] = useState<MessageDraftSummary | null>(null);
+  const [draftDeleting, setDraftDeleting] = useState(false);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setLocalDrafts(drafts);
+  }, [drafts]);
 
   useEffect(() => {
     setLocalLabels(labels);
@@ -166,9 +181,51 @@ export function MessagesWorkspace({
   }, [threads, removedThreadIds, query, unreadOnly]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [readThreadIds, setReadThreadIds] = useState<Set<string>>(() => new Set());
   const openId = localThreads.some((row) => row.id === selectedId)
     ? selectedId
     : (localThreads[0]?.id ?? null);
+  const displayThreads = useMemo(
+    () =>
+      localThreads.map((row) =>
+        readThreadIds.has(row.id) ? { ...row, unread: false } : row,
+      ),
+    [localThreads, readThreadIds],
+  );
+  const openDraftId = localDrafts.some((row) => row.id === selectedDraftId)
+    ? selectedDraftId
+    : (localDrafts[0]?.id ?? null);
+  const openDraftSummary = localDrafts.find((row) => row.id === openDraftId) ?? null;
+  const openThreadSummary = displayThreads.find((row) => row.id === openId) ?? null;
+
+  const handleThreadRead = useCallback((threadId: string) => {
+    setReadThreadIds((current) => {
+      if (current.has(threadId)) return current;
+      const next = new Set(current);
+      next.add(threadId);
+      return next;
+    });
+  }, []);
+
+  function refreshMailbox() {
+    router.refresh();
+  }
+
+  function handleDraftDeleted(id: string) {
+    setLocalDrafts((current) => current.filter((row) => row.id !== id));
+    setSelectedDraftId((current) => (current === id ? null : current));
+    setDraftDeleteTarget(null);
+    refreshMailbox();
+  }
+
+  async function deleteDraftById(id: string) {
+    if (draftDeleting) return;
+    setDraftDeleting(true);
+    const res = await deleteMessageDraft(id);
+    setDraftDeleting(false);
+    if (!res.ok) return;
+    handleDraftDeleted(id);
+  }
 
   const folders: Array<{
     id: MessageFolder | "drafts";
@@ -203,7 +260,7 @@ export function MessagesWorkspace({
       label: t("comms.folderDrafts"),
       icon: Mail,
       href: `${COMMS_MESSAGES}?folder=drafts`,
-      count: drafts.length,
+      count: localDrafts.length,
     },
     {
       id: "trash",
@@ -637,18 +694,6 @@ export function MessagesWorkspace({
 
           <button
             type="button"
-            onClick={() => setSignatureOpen(true)}
-            className={cn(
-              ACTION_NAV_LINK,
-              "w-full text-foreground/70 hover:bg-surface-muted/60 hover:text-foreground",
-            )}
-          >
-            <Signature className="h-4 w-4" />
-            <span className="flex-1 text-left">{t("comms.signatureTitle")}</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setSettingsExpanded((current) => !current)}
             className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-foreground/70 hover:bg-surface-muted/60"
           >
@@ -663,6 +708,13 @@ export function MessagesWorkspace({
 
           {settingsExpanded ? (
             <div className="ml-2 flex flex-col gap-0.5 border-l border-border pl-2">
+              <Link
+                href={COMMS_SETTINGS}
+                className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted/60 hover:text-foreground"
+              >
+                <PenSquare className="h-4 w-4" />
+                <span className="flex-1 text-left">{t("comms.mailboxSignatureLink")}</span>
+              </Link>
               <button
                 type="button"
                 onClick={() => setAutoReplyOpen(true)}
@@ -688,7 +740,7 @@ export function MessagesWorkspace({
           ) : null}
 
           {folder === "draft" ? (
-            drafts.length === 0 ? (
+            localDrafts.length === 0 ? (
               <div className="px-6 py-16 text-center">
                 <p className="text-sm font-semibold text-foreground">{t("comms.emptyDrafts")}</p>
                 <p className="mx-auto mt-1 max-w-sm text-xs font-medium text-foreground/50">
@@ -697,11 +749,23 @@ export function MessagesWorkspace({
               </div>
             ) : (
               <ul className="divide-y divide-border">
-                {drafts.map((draft) => (
-                  <li key={draft.id}>
-                    <Link
-                      href={`${COMMS_COMPOSE}?draft=${draft.id}`}
-                      className="flex items-start gap-3 px-4 py-3.5 hover:bg-surface-muted/35"
+                {localDrafts.map((draft) => (
+                  <li key={draft.id} className="group relative">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedDraftId(draft.id)}
+                      onDoubleClick={() => router.push(`${COMMS_COMPOSE}?draft=${draft.id}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelectedDraftId(draft.id);
+                        }
+                      }}
+                      className={cn(
+                        "flex w-full cursor-pointer items-start gap-3 px-4 py-3.5 text-left hover:bg-surface-muted/35",
+                        openDraftId === draft.id && "bg-[#0891B2]/10",
+                      )}
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-foreground">
@@ -714,7 +778,18 @@ export function MessagesWorkspace({
                       <span className="shrink-0 text-xs text-foreground/45">
                         {formatListTime(draft.updatedAt)}
                       </span>
-                    </Link>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDraftDeleteTarget(draft);
+                      }}
+                      className="absolute right-3 top-3 rounded-lg p-1.5 text-foreground/35 opacity-0 transition-opacity hover:bg-error/10 hover:text-error group-hover:opacity-100"
+                      aria-label={t("comms.deleteDraft")}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -733,7 +808,7 @@ export function MessagesWorkspace({
           ) : (
             <motion.ul layout className="divide-y divide-border">
               <AnimatePresence mode="popLayout" initial={false}>
-                {localThreads.map((thread) => (
+                {displayThreads.map((thread) => (
                   <motion.li
                     key={thread.id}
                     layout
@@ -861,23 +936,25 @@ export function MessagesWorkspace({
             </motion.ul>
           )}
         </section>
-        <MailboxReadingPane threadId={openId} />
+        {folder === "draft" ? (
+          <MailboxDraftReadingPane
+            draftId={openDraftId}
+            summary={openDraftSummary}
+            onDeleted={handleDraftDeleted}
+          />
+        ) : (
+          <MailboxReadingPane
+            threadId={openId}
+            listSummary={openThreadSummary}
+            onThreadRead={handleThreadRead}
+          />
+        )}
       </div>
 
       <NewFolderDialog
         open={newFolderOpen}
         onClose={() => setNewFolderOpen(false)}
         onCreated={() => router.refresh()}
-      />
-
-      <SignatureDialog
-        open={signatureOpen}
-        settings={localMailboxSettings}
-        onClose={() => setSignatureOpen(false)}
-        onSaved={(signatureBody) => {
-          setLocalMailboxSettings((current) => ({ ...current, signatureBody }));
-          router.refresh();
-        }}
       />
 
       <AutoReplyDialog
@@ -901,6 +978,19 @@ export function MessagesWorkspace({
           if (deleteTarget) void deletePermanently(deleteTarget.id);
         }}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={draftDeleteTarget != null}
+        title={t("comms.deleteDraftConfirm")}
+        description={t("comms.deleteDraftBody")}
+        confirmLabel={t("comms.deleteDraft")}
+        cancelLabel={t("common.cancel")}
+        pending={draftDeleting}
+        onConfirm={() => {
+          if (draftDeleteTarget) void deleteDraftById(draftDeleteTarget.id);
+        }}
+        onCancel={() => setDraftDeleteTarget(null)}
       />
     </div>
   );

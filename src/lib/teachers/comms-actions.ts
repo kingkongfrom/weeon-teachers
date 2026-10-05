@@ -7,7 +7,7 @@ import { inferAttachmentMimeType, isAllowedAttachmentMime } from "@/lib/comms/at
 import { appendSignature, type RichTextDoc } from "@/lib/comms/model";
 import { stripEmbedUrls } from "@/lib/comms/rich-text-embeds";
 import { requestMessageNotice } from "@/lib/comms/request-message-notice";
-import { COMMS_MESSAGES } from "@/lib/comms/paths";
+import { COMMS_MESSAGES, COMMS_SETTINGS } from "@/lib/comms/paths";
 import { finalizeCommsEmbeds } from "@/lib/dashboard/comms-embed-actions";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
 import { loadMessageMailboxSettingsForSession } from "@/lib/dashboard/message-mailbox-settings";
@@ -225,10 +225,42 @@ export async function markThreadRead(threadId: string): Promise<CommsActionResul
     return { ok: false, error: await tRequest("comms.error") };
   }
 
+  const readAt = new Date().toISOString();
+
   await session.actor
     .from("thread_recipients")
-    .update({ read_at: new Date().toISOString() })
+    .update({ read_at: readAt })
     .eq("thread_id", threadId);
+
+  const { data: thread } = await session.actor
+    .from("threads")
+    .select("last_message_at")
+    .eq("id", threadId)
+    .eq("tenant_id", session.tenantId)
+    .maybeSingle();
+
+  const watermark = thread?.last_message_at ?? readAt;
+
+  const { data: stateRow } = await session.actor
+    .from("message_thread_state")
+    .select("folder, label_id, is_favorite")
+    .eq("owner_profile_id", session.userId)
+    .eq("thread_id", threadId)
+    .maybeSingle();
+
+  await session.actor.from("message_thread_state").upsert(
+    {
+      tenant_id: session.tenantId,
+      owner_profile_id: session.userId,
+      thread_id: threadId,
+      folder: stateRow?.folder ?? "inbox",
+      label_id: stateRow?.label_id ?? null,
+      is_favorite: stateRow?.is_favorite ?? false,
+      read_through: watermark,
+      updated_at: readAt,
+    },
+    { onConflict: "owner_profile_id,thread_id" },
+  );
 
   revalidatePath(COMMS_MESSAGES);
   return { ok: true };
@@ -622,12 +654,18 @@ export async function saveMessageMailboxSettings(
   if (error) return { ok: false, error: await tRequest("comms.error") };
 
   revalidatePath(COMMS_MESSAGES);
+  revalidatePath(COMMS_SETTINGS);
   return { ok: true };
 }
 
 export async function fetchThreadDetail(threadId: string) {
   const { loadThreadDetail } = await import("@/lib/dashboard/messages");
   return loadThreadDetail(threadId);
+}
+
+export async function fetchMessageDraft(id: string) {
+  const { loadMessageDraft } = await import("@/lib/dashboard/message-drafts");
+  return loadMessageDraft(id);
 }
 
 const draftSchema = z.object({

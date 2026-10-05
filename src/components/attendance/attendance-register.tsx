@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
@@ -8,7 +9,6 @@ import { useT } from "@/lib/i18n/client";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Tooltip } from "@/components/ui/tooltip";
 import { saveAttendance } from "@/lib/teachers/attendance-actions";
-import { JustificationDecision } from "@/components/attendance/justification-decision";
 import {
   ATTENDANCE_CODE,
   ATTENDANCE_COMMENT_MAX,
@@ -71,14 +71,12 @@ export function AttendanceRegister({
   lessonId,
   students,
   initialMarks,
-  onJustificationDecided,
 }: {
   classId: string;
   date: string;
   lessonId: string | null;
   students: AttendanceStudent[];
   initialMarks: Record<string, AttendanceEntry>;
-  onJustificationDecided?: () => void;
 }) {
   const t = useT();
   const a = t.attendance;
@@ -119,26 +117,6 @@ export function AttendanceRegister({
     if (generation !== saveGeneration.current) return;
     setSaveState(res.ok ? "saved" : "error");
     if (pending.current.size > 0) scheduleFlush();
-  }
-
-  function applyJustificationDecision(recordId: string, decision: "accepted" | "rejected") {
-    onJustificationDecided?.();
-    const next = { ...marksRef.current };
-    for (const [studentId, mark] of Object.entries(next)) {
-      if (mark.recordId !== recordId) continue;
-      const status =
-        decision === "accepted"
-          ? mark.status === "late_unjustified"
-            ? "late_justified"
-            : mark.status === "absence_unjustified"
-              ? "absence_justified"
-              : mark.status
-          : mark.status;
-      next[studentId] = { ...mark, status, guardianDecision: decision };
-      break;
-    }
-    marksRef.current = next;
-    setMarks(next);
   }
 
   useEffect(() => {
@@ -339,45 +317,16 @@ export function AttendanceRegister({
                     />
                   </label>
                 ) : null}
-                {mark.guardianNote || mark.guardianAttachmentUrl ? (
-                  <div className="mt-2 space-y-2">
-                    {mark.guardianNote ? (
-                      <p className="text-sm text-foreground/70">
-                        <span className="font-semibold">{a.guardianNote}: </span>
-                        {mark.guardianNote}
-                      </p>
-                    ) : null}
-                    {mark.guardianAttachmentUrl ? (
-                      mark.guardianAttachmentPath?.endsWith(".pdf") ? (
-                        <a
-                          href={mark.guardianAttachmentUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm font-semibold text-brand-600"
-                        >
-                          PDF
-                        </a>
-                      ) : (
-                        <a href={mark.guardianAttachmentUrl} target="_blank" rel="noreferrer">
-                          <img
-                            src={mark.guardianAttachmentUrl}
-                            alt={a.guardianNote}
-                            className="h-24 w-24 rounded-lg object-cover"
-                          />
-                        </a>
-                      )
-                    ) : null}
-                    {mark.guardianDecision === "pending" && mark.recordId ? (
-                      <JustificationDecision
-                        recordId={mark.recordId}
-                        onDecided={applyJustificationDecision}
-                      />
-                    ) : mark.guardianDecision === "accepted" ? (
-                      <p className="text-xs font-semibold text-emerald-700">{a.justificationAccepted}</p>
-                    ) : mark.guardianDecision === "rejected" ? (
-                      <p className="text-xs font-semibold text-foreground/50">{a.justificationRejected}</p>
-                    ) : null}
-                  </div>
+                {mark.guardianDecision === "pending" ? (
+                  <p className="mt-2 text-xs font-medium text-amber-900/90 dark:text-amber-200/90">
+                    {a.registerJustificationPending}{" "}
+                    <Link
+                      href="/aula-virtual/justificaciones"
+                      className="font-semibold text-brand-600 underline-offset-2 hover:underline dark:text-brand-400"
+                    >
+                      {a.registerReviewJustifications}
+                    </Link>
+                  </p>
                 ) : null}
               </li>
             );

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Forward, Loader2, MoreHorizontal, Reply } from "lucide-react";
+import { Loader2, MoreHorizontal, Reply } from "lucide-react";
 import { RichTextView } from "@/components/comms/rich-text";
 import { COMMS_MESSAGES } from "@/lib/comms/paths";
-import type { MessageThreadDetail } from "@/lib/dashboard/messages";
 import { fetchThreadDetail, markThreadRead } from "@/lib/teachers/comms-actions";
+import type { MessageThreadDetail, MessageThreadSummary } from "@/lib/dashboard/messages";
 import { useT } from "@/lib/i18n/use-i18n";
+
+const threadDetailCache = new Map<string, MessageThreadDetail>();
 
 function formatDate(iso: string): string {
   const date = new Date(iso);
@@ -21,7 +23,15 @@ function formatDate(iso: string): string {
   });
 }
 
-export function MailboxReadingPane({ threadId }: { threadId: string | null }) {
+export function MailboxReadingPane({
+  threadId,
+  listSummary,
+  onThreadRead,
+}: {
+  threadId: string | null;
+  listSummary?: MessageThreadSummary | null;
+  onThreadRead?: (threadId: string) => void;
+}) {
   const t = useT();
   const [detail, setDetail] = useState<MessageThreadDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,18 +41,45 @@ export function MailboxReadingPane({ threadId }: { threadId: string | null }) {
       setDetail(null);
       return;
     }
+    if (listSummary?.unread) {
+      void markThreadRead(threadId).then((res) => {
+        if (res.ok) onThreadRead?.(threadId);
+      });
+    }
+    const cached = threadDetailCache.get(threadId);
+    if (cached) {
+      setDetail(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     let cancelled = false;
-    setLoading(true);
     void fetchThreadDetail(threadId).then((result) => {
       if (cancelled) return;
-      setDetail(result);
+      if (result) {
+        const unread = result.summary.unread || listSummary?.unread;
+        if (unread) {
+          threadDetailCache.set(threadId, {
+            ...result,
+            summary: { ...result.summary, unread: false },
+          });
+        } else {
+          threadDetailCache.set(threadId, result);
+        }
+      }
+      setDetail(result ? threadDetailCache.get(threadId) ?? result : null);
       setLoading(false);
-      if (result?.summary.unread) void markThreadRead(threadId);
+      const shouldMark = result?.summary.unread || listSummary?.unread;
+      if (shouldMark) {
+        void markThreadRead(threadId).then((res) => {
+          if (res.ok) onThreadRead?.(threadId);
+        });
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [threadId]);
+  }, [threadId, listSummary?.unread, onThreadRead]);
 
   if (!threadId) {
     return (
@@ -55,11 +92,38 @@ export function MailboxReadingPane({ threadId }: { threadId: string | null }) {
     );
   }
 
-  if (loading || !detail || detail.summary.id !== threadId) {
+  const headerSubject = detail?.summary.subject ?? listSummary?.subject ?? "";
+  const headerCounterpart =
+    detail?.summary.counterpart ?? listSummary?.counterpart ?? "";
+  const waitingForDetail = loading && (!detail || detail.summary.id !== threadId);
+
+  if (waitingForDetail && !listSummary) {
     return (
       <div className="flex min-w-[24rem] flex-1 items-center justify-center text-foreground/40">
         <Loader2 className="h-5 w-5 animate-spin" />
       </div>
+    );
+  }
+
+  if (!detail || detail.summary.id !== threadId) {
+    if (!listSummary) {
+      return (
+        <div className="flex min-w-[24rem] flex-1 items-center justify-center text-foreground/40">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      );
+    }
+    return (
+      <article className="min-w-[24rem] flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex items-start gap-3">
+          <h2 className="min-w-0 flex-1 text-xl font-semibold text-foreground">{headerSubject}</h2>
+          {waitingForDetail ? (
+            <Loader2 className="h-5 w-5 shrink-0 animate-spin text-foreground/35" />
+          ) : null}
+        </div>
+        <p className="mt-4 text-sm text-foreground/55">{headerCounterpart}</p>
+        <p className="mt-2 text-sm text-foreground/70">{listSummary.preview}</p>
+      </article>
     );
   }
 
@@ -74,25 +138,23 @@ export function MailboxReadingPane({ threadId }: { threadId: string | null }) {
   const toLabel = toNames.length > 0 ? toNames.join(", ") : detail.summary.counterpart;
 
   return (
-      <article className="min-w-[24rem] flex-1 overflow-y-auto px-6 py-5">
+    <article className="min-w-[24rem] flex-1 overflow-y-auto px-6 py-5">
       <div className="flex items-start gap-3">
         <h2 className="min-w-0 flex-1 text-xl font-semibold text-foreground">{detail.summary.subject}</h2>
         <div className="flex shrink-0 items-center gap-1 text-foreground/45">
+          {detail.summary.allowReplies ? (
+            <Link
+              href={`${COMMS_MESSAGES}/${detail.summary.id}`}
+              aria-label={t("comms.replySection")}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-muted hover:text-foreground"
+            >
+              <Reply className="h-4 w-4" />
+            </Link>
+          ) : null}
           <Link
             href={`${COMMS_MESSAGES}/${detail.summary.id}`}
-            aria-label={t("comms.replySection")}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-muted hover:text-foreground"
-          >
-            <Reply className="h-4 w-4" />
-          </Link>
-          <Link
-            href={`${COMMS_MESSAGES}/${detail.summary.id}`}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-muted hover:text-foreground"
-          >
-            <Forward className="h-4 w-4" />
-          </Link>
-          <Link
-            href={`${COMMS_MESSAGES}/${detail.summary.id}`}
+            aria-label={t("comms.openFullThread")}
+            title={t("comms.openFullThread")}
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-muted hover:text-foreground"
           >
             <MoreHorizontal className="h-4 w-4" />

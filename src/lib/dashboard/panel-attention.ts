@@ -28,11 +28,6 @@ export const loadPanelAttention = cache(async (): Promise<PanelAttention> => {
     unreadChatCount: chats.filter((row) => row.unread).length,
     unreadInboxCount: inbox.filter((row) => row.unread).length,
     justificationCount: justifications.length,
-    justificationHref:
-      justifications.length === 1
-        ? `/aula-virtual/${justifications[0].classId}?tab=asistencia&date=${justifications[0].date}`
-        : justifications.length > 1
-          ? "/aula-virtual/justificaciones"
-          : null,
+    justificationHref: justifications.length > 0 ? "/aula-virtual/justificaciones" : null,
   };
 });
