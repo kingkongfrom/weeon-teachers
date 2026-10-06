@@ -83,33 +83,33 @@ export async function ComunicacionHubActivity({
         className,
       )}
     >
-      <div className="grid md:grid-cols-2 md:divide-x md:divide-border">
+      <div className="grid grid-cols-2 divide-x divide-border">
         {/* Inbox pane */}
-        <div className="flex min-h-[16rem] flex-col">
-          <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3.5 sm:px-5">
+        <div className="flex min-h-[14rem] flex-col sm:min-h-[16rem]">
+          <header className="flex flex-col gap-2 border-b border-border px-2 py-2.5 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between min-[400px]:gap-3 sm:px-5 sm:py-3.5">
             <div className="flex min-w-0 items-center gap-2">
               <span
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white sm:h-8 sm:w-8 sm:rounded-xl",
                   TONE_AVATAR.blue,
                 )}
                 aria-hidden
               >
-                <Mail className="h-4 w-4" strokeWidth={2.2} />
+                <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2.2} />
               </span>
               <div className="min-w-0">
-                <h2 className="text-sm font-bold text-foreground">{m.hubPreviewInboxTitle}</h2>
-                <p className="truncate text-xs font-medium text-foreground/45">
+                <h2 className="text-xs font-bold text-foreground sm:text-sm">{m.hubPreviewInboxTitle}</h2>
+                <p className="hidden truncate text-xs font-medium text-foreground/45 min-[400px]:block">
                   {m.hubPreviewInboxHint}
                 </p>
               </div>
             </div>
             <Link
               href={`${COMMS_MESSAGES}?folder=inbox`}
-              className="inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-foreground/50 hover:text-foreground"
+              className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-foreground/50 hover:text-foreground sm:text-xs"
             >
               {m.hubViewAllMessages}
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+              <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
             </Link>
           </header>
           {inboxRows.length === 0 ? (
@@ -165,29 +165,31 @@ export async function ComunicacionHubActivity({
         </div>
 
         {/* Chat pane */}
-        <div className="flex min-h-[16rem] flex-col border-t border-border md:border-t-0">
-          <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3.5 sm:px-5">
+        <div className="flex min-h-[14rem] flex-col sm:min-h-[16rem]">
+          <header className="flex flex-col gap-2 border-b border-border px-2 py-2.5 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between min-[400px]:gap-3 sm:px-5 sm:py-3.5">
             <div className="flex min-w-0 items-center gap-2">
               <span
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white sm:h-8 sm:w-8 sm:rounded-xl",
                   TONE_AVATAR.green,
                 )}
                 aria-hidden
               >
-                <MessageCircle className="h-4 w-4" strokeWidth={2.2} />
+                <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2.2} />
               </span>
               <div className="min-w-0">
-                <h2 className="text-sm font-bold text-foreground">{m.hubPreviewChatTitle}</h2>
-                <p className="truncate text-xs font-medium text-foreground/45">{m.hubPreviewChatHint}</p>
+                <h2 className="text-xs font-bold text-foreground sm:text-sm">{m.hubPreviewChatTitle}</h2>
+                <p className="hidden truncate text-xs font-medium text-foreground/45 min-[400px]:block">
+                  {m.hubPreviewChatHint}
+                </p>
               </div>
             </div>
             <Link
               href={COMMS_CHAT}
-              className="inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-foreground/50 hover:text-foreground"
+              className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-foreground/50 hover:text-foreground sm:text-xs"
             >
               {m.hubViewAllChat}
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+              <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
             </Link>
           </header>
           {chatRows.length === 0 ? (
