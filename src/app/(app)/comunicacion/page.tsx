@@ -1,64 +1,78 @@
 import { Mail, MessageCircle } from "lucide-react";
-import { HubModuleCard } from "@/components/dashboard/hub-module-card";
+import {
+  ComunicacionHubActivity,
+} from "@/components/comms/comunicacion-hub-activity";
+import {
+  ComunicacionHubChannels,
+  type ComunicacionHubChannel,
+} from "@/components/comms/comunicacion-hub-channels";
+import { PanelAttentionStrip } from "@/components/dashboard/panel-attention";
+import { FadeIn } from "@/components/motion/fade-in";
 import { PageHeader } from "@/components/layout/page-header";
+import { loadChatConversations } from "@/lib/dashboard/chat";
+import { loadMessageSummaries } from "@/lib/dashboard/messages";
 import { loadPanelAttention } from "@/lib/dashboard/panel-attention";
 import { getT } from "@/lib/i18n/server";
-import type { HubTone } from "@/lib/dashboard/tones";
 import { COMMS_CHAT, COMMS_MESSAGES } from "@/lib/comms/paths";
 
 export const dynamic = "force-dynamic";
 
-/** Comunicación hub: Mensajes and Chat. */
+/** Comunicación hub — channel rails + dual inbox/chat preview (full width). */
 export default async function CommunicationPage() {
-  const [t, attention] = await Promise.all([getT(), loadPanelAttention()]);
+  const [t, attention, inbox, chats] = await Promise.all([
+    getT(),
+    loadPanelAttention(),
+    loadMessageSummaries("inbox"),
+    loadChatConversations(),
+  ]);
   const m = t.messages;
 
-  const cards: Array<{
-    id: string;
-    href: string;
-    icon: typeof Mail;
-    label: string;
-    description: string;
-    tone: HubTone;
-    badgeCount: number;
-  }> = [
+  const channels: ComunicacionHubChannel[] = [
     {
       id: "messages",
       href: `${COMMS_MESSAGES}?folder=inbox`,
       icon: Mail,
-      label: m.hubMessagesTitle,
-      description: m.hubMessagesDescription,
+      title: m.hubMessagesTitle,
+      hint: m.hubMessagesRailHint,
       tone: "blue",
       badgeCount: attention.unreadInboxCount,
+      statLabel:
+        attention.unreadInboxCount > 0
+          ? t.panel.unreadCount(attention.unreadInboxCount)
+          : inbox.length > 0
+            ? m.hubInboxCount(inbox.length)
+            : undefined,
     },
     {
       id: "chat",
       href: COMMS_CHAT,
       icon: MessageCircle,
-      label: m.chatTitle,
-      description: m.chatDescription,
+      title: m.chatTitle,
+      hint: m.hubChatRailHint,
       tone: "green",
       badgeCount: attention.unreadChatCount,
+      statLabel:
+        attention.unreadChatCount > 0
+          ? t.panel.unreadCount(attention.unreadChatCount)
+          : chats.length > 0
+            ? m.hubChatCount(chats.length)
+            : undefined,
     },
   ];
 
   return (
-    <div className="flex flex-col gap-5">
+    <FadeIn className="flex flex-col gap-6">
       <PageHeader title={m.hubTitle} description={m.hubDescription} />
-      <div className="grid max-w-md grid-cols-2 gap-3 sm:max-w-xl sm:gap-4">
-        {cards.map((card) => (
-          <HubModuleCard
-            key={card.id}
-            layout="square"
-            tone={card.tone}
-            icon={card.icon}
-            title={card.label}
-            description={card.description}
-            href={card.href}
-            badgeCount={card.badgeCount}
-          />
-        ))}
-      </div>
-    </div>
+
+      <PanelAttentionStrip attention={attention} />
+
+      <FadeIn delay={0.05}>
+        <ComunicacionHubChannels channels={channels} />
+      </FadeIn>
+
+      <FadeIn delay={0.1}>
+        <ComunicacionHubActivity inbox={inbox} chats={chats} />
+      </FadeIn>
+    </FadeIn>
   );
 }

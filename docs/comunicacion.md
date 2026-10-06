@@ -10,8 +10,9 @@ Comunicación has **three** channels on `/comunicacion`:
 - **Mensajes** — same mailbox UX as the school ERP (`weeon-tenants`): Para/Cc,
   bulk group picker, rich body, Dropbox + bottom attachment zone, folders,
   favorites, custom labels, signature, optional replies.
-- **Chat** — one inbox for administración, encargados, and estudiantes.
-  Roster contacts use `chat_*`; administración uses `admin_teacher_chat_*`.
+- **Chat** — one inbox for **dirección escolar** (school admins), encargados, and
+  estudiantes. Two-way realtime on `admin_teacher_chat_*` (teacher ↔ admin) and
+  `chat_*` (teacher ↔ roster).
 
 Panel general **Comunicación** → `/comunicacion`. **Novedades** stays in aula
 virtual — not part of Comunicación.
@@ -22,15 +23,15 @@ virtual — not part of Comunicación.
   guardian/admin chat). Counts come from `loadPanelAttention()` in the app
   layout; `TeacherCommsNavRealtime` debounces `router.refresh()` on mail/chat
   table changes.
-- **Hub (`/comunicacion`):** two **square** tiles (`HubModuleCard` `layout="square"`)
-  — **Mensajes** links to `?folder=inbox` with inbox unread badge; **Chat** links
-  to `/comunicacion/chat` with chat unread badge.
+- **Hub (`/comunicacion`):** optional `PanelAttentionStrip`, full-width **channel rails**
+  (`comunicacion-hub-channels.tsx`), then a **dual-pane preview** — Recibidos |
+  Chats activos (`comunicacion-hub-activity.tsx`). Empty when both panes are empty.
 
 ## Routes
 
 | Route | Purpose |
 | --- | --- |
-| `/comunicacion` | Hub — **Mensajes** + **Chat** cards |
+| `/comunicacion` | Hub — **Email** + **Chat** cards |
 | `/comunicacion/mensajes` | Mailbox — default **Recibidos** (`inbox` when `folder` omitted); `?folder=sent\|trash\|favorite`, `?label=<uuid>` |
 | `/comunicacion/nuevo` | Unified compose (`UnifiedMessageComposer`) |
 | `/comunicacion/mensajes/[threadId]` | Thread detail + reply when `allow_replies` |
@@ -87,13 +88,10 @@ Apply migrations through **`20260920140000_school_documents.sql`** (and the
 
 ## Chat
 
-One inbox. **Nuevo chat** lists Administración, Encargados, and Estudiantes
-from `list_message_contacts`. Loaders in `lib/dashboard/chat.ts`, UI
-`components/messages/chat-workspace.tsx`.
-
-Administración uses `start_teacher_admin_chat` and the `admin_teacher_chat_*`
-tables (same contract as the school ERP). Encargados and estudiantes use
-`chat_*` via `start_chat_conversation`.
+One inbox titled **Chat**. Sidebar: **Nuevo chat** (encargados / estudiantes) and
+**Chat con dirección** (`start_teacher_admin_chat` → `admin_teacher_chat_*`).
+School admins reply from the ERP **Comunicación → Chat** (`AdminTeacherChatWorkspace`).
+Encargados use `chat_*` via `start_chat_conversation`.
 
 ## Env
 

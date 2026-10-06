@@ -202,6 +202,11 @@ export function ChatWorkspace({
           >
             <div className="shrink-0 space-y-1.5 border-b border-border px-3 py-2">
               <NewChatButton label={m.chatNew} onClick={() => setPickerOpen(true)} />
+              <NewChatButton
+                label={m.chatAdminNew}
+                tone="blue"
+                onClick={() => void openAdminChat()}
+              />
               {adminStartError ? (
                 <p className="px-1 text-[11px] font-medium text-error">{adminStartError}</p>
               ) : null}
@@ -332,17 +337,30 @@ export function ChatWorkspace({
                   <p className="text-sm font-semibold text-foreground">{m.chatTitle}</p>
                   <p className="text-xs font-medium text-foreground/50">{m.chatSelectPrompt}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPickerOpen(true)}
-                  className={cn(
-                    "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]",
-                    TONE_AVATAR.green,
-                  )}
-                >
-                  <Plus className="h-4 w-4" aria-hidden />
-                  {m.chatNew}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpen(true)}
+                    className={cn(
+                      "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]",
+                      TONE_AVATAR.green,
+                    )}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                    {m.chatNew}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void openAdminChat()}
+                    className={cn(
+                      "inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-105 active:scale-[0.98]",
+                      TONE_AVATAR.blue,
+                    )}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                    {m.chatAdminNew}
+                  </button>
+                </div>
                 {adminStartError ? (
                   <p className="mt-2 max-w-xs text-xs font-medium text-error">{adminStartError}</p>
                 ) : null}
