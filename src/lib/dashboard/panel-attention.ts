@@ -5,21 +5,10 @@ import { loadChatConversations } from "@/lib/dashboard/chat";
 import { loadGradingInbox } from "@/lib/dashboard/grading-inbox";
 import { loadJustificationInbox } from "@/lib/dashboard/justification-inbox";
 import { loadMessageSummaries } from "@/lib/dashboard/messages";
+import type { PanelAttention } from "@/lib/dashboard/panel-attention-model";
 
-export type PanelAttention = {
-  gradingCount: number;
-  unreadChatCount: number;
-  unreadInboxCount: number;
-  justificationCount: number;
-  justificationHref: string | null;
-};
-
-/** Combined unread for the main nav Comunicación badge (inbox + guardian/admin chat). */
-export function commsNavUnreadTotal(
-  attention: Pick<PanelAttention, "unreadChatCount" | "unreadInboxCount">,
-): number {
-  return attention.unreadChatCount + attention.unreadInboxCount;
-}
+export type { PanelAttention } from "@/lib/dashboard/panel-attention-model";
+export { commsNavUnreadTotal } from "@/lib/dashboard/panel-attention-model";
 
 /** Actionable counts for Panel general — all loaders are request-cached. */
 export const loadPanelAttention = cache(async (): Promise<PanelAttention> => {

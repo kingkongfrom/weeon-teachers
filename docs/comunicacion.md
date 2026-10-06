@@ -16,12 +16,22 @@ Comunicación has **three** channels on `/comunicacion`:
 Panel general **Comunicación** → `/comunicacion`. **Novedades** stays in aula
 virtual — not part of Comunicación.
 
+### Nav + hub feedback (Oct 2026)
+
+- **Sidebar:** `AppSidebar` shows an unread count on **Comunicación** (inbox +
+  guardian/admin chat). Counts come from `loadPanelAttention()` in the app
+  layout; `TeacherCommsNavRealtime` debounces `router.refresh()` on mail/chat
+  table changes.
+- **Hub (`/comunicacion`):** two **square** tiles (`HubModuleCard` `layout="square"`)
+  — **Mensajes** links to `?folder=inbox` with inbox unread badge; **Chat** links
+  to `/comunicacion/chat` with chat unread badge.
+
 ## Routes
 
 | Route | Purpose |
 | --- | --- |
 | `/comunicacion` | Hub — **Mensajes** + **Chat** cards |
-| `/comunicacion/mensajes` | Mailbox — `?folder=inbox\|sent\|trash\|favorite`, `?label=<uuid>` |
+| `/comunicacion/mensajes` | Mailbox — default **Recibidos** (`inbox` when `folder` omitted); `?folder=sent\|trash\|favorite`, `?label=<uuid>` |
 | `/comunicacion/nuevo` | Unified compose (`UnifiedMessageComposer`) |
 | `/comunicacion/mensajes/[threadId]` | Thread detail + reply when `allow_replies` |
 | `/comunicacion/circulares`, `/comunicacion/correo` | Legacy redirects → `/comunicacion/mensajes` |

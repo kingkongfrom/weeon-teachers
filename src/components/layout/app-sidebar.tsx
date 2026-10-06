@@ -14,7 +14,10 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
-import { commsNavUnreadTotal, type PanelAttention } from "@/lib/dashboard/panel-attention";
+import {
+  commsNavUnreadTotal,
+  type PanelAttention,
+} from "@/lib/dashboard/panel-attention-model";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 

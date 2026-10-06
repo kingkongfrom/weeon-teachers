@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { TeacherAcademicRealtime } from "@/lib/comms/teacher-academic-realtime";
 import { TeacherCommsNavRealtime } from "@/lib/comms/teacher-comms-nav-realtime";
-import type { PanelAttention } from "@/lib/dashboard/panel-attention";
+import type { PanelAttention } from "@/lib/dashboard/panel-attention-model";
 
 export type AppUser = {
   userId: string;
