@@ -719,13 +719,6 @@ const es = {
   horarios: {
     title: "Horarios",
     description: "Sus clases de la semana, por grupo.",
-    viewCalendar: "Vista calendario",
-    weekStats: (classes: number, events: number) => {
-      const c = classes === 1 ? "1 clase" : `${classes} clases`;
-      if (events === 0) return c;
-      const e = events === 1 ? "1 evento" : `${events} eventos`;
-      return `${c} · ${e}`;
-    },
   },
   student: {
     title: "Estudiante",
@@ -1740,13 +1733,6 @@ const en: Messages = {
   horarios: {
     title: "Schedule",
     description: "Your classes for the week, by group.",
-    viewCalendar: "Calendar view",
-    weekStats: (classes: number, events: number) => {
-      const c = classes === 1 ? "1 class" : `${classes} classes`;
-      if (events === 0) return c;
-      const e = events === 1 ? "1 event" : `${events} events`;
-      return `${c} · ${e}`;
-    },
   },
   student: {
     title: "Student",

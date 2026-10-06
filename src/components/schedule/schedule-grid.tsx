@@ -6,12 +6,14 @@ import {
 import { isoDate, weekDates } from "@/lib/dashboard/week";
 import { getT } from "@/lib/i18n/server";
 import { LessonCard } from "@/components/schedule/lesson-card";
+import { hubTonePill, type Tone } from "@/lib/dashboard/tones";
 import { cn } from "@/lib/utils";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 
 /**
- * Weekly timetable: Mon–Fri columns inside the horarios board. With `weekStart`,
- * columns show real dates, today is highlighted, and group events sit above lessons.
+ * Weekly timetable: one column per weekday. With `weekStart` the columns carry
+ * the real dates and any events/exams for that week; clicking a lesson previews
+ * it.
  */
 export async function ScheduleGrid({
   lessons,
@@ -24,7 +26,7 @@ export async function ScheduleGrid({
 }) {
   const t = await getT();
   const dates = weekStart ? weekDates(weekStart) : null;
-  const todayISO = isoDate(new Date());
+  const dayTones: Tone[] = ["blue", "purple", "yellow", "green", "rose"];
 
   const byDay = new Map<Weekday, TeacherLesson[]>();
   for (const day of WEEKDAYS) byDay.set(day.value, []);
@@ -33,42 +35,30 @@ export async function ScheduleGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 xl:divide-x xl:divide-border">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
       {WEEKDAYS.map((day, index) => {
         const dayLessons = byDay.get(day.value) ?? [];
         const date = dates?.[index];
         const dateISO = date ? isoDate(date) : null;
-        const isToday = dateISO === todayISO;
         const dayEvents = dateISO ? events.filter((event) => event.date === dateISO) : [];
-
+        const dayPill = hubTonePill(dayTones[index] ?? "blue");
         return (
           <section
             key={day.value}
-            className={cn(
-              "flex min-h-[8rem] flex-col gap-2 border-b border-border p-4 last:border-b-0 xl:border-b-0",
-              isToday && "bg-brand-50/50 dark:bg-brand-950/25",
-            )}
+            className="flex flex-col gap-3 rounded-2xl bg-surface p-4 ring-1 ring-inset ring-black/5 dark:ring-white/10"
           >
-            <div
-              className={cn(
-                "flex items-center justify-between gap-2 rounded-lg px-2 py-2",
-                isToday
-                  ? "bg-brand-100/80 dark:bg-brand-950/40"
-                  : "bg-brand-50/70 dark:bg-brand-950/30",
-              )}
-            >
-              <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700/85 dark:text-brand-300/90">
+            <div className="flex items-center justify-between gap-2">
+              <h3
+                className={cn(
+                  "rounded-lg px-2 py-1 text-sm font-bold uppercase tracking-wide",
+                  dayPill.wash,
+                  dayPill.label,
+                )}
+              >
                 {t.schedule.weekdays[index]}
-              </p>
+              </h3>
               {date ? (
-                <span
-                  className={cn(
-                    "flex h-7 min-w-7 items-center justify-center rounded-lg text-sm font-bold tabular-nums",
-                    isToday ? "brand-gradient text-white shadow-sm" : "text-foreground/45",
-                  )}
-                >
-                  {date.getDate()}
-                </span>
+                <span className="text-sm font-bold text-foreground/40">{date.getDate()}</span>
               ) : null}
             </div>
 
@@ -77,20 +67,20 @@ export async function ScheduleGrid({
                 {dayEvents.map((event) => (
                   <li
                     key={event.id}
-                    className="rounded-lg border border-amber-200/80 bg-amber-50/90 px-2.5 py-1.5 text-xs font-semibold text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-100"
+                    className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
                   >
                     {event.title}
                     {!event.allDay && event.startTime ? (
-                      <span className="ml-1 font-medium opacity-75">{event.startTime}</span>
+                      <span className="ml-1 font-medium opacity-80">{event.startTime}</span>
                     ) : null}
                   </li>
                 ))}
               </ul>
             ) : null}
 
-            <div className="flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-2">
               {dayLessons.length === 0 ? (
-                <p className="px-1 py-3 text-center text-xs font-medium text-foreground/40">
+                <p className="px-1 py-2 text-xs font-medium text-foreground/40">
                   {t.schedule.noClasses}
                 </p>
               ) : (
@@ -101,7 +91,6 @@ export async function ScheduleGrid({
                     dayLabel={t.schedule.weekdays[index]}
                     dateISO={dateISO ?? undefined}
                     events={dayEvents.filter((event) => event.lessonId === lesson.id)}
-                    emphasize={isToday}
                   />
                 ))
               )}

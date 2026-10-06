@@ -1,7 +1,7 @@
 import { CalendarDays } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { HorariosWeekToolbar } from "@/components/schedule/horarios-week-toolbar";
 import { ScheduleGrid } from "@/components/schedule/schedule-grid";
+import { WeekNavigator } from "@/components/schedule/week-navigator";
 import { loadGroupEventsBetween } from "@/lib/dashboard/calendar";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
 import {
@@ -36,8 +36,6 @@ export default async function HorariosPage({
   ]);
 
   const isCurrentWeek = isoDate(weekStart) === isoDate(mondayOf(new Date()));
-  const calendarioHref = `/agenda/calendario?view=week&date=${startISO}`;
-  const weekStatsLabel = t.horarios.weekStats(lessons.length, events.length);
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,30 +45,25 @@ export default async function HorariosPage({
         backHref="/agenda"
       />
 
-      <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-        <HorariosWeekToolbar
-          label={weekRangeLabel(weekStart)}
-          prevHref={`/horarios?week=${isoDate(addDays(weekStart, -7))}`}
-          nextHref={`/horarios?week=${isoDate(addDays(weekStart, 7))}`}
-          todayHref="/horarios"
-          todayLabel={t.schedule.thisWeek}
-          isCurrentWeek={isCurrentWeek}
-          weekStatsLabel={weekStatsLabel}
-          viewCalendarLabel={t.horarios.viewCalendar}
-          calendarioHref={calendarioHref}
-        />
+      <WeekNavigator
+        label={weekRangeLabel(weekStart)}
+        prevHref={`/horarios?week=${isoDate(addDays(weekStart, -7))}`}
+        nextHref={`/horarios?week=${isoDate(addDays(weekStart, 7))}`}
+        todayHref="/horarios"
+        todayLabel={t.schedule.thisWeek}
+        isCurrentWeek={isCurrentWeek}
+      />
 
-        {lessons.length === 0 ? (
-          <div className="border-t border-dashed border-border px-6 py-16 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-              <CalendarDays className="h-6 w-6" strokeWidth={2.2} />
-            </div>
-            <p className="text-sm font-medium text-foreground/60">{t.panel.noLessons}</p>
+      {lessons.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-16 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+            <CalendarDays className="h-6 w-6" strokeWidth={2.2} />
           </div>
-        ) : (
-          <ScheduleGrid lessons={lessons} weekStart={weekStart} events={events} />
-        )}
-      </section>
+          <p className="text-sm font-medium text-foreground/60">{t.panel.noLessons}</p>
+        </div>
+      ) : (
+        <ScheduleGrid lessons={lessons} weekStart={weekStart} events={events} />
+      )}
     </div>
   );
 }
