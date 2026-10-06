@@ -19,6 +19,8 @@ import {
 import { addDays, isoDate, mondayOf } from "@/lib/dashboard/week";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { InstitutionCalendarSubscribe } from "@/components/agenda/institution-calendar-subscribe";
+import type { CalendarFeedLinks } from "@/lib/teachers/calendar-feed-actions";
 import type { CalendarEventType, TeacherCalendarEvent, TeacherExamDue } from "@/lib/dashboard/calendar";
 
 type StyleKey = CalendarEventType | "exam";
@@ -85,12 +87,14 @@ export function CalendarView({
   todayISO,
   events,
   exams,
+  feedLinks,
 }: {
   view: CalendarViewMode;
   anchorISO: string;
   todayISO: string;
   events: TeacherCalendarEvent[];
   exams: TeacherExamDue[];
+  feedLinks?: CalendarFeedLinks | null;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -261,6 +265,8 @@ export function CalendarView({
               className="h-8 w-40 rounded-lg border border-border bg-surface pl-8 pr-2.5 text-sm text-foreground outline-none transition-all placeholder:text-foreground/40 focus:border-brand-400 sm:w-48"
             />
           </label>
+
+          {feedLinks ? <InstitutionCalendarSubscribe initialLinks={feedLinks} /> : null}
         </div>
       </div>
 

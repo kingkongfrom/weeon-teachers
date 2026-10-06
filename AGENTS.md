@@ -149,7 +149,8 @@ calendar) must stay aligned with this repo's loaders and RPCs.
   `docs/inicio.md`), `/agenda` (hub: Horarios + Próximos
   eventos + Calendario), `/agenda/eventos` (read-only upcoming institution
   events), `/agenda/calendario` (month/week/day/agenda calendar mirroring the
-  ERP, `?view=month|week|day|agenda&date=YYYY-MM-DD`),
+  ERP, `?view=month|week|day|agenda&date=YYYY-MM-DD`; ICS/WebCal subscribe for
+  institution events only — `docs/agenda.md` § Subscribe),
   `/aula-virtual` (virtual classroom section),
   `/aula-virtual/[classId]` (class workspace), `/aula-virtual/por-evaluar`
   (cross-group grading inbox), `/comunicacion` (hub: Mensajes + Chat cards),

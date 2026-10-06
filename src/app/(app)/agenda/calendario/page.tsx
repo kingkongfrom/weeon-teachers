@@ -3,6 +3,8 @@ import { CalendarView } from "@/components/agenda/calendar-view";
 import { loadEventsBetween, loadExamDueBetween } from "@/lib/dashboard/calendar";
 import { parseAnchor, parseCalendarView, rangeFor } from "@/lib/dashboard/month";
 import { isoDate } from "@/lib/dashboard/week";
+import { calendarFeedUrls, ensureCalendarFeedToken } from "@/lib/calendar/institution-feed";
+import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -23,10 +25,15 @@ export default async function CalendarioPage({
   const view = parseCalendarView(viewParam);
   const anchor = parseAnchor(dateParam);
   const { start, end } = rangeFor(view, anchor);
-  const [events, exams] = await Promise.all([
+  const session = await getTeacherSession();
+  const [events, exams, feedTokenId] = await Promise.all([
     loadEventsBetween(start, end),
     loadExamDueBetween(start, end),
+    session
+      ? ensureCalendarFeedToken(session.userId, session.tenantId)
+      : Promise.resolve(null),
   ]);
+  const feedLinks = feedTokenId ? calendarFeedUrls(feedTokenId) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,6 +49,7 @@ export default async function CalendarioPage({
         todayISO={isoDate(new Date())}
         events={events}
         exams={exams}
+        feedLinks={feedLinks}
       />
     </div>
   );

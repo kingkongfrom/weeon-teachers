@@ -123,6 +123,27 @@ Institution events are colour-coded by type (`STYLES` in the component); aula
 virtual exams use the **rose** tone. All times are 24h. Read-only — no
 create/delete here. There is no legend/sidebar (the grid carries the colours).
 
+### Subscribe (ICS / WebCal)
+
+Teachers can add the **institution calendar only** from `/agenda/calendario`:
+
+- Toolbar **Sincronizar** (QR icon) opens a sheet/dialog — pick **Android** or **Mac / iPhone**,
+  then the QR updates (HTTPS vs WebCal). Copy-link and token rotate under **Más opciones**.
+- `components/agenda/institution-calendar-subscribe.tsx` — trigger + modal;
+  wired from `calendar-view.tsx` when `feedLinks` is passed from the page.
+- `lib/calendar/institution-feed.ts` — mint/resolve `calendar_feed_tokens`
+  (service role), filter rows (`lesson_id` null, `event_type != exam`), audience
+  same intent as `calendar_events_member_select` (school admins see all
+  institution rows in the tenant).
+- `app/api/calendar/feed/[token]/route.ts` — public `text/calendar` response;
+  auth is the UUID token (optional `.ics` suffix). Set `WEEON_TEACHERS_ORIGIN`
+  in production so URLs and QR match `https://teachers.weeon.school`.
+
+**Not in the feed:** horario / `lesson_id` events, `event_type = exam`, and aula
+virtual `assessments` overlays (those stay in the in-app calendar only).
+
+Schema: `weeon-tenants` migration `20261006200000_calendar_feed_tokens.sql`.
+
 ## Adding exams/activities (from the schedule)
 
 - `components/agenda/event-form-dialog.tsx` is the single form, opened from a
