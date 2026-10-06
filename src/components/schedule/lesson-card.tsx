@@ -58,6 +58,7 @@ export function LessonCard({
   dayLabel,
   dateISO,
   events = [],
+  emphasize = false,
 }: {
   lesson: TeacherLesson;
   dayLabel: string;
@@ -65,6 +66,8 @@ export function LessonCard({
   dateISO?: string;
   /** Exams/activities attached to this lesson (for that day). */
   events?: TeacherCalendarEvent[];
+  /** Visual emphasis when this day is today in the visible week. */
+  emphasize?: boolean;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -101,8 +104,9 @@ export function LessonCard({
         onClick={() => setOpen(true)}
         aria-label={`${lesson.title} · ${lesson.groupName}`}
         className={cn(
-          "flex w-full flex-col gap-1 rounded-xl p-3 text-left transition-all hover:opacity-95 active:scale-[0.99]",
+          "flex w-full flex-col gap-1 rounded-xl border border-transparent p-3 text-left shadow-sm transition-all hover:opacity-95 active:scale-[0.99]",
           pill.wash,
+          emphasize && "border-brand-300/40 ring-1 ring-brand-500/15 dark:border-brand-700/40",
         )}
       >
         <div className="flex items-baseline justify-between gap-2">
