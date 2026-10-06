@@ -27,6 +27,18 @@ virtual — not part of Comunicación.
   (`comunicacion-hub-channels.tsx`), then a **dual-pane preview** — Recibidos |
   Chats activos (`comunicacion-hub-activity.tsx`). Empty when both panes are empty.
 
+### Loading skeletons
+
+Next.js route `loading.tsx` files should mirror the shipped layout. Shared pieces
+live in `components/ui/page-loading-skeletons.tsx`:
+
+| Route | Skeleton |
+| --- | --- |
+| `/comunicacion` | `ComunicacionHubChannelsSkeleton` + `ComunicacionHubActivitySkeleton` |
+| `/comunicacion/mensajes` (and legacy correo/circulares) | `MessagesWorkspaceSkeleton` |
+| `/comunicacion/chat` | `PageHeaderSkeleton` + `ChatWorkspaceSkeleton` |
+| `/comunicacion/nuevo` | compose card inside bordered surface |
+
 ## Routes
 
 | Route | Purpose |

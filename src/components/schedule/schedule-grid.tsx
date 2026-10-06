@@ -26,6 +26,7 @@ export async function ScheduleGrid({
 }) {
   const t = await getT();
   const dates = weekStart ? weekDates(weekStart) : null;
+  const todayISO = isoDate(new Date());
   const dayTones: Tone[] = ["blue", "purple", "yellow", "green", "rose"];
 
   const byDay = new Map<Weekday, TeacherLesson[]>();
@@ -41,24 +42,42 @@ export async function ScheduleGrid({
         const date = dates?.[index];
         const dateISO = date ? isoDate(date) : null;
         const dayEvents = dateISO ? events.filter((event) => event.date === dateISO) : [];
+        const isToday = dateISO === todayISO;
         const dayPill = hubTonePill(dayTones[index] ?? "blue");
         return (
           <section
             key={day.value}
-            className="flex flex-col gap-3 rounded-2xl bg-surface p-4 ring-1 ring-inset ring-black/5 dark:ring-white/10"
+            className={cn(
+              "flex flex-col gap-3 rounded-2xl bg-surface p-4 ring-1 ring-inset ring-black/5 dark:ring-white/10",
+              isToday && "bg-brand-50/25 ring-brand-400/25 dark:bg-brand-950/15 dark:ring-brand-500/20",
+            )}
           >
             <div className="flex items-center justify-between gap-2">
-              <h3
-                className={cn(
-                  "rounded-lg px-2 py-1 text-sm font-bold uppercase tracking-wide",
-                  dayPill.wash,
-                  dayPill.label,
-                )}
-              >
-                {t.schedule.weekdays[index]}
-              </h3>
+              <div className="flex min-w-0 items-center gap-2">
+                <h3
+                  className={cn(
+                    "rounded-lg px-2 py-1 text-sm font-bold uppercase tracking-wide",
+                    dayPill.wash,
+                    dayPill.label,
+                  )}
+                >
+                  {t.schedule.weekdays[index]}
+                </h3>
+                {isToday ? (
+                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-brand-600/80 dark:text-brand-400/90">
+                    {t.schedule.today}
+                  </span>
+                ) : null}
+              </div>
               {date ? (
-                <span className="text-sm font-bold text-foreground/40">{date.getDate()}</span>
+                <span
+                  className={cn(
+                    "text-sm font-bold tabular-nums",
+                    isToday ? "text-brand-700 dark:text-brand-300" : "text-foreground/40",
+                  )}
+                >
+                  {date.getDate()}
+                </span>
               ) : null}
             </div>
 

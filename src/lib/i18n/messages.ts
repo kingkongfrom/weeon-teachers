@@ -40,6 +40,7 @@ const es = {
     weekdays: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
     noClasses: "Sin clases",
     openClass: "Abrir aula virtual",
+    today: "Hoy",
     thisWeek: "Esta semana",
     previousWeek: "Semana anterior",
     nextWeek: "Semana siguiente",
@@ -719,6 +720,12 @@ const es = {
   horarios: {
     title: "Horarios",
     description: "Sus clases de la semana, por grupo.",
+    upcomingEvaluations: {
+      title: "Próximas evaluaciones",
+      empty: "No hay evaluaciones programadas a partir de hoy.",
+      sourceCalendar: "Calendario",
+      sourceAula: "Aula virtual",
+    },
   },
   student: {
     title: "Estudiante",
@@ -1061,6 +1068,7 @@ const en: Messages = {
     weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     noClasses: "No classes",
     openClass: "Open virtual classroom",
+    today: "Today",
     thisWeek: "This week",
     previousWeek: "Previous week",
     nextWeek: "Next week",
@@ -1733,6 +1741,12 @@ const en: Messages = {
   horarios: {
     title: "Schedule",
     description: "Your classes for the week, by group.",
+    upcomingEvaluations: {
+      title: "Upcoming assessments",
+      empty: "No assessments scheduled from today onward.",
+      sourceCalendar: "Calendar",
+      sourceAula: "Virtual classroom",
+    },
   },
   student: {
     title: "Student",

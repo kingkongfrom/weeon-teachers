@@ -201,7 +201,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | --- | ----- |
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
-| **Agenda (schedule, upcoming events)** | `docs/agenda.md` |
+| **Agenda (schedule, upcoming events, institution ICS)** | `docs/agenda.md` |
 | **Comunicación (messaging)** | `docs/comunicacion.md` |
 | **Mis grupos (Calificaciones / Asistencia / Conducta)** | `docs/grupos.md` |
 | **Asistencia tab (Grupos)** | `docs/asistencia-grupos.md` |
@@ -212,5 +212,10 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | Tenancy | `weeon-tenants/docs/tenancy.md` |
 | Live schema / RLS | `weeon-tenants/docs/data-access.md` |
 | Usernames / first login | `weeon-tenants/docs/user-provisioning.md` |
+
+**Loading UI:** each `(app)/…/loading.tsx` should match its page layout. Shared
+anatomy lives in `src/components/ui/page-loading-skeletons.tsx` — extend there
+before one-off skeleton markup (see `docs/agenda.md`, `docs/aula-virtual.md`,
+`docs/comunicacion.md`).
 
 Follow the Next.js agent-rules block above: do not remove it from diffs.

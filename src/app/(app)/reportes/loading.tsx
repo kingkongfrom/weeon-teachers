@@ -1,25 +1,23 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "@/components/ui/page-loading-skeletons";
 
 export default function ReportesLoading() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <Skeleton className="h-9 w-44 sm:h-10" />
-        <Skeleton className="h-4 w-72 max-w-full" />
-      </div>
+      <PageHeaderSkeleton />
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-        <div className="border-b border-border/70 px-5 py-3">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="mt-2 h-3 w-64 max-w-full" />
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <div className="border-b border-border px-5 py-4">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="mt-2 h-3 w-48" />
         </div>
-        <div className="space-y-0 divide-y divide-border/60 p-1">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex gap-4 px-4 py-3">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-20" />
+        <div className="divide-y divide-border/60">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-3 px-5 py-4">
               <Skeleton className="h-4 w-28" />
-              <Skeleton className="ml-auto h-4 w-12" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="ml-auto h-4 w-10" />
             </div>
           ))}
         </div>

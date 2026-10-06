@@ -30,6 +30,13 @@ semana** section now shows the **current week's dates** like `/horarios`.
   (`lib/dashboard/week.ts`: `parseWeekStart`, `mondayOf`, `addDays`, `isoDate`,
   `weekDates`, `weekdayOf`, `weekRangeLabel` — all pure).
 - `WeekNavigator` links to the previous/next week and "Esta semana".
+- **Layout:** week navigator + `ScheduleGrid` sit inside one **bordered board**
+  (`/horarios` page). The column for **today** (when that week is visible) gets a
+  subtle **Hoy** label and tint (`schedule-grid.tsx`).
+- **Próximas evaluaciones:** below the board, `HorariosUpcomingEvaluations` lists
+  upcoming **exams and activities** from `calendar_events` plus aula virtual
+  **exams** (`loadUpcomingTeacherEvaluations` in `calendar.ts`) — not the full
+  institution event list (`/agenda/eventos`).
 - `ScheduleGrid` receives `weekStart` + the week's `events`; day headers show the
   real date and each day lists its events (amber chip) above the lessons.
 - **Each class tile shows room and an exam/activity indicator**; clicking it opens
@@ -127,8 +134,9 @@ create/delete here. There is no legend/sidebar (the grid carries the colours).
 
 Teachers can add the **institution calendar only** from `/agenda/calendario`:
 
-- Toolbar **Sincronizar** (QR icon) opens a sheet/dialog — pick **Android** or **Mac / iPhone**,
-  then the QR updates (HTTPS vs WebCal). Copy-link and token rotate under **Más opciones**.
+- Toolbar **Sincronizar** (QR icon) opens a sheet/dialog — **Mac / iPhone** is the
+  default; pick **Android** to swap the QR (WebCal vs HTTPS). Copy-link and token
+  rotate under **Más opciones**.
 - `components/agenda/institution-calendar-subscribe.tsx` — trigger + modal;
   wired from `calendar-view.tsx` when `feedLinks` is passed from the page.
 - `lib/calendar/institution-feed.ts` — mint/resolve `calendar_feed_tokens`
@@ -140,9 +148,14 @@ Teachers can add the **institution calendar only** from `/agenda/calendario`:
   in production so URLs and QR match `https://teachers.weeon.school`.
 
 **Not in the feed:** horario / `lesson_id` events, `event_type = exam`, and aula
-virtual `assessments` overlays (those stay in the in-app calendar only).
+virtual `assessments` overlays (those stay in the in-app calendar only). **No
+horario / class-schedule ICS** — assigned `class_lessons` stay in-app only
+(`/horarios`).
 
 Schema: `weeon-tenants` migration `20261006200000_calendar_feed_tokens.sql`.
+
+Route **`loading.tsx`** files for Agenda routes reuse
+`components/ui/page-loading-skeletons.tsx` (`CalendarioBoardSkeleton`, etc.).
 
 ## Adding exams/activities (from the schedule)
 

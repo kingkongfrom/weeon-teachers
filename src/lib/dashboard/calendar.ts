@@ -4,6 +4,7 @@ import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
+import { addDays, isoDate as isoDateLocal } from "@/lib/dashboard/week";
 import { zonedDateParts } from "@/lib/dashboard/timezone";
 
 export type CalendarEventType =
@@ -238,5 +239,67 @@ export const loadExamDueBetween = cache(
     }
 
     return due;
+  },
+);
+
+export type TeacherUpcomingEvaluation = {
+  key: string;
+  title: string;
+  date: string;
+  time: string | null;
+  allDay: boolean;
+  groupName: string | null;
+  source: "calendar" | "aula";
+  /** Badge on Horarios list — calendar event type or aula `exam`. */
+  kind: "exam" | "activity";
+};
+
+/** Merged upcoming evaluations: calendar (exam/activity) + aula virtual exams. */
+export const loadUpcomingTeacherEvaluations = cache(
+  async (limit = 12): Promise<TeacherUpcomingEvaluation[]> => {
+    const today = isoDateLocal(new Date());
+    const end = isoDateLocal(addDays(new Date(), 120));
+
+    const [events, aulaExams] = await Promise.all([
+      loadUpcomingEvents(),
+      loadExamDueBetween(today, end),
+    ]);
+
+    const items: TeacherUpcomingEvaluation[] = [];
+
+    for (const event of events) {
+      if (event.eventType !== "exam" && event.eventType !== "activity") continue;
+      items.push({
+        key: `cal-${event.id}`,
+        title: event.title,
+        date: event.date,
+        time: event.allDay ? null : event.startTime,
+        allDay: event.allDay,
+        groupName: event.groupName,
+        source: "calendar",
+        kind: event.eventType === "activity" ? "activity" : "exam",
+      });
+    }
+
+    for (const exam of aulaExams) {
+      if (exam.date < today) continue;
+      items.push({
+        key: `aula-${exam.id}`,
+        title: exam.title,
+        date: exam.date,
+        time: exam.time,
+        allDay: exam.time == null,
+        groupName: exam.className,
+        source: "aula",
+        kind: "exam",
+      });
+    }
+
+    items.sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return (a.time ?? "99:99").localeCompare(b.time ?? "99:99");
+    });
+
+    return items.slice(0, limit);
   },
 );

@@ -29,6 +29,20 @@ phases.
   an assignment lives in *Classwork*, its marks live in *Grades*, and a report
   is a third place. Weeon should make one object serve all three.
 
+## Loading skeletons
+
+Route `loading.tsx` files mirror the live UI. Reuse
+`components/ui/page-loading-skeletons.tsx`:
+
+| Route | Skeleton |
+| --- | --- |
+| `/aula-virtual` | `ClassCardSkeleton` grid (matches `ClassCard`) |
+| `/aula-virtual/[classId]` | `AulaClassHeroSkeleton` + `ClassTabsBarSkeleton` + `ClassStreamPanelSkeleton` |
+| `/aula-virtual/.../evaluaciones/[id]` | assessment editor blocks (existing route loader) |
+
+Grupos list uses `GrupoCardSkeleton`; gradebook detail keeps its grid-specific
+loader (see `docs/grupos.md`).
+
 ## Ownership
 
 | Concern | Where |
