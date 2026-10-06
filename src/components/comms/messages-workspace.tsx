@@ -246,7 +246,7 @@ export function MessagesWorkspace({
       id: "sent",
       label: t("comms.folderSent"),
       icon: Send,
-      href: COMMS_MESSAGES,
+      href: `${COMMS_MESSAGES}?folder=sent`,
     },
     {
       id: "favorite",

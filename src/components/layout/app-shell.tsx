@@ -12,6 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { TeacherAcademicRealtime } from "@/lib/comms/teacher-academic-realtime";
+import { TeacherCommsNavRealtime } from "@/lib/comms/teacher-comms-nav-realtime";
+import type { PanelAttention } from "@/lib/dashboard/panel-attention";
 
 export type AppUser = {
   userId: string;
@@ -28,15 +30,17 @@ type AppShellProps = {
   children: ReactNode;
   user: AppUser | null;
   supabasePublic: RealtimeConfig;
+  commsNavAttention?: Pick<PanelAttention, "unreadChatCount" | "unreadInboxCount">;
 };
 
-export function AppShell({ children, user, supabasePublic }: AppShellProps) {
+export function AppShell({ children, user, supabasePublic, commsNavAttention }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false);
   const collapsed = useSidebarCollapsed();
 
   return (
     <div className="dashboard-shell min-h-screen bg-background">
       <TeacherAcademicRealtime realtime={supabasePublic} />
+      <TeacherCommsNavRealtime realtime={supabasePublic} />
       {navOpen ? (
         <button
           type="button"
@@ -73,6 +77,7 @@ export function AppShell({ children, user, supabasePublic }: AppShellProps) {
         <AppSidebar
           open={navOpen}
           collapsed={collapsed}
+          commsNavAttention={commsNavAttention}
           onNavigate={() => setNavOpen(false)}
         />
       </aside>

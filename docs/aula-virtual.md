@@ -124,7 +124,8 @@ Honest snapshot — do not assume the rest exists.
     **`/aula-virtual/justificaciones`** — not inline on the daily register
     (the encargado may submit days after the absence). Pending items surface on
     **Inicio**, **Aula virtual**, and the class **Asistencia** tab badge; accept/reject
-    runs `decide_attendance_justification`. Push kind
+    runs `decide_attendance_justification` (reject requires a reason shown to the
+    encargado in mobile). Push kind
     `attendance_justification` (migration `20261005160000_*`) notifies teachers
     with a registered Expo token.
     Ausencias are **not** shown in the gradebook — the gradebook is

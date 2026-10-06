@@ -14,6 +14,13 @@ export type PanelAttention = {
   justificationHref: string | null;
 };
 
+/** Combined unread for the main nav Comunicación badge (inbox + guardian/admin chat). */
+export function commsNavUnreadTotal(
+  attention: Pick<PanelAttention, "unreadChatCount" | "unreadInboxCount">,
+): number {
+  return attention.unreadChatCount + attention.unreadInboxCount;
+}
+
 /** Actionable counts for Panel general — all loaders are request-cached. */
 export const loadPanelAttention = cache(async (): Promise<PanelAttention> => {
   const [inbox, chats, grading, justifications] = await Promise.all([

@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 function parseFolder(value: string | undefined): MessageFolder | "draft" {
   if (value === "inbox" || value === "trash" || value === "favorite") return value;
   if (value === "drafts") return "draft";
-  return "sent";
+  return "inbox";
 }
 
 function parseLabelId(value: string | undefined): string | null {

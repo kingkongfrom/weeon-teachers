@@ -79,31 +79,62 @@ export async function saveAttendance(input: {
   return { ok: true };
 }
 
-const decisionSchema = z.object({
-  recordId: z.string().uuid(),
-  decision: z.enum(["accepted", "rejected"]),
-});
+const decisionSchema = z
+  .object({
+    recordId: z.string().uuid(),
+    decision: z.enum(["accepted", "rejected"]),
+    rejectionReason: z.string().max(ATTENDANCE_COMMENT_MAX).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.decision !== "rejected") return;
+    const trimmed = value.rejectionReason?.trim() ?? "";
+    if (trimmed.length < 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "rejection_reason_required",
+        path: ["rejectionReason"],
+      });
+    }
+  });
 
-/** Accept flips the mark to justified. Reject keeps it and clears the alert. */
+/** Accept flips the mark to justified. Reject keeps the mark and stores a reason for the guardian. */
 export async function decideAttendanceJustification(
   recordId: string,
   decision: "accepted" | "rejected",
+  rejectionReason?: string,
 ): Promise<AttendanceActionResult> {
   const t = await getT();
-  const parsed = decisionSchema.safeParse({ recordId, decision });
-  if (!parsed.success) return { ok: false, error: t.attendance.errors.decide };
+  const parsed = decisionSchema.safeParse({ recordId, decision, rejectionReason });
+  if (!parsed.success) {
+    const code = parsed.error.issues[0]?.message;
+    if (code === "rejection_reason_required") {
+      return { ok: false, error: t.attendance.rejectReasonTooShort };
+    }
+    return { ok: false, error: t.attendance.errors.decide };
+  }
 
   const session = await getTeacherSession();
   if (!session) return { ok: false, error: t.attendance.errors.decide };
 
   const supabase = await createSessionClient();
+  const reason =
+    parsed.data.decision === "rejected"
+      ? normalizeAttendanceComment(parsed.data.rejectionReason ?? null)
+      : null;
   const { error } = await supabase.rpc("decide_attendance_justification", {
     p_record_id: parsed.data.recordId,
     p_decision: parsed.data.decision,
+    p_reason: reason,
   });
 
   if (error) {
     console.error("[attendance] decision failed:", error.code, error.message);
+    if (error.message.includes("rejection_reason_required")) {
+      return { ok: false, error: t.attendance.rejectReasonTooShort };
+    }
+    if (error.message.includes("rejection_reason_too_long")) {
+      return { ok: false, error: t.attendance.rejectReasonTooLong };
+    }
     return { ok: false, error: t.attendance.errors.decide };
   }
 

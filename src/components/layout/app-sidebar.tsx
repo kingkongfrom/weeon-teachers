@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
+import { commsNavUnreadTotal, type PanelAttention } from "@/lib/dashboard/panel-attention";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -20,25 +22,34 @@ type NavLink = {
   href: string;
   label: string;
   icon: LucideIcon;
+  badgeCount?: number;
 };
 
 export function AppSidebar({
   open,
   collapsed,
+  commsNavAttention,
   onNavigate,
 }: {
   open: boolean;
   collapsed: boolean;
+  commsNavAttention?: Pick<PanelAttention, "unreadChatCount" | "unreadInboxCount">;
   onNavigate: () => void;
 }) {
   const pathname = usePathname();
   const t = useT();
+  const commsUnread = commsNavAttention ? commsNavUnreadTotal(commsNavAttention) : 0;
 
   const primary: NavLink[] = [
     { href: "/inicio", label: t.panel.title, icon: Home },
     { href: "/aula-virtual", label: t.panel.classroom.label, icon: Presentation },
     { href: "/grupos", label: t.panel.grades.label, icon: GraduationCap },
-    { href: "/comunicacion", label: t.panel.communication.label, icon: Mail },
+    {
+      href: "/comunicacion",
+      label: t.panel.communication.label,
+      icon: Mail,
+      badgeCount: commsUnread,
+    },
     { href: "/reportes", label: t.reportes.title, icon: FileBarChart },
   ];
 
@@ -112,13 +123,16 @@ function NavItem({
       ? pathname === "/inicio"
       : pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
+  const badge = item.badgeCount ?? 0;
+  const collapsedLabel =
+    collapsed && badge > 0 ? `${item.label} (${badge > 99 ? "99+" : badge})` : item.label;
 
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
-      title={collapsed ? item.label : undefined}
-      aria-label={collapsed ? item.label : undefined}
+      title={collapsed ? collapsedLabel : undefined}
+      aria-label={collapsed ? collapsedLabel : undefined}
       aria-current={active ? "page" : undefined}
       className={cn(
         "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all",
@@ -139,15 +153,19 @@ function NavItem({
       ) : null}
       <span
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+          "relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
           active
             ? "bg-brand-100 text-brand-600 shadow-[inset_0_0_0_1px] shadow-brand-200/60 dark:bg-brand-900/50 dark:text-brand-300"
             : "bg-surface-muted text-foreground/80 group-hover:bg-surface-elevated group-hover:text-foreground",
         )}
       >
         <Icon className="h-4 w-4" strokeWidth={2.2} />
+        {badge > 0 ? <UnreadCountBadge count={badge} absolute /> : null}
       </span>
       <span className={cn("min-w-0 flex-1 truncate", collapsed && "lg:hidden")}>{item.label}</span>
+      {!collapsed && badge > 0 ? (
+        <UnreadCountBadge count={badge} className="shrink-0" />
+      ) : null}
       {collapsed ? (
         <span className="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-lg border border-border bg-surface px-2 py-1 text-xs font-semibold text-foreground lg:group-hover:block">
           {item.label}

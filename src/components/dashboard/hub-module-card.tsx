@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
 import { cn } from "@/lib/utils";
 import { hubTonePill, TONE_AVATAR, type HubTone } from "@/lib/dashboard/tones";
 
@@ -12,6 +13,10 @@ type HubModuleCardProps = {
   stat?: string;
   /** Shown when the module is not linked yet. */
   upcomingLabel?: string;
+  /** Unread badge on the icon (Comunicación hub tiles). */
+  badgeCount?: number;
+  /** Square tile for two-column hubs (e.g. Comunicación). */
+  layout?: "default" | "square";
   href?: string;
   className?: string;
 };
@@ -24,15 +29,19 @@ export function HubModuleCard({
   description,
   stat,
   upcomingLabel,
+  badgeCount = 0,
+  layout = "default",
   href,
   className,
 }: HubModuleCardProps) {
   const pill = hubTonePill(tone);
+  const square = layout === "square";
 
   const card = (
     <div
       className={cn(
-        "flex h-full min-h-[8.5rem] flex-col gap-2.5 rounded-3xl border border-border p-5 transition-all sm:min-h-[9rem] sm:gap-3",
+        "flex flex-col gap-2.5 rounded-3xl border border-border p-5 transition-all sm:gap-3",
+        square ? "aspect-square min-h-0 justify-between" : "h-full min-h-[8.5rem] sm:min-h-[9rem]",
         pill.active,
         href ? "hover:opacity-95 active:scale-[0.99]" : "",
         className,
@@ -40,17 +49,25 @@ export function HubModuleCard({
     >
       <span
         className={cn(
-          "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white",
+          "relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white",
           TONE_AVATAR[tone],
         )}
         aria-hidden
       >
         <Icon className="h-5 w-5" strokeWidth={2.2} />
+        {badgeCount > 0 ? <UnreadCountBadge count={badgeCount} absolute /> : null}
       </span>
 
-      <div className="mt-auto min-w-0">
+      <div className={cn("min-w-0", square ? "flex flex-1 flex-col justify-end" : "mt-auto")}>
         <h2 className={cn("text-base font-bold leading-snug sm:text-lg", pill.label)}>{title}</h2>
-        <p className="mt-0.5 text-sm font-medium leading-snug text-foreground/55">{description}</p>
+        <p
+          className={cn(
+            "mt-0.5 text-sm font-medium leading-snug text-foreground/55",
+            square && "line-clamp-4",
+          )}
+        >
+          {description}
+        </p>
         {stat ? (
           <p className={cn("mt-2 text-xs font-semibold opacity-75", pill.label)}>{stat}</p>
         ) : upcomingLabel ? (
