@@ -271,6 +271,8 @@ export const commsEs = {
   "comms.groupTag": "Grupo",
   "comms.error": "No se pudo publicar la circular.",
   "comms.noRecipientsPick": "Selecciona al menos un destinatario.",
+  "comms.tooManyRecipients":
+    "Demasiados destinatarios en un solo envío (máximo 500). Use un filtro de sector o toda la institución en lugar de combinar muchos grupos.",
   "comms.addRecipient": "Agregar destinatario",
   "comms.confirmSelection": "Confirmar selección",
   "comms.kindStudent": "Estudiante",
@@ -592,6 +594,8 @@ export const commsEn: Record<CommsMessageKey, string> = {
   "comms.groupTag": "Group",
   "comms.error": "Couldn't publish the circular.",
   "comms.noRecipientsPick": "Select at least one recipient.",
+  "comms.tooManyRecipients":
+    "Too many recipients in one send (500 max). Use a sector or whole-school filter instead of combining many groups.",
   "comms.addRecipient": "Add recipient",
   "comms.confirmSelection": "Confirm selection",
   "comms.kindStudent": "Student",

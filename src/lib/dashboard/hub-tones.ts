@@ -28,11 +28,12 @@ export const PEOPLE_ROSTER_TONE: Record<PeopleTabId, HubTone> = {
   parents: "green",
 };
 
+/** Solid borders — `ring` on pills inside `overflow-x-auto` gets clipped (broken arcs). */
 const HUB_TONE_PILL_RING: Record<HubTone, string> = {
-  blue: "shadow-sm ring-1 ring-[#9ec5eb]/70 dark:ring-[#2a5080]/80",
-  purple: "shadow-sm ring-1 ring-[#c4b0ef]/70 dark:ring-[#5b4a9a]/80",
-  yellow: "shadow-sm ring-1 ring-[#f5d88a]/70 dark:ring-[#8a6b2a]/80",
-  green: "shadow-sm ring-1 ring-[#7dd3c7]/70 dark:ring-[#2a6b62]/80",
+  blue: "border border-[#9ec5eb]/85 dark:border-[#3b6ea8]/85 shadow-sm",
+  purple: "border border-[#c4b0ef]/85 dark:border-[#6d5bb5]/85 shadow-sm",
+  yellow: "border border-[#f5d88a]/90 dark:border-[#a67c2e]/85 shadow-sm",
+  green: "border border-[#7dd3c7]/85 dark:border-[#2a6b62]/85 shadow-sm",
 };
 
 const HUB_TONE_PILL_LABEL: Record<HubTone, string> = {

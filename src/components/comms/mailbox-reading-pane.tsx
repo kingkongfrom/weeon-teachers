@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, MoreHorizontal, Reply } from "lucide-react";
+import { RecipientReadList } from "@/components/comms/recipient-read-list";
 import { RichTextView } from "@/components/comms/rich-text";
 import { COMMS_MESSAGES } from "@/lib/comms/paths";
 import { fetchThreadDetail, markThreadRead } from "@/lib/teachers/comms-actions";
@@ -181,6 +182,10 @@ export function MailboxReadingPane({
         <div className="mt-6 text-sm leading-relaxed text-foreground/90">
           <RichTextView doc={latest.body} />
         </div>
+      ) : null}
+
+      {detail.summary.mine && detail.recipients.length > 0 ? (
+        <RecipientReadList recipients={detail.recipients} />
       ) : null}
 
       {earlier.length > 0 ? (

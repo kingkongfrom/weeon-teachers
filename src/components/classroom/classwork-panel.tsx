@@ -95,10 +95,10 @@ export function ClassworkPanel({
                 key={option.id}
                 href={`/aula-virtual/${classId}?subject=${option.id}&tab=trabajo`}
                 className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                  "rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
                   active
-                    ? cn("border-transparent", TONE_PILL.blue)
-                    : "ui-hover border-border text-foreground/60 hover:text-foreground",
+                    ? TONE_PILL.blue
+                    : "ui-hover border border-border bg-surface text-foreground/60 hover:bg-surface-muted hover:text-foreground",
                 )}
               >
                 {option.name}
@@ -118,10 +118,10 @@ export function ClassworkPanel({
             type="button"
             onClick={() => setSelected(chip.id)}
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+              "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
               selected === chip.id
-                ? cn("border-transparent", TONE_PILL.purple)
-                : "ui-hover border-border text-foreground/60 hover:text-foreground",
+                ? TONE_PILL.purple
+                : "ui-hover border border-border bg-surface text-foreground/60 hover:bg-surface-muted hover:text-foreground",
             )}
           >
             {chip.label}

@@ -68,9 +68,14 @@ function pctOf(mark: number | null | undefined, max: number): number | null {
   return Math.round((mark / max) * 100);
 }
 
+function columnMaxPoints(column: ExamColumn): number {
+  if (column.points != null && column.points > 0) return column.points;
+  return 100;
+}
+
 function cellMax(column: ExamColumn, studentId: string): number {
   const grade = column.grades[studentId];
-  return grade?.maxMarks || column.points || 100;
+  return grade?.maxMarks || columnMaxPoints(column);
 }
 
 function columnPct(column: ExamColumn, studentId: string): number | null {
@@ -345,14 +350,25 @@ export function GradebookWorkspace({
   function exportCsv() {
     const header = [
       t.gradebook.headers.student,
-      ...orderedExams.map((column) => labels.get(column.id)?.medium ?? column.title),
-      w.final,
+      ...orderedExams.map((column) => {
+        const label = labels.get(column.id)?.medium ?? column.title;
+        return `${label} (${w.columnPointsShort(columnMaxPoints(column))})`;
+      }),
+      `${w.final} ${w.finalPercentSuffix}`.trim(),
     ];
-    const rows = visibleStudents.map((student) => [
-      studentName(student),
-      ...orderedExams.map((column) => column.grades[student.id]?.mark ?? ""),
-      studentAverage(orderedExams, student.id) ?? "",
-    ]);
+    const rows = visibleStudents.map((student) => {
+      const finalPct = studentAverage(orderedExams, student.id);
+      return [
+        studentName(student),
+        ...orderedExams.map((column) => {
+          const grade = column.grades[student.id];
+          if (!grade) return "";
+          const max = cellMax(column, student.id);
+          return `${grade.mark}/${max}`;
+        }),
+        finalPct == null ? "" : `${finalPct}${w.finalPercentSuffix}`,
+      ];
+    });
     const csv = [header, ...rows]
       .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
       .join("\n");
@@ -432,8 +448,8 @@ export function GradebookWorkspace({
                 className={cn(
                   "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
                   active
-                    ? cn("border border-transparent", TONE_PILL.blue)
-                    : "ui-hover border border-border text-foreground/60 hover:text-foreground",
+                    ? TONE_PILL.blue
+                    : "ui-hover border border-border bg-surface text-foreground/60 hover:bg-surface-muted hover:text-foreground",
                 )}
               >
                 {option.name}
@@ -532,9 +548,19 @@ export function GradebookWorkspace({
                   ))}
                   <th
                     rowSpan={2}
-                    className={cn("sticky right-0 top-0 z-50 w-[4.5rem] border-b border-l border-border bg-surface px-2 text-center text-xs font-bold uppercase tracking-wide", ACCENT_TEXT, headY)}
+                    className={cn(
+                      "sticky right-0 top-0 z-50 w-[4.5rem] border-b border-l border-border bg-surface px-1 text-center align-middle",
+                      headY,
+                    )}
                   >
-                    {w.final}
+                    <div className="flex flex-col items-center gap-0.5 py-1">
+                      <span className={cn("text-xs font-bold uppercase tracking-wide", ACCENT_TEXT)}>
+                        {w.final}
+                      </span>
+                      <span className="text-[9px] font-semibold tabular-nums text-foreground/45">
+                        {w.finalPercentSuffix}
+                      </span>
+                    </div>
                   </th>
                 </tr>
 
@@ -623,7 +649,7 @@ export function GradebookWorkspace({
                       ))}
                       <td className={cn("sticky right-0 z-20 w-[4.5rem] border-b border-l border-border bg-surface px-2 text-center", rowY)}>
                         <span className={cn("inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none tabular-nums", final == null ? "text-foreground/40" : TINT_FINAL)}>
-                          {final == null ? "—" : final}
+                          {final == null ? "—" : `${final}${w.finalPercentSuffix}`}
                         </span>
                       </td>
                     </tr>
@@ -645,14 +671,14 @@ export function GradebookWorkspace({
                         className="sticky bottom-0 z-30 border-r border-t border-border bg-surface-muted px-1 py-1 text-center text-xs font-bold"
                       >
                         <span className={cn("inline-block rounded-md px-2 py-0.5 font-bold tabular-nums", avg == null ? "text-foreground/40" : tintFor(avg))}>
-                          {avg == null ? "—" : avg}
+                          {avg == null ? "—" : `${avg}${w.finalPercentSuffix}`}
                         </span>
                       </td>
                     );
                   })}
                   <td className={cn("sticky bottom-0 right-0 z-40 w-[4.5rem] border-l border-t border-border bg-surface-muted px-2 text-center text-xs font-bold", headY)}>
                     <span className={cn("inline-block rounded-md px-2 py-0.5 tabular-nums", overall == null ? "text-foreground/40" : TINT_FINAL)}>
-                      {overall == null ? "—" : overall}
+                      {overall == null ? "—" : `${overall}${w.finalPercentSuffix}`}
                     </span>
                   </td>
                 </tr>
@@ -764,10 +790,14 @@ function GradeCell({
   const dirty = useRef(false);
 
   const max = cellMax(column, studentId);
-  const cellTitle =
-    stored?.status === "missing" ? `${label} — ${w.missingMark}` : label;
   const numeric = text.trim() === "" ? null : Number(text.replace(",", "."));
   const pct = pctOf(numeric, max);
+  const cellTitle =
+    stored?.status === "missing"
+      ? w.gradeTooltipMissing(max)
+      : numeric != null && pct != null
+        ? w.gradeTooltip(numeric, max, pct)
+        : w.gradeTooltipEmpty(max);
 
   async function commit() {
     if (!dirty.current) return;
@@ -803,7 +833,7 @@ function GradeCell({
         data-cell={`${row}:${col}`}
         value={text}
         inputMode="decimal"
-        aria-label={cellTitle}
+        aria-label={`${label}. ${cellTitle}`}
         title={cellTitle}
         onChange={(event) => {
           setText(event.target.value);
@@ -856,17 +886,21 @@ function ColumnHeader({
   const t = useT();
   const w = t.gradebook.workspace;
   const compact = density === "compact";
+  const maxPts = columnMaxPoints(column);
 
   return (
-    <div className="group/col relative flex w-full flex-col items-center gap-1">
+    <div className="group/col relative flex w-full flex-col items-center gap-0.5">
       <span
-        title={label.medium}
+        title={`${label.medium} · ${w.columnPointsShort(maxPts)}`}
         className={cn(
           "max-w-full whitespace-nowrap px-1 text-center font-bold leading-tight text-foreground/55",
           compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
         )}
       >
         {compact ? label.short : density === "cozy" ? label.medium : label.full}
+      </span>
+      <span className="text-[9px] font-semibold tabular-nums text-foreground/45">
+        {w.columnPointsShort(maxPts)}
       </span>
       {column.closedAt ? (
         <span className="text-[9px] font-semibold uppercase tracking-wide text-foreground/45">
@@ -969,6 +1003,7 @@ function AddColumnDialog({
               inputMode="numeric"
               className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-950"
             />
+            <span className="text-xs font-medium text-foreground/50">{w.columnPointsHint}</span>
           </label>
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold text-foreground/70">{w.columnKind}</span>

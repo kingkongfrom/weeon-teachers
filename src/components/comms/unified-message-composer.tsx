@@ -38,6 +38,8 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
 
 const MAX_ATTACHMENTS = 10;
+/** Matches server compose cap in comms-actions (weeon-tenants schema). */
+const COMPOSE_RECIPIENT_MAX = 500;
 
 function selectionLabel(selection: PickerSelection): string {
   if (selection.type === "contact") return selection.name;
@@ -181,6 +183,11 @@ export function UnifiedMessageComposer({
       if (expanded.length === 0) {
         setSending(false);
         setError(t("comms.noRecipientsPick"));
+        return;
+      }
+      if (expanded.length > COMPOSE_RECIPIENT_MAX) {
+        setSending(false);
+        setError(t("comms.tooManyRecipients"));
         return;
       }
       payload = {

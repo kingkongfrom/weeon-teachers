@@ -26,12 +26,13 @@ const TONE_WASH: Record<Tone, string> = {
   rose: "bg-[color-mix(in_srgb,#e11d48_8%,var(--surface))]",
 };
 
+/** Solid borders — `ring` on pills inside `overflow-x-auto` gets clipped (broken arcs). */
 const TONE_PILL_RING: Record<Tone, string> = {
-  blue: "shadow-sm ring-1 ring-[#9ec5eb]/70 dark:ring-[#2a5080]/80",
-  purple: "shadow-sm ring-1 ring-[#c4b0ef]/70 dark:ring-[#5b4a9a]/80",
-  yellow: "shadow-sm ring-1 ring-[#f5d88a]/70 dark:ring-[#8a6b2a]/80",
-  green: "shadow-sm ring-1 ring-[#7dd3c7]/70 dark:ring-[#2a6b62]/80",
-  rose: "shadow-sm ring-1 ring-[#f0b8c8]/70 dark:ring-[#8a3a52]/80",
+  blue: "border border-[#9ec5eb]/85 dark:border-[#3b6ea8]/85 shadow-sm",
+  purple: "border border-[#c4b0ef]/85 dark:border-[#6d5bb5]/85 shadow-sm",
+  yellow: "border border-[#f5d88a]/90 dark:border-[#a67c2e]/85 shadow-sm",
+  green: "border border-[#7dd3c7]/85 dark:border-[#2a6b62]/85 shadow-sm",
+  rose: "border border-[#f0b8c8]/85 dark:border-[#9a4560]/85 shadow-sm",
 };
 
 const TONE_PILL_LABEL: Record<Tone, string> = {

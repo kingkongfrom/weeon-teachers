@@ -563,12 +563,12 @@ function AddConductDialog({
                   type="button"
                   onClick={() => selectKind(option)}
                   className={cn(
-                    "flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors",
+                    "flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
                     kind === option
                       ? option === "merit"
-                        ? cn("border-transparent", TONE_PILL.green)
-                        : cn("border-transparent", TONE_PILL.rose)
-                      : "border-border text-foreground/60 ui-hover",
+                        ? TONE_PILL.green
+                        : TONE_PILL.rose
+                      : "border border-border bg-surface text-foreground/60 ui-hover hover:bg-surface-muted",
                   )}
                 >
                   {option === "merit" ? c.kindMerit : c.kindDemerit}

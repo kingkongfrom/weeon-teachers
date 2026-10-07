@@ -47,7 +47,9 @@ Page loader: `src/app/(app)/grupos/[id]/page.tsx`
   sorted by type, so a type is never repeated) and a labels row. Cells are
   tinted pills using the shared marketing palette (green ≥ 70, amber 50–69,
   rose < 50, purple FINAL). Columns are auto-titled `Tipo n`; the dialog asks
-  only for points and type. A **three-step density** toggle widens the columns
+  for **Puntos** (max score, e.g. 10 or 100) and type. Headers show **`10 pts`**;
+  cells show the raw mark (tooltip: `7 de 10 (70%)`). **Final** and **Prom. %**
+  are percentage averages (0–100). A **three-step density** toggle widens the columns
   and lengthens the labels: Compacto `TRAB 1` → Normal `Trabajo 1` → Ampliada
   `Trabajo en clase 1`.
 - **CSV export** covers students × grade columns + FINAL (no attendance).
