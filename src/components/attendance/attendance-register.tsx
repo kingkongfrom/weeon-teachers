@@ -97,6 +97,11 @@ export function AttendanceRegister({
     return next;
   }
 
+  function scheduleFlush() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => void flush(), 600);
+  }
+
   async function flush() {
     if (timer.current) {
       clearTimeout(timer.current);
@@ -125,11 +130,6 @@ export function AttendanceRegister({
       if (pending.current.size > 0) void flush();
     };
   }, []);
-
-  function scheduleFlush() {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => void flush(), 600);
-  }
 
   function flushNow() {
     void flush();

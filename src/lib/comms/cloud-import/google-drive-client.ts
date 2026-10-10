@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment -- Google Picker typings are loaded at runtime only. */
 // @ts-nocheck
 import {
   GOOGLE_DRIVE_API_KEY,
