@@ -89,16 +89,23 @@ export async function addExamColumn(input: {
     return { ok: false, error: "Sesión inválida. Inicie sesión de nuevo." };
   }
 
-  if (parsed.data.subjectId == null) {
-    const { count } = await supabase
+  // Every grade column belongs to a subject. If the caller did not pick one,
+  // derive it from the class's lessons; if the class has subjects and we still
+  // can't resolve one, refuse rather than write an orphan (subject-less) column.
+  let subjectId = parsed.data.subjectId ?? null;
+  if (subjectId == null) {
+    const { data: lesson } = await supabase
       .from("class_lessons")
-      .select("id", { count: "exact", head: true })
+      .select("subject_id")
       .eq("class_id", parsed.data.classId)
-      .not("subject_id", "is", null);
-    if ((count ?? 0) > 0) {
+      .not("subject_id", "is", null)
+      .limit(1)
+      .maybeSingle();
+    subjectId = (lesson?.subject_id as string | null) ?? null;
+    if (subjectId == null) {
       return {
         ok: false,
-        error: "Seleccione una materia antes de agregar una columna de calificación.",
+        error: "Esta clase no tiene una materia asignada. Asigne una materia antes de agregar una columna de calificación.",
       };
     }
   }
@@ -108,7 +115,7 @@ export async function addExamColumn(input: {
     .insert({
       tenant_id,
       class_id: parsed.data.classId,
-      subject_id: parsed.data.subjectId ?? null,
+      subject_id: subjectId,
       title: parsed.data.title,
       points: parsed.data.points,
       kind: parsed.data.kind ?? "classwork",

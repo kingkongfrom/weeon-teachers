@@ -126,6 +126,21 @@ async function syncGradeColumn(
   },
 ): Promise<void> {
   try {
+    // Every grade column belongs to a subject: fall back to the class's lesson
+    // subject so a published assessment never creates a subject-less (orphan)
+    // column. If the class has no subject at all, skip column creation.
+    let subjectId = input.subjectId;
+    if (subjectId == null) {
+      const { data: lesson } = await supabase
+        .from("class_lessons")
+        .select("subject_id")
+        .eq("class_id", input.classId)
+        .not("subject_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+      subjectId = (lesson?.subject_id as string | null) ?? null;
+    }
+
     const { data: existing } = await supabase
       .from("assignments")
       .select("id")
@@ -138,7 +153,7 @@ async function syncGradeColumn(
         .update({
           title: input.title,
           points: input.points,
-          subject_id: input.subjectId,
+          subject_id: subjectId,
           kind: input.kind,
           category: categoryFor(input.kind),
         })
@@ -147,6 +162,7 @@ async function syncGradeColumn(
     }
 
     if (!input.published) return; // don't surface drafts in the gradebook
+    if (subjectId == null) return; // no subject yet — don't create an orphan column
 
     const {
       data: { user },
@@ -157,7 +173,7 @@ async function syncGradeColumn(
     await supabase.from("assignments").insert({
       tenant_id: tenantId,
       class_id: input.classId,
-      subject_id: input.subjectId,
+      subject_id: subjectId,
       title: input.title,
       points: input.points,
       kind: input.kind,
