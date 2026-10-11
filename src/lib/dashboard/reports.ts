@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { schoolAcademicYear } from "@/lib/dashboard/school-period";
 import type {
   ReportAssignmentMeta,
   ReportAttendanceLogEntry,
@@ -20,6 +21,7 @@ type ReportQueryRow = {
   class_id: string;
   subject_id: string | null;
   period: string | null;
+  academic_year: string | null;
   submitted_at: string;
   updated_at: string;
   grades_snapshot: unknown;
@@ -50,7 +52,7 @@ export const loadMyReports = cache(async (): Promise<SubmittedReport[]> => {
   const { data: reports, error } = await supabase
     .from("class_reports")
     .select(
-      "class_id, subject_id, period, submitted_at, updated_at, grades_snapshot, student_names, assignment_titles, assignments_meta, conduct_snapshot, conduct_log, attendance_snapshot, attendance_log, summary, classes(id, name, grade, section)",
+      "class_id, subject_id, period, academic_year, submitted_at, updated_at, grades_snapshot, student_names, assignment_titles, assignments_meta, conduct_snapshot, conduct_log, attendance_snapshot, attendance_log, summary, classes(id, name, grade, section)",
     )
     .order("updated_at", { ascending: false });
 
@@ -107,6 +109,7 @@ export const loadMyReports = cache(async (): Promise<SubmittedReport[]> => {
       subjectId: row.subject_id ?? null,
       subjectName: row.subject_id ? (subjectNames.get(row.subject_id) ?? null) : null,
       period: row.period ?? "",
+      academicYear: row.academic_year?.trim() || schoolAcademicYear(row.submitted_at),
       submittedAt: row.submitted_at,
       updatedAt: row.updated_at,
       grades,

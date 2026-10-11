@@ -7,7 +7,7 @@ import {
 } from "@/lib/dashboard/attendance";
 import { loadClassConduct } from "@/lib/dashboard/conduct";
 import { loadClassExams } from "@/lib/dashboard/exams";
-import { schoolPeriodLabel } from "@/lib/dashboard/school-period";
+import { schoolAcademicYear, schoolPeriodLabel } from "@/lib/dashboard/school-period";
 import type {
   ReportAssignmentMeta,
   ReportAttendanceLogEntry,
@@ -158,6 +158,7 @@ export async function buildReportDraft(input: {
   };
 
   const period = schoolPeriodLabel(new Date().toISOString(), input.locale ?? "es");
+  const academicYear = schoolAcademicYear(new Date().toISOString());
 
   return {
     classId: input.classId,
@@ -165,6 +166,7 @@ export async function buildReportDraft(input: {
     subjectId,
     subjectName: input.subjectName ?? null,
     period,
+    academicYear,
     grades: gradesSnapshot,
     assignmentTitles,
     assignmentsMeta,

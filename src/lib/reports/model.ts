@@ -49,6 +49,7 @@ export type ReportDraft = {
   subjectId: string | null;
   subjectName: string | null;
   period: string;
+  academicYear: string;
   grades: ReportGradesSnapshot;
   assignmentTitles: Record<string, string>;
   assignmentsMeta: Record<string, ReportAssignmentMeta>;

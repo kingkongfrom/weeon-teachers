@@ -47,6 +47,17 @@ function mepAcademicYearStart(when: Date): number {
   return when.getMonth() === 0 ? year - 1 : year;
 }
 
+/**
+ * Academic-year label (e.g. "2026") for a date, using the same MEP rule as
+ * `schoolPeriodLabel`. Stored on `class_reports.academic_year` so the admin can
+ * build a multi-year transcript (T1-3 / T1-3b).
+ */
+export function schoolAcademicYear(iso: string): string {
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return "";
+  return `${mepAcademicYearStart(when)}`;
+}
+
 /** Best-effort period label for a date (falls back to the year itself). */
 export function schoolPeriodLabel(iso: string, locale: Locale = "es"): string {
   const when = new Date(iso);

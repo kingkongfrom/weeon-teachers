@@ -89,6 +89,7 @@ export async function submitClassReport(input: {
       attendance_log: built.attendanceLog,
       summary,
       period: built.period,
+      academic_year: built.academicYear,
     },
     { onConflict: "class_id,subject_id,teacher_profile_id,period" },
   );

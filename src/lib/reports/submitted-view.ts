@@ -8,6 +8,7 @@ export type SubmittedReport = {
   subjectId: string | null;
   subjectName: string | null;
   period: string;
+  academicYear: string;
   submittedAt: string;
   updatedAt: string;
   grades: ReportGradesSnapshot;
@@ -33,6 +34,7 @@ export function submittedReportAsDraft(report: SubmittedReport): ReportDraft {
     subjectId: report.subjectId,
     subjectName: report.subjectName,
     period: report.period,
+    academicYear: report.academicYear,
     grades: report.grades,
     assignmentTitles: report.assignmentTitles,
     assignmentsMeta: report.assignmentsMeta,

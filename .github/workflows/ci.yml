@@ -1,6 +1,8 @@
 # CI gate for weeon-teachers (teacher web).
 # Blocks merge on: lint · typecheck · tests (when present) · build (when env present).
 # Test runner introduced per docs/testing.md §15 (QA-3).
+# e2e — Playwright journeys (docs/testing.md §7, QA-6); auth-backed specs skip
+# unless E2E_* secrets are configured.
 name: CI
 
 on:
@@ -35,3 +37,26 @@ jobs:
       - name: Build
         if: env.NEXT_PUBLIC_SUPABASE_URL != ''
         run: npm run build
+
+  # Playwright journeys (docs/testing.md §7). Public smoke always runs;
+  # credential-gated journeys skip unless E2E_* are set.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      E2E_TEACHER_USERNAME: ${{ secrets.E2E_TEACHER_USERNAME }}
+      E2E_TEACHER_PASSWORD: ${{ secrets.E2E_TEACHER_PASSWORD }}
+      E2E_CLASS_ID: ${{ secrets.E2E_CLASS_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: E2E journeys
+        run: npm run test:e2e
