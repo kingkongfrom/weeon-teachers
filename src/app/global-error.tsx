@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { reportRenderError } from "@/lib/observability/report-render-error";
+
 /** Root error boundary — renders its own html/body (replaces the root layout). */
 export default function GlobalError({
   error,
@@ -11,7 +13,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[weeon-teachers] global error", error);
+    reportRenderError(error, "global-error");
   }, [error]);
 
   return (

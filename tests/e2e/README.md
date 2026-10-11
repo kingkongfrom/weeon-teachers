@@ -25,3 +25,8 @@ The config starts `next dev` on port 3300 unless `E2E_BASE_URL` is set.
 
 `E2E_TEACHER_USERNAME` may be the teacher's username or email; the app resolves
 the school from the roster. **Never point these at production.**
+
+## Vercel preview
+
+Set `E2E_BASE_URL` to the teacher-web **Preview** deployment URL. Runbook:
+[`docs/e2e-preview-stack.md`](../../../docs/e2e-preview-stack.md).

@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { reportRenderError } from "@/lib/observability/report-render-error";
+
 /** Route-segment error boundary. Minimal + dependency-free on purpose. */
 export default function Error({
   error,
@@ -11,7 +13,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[weeon-teachers] render error", error);
+    reportRenderError(error, "error-boundary");
   }, [error]);
 
   return (
