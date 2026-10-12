@@ -60,6 +60,7 @@ import type { MessageDraftSummary } from "@/lib/comms/message-draft";
 import type { MessageFolder, MessageLabel, MessageThreadSummary } from "@/lib/dashboard/messages";
 import type { MessageMailboxSettings } from "@/lib/dashboard/message-mailbox-settings";
 import { useMailRealtimeRefresh } from "@/lib/comms/mail-realtime";
+import { invalidateThreadDetailCache } from "@/lib/comms/thread-detail-cache";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 
 function formatListTime(iso: string): string {
@@ -77,6 +78,11 @@ function formatListTime(iso: string): string {
 }
 
 const LABEL_REORDER_MIME = "application/x-weeon-label-reorder";
+
+const MAIL_LIST_PANE =
+  "min-w-[14rem] w-[35%] max-w-[35%] shrink-0 basis-[35%] overflow-hidden";
+const MAIL_READ_PANE =
+  "flex min-h-0 min-w-[16rem] w-[65%] max-w-[65%] shrink-0 basis-[65%] flex-col overflow-hidden";
 
 const AVATAR_COLORS = ["bg-[#0f766e]", "bg-[#2563b0]", "bg-[#7c3aed]", "bg-[#d97706]", "bg-[#e11d48]"];
 
@@ -117,7 +123,6 @@ export function MessagesWorkspace({
 }) {
   const t = useT();
   const router = useRouter();
-  useMailRealtimeRefresh(realtime, folder !== "draft");
   const [removedThreadIds, setRemovedThreadIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -197,6 +202,12 @@ export function MessagesWorkspace({
     : (localDrafts[0]?.id ?? null);
   const openDraftSummary = localDrafts.find((row) => row.id === openDraftId) ?? null;
   const openThreadSummary = displayThreads.find((row) => row.id === openId) ?? null;
+
+  const invalidateOpenThreadCache = useCallback(() => {
+    if (openId) invalidateThreadDetailCache(openId);
+  }, [openId]);
+
+  useMailRealtimeRefresh(realtime, folder !== "draft", invalidateOpenThreadCache);
 
   const handleThreadRead = useCallback((threadId: string) => {
     setReadThreadIds((current) => {
@@ -427,6 +438,29 @@ export function MessagesWorkspace({
     },
   };
 
+  const previewToolbar =
+    openId && openThreadSummary
+      ? {
+          threadId: openId,
+          allowReplies: openThreadSummary.allowReplies ?? false,
+          fullThreadHref: `${COMMS_MESSAGES}/${openId}`,
+          folder: folder === "draft" ? ("sent" as const) : folder,
+          isFavorite: isThreadFavorite(openThreadSummary),
+          isMine: openThreadSummary.mine,
+          busy: busyId === openId,
+          onToggleFavorite: () => void setFavorite(openId, !isThreadFavorite(openThreadSummary)),
+          onMoveToTrash: () => void moveTo(openId, "trash"),
+          onRestore:
+            folder === "trash"
+              ? () => void moveTo(openId, openThreadSummary.mine ? "sent" : "inbox")
+              : undefined,
+          onDeletePermanently:
+            folder === "trash" && openThreadSummary.mine
+              ? () => setDeleteTarget(openThreadSummary)
+              : undefined,
+        }
+      : null;
+
   const dropProps = (target: "inbox" | "sent" | "trash") => ({
     onDragOver: (event: DragEvent) => {
       event.preventDefault();
@@ -447,7 +481,7 @@ export function MessagesWorkspace({
   });
 
   return (
-    <div className="relative flex w-full flex-col gap-3">
+    <div className="relative flex w-full flex-col gap-2">
       <AnimatePresence>
         {notice ? (
           <motion.div
@@ -463,7 +497,7 @@ export function MessagesWorkspace({
       </AnimatePresence>
 
       <div className="flex items-center">
-        <div className="flex w-56 shrink-0 items-center gap-2 px-2">
+        <div className="flex w-44 shrink-0 items-center gap-1.5 px-1 lg:w-48">
           <button
             type="button"
             onClick={() => setSidebarOpen((current) => !current)}
@@ -482,8 +516,9 @@ export function MessagesWorkspace({
             {t("comms.composeMessage")}
           </Link>
         </div>
-        <div className="flex w-[22rem] shrink-0 items-center">
-          <div className="relative w-[80%] shrink-0">
+        <div className="flex min-w-0 flex-1">
+          <div className={cn("flex items-center gap-2", MAIL_LIST_PANE)}>
+          <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/35" />
             <input
               value={query}
@@ -527,17 +562,18 @@ export function MessagesWorkspace({
               <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
             </button>
           </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex h-[calc(100dvh-8rem)] min-h-[28rem] w-full overflow-x-auto rounded-2xl border border-border bg-surface">
+      <div className="flex h-[calc(100dvh-8rem)] min-h-[28rem] w-full min-w-0 overflow-x-auto rounded-2xl border border-border bg-surface">
         <aside
           className={cn(
-            "flex w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border px-2 py-3",
+            "flex w-44 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border px-1 py-2 lg:w-48",
             !sidebarOpen && "hidden lg:flex",
           )}
         >
-          <p className="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-foreground/40">
+          <p className="mb-1 px-1.5 text-[10px] font-bold uppercase tracking-wider text-foreground/40">
             {t("comms.messagesTitle")}
           </p>
           {folders.map((item) => {
@@ -730,9 +766,12 @@ export function MessagesWorkspace({
           ) : null}
         </aside>
 
-        <section className="flex w-[22rem] shrink-0 flex-col overflow-y-auto border-r border-border">
+        <div className="flex min-w-0 flex-1">
+        <section
+          className={cn("flex flex-col overflow-y-auto border-r border-border", MAIL_LIST_PANE)}
+        >
           {!labelId && folder === "inbox" && unreadInbox > 0 ? (
-            <div className="border-b border-border px-4 py-3">
+            <div className="border-b border-border px-2 py-2">
               <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", messagesTone.accentMuted)}>
                 {t("comms.unreadCount", { n: unreadInbox })}
               </span>
@@ -763,20 +802,20 @@ export function MessagesWorkspace({
                         }
                       }}
                       className={cn(
-                        "flex w-full cursor-pointer items-start gap-3 px-4 py-3.5 text-left hover:bg-surface-muted/35",
+                        "relative w-full cursor-pointer px-1.5 py-2 pr-12 text-left hover:bg-surface-muted/35 sm:px-2",
                         openDraftId === draft.id && "bg-[#0891B2]/10",
                       )}
                     >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-foreground">
-                          {draft.subject.trim() || t("comms.draftNoSubject")}
-                        </span>
-                        <span className="mt-0.5 block truncate text-xs text-foreground/45">
-                          {draft.preview || t("comms.emptyDraftsBody")}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-xs text-foreground/45">
+                      <span className="absolute right-2 top-2 text-[11px] tabular-nums text-foreground/45">
                         {formatListTime(draft.updatedAt)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <p className="line-clamp-1 text-sm font-semibold text-foreground">
+                          {draft.subject.trim() || t("comms.draftNoSubject")}
+                        </p>
+                        <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-foreground/45">
+                          {draft.preview || t("comms.emptyDraftsBody")}
+                        </p>
                       </span>
                     </div>
                     <button
@@ -830,6 +869,7 @@ export function MessagesWorkspace({
                       role="button"
                       tabIndex={0}
                       onClick={() => setSelectedId(thread.id)}
+                      onDoubleClick={() => router.push(`${COMMS_COMPOSE}?thread=${thread.id}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
@@ -837,60 +877,15 @@ export function MessagesWorkspace({
                         }
                       }}
                       className={cn(
-                        "flex w-full cursor-pointer items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-muted/35",
+                        "relative w-full cursor-pointer px-1.5 py-2 text-left transition-colors hover:bg-surface-muted/35 sm:px-2",
                         openId === thread.id && "bg-[#0891B2]/10",
                       )}
                     >
-                      <span
-                        className={cn(
-                          "mt-2 h-2.5 w-2.5 shrink-0 rounded-full",
-                          thread.unread ? messagesTone.unreadDot : "bg-transparent",
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
-                          avatarColor(thread.authorName ?? thread.counterpart),
-                        )}
-                      >
-                        {(thread.authorName ?? thread.counterpart).slice(0, 1).toUpperCase()}
+                      <span className="pointer-events-none absolute right-1.5 top-2 z-[1] text-[11px] tabular-nums leading-none text-foreground/45 transition-opacity group-hover:opacity-0">
+                        {formatListTime(thread.lastMessageAt)}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={cn(
-                              "truncate text-sm",
-                              thread.unread ? "font-bold text-foreground" : "font-semibold text-foreground/85",
-                            )}
-                          >
-                            {thread.mine ? thread.counterpart : (thread.authorName ?? thread.counterpart)}
-                          </span>
-                          {thread.listTags.map((tag) => (
-                            <span
-                              key={tag.id}
-                              className={cn(
-                                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
-                                TAG_TONE[tag.tone] ?? TAG_TONE.slate,
-                              )}
-                            >
-                              {tag.label}
-                            </span>
-                          ))}
-                        </span>
-                        <span
-                          className={cn(
-                            "mt-0.5 block truncate text-sm",
-                            thread.unread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
-                          )}
-                        >
-                          {thread.subject}
-                        </span>
-                        <span className="mt-0.5 block truncate text-xs text-foreground/45">
-                          {thread.preview}
-                        </span>
-                      </span>
-                      <span className="flex shrink-0 flex-col items-end gap-1 text-xs text-foreground/45">
-                        <span className="flex items-center gap-1">
+                      {folder !== "trash" ? (
+                        <div className="absolute right-0 top-0.5 z-10 flex items-center opacity-0 transition-opacity group-hover:opacity-100">
                           <button
                             type="button"
                             aria-label={
@@ -900,10 +895,10 @@ export function MessagesWorkspace({
                             }
                             onClick={(event) => void toggleFavorite(thread, event)}
                             className={cn(
-                              "rounded-md p-1 transition-colors",
+                              "inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
                               isThreadFavorite(thread)
-                                ? "text-amber-500 hover:text-amber-600"
-                                : "text-foreground/25 opacity-0 hover:text-amber-500 group-hover:opacity-100",
+                                ? "text-amber-500 opacity-100 hover:text-amber-600"
+                                : "text-foreground/45 hover:bg-surface-muted hover:text-amber-500",
                             )}
                           >
                             <Star
@@ -911,15 +906,81 @@ export function MessagesWorkspace({
                               fill={isThreadFavorite(thread) ? "currentColor" : "none"}
                             />
                           </button>
-                          <span>{formatListTime(thread.lastMessageAt)}</span>
-                        </span>
-                        {thread.attachmentCount > 0 ? (
-                          <span className="inline-flex items-center gap-1">
-                            <Paperclip className="h-3.5 w-3.5" />
-                            {thread.attachmentCount}
-                          </span>
+                          <button
+                            type="button"
+                            aria-label={t("comms.moveToTrash")}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void moveTo(thread.id, "trash");
+                            }}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-foreground/45 hover:bg-error/10 hover:text-error"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : null}
+                      <div className="flex min-w-0 items-start gap-1.5 pr-[3.25rem]">
+                        {thread.unread ? (
+                          <span
+                            className={cn(
+                              "mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full",
+                              messagesTone.unreadDot,
+                            )}
+                          />
                         ) : null}
-                      </span>
+                        <span
+                          className={cn(
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
+                            avatarColor(thread.authorName ?? thread.counterpart),
+                          )}
+                        >
+                          {(thread.authorName ?? thread.counterpart).slice(0, 1).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={cn(
+                              "block truncate text-sm leading-tight",
+                              thread.unread ? "font-bold text-foreground" : "font-semibold text-foreground/85",
+                            )}
+                          >
+                            {thread.mine ? thread.counterpart : (thread.authorName ?? thread.counterpart)}
+                          </span>
+                          {thread.listTags.length > 0 ? (
+                            <span className="mt-0.5 flex flex-wrap gap-1">
+                              {thread.listTags.map((tag) => (
+                                <span
+                                  key={tag.id}
+                                  className={cn(
+                                    "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                                    TAG_TONE[tag.tone] ?? TAG_TONE.slate,
+                                  )}
+                                >
+                                  {tag.label}
+                                </span>
+                              ))}
+                            </span>
+                          ) : null}
+                          <p
+                            className={cn(
+                              "mt-0.5 line-clamp-1 text-sm leading-snug",
+                              thread.unread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
+                            )}
+                          >
+                            {thread.subject}
+                          </p>
+                          {thread.preview ? (
+                            <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-foreground/45">
+                              {thread.preview}
+                            </p>
+                          ) : null}
+                          {thread.attachmentCount > 0 ? (
+                            <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-foreground/40">
+                              <Paperclip className="h-3 w-3" />
+                              {thread.attachmentCount}
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
                     </div>
                     {folder === "trash" && thread.mine ? (
                       <button
@@ -936,6 +997,7 @@ export function MessagesWorkspace({
             </motion.ul>
           )}
         </section>
+        <div className={MAIL_READ_PANE}>
         {folder === "draft" ? (
           <MailboxDraftReadingPane
             draftId={openDraftId}
@@ -947,8 +1009,12 @@ export function MessagesWorkspace({
             threadId={openId}
             listSummary={openThreadSummary}
             onThreadRead={handleThreadRead}
+            toolbar={previewToolbar}
+            realtime={realtime}
           />
         )}
+        </div>
+        </div>
       </div>
 
       <NewFolderDialog

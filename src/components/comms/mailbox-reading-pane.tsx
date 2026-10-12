@@ -1,90 +1,119 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Loader2, MoreHorizontal, Reply } from "lucide-react";
-import { RecipientReadList } from "@/components/comms/recipient-read-list";
-import { RichTextView } from "@/components/comms/rich-text";
-import { COMMS_MESSAGES } from "@/lib/comms/paths";
+import { useCallback, useEffect, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { ThreadMessageHistory } from "@/components/comms/thread-message-history";
+import { formatThreadRecipientsLine } from "@/lib/comms/recipient-display-summary";
+import { COMMS_COMPOSE, COMMS_MESSAGES } from "@/lib/comms/paths";
+import {
+  MailboxThreadToolbar,
+  type MailboxThreadToolbarProps,
+} from "@/components/comms/mailbox-thread-toolbar";
+import { useThreadDetailRealtime } from "@/lib/comms/mail-realtime";
+import {
+  getCachedThreadDetail,
+  invalidateThreadDetailCache,
+  setCachedThreadDetail,
+} from "@/lib/comms/thread-detail-cache";
 import { fetchThreadDetail, markThreadRead } from "@/lib/teachers/comms-actions";
 import type { MessageThreadDetail, MessageThreadSummary } from "@/lib/dashboard/messages";
+import type { RealtimeConfig } from "@/lib/supabase/browser";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n/use-i18n";
 
-const threadDetailCache = new Map<string, MessageThreadDetail>();
-
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("es-CR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const readPaneHeaderClass =
+  "sticky top-0 z-10 flex items-start gap-2 border-b border-border bg-surface/95 px-4 pt-4 pb-3 backdrop-blur-sm sm:px-5 sm:pt-5 sm:pb-3.5";
 
 export function MailboxReadingPane({
   threadId,
   listSummary,
   onThreadRead,
+  toolbar,
+  realtime = null,
 }: {
   threadId: string | null;
   listSummary?: MessageThreadSummary | null;
   onThreadRead?: (threadId: string) => void;
+  toolbar?: MailboxThreadToolbarProps | null;
+  realtime?: RealtimeConfig | null;
 }) {
   const t = useT();
+  const router = useRouter();
   const [detail, setDetail] = useState<MessageThreadDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const openRedactar = useCallback(() => {
+    if (!threadId) return;
+    router.push(`${COMMS_COMPOSE}?thread=${threadId}`);
+  }, [router, threadId]);
+
+  const loadDetail = useCallback(
+    async (id: string, force = false) => {
+      if (!force) {
+        const cached = getCachedThreadDetail(id);
+        if (cached) {
+          setDetail(cached);
+          setLoading(false);
+          return;
+        }
+      } else {
+        invalidateThreadDetailCache(id);
+      }
+      setLoading(true);
+      const result = await fetchThreadDetail(id);
+      if (!result) {
+        setDetail(null);
+        setLoading(false);
+        return;
+      }
+      const unread = result.summary.unread || listSummary?.unread;
+      const normalized = unread
+        ? { ...result, summary: { ...result.summary, unread: false } }
+        : result;
+      setCachedThreadDetail(id, normalized);
+      setDetail(normalized);
+      setLoading(false);
+      if (unread) {
+        void markThreadRead(id).then((res) => {
+          if (res.ok) onThreadRead?.(id);
+        });
+      }
+    },
+    [listSummary?.unread, onThreadRead],
+  );
+
+  const bumpThread = useCallback(() => {
+    if (!threadId) return;
+    invalidateThreadDetailCache(threadId);
+    setReloadToken((value) => value + 1);
+  }, [threadId]);
+
+  useThreadDetailRealtime(realtime, threadId, bumpThread);
 
   useEffect(() => {
     if (!threadId) {
       setDetail(null);
       return;
     }
-    if (listSummary?.unread) {
-      void markThreadRead(threadId).then((res) => {
-        if (res.ok) onThreadRead?.(threadId);
-      });
-    }
-    const cached = threadDetailCache.get(threadId);
-    if (cached) {
-      setDetail(cached);
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-    let cancelled = false;
-    void fetchThreadDetail(threadId).then((result) => {
-      if (cancelled) return;
-      if (result) {
-        const unread = result.summary.unread || listSummary?.unread;
-        if (unread) {
-          threadDetailCache.set(threadId, {
-            ...result,
-            summary: { ...result.summary, unread: false },
-          });
-        } else {
-          threadDetailCache.set(threadId, result);
-        }
-      }
-      setDetail(result ? threadDetailCache.get(threadId) ?? result : null);
-      setLoading(false);
-      const shouldMark = result?.summary.unread || listSummary?.unread;
-      if (shouldMark) {
-        void markThreadRead(threadId).then((res) => {
-          if (res.ok) onThreadRead?.(threadId);
-        });
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [threadId, listSummary?.unread, onThreadRead]);
+    void loadDetail(threadId, false);
+  }, [threadId, loadDetail]);
+
+  useEffect(() => {
+    if (!threadId || reloadToken === 0) return;
+    void loadDetail(threadId, true);
+  }, [reloadToken, threadId, loadDetail]);
+
+  function bodyActivate(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) {
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, input, textarea, [role='switch']")) return;
+    openRedactar();
+  }
 
   if (!threadId) {
     return (
-      <div className="flex min-w-[24rem] flex-1 items-center justify-center px-8 text-center">
+      <div className="flex min-w-0 flex-1 items-center justify-center px-4 text-center">
         <div>
           <p className="text-sm font-semibold text-foreground">{t("comms.emptyMessages")}</p>
           <p className="mt-1 text-xs font-medium text-foreground/50">{t("comms.emptyMessagesBody")}</p>
@@ -94,14 +123,14 @@ export function MailboxReadingPane({
   }
 
   const headerSubject = detail?.summary.subject ?? listSummary?.subject ?? "";
-  const headerCounterpart =
-    detail?.summary.counterpart ?? listSummary?.counterpart ?? "";
   const waitingForDetail = loading && (!detail || detail.summary.id !== threadId);
+  const fullThreadHref = `${COMMS_MESSAGES}/${threadId}`;
+  const openHint = t("comms.openMessageInComposer");
 
   if (waitingForDetail && !listSummary) {
     return (
-      <div className="flex min-w-[24rem] flex-1 items-center justify-center text-foreground/40">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="flex min-w-0 flex-1 items-center justify-center text-foreground/40">
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
@@ -109,99 +138,83 @@ export function MailboxReadingPane({
   if (!detail || detail.summary.id !== threadId) {
     if (!listSummary) {
       return (
-        <div className="flex min-w-[24rem] flex-1 items-center justify-center text-foreground/40">
-          <Loader2 className="h-5 w-5 animate-spin" />
+        <div className="flex min-w-0 flex-1 items-center justify-center text-foreground/40">
+          <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       );
     }
     return (
-      <article className="min-w-[24rem] flex-1 overflow-y-auto px-6 py-5">
-        <div className="flex items-start gap-3">
-          <h2 className="min-w-0 flex-1 text-xl font-semibold text-foreground">{headerSubject}</h2>
-          {waitingForDetail ? (
-            <Loader2 className="h-5 w-5 shrink-0 animate-spin text-foreground/35" />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className={readPaneHeaderClass}>
+          <h2 className="min-w-0 flex-1 text-lg font-semibold text-foreground">{headerSubject}</h2>
+          {toolbar ? (
+            <MailboxThreadToolbar
+              {...toolbar}
+              threadId={threadId}
+              allowReplies={listSummary.allowReplies ?? false}
+              fullThreadHref={fullThreadHref}
+            />
           ) : null}
-        </div>
-        <p className="mt-4 text-sm text-foreground/55">{headerCounterpart}</p>
-        <p className="mt-2 text-sm text-foreground/70">{listSummary.preview}</p>
-      </article>
+        </header>
+        <article className="flex-1 overflow-y-auto px-4 py-5 sm:px-5">
+          {waitingForDetail ? (
+            <Loader2 className="h-5 w-5 animate-spin text-foreground/35" />
+          ) : (
+            <Tooltip content={openHint} placement="bottom" className="w-full">
+              <button
+                type="button"
+                onClick={bodyActivate}
+                className="w-full cursor-pointer rounded-xl px-2 py-3 text-left text-sm text-foreground/70 transition-colors hover:bg-surface-muted/50"
+              >
+                {listSummary.preview}
+              </button>
+            </Tooltip>
+          )}
+        </article>
+      </div>
     );
   }
 
-  const latest = detail.messages[detail.messages.length - 1];
-  const earlier = detail.messages.slice(0, -1).reverse();
-  const authorName = latest
-    ? latest.mine
-      ? t("comms.you")
-      : latest.authorName || detail.summary.counterpart
-    : detail.summary.counterpart;
   const toNames = detail.recipients.map((row) => row.name).filter(Boolean);
-  const toLabel = toNames.length > 0 ? toNames.join(", ") : detail.summary.counterpart;
+  const toLabel = formatThreadRecipientsLine(toNames, detail.summary.counterpart);
 
   return (
-    <article className="min-w-[24rem] flex-1 overflow-y-auto px-6 py-5">
-      <div className="flex items-start gap-3">
-        <h2 className="min-w-0 flex-1 text-xl font-semibold text-foreground">{detail.summary.subject}</h2>
-        <div className="flex shrink-0 items-center gap-1 text-foreground/45">
-          {detail.summary.allowReplies ? (
-            <Link
-              href={`${COMMS_MESSAGES}/${detail.summary.id}`}
-              aria-label={t("comms.replySection")}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-muted hover:text-foreground"
-            >
-              <Reply className="h-4 w-4" />
-            </Link>
-          ) : null}
-          <Link
-            href={`${COMMS_MESSAGES}/${detail.summary.id}`}
-            aria-label={t("comms.openFullThread")}
-            title={t("comms.openFullThread")}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-muted hover:text-foreground"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Link>
-        </div>
-      </div>
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <header className={readPaneHeaderClass}>
+        <h2 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground sm:text-lg">
+          {detail.summary.subject}
+        </h2>
+        {toolbar ? (
+          <MailboxThreadToolbar
+            {...toolbar}
+            threadId={threadId}
+            allowReplies={detail.summary.allowReplies}
+            fullThreadHref={fullThreadHref}
+          />
+        ) : null}
+      </header>
 
-      <div className="mt-5 flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#2563b0] text-sm font-bold text-white">
-          {authorName.slice(0, 1).toUpperCase()}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-sm font-semibold text-foreground">{authorName}</p>
-            <p className="text-xs text-foreground/45">{latest ? formatDate(latest.createdAt) : ""}</p>
-          </div>
-          <p className="mt-0.5 text-xs text-foreground/55">
-            <span className="font-semibold">{t("comms.toLabel")}:</span> {toLabel}
-          </p>
-        </div>
-      </div>
-
-      {latest ? (
-        <div className="mt-6 text-sm leading-relaxed text-foreground/90">
-          <RichTextView doc={latest.body} />
-        </div>
-      ) : null}
-
-      {detail.summary.mine && detail.recipients.length > 0 ? (
-        <RecipientReadList recipients={detail.recipients} />
-      ) : null}
-
-      {earlier.length > 0 ? (
-        <div className="mt-8 space-y-4 border-t border-border pt-4">
-          {earlier.map((message) => (
-            <div key={message.id} className="rounded-xl bg-surface-muted/50 px-4 py-3">
-              <p className="text-xs font-semibold text-foreground/55">
-                {message.mine ? t("comms.you") : message.authorName} · {formatDate(message.createdAt)}
-              </p>
-              <div className="mt-2 text-sm text-foreground/80">
-                <RichTextView doc={message.body} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </article>
+      <Tooltip
+        content={openHint}
+        placement="bottom"
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+      >
+        <article
+          className="flex-1 cursor-pointer overflow-y-auto px-4 py-5 sm:px-5 hover:bg-surface-muted/20"
+          onClick={bodyActivate}
+        >
+          <ThreadMessageHistory
+            messages={detail.messages}
+            subject={detail.summary.subject}
+            toLabel={toLabel}
+            recipients={detail.recipients}
+            showReadReceipts={detail.summary.mine}
+            attachments={detail.attachments}
+            allowReplies={detail.summary.allowReplies}
+            readOnly
+          />
+        </article>
+      </Tooltip>
+    </div>
   );
 }

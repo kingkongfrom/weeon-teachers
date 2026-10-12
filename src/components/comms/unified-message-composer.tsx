@@ -4,9 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  FolderOpen,
   Loader2,
-  Paperclip,
   Save,
   Send,
   Trash2,
@@ -14,35 +12,43 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { CloudImportSources } from "@/components/comms/cloud-import-sources";
+import { ComposeActionBar } from "@/components/comms/compose-action-bar";
+import { ComposeAttachmentStrip } from "@/components/comms/compose-attachment-strip";
 import { MessageBodyEditor } from "@/components/comms/message-body-editor";
-import { MESSAGE_ATTACHMENT_ACCEPT } from "@/lib/comms/attachment-mime";
+import { ComposeParaRecipientField } from "@/components/comms/compose-para-recipient-field";
+import {
+  ComposeThreadQuotedSection,
+  ComposeThreadReadPhase,
+} from "@/components/comms/compose-thread-read-phase";
 import {
   RecipientPickerModal,
   type PickerSelection,
 } from "@/components/comms/recipient-picker-modal";
+import { ensureForwardSubject } from "@/lib/comms/compose-display-utils";
 import { COMMS_MESSAGES } from "@/lib/comms/paths";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import { docToPlainText, emptyDoc, type RichTextDoc } from "@/lib/comms/model";
 import type { CommsGroupWithGrade } from "@/lib/comms/broadcast-filter";
 import { recipientsFromBulkSelections } from "@/lib/comms/recipient-catalog";
-import type { MessageDraftRecord } from "@/lib/comms/message-draft";
 import {
   createMessageThread,
   deleteMessageDraft,
   saveMessageDraft,
   uploadMessageAttachment,
 } from "@/lib/teachers/comms-actions";
+import type { MessageDraftRecord } from "@/lib/comms/message-draft";
 import type { MessageContact } from "@/lib/dashboard/messages";
+import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
 
-const MAX_ATTACHMENTS = 10;
-/** Matches server compose cap in comms-actions (weeon-tenants schema). */
+/** Matches `composeSchema.recipients.max` in comms-actions. */
 const COMPOSE_RECIPIENT_MAX = 500;
+const MAX_ATTACHMENTS = 10;
 
 function selectionLabel(selection: PickerSelection): string {
   if (selection.type === "contact") return selection.name;
+  if (selection.type === "collapsed") return selection.label;
   return `${selection.item.label} · ${selection.item.subtitle}`;
 }
 
@@ -50,10 +56,22 @@ export function UnifiedMessageComposer({
   contacts,
   groups,
   initialDraft = null,
+  variant = "page",
+  persistDraft = true,
+  onSent,
+  onDiscard,
+  realtime = null,
+  fromLabel = "",
 }: {
   contacts: MessageContact[];
   groups: CommsGroupWithGrade[];
   initialDraft?: MessageDraftRecord | null;
+  variant?: "page" | "mailbox";
+  persistDraft?: boolean;
+  onSent?: (threadId: string) => void;
+  onDiscard?: () => void;
+  realtime?: RealtimeConfig | null;
+  fromLabel?: string;
 }) {
   const t = useT();
   const router = useRouter();
@@ -62,6 +80,9 @@ export function UnifiedMessageComposer({
   );
   const [ccSelected, setCcSelected] = useState<Array<{ key: string; name: string }>>(
     () => initialDraft?.ccSelected ?? [],
+  );
+  const [ccRowVisible, setCcRowVisible] = useState(
+    () => (initialDraft?.ccSelected?.length ?? 0) > 0,
   );
   const [pickerTarget, setPickerTarget] = useState<"to" | "cc" | null>(null);
   const [subject, setSubject] = useState(initialDraft?.subject ?? "");
@@ -74,13 +95,48 @@ export function UnifiedMessageComposer({
   const sentRef = useRef(false);
   const skipDraftRef = useRef(false);
   const draftIdRef = useRef<string | null>(initialDraft?.id ?? null);
+  const sourceThreadHistory = initialDraft?.sourceThreadHistory ?? null;
+  const hasThreadReadPhase = (sourceThreadHistory?.length ?? 0) > 0;
+  const threadSeedRef = useRef({
+    to: (initialDraft?.toSelected ?? []) as PickerSelection[],
+    cc: initialDraft?.ccSelected ?? [],
+  });
+  const [replyExpanded, setReplyExpanded] = useState(!hasThreadReadPhase);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function expandReply(mode: "reply" | "reply-all") {
+    setToSelected(threadSeedRef.current.to);
+    const cc = mode === "reply-all" ? threadSeedRef.current.cc : [];
+    setCcSelected(cc);
+    setCcRowVisible(cc.length > 0);
+    setReplyExpanded(true);
+  }
+
+  function expandForward() {
+    setToSelected([]);
+    setCcSelected([]);
+    setCcRowVisible(false);
+    setSubject((current) => ensureForwardSubject(current));
+    setReplyExpanded(true);
+  }
+
+  function ccSelectionsFromState(): PickerSelection[] {
+    return ccSelected.map((item) => ({ type: "contact" as const, ...item }));
+  }
+
+  function applyCcSelections(next: PickerSelection[]) {
+    setCcSelected(
+      next
+        .filter((item): item is Extract<PickerSelection, { type: "contact" }> => item.type === "contact")
+        .map((item) => ({ key: item.key, name: item.name })),
+    );
+  }
   const snapRef = useRef({ subject, body, toSelected, ccSelected, allowReplies });
   snapRef.current = { subject, body, toSelected, ccSelected, allowReplies };
 
   const persistRef = useRef<(snap?: typeof snapRef.current) => Promise<void>>(async () => {});
   persistRef.current = async (snap = snapRef.current) => {
-    if (skipDraftRef.current || sentRef.current) return;
+    if (!persistDraft || skipDraftRef.current || sentRef.current) return;
     const res = await saveMessageDraft({
       id: draftIdRef.current,
       subject: snap.subject,
@@ -93,11 +149,12 @@ export function UnifiedMessageComposer({
   };
 
   useEffect(() => {
+    if (!persistDraft) return;
     const timer = window.setTimeout(() => {
       void persistRef.current();
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [subject, body, toSelected, ccSelected, allowReplies]);
+  }, [persistDraft, subject, body, toSelected, ccSelected, allowReplies]);
 
   useEffect(
     () => () => {
@@ -140,8 +197,14 @@ export function UnifiedMessageComposer({
     const toContacts = toSelected.filter(
       (item): item is Extract<PickerSelection, { type: "contact" }> => item.type === "contact",
     );
+    const collapsedTo = toSelected.filter(
+      (item): item is Extract<PickerSelection, { type: "collapsed" }> => item.type === "collapsed",
+    );
 
-    if (bulkItems.length > 0 && (toContacts.length > 0 || ccSelected.length > 0)) {
+    if (
+      bulkItems.length > 0 &&
+      (toContacts.length > 0 || collapsedTo.length > 0 || ccSelected.length > 0)
+    ) {
       setSending(false);
       setError(t("comms.bulkMixError"));
       return;
@@ -215,6 +278,13 @@ export function UnifiedMessageComposer({
             name: item.name,
             role: "to" as const,
           })),
+          ...collapsedTo.flatMap((group) =>
+            group.members.map((item) => ({
+              key: item.key,
+              name: item.name,
+              role: "to" as const,
+            })),
+          ),
           ...ccSelected.map((item) => ({
             key: item.key,
             name: item.name,
@@ -245,215 +315,245 @@ export function UnifiedMessageComposer({
     }
 
     sentRef.current = true;
-    if (draftIdRef.current) void deleteMessageDraft(draftIdRef.current);
-    router.replace(`${COMMS_MESSAGES}/${threadId}`);
+    if (draftIdRef.current && persistDraft) void deleteMessageDraft(draftIdRef.current);
+    if (onSent) {
+      onSent(threadId);
+      router.refresh();
+    } else {
+      router.replace(`${COMMS_MESSAGES}?folder=sent&thread=${threadId}`);
+      router.refresh();
+    }
     setSending(false);
   }
 
   const inputClass =
     "h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25";
 
+  const mailbox = variant === "mailbox";
+
+  function discardCompose() {
+    skipDraftRef.current = true;
+    const id = draftIdRef.current;
+    if (id && persistDraft) void deleteMessageDraft(id);
+    if (onDiscard) {
+      onDiscard();
+      return;
+    }
+    router.push(COMMS_MESSAGES);
+  }
+
+  const toolbarBtn =
+    "inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors sm:px-3";
+  const sendDisabled =
+    sending || !canSend || (hasThreadReadPhase && !replyExpanded);
+
   return (
-    <div className="flex flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href={COMMS_MESSAGES}
-            className="ui-hover inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground/60 hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {t("comms.back")}
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              skipDraftRef.current = true;
-              const id = draftIdRef.current;
-              if (id) void deleteMessageDraft(id);
-              router.push(COMMS_MESSAGES);
-            }}
-            className="ui-hover inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-error/80 hover:text-error"
-          >
-            <Trash2 className="h-4 w-4" />
-            {t("comms.discard")}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              void persistRef.current().then(() => router.push(`${COMMS_MESSAGES}?folder=drafts`));
-            }}
-            className="ui-hover inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-foreground/70 hover:text-foreground"
-          >
-            <Save className="h-4 w-4" />
-            {t("comms.saveDraft")}
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={!canSend || sending}
-          className={cn(
-            "inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold disabled:opacity-50",
-            messagesTone.primaryButton,
-          )}
-        >
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          {sending ? t("comms.sending") : t("comms.sendMessage")}
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-0 px-4 py-4">
-        <RecipientRow
-          label={t("comms.toField")}
-          actionLabel={t("comms.addRecipient")}
-          onAdd={() => setPickerTarget("to")}
-        >
-          {toSelected.map((item, index) => (
-            <RecipientChip
-              key={item.type === "bulk" ? item.item.id : item.key}
-              label={selectionLabel(item)}
-              onRemove={() =>
-                setToSelected((current) => current.filter((_, i) => i !== index))
-              }
-            />
-          ))}
-        </RecipientRow>
-
-        <RecipientRow
-          label={t("comms.ccField")}
-          actionLabel={t("comms.addCc")}
-          onAdd={() => setPickerTarget("cc")}
-          muted
-        >
-          {ccSelected.map((item) => (
-            <RecipientChip
-              key={item.key}
-              label={item.name}
-              onRemove={() =>
-                setCcSelected((current) => current.filter((row) => row.key !== item.key))
-              }
-            />
-          ))}
-        </RecipientRow>
-
-        <label className="flex items-center gap-3 border-b border-border py-3">
-          <span className="w-16 shrink-0 text-sm font-semibold text-foreground/55">
-            {t("comms.subject")}
-          </span>
-          <input
-            value={subject}
-            onChange={(event) => setSubject(event.target.value)}
-            placeholder={t("comms.subjectPlaceholderMessage")}
-            maxLength={160}
-            className={cn(inputClass, "border-0 bg-transparent px-0 focus:ring-0")}
-          />
-        </label>
-
-        <MessageBodyEditor
-          value={body}
-          onChange={setBody}
-          placeholder={t("comms.bodyPlaceholderMessage")}
-          editorClassName="min-h-[16rem]"
-          disabled={sending}
-          inlineEmbeds={false}
-        />
-
-        <label className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
-          <span className="text-sm font-semibold text-foreground">{t("comms.allowReplies")}</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={allowReplies}
-            onClick={() => setAllowReplies((current) => !current)}
-            className={cn(
-              "inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors",
-              allowReplies ? messagesTone.toggleOn : "bg-foreground/20",
+    <div
+      className={cn(
+        "flex min-h-0 flex-col gap-0 bg-surface",
+        mailbox ? "h-full flex-1" : "min-h-0 flex-1",
+      )}
+    >
+      <div className="sticky top-0 z-20 -mx-1 overflow-visible border-b border-border/60 bg-surface/95 px-1 py-2.5 backdrop-blur-sm sm:-mx-2 sm:px-2">
+        <div className="flex flex-wrap items-center gap-2 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
+            {mailbox ? null : (
+              <Link
+                href={COMMS_MESSAGES}
+                className={cn(
+                  toolbarBtn,
+                  "text-foreground/65 hover:bg-surface-muted hover:text-foreground",
+                )}
+              >
+                <ArrowLeft className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{t("comms.back")}</span>
+              </Link>
             )}
-          >
-            <span
-              className={cn(
-                "block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ease-out",
-                allowReplies ? "translate-x-5" : "translate-x-0",
-              )}
-            />
-          </button>
-        </label>
-
-        <div
-          className="mt-4 rounded-2xl border border-dashed border-border bg-surface-muted/30 px-6 py-8 text-center"
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            if (event.dataTransfer.files.length > 0) addFiles(event.dataTransfer.files);
-          }}
-        >
-          <p className="text-sm font-medium text-foreground/55">{t("comms.dropFilesHint")}</p>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-foreground/40">
-            {t("comms.documents.importFrom")}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
             <button
               type="button"
-              disabled={sending || remainingAttachmentSlots <= 0}
-              onClick={() => {
-                setCloudError(null);
-                fileInputRef.current?.click();
-              }}
-              className="ui-hover flex min-w-[4.5rem] flex-col items-center gap-1 text-xs font-semibold text-foreground/60 hover:text-foreground disabled:opacity-50"
+              onClick={discardCompose}
+              className={cn(toolbarBtn, "text-error/90 hover:bg-error/5")}
             >
-              <FolderOpen className="h-8 w-8" />
-              {t("comms.myDevice")}
+              <Trash2 className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">{t("comms.discard")}</span>
             </button>
-            <CloudImportSources
-              remainingSlots={remainingAttachmentSlots}
-              disabled={sending}
-              onLocalFiles={addFiles}
-              onError={setCloudError}
-            />
+            {persistDraft ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void persistRef.current().then(() =>
+                    router.push(`${COMMS_MESSAGES}?folder=drafts`),
+                  );
+                }}
+                className={cn(
+                  toolbarBtn,
+                  "text-foreground/65 hover:bg-surface-muted hover:text-foreground",
+                )}
+              >
+                <Save className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{t("comms.saveDraft")}</span>
+              </button>
+            ) : null}
           </div>
-          {cloudError ? (
-            <p className="mt-3 text-xs font-medium text-error">{cloudError}</p>
+
+          <div className="min-w-3 flex-1" aria-hidden />
+
+          {hasThreadReadPhase && !replyExpanded ? (
+            <ComposeActionBar
+              onReply={() => expandReply("reply")}
+              onReplyAll={() => expandReply("reply-all")}
+              onForward={() => expandForward()}
+            />
           ) : null}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept={MESSAGE_ATTACHMENT_ACCEPT}
-            className="hidden"
-            disabled={sending || remainingAttachmentSlots <= 0}
-            onChange={(event) => {
-              if (event.target.files) addFiles(event.target.files);
-              event.target.value = "";
-            }}
-          />
-          {files.length > 0 ? (
-            <ul className="mt-4 space-y-2 text-left">
-              {files.map((file, index) => (
-                <li
-                  key={`${file.name}-${index}`}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                >
-                  <span className="inline-flex min-w-0 items-center gap-2">
-                    <Paperclip className="h-4 w-4 shrink-0 text-foreground/40" />
-                    <span className="truncate font-medium">{file.name}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}
-                    className="text-foreground/40 hover:text-error"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+
+          {hasThreadReadPhase && !replyExpanded ? null : (
+            <button
+              type="button"
+              onClick={() => void send()}
+              disabled={sendDisabled}
+              className={cn(
+                "inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45",
+                messagesTone.primaryButton,
+              )}
+            >
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {sending ? t("comms.sending") : t("comms.sendMessage")}
+            </button>
+          )}
         </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto pt-4">
+        {hasThreadReadPhase && sourceThreadHistory ? (
+          <ComposeThreadReadPhase
+            subject={subject}
+            messages={sourceThreadHistory}
+            deferQuotedThread={replyExpanded}
+            replyEditor={
+              replyExpanded ? (
+                <>
+                  <ComposeEmailFields
+                    subject={subject}
+                    onSubjectChange={setSubject}
+                    subjectPlaceholder={t("comms.subjectPlaceholderMessage")}
+                    inputClass={inputClass}
+                    fromLabel={fromLabel}
+                    fromFieldLabel={t("comms.from")}
+                    toLabel={t("comms.toField")}
+                    ccLabel={t("comms.ccField")}
+                    subjectLabel={t("comms.subject")}
+                    onPickTo={() => setPickerTarget("to")}
+                    onPickCc={() => setCcRowVisible(true)}
+                    toField={
+                      <ComposeParaRecipientField
+                        contacts={contacts}
+                        selections={toSelected}
+                        onChange={setToSelected}
+                        onOpenPicker={() => setPickerTarget("to")}
+                        realtime={realtime}
+                        disabled={sending}
+                      />
+                    }
+                    ccField={
+                      <ComposeParaRecipientField
+                        contacts={contacts}
+                        selections={ccSelectionsFromState()}
+                        onChange={applyCcSelections}
+                        onOpenPicker={() => setPickerTarget("cc")}
+                        realtime={realtime}
+                        disabled={sending}
+                      />
+                    }
+                    showCcRow={ccRowVisible || ccSelected.length > 0}
+                  />
+                  <MessageBodyEditor
+                    value={body}
+                    onChange={setBody}
+                    placeholder={t("comms.bodyPlaceholderMessage")}
+                    editorClassName="min-h-[14rem] border-0"
+                    disabled={sending}
+                    inlineEmbeds={false}
+                  />
+                </>
+              ) : null
+            }
+          />
+        ) : replyExpanded ? (
+          <>
+            <ComposeEmailFields
+              subject={subject}
+              onSubjectChange={setSubject}
+              subjectPlaceholder={t("comms.subjectPlaceholderMessage")}
+              inputClass={inputClass}
+              fromLabel={fromLabel}
+              fromFieldLabel={t("comms.from")}
+              toLabel={t("comms.toField")}
+              ccLabel={t("comms.ccField")}
+              subjectLabel={t("comms.subject")}
+              onPickTo={() => setPickerTarget("to")}
+              onPickCc={() => setCcRowVisible(true)}
+              toField={
+                <ComposeParaRecipientField
+                  contacts={contacts}
+                  selections={toSelected}
+                  onChange={setToSelected}
+                  onOpenPicker={() => setPickerTarget("to")}
+                  realtime={realtime}
+                  disabled={sending}
+                />
+              }
+              ccField={
+                <ComposeParaRecipientField
+                  contacts={contacts}
+                  selections={ccSelectionsFromState()}
+                  onChange={applyCcSelections}
+                  onOpenPicker={() => setPickerTarget("cc")}
+                  realtime={realtime}
+                  disabled={sending}
+                />
+              }
+              showCcRow={ccRowVisible || ccSelected.length > 0}
+            />
+            <MessageBodyEditor
+              value={body}
+              onChange={setBody}
+              placeholder={t("comms.bodyPlaceholderMessage")}
+              editorClassName="min-h-[16rem] border-0"
+              disabled={sending}
+              inlineEmbeds={false}
+            />
+          </>
+        ) : null}
+
+        {replyExpanded ? (
+          <>
+        <ComposeAttachmentStrip
+          allowReplies={allowReplies}
+          onAllowRepliesChange={setAllowReplies}
+          files={files}
+          onRemoveFile={(index) => setFiles((current) => current.filter((_, i) => i !== index))}
+          onAddFiles={addFiles}
+          sending={sending}
+          remainingAttachmentSlots={remainingAttachmentSlots}
+          cloudError={cloudError}
+          onCloudError={setCloudError}
+          fileInputRef={fileInputRef}
+        />
 
         {error ? (
           <p className="mt-4 rounded-lg bg-error/10 px-3 py-2 text-sm font-medium text-error">
             {error}
           </p>
+        ) : null}
+
+        {hasThreadReadPhase && sourceThreadHistory && replyExpanded ? (
+          <ComposeThreadQuotedSection
+            messages={sourceThreadHistory}
+            subject={subject}
+            replying
+          />
+        ) : null}
+          </>
         ) : null}
       </div>
 
@@ -487,46 +587,100 @@ export function UnifiedMessageComposer({
   );
 }
 
-function RecipientRow({
-  label,
-  actionLabel,
-  onAdd,
-  muted = false,
-  children,
+/** Classic email header rows (Para / Cc / Asunto). */
+function ComposeEmailFields({
+  fromLabel = "",
+  fromFieldLabel = "",
+  toLabel,
+  ccLabel,
+  subjectLabel,
+  subject,
+  onSubjectChange,
+  subjectPlaceholder,
+  inputClass,
+  onPickTo,
+  onPickCc,
+  toField,
+  ccField,
+  showCcRow,
+  showSubjectRow = true,
 }: {
-  label: string;
-  actionLabel: string;
-  onAdd: () => void;
-  muted?: boolean;
-  children: React.ReactNode;
+  fromLabel?: string;
+  fromFieldLabel?: string;
+  toLabel: string;
+  ccLabel: string;
+  subjectLabel: string;
+  subject: string;
+  onSubjectChange: (value: string) => void;
+  subjectPlaceholder: string;
+  inputClass: string;
+  onPickTo: () => void;
+  onPickCc: () => void;
+  toField: React.ReactNode;
+  ccField: React.ReactNode;
+  showCcRow: boolean;
+  showSubjectRow?: boolean;
 }) {
+  const fieldLabel = "w-[3.25rem] shrink-0 pt-0.5 text-xs font-semibold text-foreground/45 sm:w-14";
+  const rowClass = "flex min-h-[2.25rem] items-start gap-2 border-b border-border/45 py-1.5";
+
   return (
-    <div
-      className={cn(
-        "flex flex-wrap items-start gap-3 border-b border-border py-3",
-        muted && "opacity-90",
-      )}
-    >
-      <span className="w-16 shrink-0 pt-1.5 text-sm font-semibold text-foreground/55">{label}</span>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-        {children}
-        <button
-          type="button"
-          onClick={onAdd}
-          className="ui-hover inline-flex h-9 items-center gap-1.5 rounded-full border border-brand-400/40 px-3.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-300"
-        >
-          <UserPlus className="h-4 w-4" />
-          {actionLabel}
-        </button>
+    <div className="mb-1 rounded-lg border border-border/50 bg-surface-muted/20 px-3 py-0.5 sm:px-4">
+      {fromLabel ? (
+        <div className={cn(rowClass, "items-center py-2")}>
+          <span className={cn(fieldLabel, "pt-0")}>{fromFieldLabel}</span>
+          <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground/85">
+            {fromLabel}
+          </span>
+        </div>
+      ) : null}
+      <div className={rowClass}>
+        <span className={fieldLabel}>{toLabel}</span>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">{toField}</div>
+        <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
+          <button
+            type="button"
+            onClick={onPickCc}
+            className="rounded-md px-1.5 py-1 text-xs font-medium text-foreground/45 hover:bg-surface-muted hover:text-foreground"
+          >
+            {ccLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onPickTo}
+            className="rounded-md p-1 text-foreground/45 hover:bg-surface-muted hover:text-foreground"
+            aria-label={toLabel}
+          >
+            <UserPlus className="h-4 w-4" />
+          </button>
+        </div>
       </div>
+      {showCcRow ? (
+        <div className={rowClass}>
+          <span className={fieldLabel}>{ccLabel}</span>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">{ccField}</div>
+        </div>
+      ) : null}
+      {showSubjectRow ? (
+        <label className={cn(rowClass, "items-center py-2")}>
+          <span className={cn(fieldLabel, "pt-0")}>{subjectLabel}</span>
+          <input
+            value={subject}
+            onChange={(event) => onSubjectChange(event.target.value)}
+            placeholder={subjectPlaceholder}
+            maxLength={160}
+            className={cn(inputClass, "h-8 min-w-0 flex-1 border-0 bg-transparent px-0 py-0 text-sm focus:ring-0")}
+          />
+        </label>
+      ) : null}
     </div>
   );
 }
 
 function RecipientChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5">
-      <span className="truncate text-xs font-semibold text-foreground/80">{label}</span>
+    <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-surface px-2 py-0.5 ring-1 ring-border/60">
+      <span className="truncate text-xs font-medium text-foreground/85">{label}</span>
       <button
         type="button"
         onClick={onRemove}

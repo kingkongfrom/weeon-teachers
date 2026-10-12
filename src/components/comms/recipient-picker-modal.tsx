@@ -9,7 +9,9 @@ import { hubFilterChipClass } from "@/lib/dashboard/hub-tones";
 import { useT } from "@/lib/i18n/use-i18n";
 import {
   buildBulkRecipientCatalog,
+  bulkItemRoleLabel,
   filterBulkCatalog,
+  groupBulkRecipientItems,
   type BulkRecipientCategory,
   type BulkRecipientItem,
 } from "@/lib/comms/recipient-catalog";
@@ -17,9 +19,17 @@ import type { CommsGroupWithGrade } from "@/lib/comms/broadcast-filter";
 import { contactRowId, dedupeMessageContacts } from "@/lib/dashboard/message-contacts";
 import type { MessageContact } from "@/lib/dashboard/messages";
 
+export type CollapsedRecipientSelection = {
+  type: "collapsed";
+  key: string;
+  label: string;
+  members: Array<{ key: string; name: string }>;
+};
+
 export type PickerSelection =
   | { type: "contact"; key: string; name: string }
-  | { type: "bulk"; item: BulkRecipientItem };
+  | { type: "bulk"; item: BulkRecipientItem }
+  | CollapsedRecipientSelection;
 
 export function RecipientPickerModal({
   open,
@@ -80,7 +90,7 @@ function PickerBody({
   const t = useT();
   const [mode, setMode] = useState<"regular" | "bulk">(initialMode);
   const [query, setQuery] = useState("");
-  const [bulkCategory, setBulkCategory] = useState<"all" | BulkRecipientCategory>("all");
+  const [bulkCategory, setBulkCategory] = useState<"all" | BulkRecipientCategory>("sections");
   const [draft, setDraft] = useState<PickerSelection[]>(selected);
 
   const bulkCatalog = useMemo(() => buildBulkRecipientCatalog(groups), [groups]);
@@ -123,7 +133,8 @@ function PickerBody({
   }
 
   const bulkSections = useMemo(() => {
-    const sections: Array<{ title: string; items: BulkRecipientItem[] }> = [];
+    const sections: Array<{ title: string; groups: ReturnType<typeof groupBulkRecipientItems> }> =
+      [];
     const byCategory: Record<BulkRecipientCategory, BulkRecipientItem[]> = {
       sections: [],
       sectors: [],
@@ -133,13 +144,22 @@ function PickerBody({
       byCategory[item.category].push(item);
     }
     if (byCategory.sections.length > 0) {
-      sections.push({ title: t("comms.bulkSections"), items: byCategory.sections });
+      sections.push({
+        title: t("comms.bulkSections"),
+        groups: groupBulkRecipientItems(byCategory.sections),
+      });
     }
     if (byCategory.sectors.length > 0) {
-      sections.push({ title: t("comms.bulkSectors"), items: byCategory.sectors });
+      sections.push({
+        title: t("comms.bulkSectors"),
+        groups: groupBulkRecipientItems(byCategory.sectors),
+      });
     }
     if (byCategory.staff.length > 0) {
-      sections.push({ title: t("comms.bulkStaff"), items: byCategory.staff });
+      sections.push({
+        title: t("comms.bulkStaff"),
+        groups: groupBulkRecipientItems(byCategory.staff),
+      });
     }
     return sections;
   }, [filteredBulk, t]);
@@ -271,39 +291,43 @@ function PickerBody({
             >
               {section.title}
             </li>,
-            ...section.items.map((item) => {
-              const active = draft.some(
-                (row) => row.type === "bulk" && row.item.id === item.id,
-              );
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => toggleBulk(item)}
-                    className="flex w-full items-center gap-3 border-b border-border/60 px-3 py-3 text-left transition-colors last:border-b-0 hover:bg-surface-muted/60"
-                  >
-                    <span
-                      className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                        active
-                          ? messagesTone.selectedChip
-                          : "border-border text-transparent",
-                      )}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="truncate text-sm font-semibold text-foreground">
-                          {item.label}
-                        </span>
-                        <KindBadge kind={item.kind === "parents" ? "parent" : item.kind === "students" ? "student" : "teacher"} />
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            }),
+            ...section.groups.map((group) => (
+              <li
+                key={group.key}
+                className="border-b border-border/60 px-3 py-3 last:border-b-0"
+              >
+                <p className="text-sm font-semibold text-foreground">{group.label}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {group.items.map((item) => {
+                    const active = draft.some(
+                      (row) => row.type === "bulk" && row.item.id === item.id,
+                    );
+                    const roleLabel = bulkItemRoleLabel(item);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        aria-pressed={active}
+                        aria-label={`${roleLabel} · ${group.label}`}
+                        onClick={() => toggleBulk(item)}
+                        className={cn(
+                          "inline-flex h-8 items-center rounded-full px-3 text-xs font-bold uppercase tracking-wide transition-colors",
+                          active
+                            ? messagesTone.selectedChip
+                            : item.kind === "students"
+                              ? "border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-200"
+                              : item.kind === "teachers"
+                                ? "border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 dark:border-violet-500/30 dark:bg-violet-950/30 dark:text-violet-200"
+                                : "border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200",
+                        )}
+                      >
+                        {roleLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+              </li>
+            )),
           ])
         )}
       </ul>

@@ -63,6 +63,7 @@ export type MessageItem = {
 
 export type MessageRecipient = {
   profileId: string;
+  contactKey: string;
   name: string;
   role: "to" | "cc";
   readAt: string | null;
@@ -80,6 +81,7 @@ export type MessageThreadDetail = {
   summary: MessageThreadSummary;
   allowReplies: boolean;
   classId: string | null;
+  broadcastFilter: import("@/lib/comms/broadcast-filter").BroadcastFilter | null;
   messages: MessageItem[];
   recipients: MessageRecipient[];
   attachments: MessageAttachment[];
@@ -91,6 +93,8 @@ export type MessageContact = {
   kind: string;
   context: string;
   classId: string | null;
+  studentName?: string;
+  email?: string | null;
 };
 
 type NameEmbed = { name: string } | { name: string }[] | null;
@@ -253,13 +257,14 @@ export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => 
   const { data, error } = await session.actor.rpc("list_message_contacts");
   if (error || !data) return [];
 
-  return (
+  const contacts = (
     data as Array<{
       recipient_key: string;
       full_name: string;
       kind: string;
       context: string;
       class_id: string | null;
+      student_name?: string | null;
     }>
   ).map((row) => ({
     key: row.recipient_key,
@@ -267,8 +272,42 @@ export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => 
     kind: row.kind,
     context: row.context ?? "",
     classId: row.class_id ?? null,
+    studentName: row.student_name?.trim() || undefined,
   }));
+
+  return attachMessageContactEmails(session, contacts);
 });
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function attachMessageContactEmails(
+  session: NonNullable<Awaited<ReturnType<typeof getCommsActor>>>,
+  contacts: MessageContact[],
+): Promise<MessageContact[]> {
+  const keys = [...new Set(contacts.map((row) => row.key.trim()).filter((key) => UUID_RE.test(key)))];
+  if (keys.length === 0) return contacts;
+
+  const [{ data: rosterRows }, { data: profileRows }] = await Promise.all([
+    session.actor.from("roster_accounts").select("id, email, username").in("id", keys),
+    session.actor.from("profiles").select("id, email, auth_email").in("id", keys),
+  ]);
+
+  const emailByKey = new Map<string, string>();
+  for (const row of rosterRows ?? []) {
+    const email = String(row.email ?? row.username ?? "").trim();
+    if (email) emailByKey.set(String(row.id), email);
+  }
+  for (const row of profileRows ?? []) {
+    const email = String(row.auth_email ?? row.email ?? "").trim();
+    if (email) emailByKey.set(String(row.id), email);
+  }
+
+  return contacts.map((contact) => {
+    const email = emailByKey.get(contact.key.trim());
+    return email ? { ...contact, email } : contact;
+  });
+}
 
 export const loadCommsUnreadCount = cache(async (): Promise<number> => {
   const inbox = await loadMessageSummaries("inbox", null, null);
@@ -650,6 +689,7 @@ export const loadThreadDetail = cache(
     return {
       allowReplies: row.allow_replies,
       classId: row.class_id,
+      broadcastFilter: null,
       summary: {
         id: row.id,
         subject: row.subject?.trim() || "(Sin asunto)",
@@ -693,6 +733,7 @@ export const loadThreadDetail = cache(
       })),
       recipients: recipientRows.map((recipient) => ({
         profileId: recipient.profile_id ?? recipient.recipient_key ?? "",
+        contactKey: (recipient.recipient_key ?? recipient.profile_id ?? "").trim(),
         name: personName(recipient.profiles, recipient.display_name),
         role: recipient.role,
         readAt: recipient.read_at,

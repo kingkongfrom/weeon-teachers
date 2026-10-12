@@ -46,12 +46,17 @@ live in `components/ui/page-loading-skeletons.tsx`:
 | `/comunicacion` | Hub — **Email** + **Chat** cards |
 | `/comunicacion/mensajes` | Mailbox — default **Recibidos** (`inbox` when `folder` omitted); `?folder=sent\|trash\|favorite`, `?label=<uuid>` |
 | `/comunicacion/nuevo` | Unified compose (`UnifiedMessageComposer`) |
+| `/comunicacion/nuevo?thread=<uuid>` | Redactar from thread (read → Reply / Reply all → editor) |
 | `/comunicacion/mensajes/[threadId]` | Thread detail + reply when `allow_replies` |
 | `/comunicacion/circulares`, `/comunicacion/correo` | Legacy redirects → `/comunicacion/mensajes` |
 | `/comunicacion/chat`, `/comunicacion/chat/[conversationId]` | Guardian + admin chat (one inbox) |
 | `/comunicacion/chat-admin/*` | Redirect → `/comunicacion/chat` |
 
 ## Mensajes (parity with tenants)
+
+**Canonical UX:** [`weeon-tenants/docs/comms-mailbox-ux.md`](../weeon-tenants/docs/comms-mailbox-ux.md)
+(reading pane vs full-page Redactar, Outlook reply expand). Keep ERP + teacher web in sync
+when changing mailbox or compose.
 
 Ported from `weeon-tenants/components/comms/*` (2026-09-19). Teacher scope:
 
@@ -66,6 +71,9 @@ Ported from `weeon-tenants/components/comms/*` (2026-09-19). Teacher scope:
   **Dropbox** (`NEXT_PUBLIC_GOOGLE_DRIVE_*`, `NEXT_PUBLIC_DROPBOX_APP_KEY`;
   APIs `POST /api/comms/google-drive-import`, `POST /api/comms/dropbox-import`).
   No duplicate “Content / Attach file” row on the body (`inlineEmbeds={false}`).
+- **De (compose):** read-only `Nombre <correo>` from tenant `emailDisplayName` /
+  `emailReplyTo` (`resolveTenantEmailIdentity`); thread history uses the same identity
+  when opening `?thread=`.
 - **Mailbox:** search, unread filter, favorites, custom folders (labels), drag to
   folder, signature + auto-reply settings dialogs.
 
@@ -75,7 +83,9 @@ Ported from `weeon-tenants/components/comms/*` (2026-09-19). Teacher scope:
 | --- | ---- |
 | Routes | `src/app/(app)/comunicacion/mensajes/`, `nuevo/`, `[threadId]/` |
 | Mailbox UI | `components/comms/messages-workspace.tsx` |
-| Compose | `components/comms/unified-message-composer.tsx` |
+| Reading pane | `components/comms/mailbox-reading-pane.tsx`, `thread-message-history.tsx`, `mailbox-thread-toolbar.tsx` |
+| Compose / thread reply | `unified-message-composer.tsx`, `compose-thread-read-phase.tsx`, `compose-action-bar.tsx` |
+| Tooltips (icon hints) | `components/ui/tooltip.tsx` — same as ERP; no native `title` on mailbox icons |
 | Picker | `components/comms/recipient-picker-modal.tsx` |
 | Loaders | `lib/dashboard/messages.ts`, `lib/dashboard/comms-groups.ts` |
 | Actions | `lib/teachers/comms-actions.ts` |

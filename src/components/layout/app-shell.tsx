@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { TeacherAcademicRealtime } from "@/lib/comms/teacher-academic-realtime";
 import { TeacherCommsNavRealtime } from "@/lib/comms/teacher-comms-nav-realtime";
+import { ProfilePresenceHeartbeat } from "@/components/comms/profile-presence-heartbeat";
 import type { PanelAttention } from "@/lib/dashboard/panel-attention-model";
 
 export type AppUser = {
@@ -41,6 +42,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
     <div className="dashboard-shell min-h-screen bg-background">
       <TeacherAcademicRealtime realtime={supabasePublic} />
       <TeacherCommsNavRealtime realtime={supabasePublic} />
+      <ProfilePresenceHeartbeat realtime={supabasePublic} enabled={Boolean(user)} />
       {navOpen ? (
         <button
           type="button"

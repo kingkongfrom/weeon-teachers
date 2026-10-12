@@ -1,5 +1,14 @@
 import type { RichTextDoc } from "@/lib/comms/model";
 
+export type ComposeThreadHistoryMessage = {
+  id: string;
+  fromLabel: string;
+  toLabel: string;
+  subject: string;
+  sentAt: string;
+  body: RichTextDoc;
+};
+
 export type MessageDraftSummary = {
   id: string;
   subject: string;
@@ -14,4 +23,5 @@ export type MessageDraftRecord = {
   toSelected: unknown[];
   ccSelected: { key: string; name: string }[];
   allowReplies: boolean;
+  sourceThreadHistory?: ComposeThreadHistoryMessage[];
 };

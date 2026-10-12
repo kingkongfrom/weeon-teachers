@@ -16,7 +16,7 @@ import { useT } from "@/lib/i18n/use-i18n";
 
 type BusySource = "dropbox" | "google-drive" | null;
 
-function mapCloudError(error: unknown, t: (key: string) => string): string {
+function mapCloudError(error: unknown, t: ReturnType<typeof useT>): string {
   const code = error instanceof Error ? error.message : "";
   if (code.includes("not_configured")) return t("comms.documents.cloudNotConfigured");
   if (code === "attachment_type_not_allowed") return t("comms.attachmentTypeNotAllowed");
@@ -57,6 +57,7 @@ function SourceButton({
   disabled,
   onClick,
   icon,
+  compact = false,
 }: {
   label: string;
   title: string;
@@ -65,6 +66,7 @@ function SourceButton({
   disabled?: boolean;
   onClick: () => void;
   icon: ReactNode;
+  compact?: boolean;
 }) {
   return (
     <button
@@ -73,14 +75,23 @@ function SourceButton({
       disabled={disabled || !ready}
       onClick={onClick}
       className={cn(
-        "inline-flex min-w-[4.5rem] flex-col items-center gap-1 text-xs font-semibold transition-colors",
+        "text-xs font-semibold transition-colors",
+        compact
+          ? "ui-hover inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-surface-muted/80"
+          : "inline-flex min-w-[4.5rem] flex-col items-center gap-1",
         ready
-          ? cn(messagesTone.accentText, "hover:brightness-110")
+          ? compact
+            ? "text-foreground/70 hover:text-foreground"
+            : cn(messagesTone.accentText, "hover:brightness-110")
           : "cursor-not-allowed text-foreground/30",
         disabled && ready && "opacity-50",
       )}
     >
-      {busy ? <Loader2 className="h-8 w-8 animate-spin" /> : icon}
+      {busy ? (
+        <Loader2 className={cn("animate-spin", compact ? "h-4 w-4" : "h-8 w-8")} />
+      ) : (
+        icon
+      )}
       {label}
     </button>
   );
@@ -92,12 +103,15 @@ export function CloudImportSources({
   onLocalFiles,
   onCloudImports,
   onError,
+  compact = false,
 }: {
   remainingSlots: number;
   disabled?: boolean;
   onLocalFiles: (files: File[]) => void;
+  /** When set, Google Drive picks are kept as cloud refs (download on server submit). */
   onCloudImports?: (refs: CloudImportRef[]) => void;
   onError: (message: string) => void;
+  compact?: boolean;
 }) {
   const t = useT();
   const [busySource, setBusySource] = useState<BusySource>(null);
@@ -146,22 +160,29 @@ export function CloudImportSources({
   return (
     <>
       <SourceButton
+        compact={compact}
         label={t("comms.documents.googleDrive")}
         title={googleReady ? t("comms.documents.googleDrive") : notConfiguredHint}
         ready={googleReady}
         busy={busySource === "google-drive"}
         disabled={disabled || remainingSlots <= 0 || busy}
         onClick={() => void runGoogleDrivePick()}
-        icon={<HardDrive className="h-8 w-8 text-[#4285F4]" strokeWidth={1.75} />}
+        icon={
+          <HardDrive
+            className={cn(compact ? "h-4 w-4 text-[#4285F4]" : "h-8 w-8 text-[#4285F4]")}
+            strokeWidth={1.75}
+          />
+        }
       />
       <SourceButton
+        compact={compact}
         label={t("comms.documents.dropbox")}
         title={dropboxReady ? t("comms.documents.dropbox") : notConfiguredHint}
         ready={dropboxReady}
         busy={busySource === "dropbox"}
         disabled={disabled || remainingSlots <= 0 || busy}
         onClick={() => void runDropboxPick()}
-        icon={<Cloud className="h-8 w-8" strokeWidth={1.75} />}
+        icon={<Cloud className={cn(compact ? "h-4 w-4" : "h-8 w-8")} strokeWidth={1.75} />}
       />
     </>
   );

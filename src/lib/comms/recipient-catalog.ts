@@ -76,6 +76,52 @@ export function buildBulkRecipientCatalog(groups: CommsGroupWithGrade[]): BulkRe
   return items;
 }
 
+export type BulkRecipientGroup = {
+  key: string;
+  label: string;
+  category: BulkRecipientCategory;
+  items: BulkRecipientItem[];
+};
+
+const BULK_KIND_ORDER: BroadcastKind[] = ["parents", "students", "teachers"];
+
+export function groupBulkRecipientItems(items: BulkRecipientItem[]): BulkRecipientGroup[] {
+  const groups = new Map<string, BulkRecipientGroup>();
+  const order: string[] = [];
+
+  function add(
+    key: string,
+    label: string,
+    category: BulkRecipientCategory,
+    item: BulkRecipientItem,
+  ): void {
+    let group = groups.get(key);
+    if (!group) {
+      group = { key, label, category, items: [] };
+      groups.set(key, group);
+      order.push(key);
+    }
+    group.items.push(item);
+  }
+
+  for (const item of items) {
+    const match = /^class:([^:]+):/.exec(item.id);
+    add(match ? `section:${match[1]}` : item.id, item.label, item.category, item);
+  }
+
+  for (const group of groups.values()) {
+    group.items.sort(
+      (a, b) => BULK_KIND_ORDER.indexOf(a.kind) - BULK_KIND_ORDER.indexOf(b.kind),
+    );
+  }
+
+  return order.map((key) => groups.get(key)!);
+}
+
+export function bulkItemRoleLabel(item: BulkRecipientItem): string {
+  return KIND_LABEL[item.kind];
+}
+
 /** Resolve one or more bulk picks into deduped roster keys for a single send. */
 export function recipientsFromBulkSelections(
   bulkItems: BulkRecipientItem[],
