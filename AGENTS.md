@@ -145,7 +145,7 @@ calendar) must stay aligned with this repo's loaders and RPCs.
 - Next.js **16.3.4**, React **19**, Tailwind **v4**, `motion`, `lucide-react`,
   `@supabase/ssr`, Zod.
 - App Router under `src/app/`. Routes: `/` (login), `/crear-contrasena`,
-  `/inicio` (landing / hub — 2×2 module cards + today schedule widget; see
+  `/inicio` (landing / hub — five-tile quincunx + today schedule widget; see
   `docs/inicio.md`), `/agenda` (hub: Horarios + Próximos
   eventos + Calendario), `/agenda/eventos` (read-only upcoming institution
   events), `/agenda/calendario` (month/week/day/agenda calendar mirroring the

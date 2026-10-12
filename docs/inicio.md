@@ -4,10 +4,9 @@
 
 ## One line
 
-**Panel general** is a **launch pad**, not a second horario page. Four tone
-cards link to the main modules; a compact **Hoy / Próximas clases** widget shows
-today's timetable at a glance. The full week grid lives on **`/horarios`**
-(reached via **Agenda → Horarios** or **Ver horario completo**).
+**Panel general** is a **launch pad**. A fused **five-tile grid** (2×2 plus a
+center diamond) links to the main modules. A compact **Hoy / Próximas clases**
+column shows today's timetable. The full week lives on **`/horarios`**.
 
 ## Layout
 
@@ -15,31 +14,33 @@ today's timetable at a glance. The full week grid lives on **`/horarios`**
 | ---- | ----------------- | ------ |
 | Header | School name + **Panel general** title | Same |
 | Attention | **Requiere atención** — por evaluar, justificaciones, chat/mensajes sin leer (hidden when none) | Same |
-| Left | 2×2 **hub module cards** | Stacked cards (1 col → 2 col `sm`) |
-| Right | **ScheduleUpcoming** — today + up to 3 later-week classes | Below cards |
+| Left | **Quincunx** — 2×2 corners + center diamond | Same square |
+| Right | **ScheduleUpcoming** — today + up to 3 later-week classes | Below the grid |
 
-Shell width: `app-shell.tsx` uses `max-w-[77rem]` (~20% wider than the former
-`max-w-5xl`) so cards and the schedule panel breathe on desktop.
+Shell width: `app-shell.tsx` uses `max-w-[77rem]`.
 
-## Hub cards
+## Hub grid
 
-Shared component: `components/dashboard/hub-module-card.tsx` — tone chip +
-gradient icon square, aligned with `weeon-tenants` hub tiles
-(`lib/dashboard/tones.ts` → `hubTonePill`, `TONE_AVATAR`).
+`components/dashboard/hub-quincunx-grid.tsx` — fused 2×2 plus a center rhombus.
+Light surface, soft accent wash, icon centered over its label. Comunicación
+shows an unread badge when chat + inbox > 0.
 
-| Card | Route | Stat |
-| ---- | ----- | ---- |
-| Aula virtual | `/aula-virtual` | N clases |
-| Calificaciones | `/grupos` | N materias |
-| Agenda | `/agenda` | N clases esta semana |
-| Comunicación | `/comunicacion` | N sin leer (when unread chat + inbox) |
+| Tile | Place | Route |
+| ---- | ----- | ----- |
+| Aula virtual | Top left | `/aula-virtual` |
+| Calificaciones | Top right | `/grupos` |
+| Agenda | Bottom left | `/agenda` |
+| Comunicación | Bottom right | `/comunicacion` |
+| Reportes | Center diamond | `/reportes` |
+
+`HubModuleCard` remains for other hubs (Agenda).
 
 Agenda card copy: *Horario, eventos y calendario escolar* (the hub owns horarios,
 eventos, and calendario — not duplicated on this page).
 
 ## Schedule widget
 
-`components/schedule/schedule-upcoming.tsx` (server component):
+`components/schedule/schedule-upcoming.tsx` (right column on `/inicio`):
 
 - **Requiere atención** (`panel-attention.tsx`) — links to por evaluar, unread
   chat, unread messages inbox; driven by `loadPanelAttention()`.
@@ -62,8 +63,9 @@ Agenda and pushed the hub below the fold.
 
 | File | Role |
 | ---- | ---- |
-| `src/app/(app)/inicio/page.tsx` | Loads grupos + schedule; renders hub + widget |
-| `components/dashboard/hub-module-card.tsx` | Hub tile |
+| `src/app/(app)/inicio/page.tsx` | Five-tile hub + Hoy column |
+| `components/dashboard/hub-quincunx-grid.tsx` | Five-tile home grid |
+| `components/dashboard/hub-module-card.tsx` | Tone cards on other hubs |
 | `components/schedule/schedule-upcoming.tsx` | Today / upcoming compact list |
 | `components/schedule/schedule-grid.tsx` | Full week (used on `/horarios` only) |
 | `components/layout/app-shell.tsx` | Main content max width |
@@ -74,7 +76,7 @@ Agenda and pushed the hub below the fold.
 ```powershell
 cd weeon-teachers
 npm run dev
-# /inicio — 2×2 cards left, Hoy panel right on wide screen
+# /inicio — five-tile grid left, Hoy panel right on wide screen
 # Ver horario completo → /horarios with full week grid
 # Agenda card → /agenda hub (not duplicate horario on inicio)
 ```
