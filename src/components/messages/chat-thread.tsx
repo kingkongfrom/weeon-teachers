@@ -3,17 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowUp, Loader2, MessageCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Loader2, MessageCircle, Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GuardianChatIdentity } from "@/components/messages/guardian-chat-identity";
-import { TONE_AVATAR } from "@/lib/dashboard/tones";
+import { ChatAvatar } from "@/components/comms/chat-avatar";
 import { mergeChatMessages } from "@/lib/comms/chat-live-messages";
 import {
   connectAdminTeacherChatLive,
   connectGuardianChatLive,
   type ChatLiveHandle,
 } from "@/lib/comms/chat-realtime";
-import { guardianInitial } from "@/lib/messages/chat-display";
 import { useT } from "@/lib/i18n/client";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -65,9 +63,11 @@ export function ChatThread({
   channel = "guardian",
   me,
   counterpartName,
+  counterpartAvatarUrl = null,
   classLabel = "",
   studentName = "",
   initialMessages,
+  otherReadAt = null,
   realtime,
   embedded = false,
 }: {
@@ -75,9 +75,11 @@ export function ChatThread({
   channel?: ChatChannel;
   me: string;
   counterpartName: string;
+  counterpartAvatarUrl?: string | null;
   classLabel?: string;
   studentName?: string;
   initialMessages: ChatMessageItem[];
+  otherReadAt?: string | null;
   realtime: RealtimeConfig;
   /** When true, fills a split-pane workspace (no outer card chrome). */
   embedded?: boolean;
@@ -227,60 +229,51 @@ export function ChatThread({
   }
 
   const shellClass = embedded
-    ? "flex h-full min-h-0 flex-col overflow-hidden bg-surface"
-    : "flex h-[min(512px,calc(100vh-13rem))] min-h-[288px] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm";
+    ? "wa-chat flex h-full min-h-0 flex-col overflow-hidden"
+    : "wa-chat flex h-[min(512px,calc(100vh-13rem))] min-h-[288px] flex-col overflow-hidden rounded-2xl border border-[var(--wa-border)] shadow-[var(--wa-shadow)]";
 
   return (
     <div className={shellClass}>
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 py-2.5">
         {embedded ? (
           <Link
             href="/comunicacion/chat"
-            className="ui-hover inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/60 lg:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--wa-icon)] hover:bg-[var(--wa-hover)] lg:hidden"
             aria-label={m.chatTitle}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-5 w-5" />
           </Link>
         ) : null}
-        <span
-          className={cn(
-            "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
-            isAdminChat ? TONE_AVATAR.blue : TONE_AVATAR.green,
-          )}
-        >
-          {guardianInitial(counterpartName)}
-        </span>
-        {isAdminChat ? (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{counterpartName}</p>
-            <p className="truncate text-[11px] font-medium text-foreground/45">{m.chatAdminSubtitle}</p>
-          </div>
-        ) : (
-          <GuardianChatIdentity
-            name={counterpartName}
-            classLabel={classLabel}
-            studentName={studentName}
-            variant="header"
-            className="min-w-0 flex-1"
-          />
-        )}
+        <ChatAvatar
+          name={counterpartName}
+          imageUrl={counterpartAvatarUrl}
+          className="h-10 w-10 text-sm"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[16px] font-semibold leading-tight text-[var(--wa-text)]">{counterpartName}</p>
+          <p className="truncate text-[12.5px] leading-tight text-[var(--wa-muted)]">
+            {isAdminChat ? m.chatAdminSubtitle : [classLabel, studentName].filter(Boolean).join(" · ")}
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setDeleteOpen(true)}
           disabled={deleting}
           aria-label={m.chatDelete}
-          className="ui-hover inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/45 hover:text-error disabled:opacity-40"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--wa-icon)] transition-colors hover:bg-[var(--wa-hover)] hover:text-[var(--wa-error)] disabled:opacity-40"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-[18px] w-[18px]" />
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2">
+      <div className="chat-wallpaper flex min-h-0 flex-1 flex-col overflow-y-auto px-[4%] py-3">
         <div className="mt-auto flex flex-col">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center gap-1.5 px-3 pb-3 pt-1 text-center">
-              <MessageCircle className="h-6 w-6 text-foreground/15" aria-hidden />
-              <p className="max-w-[240px] text-xs font-medium leading-relaxed text-foreground/45">
+            <div className="mx-auto flex max-w-[300px] flex-col items-center gap-3 rounded-2xl bg-[var(--wa-day)]/90 px-5 py-6 text-center shadow-sm backdrop-blur">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--wa-accent-soft)]">
+                <MessageCircle className="h-6 w-6 text-[var(--wa-accent)]" aria-hidden />
+              </span>
+              <p className="text-[13px] leading-relaxed text-[var(--wa-day-ink)]">
                 {m.chatThreadEmptyHint}
               </p>
             </div>
@@ -299,56 +292,67 @@ export function ChatThread({
               return (
                 <Fragment key={message.id}>
                   {showDay ? (
-                    <p className="py-1.5 text-center text-[11px] font-semibold text-foreground/40">
+                    <p className="mx-auto my-2.5 w-fit rounded-lg bg-[var(--wa-day)] px-3 py-1 text-[12.5px] font-medium text-[var(--wa-day-ink)] shadow-sm">
                       {dayLabel(message.createdAt, m.chatToday, m.chatYesterday)}
                     </p>
                   ) : null}
                   <div
                     className={cn(
-                      "flex",
+                      "flex px-1",
                       message.mine ? "justify-end" : "justify-start",
-                      startGroup ? "mt-1.5" : "mt-0.5",
+                      startGroup ? "mt-2" : "mt-[3px]",
+                      endGroup ? "mb-1" : "mb-0",
                     )}
                   >
                     <div
                       className={cn(
-                        "max-w-[82%] px-2.5 py-1.5 text-sm shadow-sm",
+                        "wa-bubble relative max-w-[min(78%,34rem)] px-2.5 py-1.5 text-[14.5px] leading-[20px] text-[var(--wa-bubble)] shadow-[var(--wa-bubble-shadow)]",
+                        message.mine ? "bg-[var(--wa-out)]" : "bg-[var(--wa-in)]",
+                        "rounded-lg",
                         message.mine
-                          ? "brand-gradient text-white"
-                          : "border border-border/60 bg-surface-muted text-foreground",
-                        "rounded-2xl",
-                        message.mine
-                          ? cn(!startGroup && "rounded-tr-md", !endGroup && "rounded-br-md")
-                          : cn(!startGroup && "rounded-tl-md", !endGroup && "rounded-bl-md"),
+                          ? endGroup
+                            ? "rounded-br-[3px] wa-bubble-tail-out"
+                            : ""
+                          : endGroup
+                            ? "rounded-bl-[3px] wa-bubble-tail-in"
+                            : "",
                       )}
                     >
-                      <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                      <p className="whitespace-pre-wrap break-words">
+                        {message.body}
+                        <span className="ml-2.5 inline-flex translate-y-1 items-center gap-1 align-bottom text-[11px] text-[var(--wa-time)]">
+                          {timeLabel(message.createdAt)}
+                          {message.mine ? (
+                            otherReadAt &&
+                            new Date(message.createdAt).getTime() <= new Date(otherReadAt).getTime() ? (
+                              <CheckCheck className="h-[15px] w-[15px] text-[var(--wa-check)]" aria-hidden />
+                            ) : (
+                              <Check className="h-[15px] w-[15px] text-[var(--wa-check)]" aria-hidden />
+                            )
+                          ) : null}
+                        </span>
+                      </p>
                     </div>
                   </div>
-                  {endGroup ? (
-                    <p
-                      className={cn(
-                        "mt-0.5 px-1 text-[10px] font-medium text-foreground/40",
-                        message.mine ? "text-right" : "text-left",
-                      )}
-                    >
-                      {timeLabel(message.createdAt)}
-                    </p>
-                  ) : null}
                 </Fragment>
               );
             })
           )}
           {otherTyping ? (
-            <div className="mt-1 flex justify-start">
+            <div className="mb-1 mt-2 flex justify-start px-1">
               <div
-                className="flex items-center gap-2 rounded-2xl border border-border/60 bg-surface-muted px-3 py-2"
+                className="flex items-center gap-1 rounded-lg rounded-bl-[3px] bg-[var(--wa-in)] px-3 py-2.5 shadow-[var(--wa-bubble-shadow)]"
                 aria-label={m.chatTyping}
               >
-                <span className="text-[11px] font-medium text-foreground/55">{m.chatTyping}</span>
-                <span className="weeon-typing-dot" />
-                <span className="weeon-typing-dot [animation-delay:150ms]" />
-                <span className="weeon-typing-dot [animation-delay:300ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--wa-muted)]" />
+                <span
+                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--wa-muted)]"
+                  style={{ animationDelay: "150ms" }}
+                />
+                <span
+                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--wa-muted)]"
+                  style={{ animationDelay: "300ms" }}
+                />
               </div>
             </div>
           ) : null}
@@ -357,13 +361,13 @@ export function ChatThread({
       </div>
 
       {error ? (
-        <p className="shrink-0 border-t border-border px-3 py-2 text-xs font-medium text-error">
+        <p className="shrink-0 bg-[var(--wa-composer)] px-4 py-2 text-xs font-medium text-[var(--wa-error)]">
           {error}
         </p>
       ) : null}
 
-      <div className="shrink-0 border-t border-border p-2">
-        <div className="flex items-end gap-1.5 rounded-2xl border border-border bg-background px-2 py-0.5">
+      <div className="flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5">
+        <div className="flex min-w-0 flex-1 items-end rounded-3xl bg-[var(--wa-input)] px-4 py-2 shadow-sm">
           <textarea
             value={text}
             onChange={(event) => {
@@ -379,22 +383,18 @@ export function ChatThread({
             rows={1}
             maxLength={4000}
             placeholder={m.chatPlaceholder}
-            className="max-h-24 min-h-7 flex-1 resize-none bg-transparent py-1 text-sm text-foreground outline-none placeholder:text-foreground/40"
+            className="max-h-28 min-h-6 flex-1 resize-none bg-transparent text-[15px] leading-6 text-[var(--wa-text)] outline-none placeholder:text-[var(--wa-muted)]"
           />
-          <button
-            type="button"
-            onClick={() => void send()}
-            disabled={sending || text.trim().length === 0}
-            aria-label={m.chatSend}
-            className="brand-gradient mb-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition-all hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ArrowUp className="h-4 w-4" />
-            )}
-          </button>
         </div>
+        <button
+          type="button"
+          onClick={() => void send()}
+          disabled={sending || text.trim().length === 0}
+          aria-label={m.chatSend}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--wa-accent)] text-[var(--wa-accent-ink)] shadow-sm transition-all hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-[var(--wa-search)] disabled:text-[var(--wa-muted)] disabled:shadow-none"
+        >
+          {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+        </button>
       </div>
 
       <ConfirmDialog

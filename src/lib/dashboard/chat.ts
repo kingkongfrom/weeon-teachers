@@ -123,15 +123,26 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
 
       if (studentName.trim().length === 0) continue;
 
+      const kind: "parent" | "student" =
+        contact?.kind === "student"
+          ? "student"
+          : contact?.kind === "parent"
+            ? "parent"
+            : studentName.trim() === cleanGuardianDisplayName(row.counterpart_name).trim()
+              ? "student"
+              : "parent";
+
       guardianRows.push({
         id: row.id,
         channel: "guardian",
+        kind,
         counterpartName: cleanGuardianDisplayName(row.counterpart_name),
         classLabel,
         studentName,
         lastBody: row.last_body ?? "",
         lastAt: row.last_at ?? new Date(0).toISOString(),
         unread: Boolean(row.unread),
+        avatarUrl: null,
       });
     }
   }
@@ -139,12 +150,14 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
   const adminRows: ChatConversationSummary[] = adminConversations.map((row) => ({
     id: row.id,
     channel: "admin" as const,
+    kind: "admin" as const,
     counterpartName: row.counterpartName,
     classLabel: "",
     studentName: "",
     lastBody: row.preview,
     lastAt: row.lastMessageAt,
     unread: row.unread,
+    avatarUrl: row.avatarUrl,
   }));
 
   return [...guardianRows, ...adminRows].sort(
@@ -166,6 +179,8 @@ export const loadChatConversation = cache(
         counterpartName: adminDetail.counterpartName,
         classLabel: "",
         studentName: "",
+        otherReadAt: adminDetail.otherReadAt,
+        avatarUrl: adminDetail.avatarUrl,
         messages: adminDetail.messages.map((message) => ({
           id: message.id,
           body: message.body,
@@ -180,7 +195,7 @@ export const loadChatConversation = cache(
 
     const { data: conversation, error } = await supabase
       .from("chat_conversations")
-      .select("id, teacher_profile_id, recipient_key, recipient_name")
+      .select("id, teacher_profile_id, recipient_key, recipient_name, recipient_last_read_at")
       .eq("id", conversationId)
       .maybeSingle();
     if (error || !conversation) return null;
@@ -190,7 +205,10 @@ export const loadChatConversation = cache(
       teacher_profile_id: string;
       recipient_key: string;
       recipient_name: string | null;
+      recipient_last_read_at: string | null;
     };
+
+    const otherReadAt = row.recipient_last_read_at;
 
     const mine = row.teacher_profile_id === session.userId;
     let counterpartName = cleanGuardianDisplayName(row.recipient_name);
@@ -222,6 +240,8 @@ export const loadChatConversation = cache(
       counterpartName,
       classLabel,
       studentName,
+      otherReadAt: otherReadAt ?? null,
+      avatarUrl: null,
       messages: (
         (messages ?? []) as Array<{
           id: string;

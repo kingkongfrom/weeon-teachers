@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { ThreadMessageHistory } from "@/components/comms/thread-message-history";
 import { formatThreadRecipientsLine } from "@/lib/comms/recipient-display-summary";
 import { COMMS_COMPOSE, COMMS_MESSAGES } from "@/lib/comms/paths";
@@ -113,10 +113,13 @@ export function MailboxReadingPane({
 
   if (!threadId) {
     return (
-      <div className="flex min-w-0 flex-1 items-center justify-center px-4 text-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-surface-muted/30 px-6 text-center">
         <div>
+          <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-foreground/35 shadow-sm">
+            <Mail className="h-6 w-6" aria-hidden />
+          </span>
           <p className="text-sm font-semibold text-foreground">{t("comms.emptyMessages")}</p>
-          <p className="mt-1 text-xs font-medium text-foreground/50">{t("comms.emptyMessagesBody")}</p>
+          <p className="mt-1 text-xs text-foreground/50">{t("comms.selectMessagePrompt")}</p>
         </div>
       </div>
     );

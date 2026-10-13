@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { ACTION_NAV_LINK } from "@/lib/ui/action-button";
 import { useT } from "@/lib/i18n/use-i18n";
 import { COMMS_COMPOSE, COMMS_MESSAGES, COMMS_SETTINGS } from "@/lib/comms/paths";
+import { contactAvatarColor, contactInitial } from "@/lib/comms/chat-display";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import {
   messageTrashExit,
@@ -79,17 +80,28 @@ function formatListTime(iso: string): string {
 
 const LABEL_REORDER_MIME = "application/x-weeon-label-reorder";
 
+/** List vs reading split beside folder sidebar (35% / 65%). */
 const MAIL_LIST_PANE =
   "min-w-[14rem] w-[35%] max-w-[35%] shrink-0 basis-[35%] overflow-hidden";
 const MAIL_READ_PANE =
   "flex min-h-0 min-w-[16rem] w-[65%] max-w-[65%] shrink-0 basis-[65%] flex-col overflow-hidden";
 
-const AVATAR_COLORS = ["bg-[#0f766e]", "bg-[#2563b0]", "bg-[#7c3aed]", "bg-[#d97706]", "bg-[#e11d48]"];
-
-function avatarColor(name: string): string {
-  let hash = 0;
-  for (const char of name) hash += char.charCodeAt(0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? AVATAR_COLORS[0];
+function PersonAvatar({ name, unread = false }: { name: string; unread?: boolean }) {
+  return (
+    <span className="relative mt-0.5 inline-flex h-10 w-10 shrink-0" aria-hidden>
+      <span
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-semibold text-white"
+        style={{
+          backgroundImage: `linear-gradient(140deg, ${contactAvatarColor(name)}, color-mix(in srgb, ${contactAvatarColor(name)} 62%, #000))`,
+        }}
+      >
+        {contactInitial(name)}
+      </span>
+      {unread ? (
+        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-[#0f766e]" />
+      ) : null}
+    </span>
+  );
 }
 
 const TAG_TONE: Record<string, string> = {
@@ -481,7 +493,7 @@ export function MessagesWorkspace({
   });
 
   return (
-    <div className="relative flex w-full flex-col gap-2">
+    <div className="relative flex h-full min-h-0 w-full flex-col gap-3">
       <AnimatePresence>
         {notice ? (
           <motion.div
@@ -496,86 +508,27 @@ export function MessagesWorkspace({
         ) : null}
       </AnimatePresence>
 
-      <div className="flex items-center">
-        <div className="flex w-44 shrink-0 items-center gap-1.5 px-1 lg:w-48">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen((current) => !current)}
-            className={cn(
-              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl lg:hidden",
-              messagesTone.primaryButton,
-            )}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <Link
-            href={COMMS_COMPOSE}
-            className="inline-flex h-10 w-full items-center gap-2.5 rounded-xl bg-[#0891B2] px-3 text-sm font-semibold text-white hover:bg-[#0e7490]"
-          >
-            <PenSquare className="h-4 w-4" />
-            {t("comms.composeMessage")}
-          </Link>
-        </div>
-        <div className="flex min-w-0 flex-1">
-          <div className={cn("flex items-center gap-2", MAIL_LIST_PANE)}>
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/35" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t("comms.searchMessages")}
-              className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-brand-400"
-            />
-          </div>
-          <div className="ml-2 flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setUnreadOnly((current) => !current)}
-              aria-pressed={unreadOnly}
-              className={cn(
-                "inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold",
-                unreadOnly ? messagesTone.unreadFilterActive : "border-border text-foreground/70",
-              )}
-            >
-              <Mail className="h-4 w-4" />
-              {t("comms.unreadOnly")}
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground/60"
-            >
-              <Printer className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              disabled={refreshing}
-              onClick={() => {
-                setRefreshing(true);
-                router.refresh();
-                window.setTimeout(() => setRefreshing(false), 800);
-              }}
-              title={t("comms.refreshList")}
-              aria-label={t("comms.refreshList")}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground/60 disabled:opacity-60"
-            >
-              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-            </button>
-          </div>
-          </div>
-        </div>
-      </div>
+      <h1 className="shrink-0 text-[18px] font-bold tracking-tight text-foreground">
+        {t("comms.messagesTitle")}
+      </h1>
 
-      <div className="flex h-[calc(100dvh-8rem)] min-h-[28rem] w-full min-w-0 overflow-x-auto rounded-2xl border border-border bg-surface">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         <aside
           className={cn(
-            "flex w-44 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border px-1 py-2 lg:w-48",
+            "flex w-44 shrink-0 flex-col overflow-y-auto border-r border-border lg:w-52",
             !sidebarOpen && "hidden lg:flex",
           )}
         >
-          <p className="mb-1 px-1.5 text-[10px] font-bold uppercase tracking-wider text-foreground/40">
-            {t("comms.messagesTitle")}
-          </p>
+          <div className="flex h-14 shrink-0 items-center border-b border-border px-3">
+            <Link
+              href={COMMS_COMPOSE}
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full bg-[#0891B2] px-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#0e7490]"
+            >
+              <PenSquare className="h-4 w-4" />
+              {t("comms.composeMessage")}
+            </Link>
+          </div>
+          <div className="flex flex-col gap-0.5 px-2 pb-2">
           {folders.map((item) => {
             const Icon = item.icon;
             const active =
@@ -617,7 +570,7 @@ export function MessagesWorkspace({
                 href={item.href}
                 className={cn(
                   ACTION_NAV_LINK,
-                  active ? "bg-[#0891B2] text-white" : "text-foreground/70 hover:bg-surface-muted/60 hover:text-foreground",
+                  active ? "bg-[#0891B2]/10 text-[#0e7490] dark:text-[#99f6e4]" : "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground",
                   dropTarget === item.id &&
                     item.id === "trash" &&
                     "ring-2 ring-error/40 bg-error/5",
@@ -697,7 +650,7 @@ export function MessagesWorkspace({
                       href={`${COMMS_MESSAGES}?label=${label.id}`}
                       className={cn(
                         "inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold transition-colors",
-                        active ? messagesTone.activeNav : "text-foreground/70 hover:bg-surface-muted/60",
+                        active ? "bg-[#0891B2]/10 text-foreground" : "text-foreground/70 hover:bg-foreground/[0.04]",
                       )}
                     >
                       <span
@@ -764,12 +717,70 @@ export function MessagesWorkspace({
               </button>
             </div>
           ) : null}
+          </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((current) => !current)}
+              aria-label={t("comms.messagesTitle")}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/60 hover:bg-foreground/[0.05] lg:hidden"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            <label className="flex w-[34.5%] shrink-0 items-center gap-2 rounded-full bg-surface-muted/70 px-3 py-2">
+              <Search className="h-4 w-4 shrink-0 text-foreground/40" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t("comms.searchMessages")}
+                className="h-5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/40"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => setUnreadOnly((current) => !current)}
+              aria-pressed={unreadOnly}
+              aria-label={t("comms.unreadOnly")}
+              className={cn(
+                "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold",
+                unreadOnly
+                  ? "bg-[#0891B2]/10 text-[#0e7490]"
+                  : "text-foreground/55 hover:bg-foreground/[0.05]",
+              )}
+            >
+              <Mail className="h-5 w-5" />
+              <span className="hidden sm:inline">{t("comms.unreadOnly")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              aria-label={t("comms.printThread")}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05]"
+            >
+              <Printer className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              disabled={refreshing}
+              aria-label={t("comms.refreshList")}
+              onClick={() => {
+                setRefreshing(true);
+                router.refresh();
+                window.setTimeout(() => setRefreshing(false), 800);
+              }}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05] disabled:opacity-60"
+            >
+              <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
+            </button>
+          </div>
+          <div className="flex min-h-0 min-w-0 flex-1">
         <section
-          className={cn("flex flex-col overflow-y-auto border-r border-border", MAIL_LIST_PANE)}
+          className={cn("flex min-h-0 flex-col overflow-hidden border-r border-border", MAIL_LIST_PANE)}
         >
+          <div className="min-h-0 flex-1 overflow-y-auto">
           {!labelId && folder === "inbox" && unreadInbox > 0 ? (
             <div className="border-b border-border px-2 py-2">
               <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", messagesTone.accentMuted)}>
@@ -787,7 +798,7 @@ export function MessagesWorkspace({
                 </p>
               </div>
             ) : (
-              <ul className="divide-y divide-border">
+              <ul className="flex flex-col gap-0.5 p-2">
                 {localDrafts.map((draft) => (
                   <li key={draft.id} className="group relative">
                     <div
@@ -802,11 +813,11 @@ export function MessagesWorkspace({
                         }
                       }}
                       className={cn(
-                        "relative w-full cursor-pointer px-1.5 py-2 pr-12 text-left hover:bg-surface-muted/35 sm:px-2",
+                        "relative w-full cursor-pointer rounded-xl px-2.5 py-2 pr-12 text-left hover:bg-foreground/[0.04]",
                         openDraftId === draft.id && "bg-[#0891B2]/10",
                       )}
                     >
-                      <span className="absolute right-2 top-2 text-[11px] tabular-nums text-foreground/45">
+                      <span className="absolute right-1.5 top-2 text-[11px] tabular-nums text-foreground/45">
                         {formatListTime(draft.updatedAt)}
                       </span>
                       <span className="min-w-0 flex-1">
@@ -845,7 +856,7 @@ export function MessagesWorkspace({
               </p>
             </div>
           ) : (
-            <motion.ul layout className="divide-y divide-border">
+            <motion.ul layout className="flex flex-col gap-0.5 p-2">
               <AnimatePresence mode="popLayout" initial={false}>
                 {displayThreads.map((thread) => (
                   <motion.li
@@ -877,13 +888,10 @@ export function MessagesWorkspace({
                         }
                       }}
                       className={cn(
-                        "relative w-full cursor-pointer px-1.5 py-2 text-left transition-colors hover:bg-surface-muted/35 sm:px-2",
+                        "relative w-full cursor-pointer rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-foreground/[0.04]",
                         openId === thread.id && "bg-[#0891B2]/10",
                       )}
                     >
-                      <span className="pointer-events-none absolute right-1.5 top-2 z-[1] text-[11px] tabular-nums leading-none text-foreground/45 transition-opacity group-hover:opacity-0">
-                        {formatListTime(thread.lastMessageAt)}
-                      </span>
                       {folder !== "trash" ? (
                         <div className="absolute right-0 top-0.5 z-10 flex items-center opacity-0 transition-opacity group-hover:opacity-100">
                           <button
@@ -919,67 +927,62 @@ export function MessagesWorkspace({
                           </button>
                         </div>
                       ) : null}
-                      <div className="flex min-w-0 items-start gap-1.5 pr-[3.25rem]">
-                        {thread.unread ? (
-                          <span
-                            className={cn(
-                              "mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full",
-                              messagesTone.unreadDot,
-                            )}
-                          />
-                        ) : null}
-                        <span
+                      <div className="flex items-start gap-2.5">
+                        <PersonAvatar
+                          name={
+                            thread.mine
+                              ? thread.counterpart
+                              : (thread.authorName ?? thread.counterpart)
+                          }
+                          unread={thread.unread}
+                        />
+                      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-1.5 gap-y-0.5">
+                        <p
                           className={cn(
-                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
-                            avatarColor(thread.authorName ?? thread.counterpart),
+                            "min-w-0 line-clamp-1 text-sm leading-tight",
+                            thread.unread ? "font-bold text-foreground" : "font-semibold text-foreground/85",
                           )}
                         >
-                          {(thread.authorName ?? thread.counterpart).slice(0, 1).toUpperCase()}
+                          {thread.mine ? thread.counterpart : (thread.authorName ?? thread.counterpart)}
+                        </p>
+                        <span className="shrink-0 pt-0.5 text-[11px] tabular-nums leading-none text-foreground/45 group-hover:opacity-0">
+                          {formatListTime(thread.lastMessageAt)}
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span
-                            className={cn(
-                              "block truncate text-sm leading-tight",
-                              thread.unread ? "font-bold text-foreground" : "font-semibold text-foreground/85",
-                            )}
-                          >
-                            {thread.mine ? thread.counterpart : (thread.authorName ?? thread.counterpart)}
+                        {thread.listTags.length > 0 ? (
+                          <span className="col-span-2 flex flex-wrap gap-1">
+                            {thread.listTags.map((tag) => (
+                              <span
+                                key={tag.id}
+                                className={cn(
+                                  "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                                  TAG_TONE[tag.tone] ?? TAG_TONE.slate,
+                                )}
+                              >
+                                {tag.label}
+                              </span>
+                            ))}
                           </span>
-                          {thread.listTags.length > 0 ? (
-                            <span className="mt-0.5 flex flex-wrap gap-1">
-                              {thread.listTags.map((tag) => (
-                                <span
-                                  key={tag.id}
-                                  className={cn(
-                                    "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase",
-                                    TAG_TONE[tag.tone] ?? TAG_TONE.slate,
-                                  )}
-                                >
-                                  {tag.label}
-                                </span>
-                              ))}
-                            </span>
-                          ) : null}
-                          <p
-                            className={cn(
-                              "mt-0.5 line-clamp-1 text-sm leading-snug",
-                              thread.unread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
-                            )}
-                          >
-                            {thread.subject}
+                        ) : null}
+                        <p
+                          className={cn(
+                            "col-span-2 min-w-0 line-clamp-2 text-sm leading-snug",
+                            thread.unread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
+                          )}
+                        >
+                          {thread.subject}
+                        </p>
+                        {thread.preview ? (
+                          <p className="col-span-2 min-w-0 line-clamp-2 text-xs leading-relaxed text-foreground/45">
+                            {thread.preview}
                           </p>
-                          {thread.preview ? (
-                            <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-foreground/45">
-                              {thread.preview}
-                            </p>
-                          ) : null}
-                          {thread.attachmentCount > 0 ? (
-                            <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-foreground/40">
-                              <Paperclip className="h-3 w-3" />
-                              {thread.attachmentCount}
-                            </span>
-                          ) : null}
-                        </span>
+                        ) : null}
+                        {thread.attachmentCount > 0 ? (
+                          <span className="col-span-2 inline-flex items-center gap-1 text-[11px] text-foreground/40">
+                            <Paperclip className="h-3 w-3" />
+                            {thread.attachmentCount}
+                          </span>
+                        ) : null}
+                      </div>
                       </div>
                     </div>
                     {folder === "trash" && thread.mine ? (
@@ -996,6 +999,7 @@ export function MessagesWorkspace({
               </AnimatePresence>
             </motion.ul>
           )}
+          </div>
         </section>
         <div className={MAIL_READ_PANE}>
         {folder === "draft" ? (
@@ -1013,6 +1017,7 @@ export function MessagesWorkspace({
             realtime={realtime}
           />
         )}
+        </div>
         </div>
         </div>
       </div>

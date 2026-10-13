@@ -338,10 +338,7 @@ function PickerBody({
           onConfirm(draft);
           onClose();
         }}
-        className={cn(
-          "inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold active:scale-[0.98]",
-          messagesTone.primaryButton,
-        )}
+        className="inline-flex h-10 items-center justify-center rounded-full bg-[#0891B2] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0e7490] active:scale-[0.98]"
       >
         {t("comms.confirmSelection")}
       </button>

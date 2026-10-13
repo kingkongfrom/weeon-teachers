@@ -26,7 +26,6 @@ import {
 } from "@/components/comms/recipient-picker-modal";
 import { ensureForwardSubject } from "@/lib/comms/compose-display-utils";
 import { COMMS_MESSAGES } from "@/lib/comms/paths";
-import { messagesTone } from "@/lib/comms/messages-tone";
 import { docToPlainText, emptyDoc, type RichTextDoc } from "@/lib/comms/model";
 import type { CommsGroupWithGrade } from "@/lib/comms/broadcast-filter";
 import { recipientsFromBulkSelections } from "@/lib/comms/recipient-catalog";
@@ -411,10 +410,7 @@ export function UnifiedMessageComposer({
               type="button"
               onClick={() => void send()}
               disabled={sendDisabled}
-              className={cn(
-                "inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45",
-                messagesTone.primaryButton,
-              )}
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-[#0891B2] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0e7490] disabled:cursor-not-allowed disabled:bg-foreground/10 disabled:text-foreground/40 disabled:shadow-none"
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {sending ? t("comms.sending") : t("comms.sendMessage")}

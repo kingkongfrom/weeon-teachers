@@ -1,8 +1,8 @@
 import {
   CalendarDays,
-  FileBarChart,
   GraduationCap,
-  MessageSquare,
+  Mail,
+  MessageCircle,
   Presentation,
 } from "lucide-react";
 import {
@@ -35,8 +35,6 @@ export default async function InicioPage() {
     loadGroupEventsBetween(todayISO, todayISO),
   ]);
 
-  const unreadComms = attention.unreadChatCount + attention.unreadInboxCount;
-
   const corners = [
     {
       id: "classroom",
@@ -60,12 +58,12 @@ export default async function InicioPage() {
       accent: "#F5A623",
     },
     {
-      id: "communication",
-      label: t.panel.communication.label,
-      href: "/comunicacion",
-      icon: MessageSquare,
-      accent: "#2FBF9A",
-      badgeCount: unreadComms,
+      id: "email",
+      label: t.messages.hubMessagesTitle,
+      href: "/comunicacion/mensajes",
+      icon: Mail,
+      accent: "#4F8CFF",
+      badgeCount: attention.unreadInboxCount,
     },
   ] as const satisfies readonly [
     HubQuincunxItem,
@@ -75,11 +73,12 @@ export default async function InicioPage() {
   ];
 
   const center: HubQuincunxItem = {
-    id: "reports",
-    label: t.reportes.title,
-    href: "/reportes",
-    icon: FileBarChart,
-    accent: "#E86FA0",
+    id: "chat",
+    label: t.messages.chatTitle,
+    href: "/comunicacion/chat",
+    icon: MessageCircle,
+    accent: "#00a884",
+    badgeCount: attention.unreadChatCount,
   };
 
   return (

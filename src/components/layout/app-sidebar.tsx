@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Home,
   Mail,
+  MessageCircle,
   Presentation,
   BellRing,
   FileBarChart,
@@ -14,10 +15,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
-import {
-  commsNavUnreadTotal,
-  type PanelAttention,
-} from "@/lib/dashboard/panel-attention-model";
+import type { PanelAttention } from "@/lib/dashboard/panel-attention-model";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -41,17 +39,21 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const t = useT();
-  const commsUnread = commsNavAttention ? commsNavUnreadTotal(commsNavAttention) : 0;
-
   const primary: NavLink[] = [
     { href: "/inicio", label: t.panel.title, icon: Home },
     { href: "/aula-virtual", label: t.panel.classroom.label, icon: Presentation },
     { href: "/grupos", label: t.panel.grades.label, icon: GraduationCap },
     {
-      href: "/comunicacion",
-      label: t.panel.communication.label,
+      href: "/comunicacion/mensajes",
+      label: t.messages.hubMessagesTitle,
       icon: Mail,
-      badgeCount: commsUnread,
+      badgeCount: commsNavAttention?.unreadInboxCount,
+    },
+    {
+      href: "/comunicacion/chat",
+      label: t.messages.chatTitle,
+      icon: MessageCircle,
+      badgeCount: commsNavAttention?.unreadChatCount,
     },
     { href: "/reportes", label: t.reportes.title, icon: FileBarChart },
   ];

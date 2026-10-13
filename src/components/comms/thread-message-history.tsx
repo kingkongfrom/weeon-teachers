@@ -8,10 +8,9 @@ import type {
   MessageItem,
   MessageRecipient,
 } from "@/lib/dashboard/messages";
-import { messagesTone } from "@/lib/comms/messages-tone";
+import { contactAvatarColor, contactInitial } from "@/lib/comms/chat-display";
 import {
   formatComposeLongSent,
-  initialsFromName,
 } from "@/lib/comms/compose-display-utils";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
@@ -99,13 +98,13 @@ export function ThreadMessageHistory({
               ) : null}
               <header className="flex items-start gap-3">
                 <span
-                  className={cn(
-                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-                    messagesTone.avatar,
-                  )}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[16px] font-semibold text-white"
+                  style={{
+                    backgroundImage: `linear-gradient(140deg, ${contactAvatarColor(authorName)}, color-mix(in srgb, ${contactAvatarColor(authorName)} 62%, #000))`,
+                  }}
                   aria-hidden
                 >
-                  {initialsFromName(authorName)}
+                  {contactInitial(authorName)}
                 </span>
                 <div className="min-w-0 flex-1 space-y-3">
                   <MetaRow label={t("comms.historyFrom")} value={authorName} />

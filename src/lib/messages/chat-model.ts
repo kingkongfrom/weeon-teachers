@@ -6,12 +6,14 @@ export type ChatChannel = "guardian" | "admin";
 export type ChatConversationSummary = {
   id: string;
   channel: ChatChannel;
+  kind: "admin" | "parent" | "student";
   counterpartName: string;
   classLabel: string;
   studentName: string;
   lastBody: string;
   lastAt: string;
   unread: boolean;
+  avatarUrl: string | null;
 };
 
 export type ChatMessageItem = {
@@ -29,6 +31,8 @@ export type ChatConversationDetail = {
   classLabel: string;
   studentName: string;
   messages: ChatMessageItem[];
+  otherReadAt: string | null;
+  avatarUrl: string | null;
 };
 
 /** Someone the teacher may start a chat with. */
