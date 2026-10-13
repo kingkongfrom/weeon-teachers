@@ -53,24 +53,24 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
       ) : null}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface transition-[width,transform] duration-200 lg:z-40 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface transition-[width,transform] duration-200 md:z-40 md:translate-x-0",
           navOpen ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "w-[15.3rem] lg:w-[4.5rem]" : "w-[15.3rem]",
+          collapsed ? "w-[15.3rem] md:w-[4.5rem]" : "w-[15.3rem]",
         )}
       >
         <div
           className={cn(
-            "flex h-16 items-center border-b border-border",
+            "flex h-16 shrink-0 items-center border-b border-border",
             collapsed ? "justify-center px-2" : "px-4",
           )}
         >
-          <Link href="/inicio" className="transition-opacity hover:opacity-85" aria-label="Weeon">
-            <span className={collapsed ? "lg:hidden" : undefined}>
+          <Link href="/inicio" className="transition-opacity hover:opacity-85" aria-label="Weeon School">
+            <span className={collapsed ? "md:hidden" : undefined}>
               <LogoCompact />
             </span>
             {collapsed ? (
-              <span className="hidden lg:inline-flex">
-                <LogoMark />
+              <span className="hidden md:inline-flex">
+                <LogoMark className="h-7 w-7" />
               </span>
             ) : null}
           </Link>
@@ -84,7 +84,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
         />
       </aside>
 
-      <div className={collapsed ? "lg:pl-[4.5rem]" : "lg:pl-[15.3rem]"}>
+      <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-[15.3rem]"}>
         <AppHeader
           user={user}
           supabasePublic={supabasePublic}
@@ -99,30 +99,28 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
 }
 
 function SidebarToggle({ collapsed }: { collapsed: boolean }) {
+  const hint = collapsed ? "Expandir menú" : "Reducir menú";
   return (
     <button
       type="button"
       onClick={() => writeSidebarCollapsed(!collapsed)}
-      className="absolute top-8 right-0 z-50 hidden h-7 w-7 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-foreground/55 transition-colors hover:bg-surface-muted hover:text-foreground lg:flex"
-      aria-label={collapsed ? "Expandir menú" : "Reducir menú"}
-      title={collapsed ? "Expandir menú" : "Reducir menú"}
+      className="absolute top-8 right-0 z-50 hidden h-7 w-7 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-border bg-surface text-foreground/55 transition-colors hover:bg-surface-muted hover:text-foreground md:flex"
+      aria-label={hint}
     >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden
-        className={collapsed ? "rotate-180" : undefined}
-      >
-        <path
-          d="M15 6l-6 6 6 6"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden
+          className={collapsed ? "h-4 w-4 rotate-180" : "h-4 w-4"}
+        >
+          <path
+            d="M15 6l-6 6 6 6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
   );
 }

@@ -24,7 +24,7 @@ export function AppHeader({
         <button
           type="button"
           onClick={onMenu}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-foreground/70 hover:bg-surface-muted lg:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-foreground/70 hover:bg-surface-muted md:hidden"
           aria-label="Menú"
         >
           <Menu className="h-5 w-5" />
@@ -32,7 +32,7 @@ export function AppHeader({
       ) : null}
       <Link
         href="/inicio"
-        className="shrink-0 transition-opacity hover:opacity-85 lg:hidden"
+        className="shrink-0 transition-opacity hover:opacity-85 md:hidden"
         aria-label="Ir al inicio"
       >
         <span className="hidden sm:inline-flex">

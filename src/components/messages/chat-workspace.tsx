@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, MessageCircle, MessageSquarePlus, Search, X } from "lucide-react";
+import { Loader2, MessageCircle, MessageSquarePlus, Search, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ChatAvatar } from "@/components/comms/chat-avatar";
@@ -16,7 +16,7 @@ import {
 } from "@/lib/supabase/browser";
 import { startTeacherAdminChat } from "@/lib/teachers/admin-teacher-chat-actions";
 import { startChatConversation } from "@/lib/teachers/chat-actions";
-import { COMMS_BASE, COMMS_CHAT } from "@/lib/comms/paths";
+import { COMMS_CHAT } from "@/lib/comms/paths";
 import { ChatThread } from "@/components/messages/chat-thread";
 import type {
   ChatContact,
@@ -178,15 +178,7 @@ export function ChatWorkspace({
 
   return (
     <>
-      <div className="flex h-[calc(100dvh-14rem)] min-h-[28rem] flex-col gap-3 md:h-[calc(100dvh-11rem)]">
-      <Link
-        href={COMMS_BASE}
-        className="ui-hover inline-flex w-fit shrink-0 items-center gap-1.5 text-sm font-semibold text-foreground/55 hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {comms("comms.backToHub")}
-      </Link>
-      <div className="wa-chat flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--wa-border)] bg-[var(--wa-panel)] shadow-[var(--wa-shadow)]">
+      <div className="wa-chat flex h-[calc(100dvh-12rem)] min-h-[28rem] flex-col overflow-hidden rounded-2xl border border-[var(--wa-border)] bg-[var(--wa-panel)] shadow-[var(--wa-shadow)] md:h-[calc(100dvh-9rem)]">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside
             className={cn(
@@ -373,7 +365,6 @@ export function ChatWorkspace({
             )}
           </section>
         </div>
-      </div>
       </div>
 
       <ChatPicker
