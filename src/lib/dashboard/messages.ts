@@ -7,6 +7,7 @@ import {
   type CircularAudienceSlug,
 } from "@/lib/comms/circular-audience";
 import { counterpartLabels } from "@/lib/comms/counterpart-labels";
+import { avatarUrlsByProfileId } from "@/lib/comms/profile-avatar-urls";
 import { collectEmbedPaths, injectEmbedUrls } from "@/lib/comms/rich-text-embeds";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
 import { formatSentCounterpart } from "@/lib/dashboard/message-counterpart";
@@ -51,6 +52,8 @@ export type MessageThreadSummary = {
   ccCount: number;
   listTags: MessageListTag[];
   isFavorite: boolean;
+  /** Photo of the person named on the row, when they have one. */
+  avatarUrl: string | null;
 };
 
 export type MessageItem = {
@@ -59,6 +62,7 @@ export type MessageItem = {
   body: RichTextDoc;
   createdAt: string;
   mine: boolean;
+  avatarUrl: string | null;
 };
 
 export type MessageRecipient = {
@@ -188,6 +192,35 @@ const THREAD_COLUMNS =
 
 /** Signed URLs for attachment open/download (mobile + admin detail). */
 const ATTACHMENT_SIGNED_URL_TTL_SEC = 60 * 60 * 24;
+
+function listAvatarProfileId(input: {
+  mine: boolean;
+  audience: "individual" | "group";
+  createdBy: string | null;
+  lastAuthorId: string | null | undefined;
+  recipients: Array<{ profile_id: string | null; role: "to" | "cc" }>;
+}): string | null {
+  if (input.mine) {
+    if (input.audience !== "individual") return null;
+    const tos = input.recipients.filter((row) => row.role === "to" && row.profile_id);
+    return tos.length === 1 ? tos[0].profile_id : null;
+  }
+  return input.lastAuthorId ?? input.createdBy;
+}
+
+async function fillListAvatars(
+  client: Parameters<typeof avatarUrlsByProfileId>[0],
+  rows: Array<MessageThreadSummary & { avatarProfileId: string | null }>,
+): Promise<MessageThreadSummary[]> {
+  const urls = await avatarUrlsByProfileId(
+    client,
+    rows.flatMap((row) => (row.avatarProfileId ? [row.avatarProfileId] : [])),
+  );
+  return rows.map(({ avatarProfileId, ...row }) => ({
+    ...row,
+    avatarUrl: avatarProfileId ? (urls.get(avatarProfileId) ?? null) : null,
+  }));
+}
 
 function scopeKindLabel(scope: MessageRecipientScope): string | null {
   if (scope === "parents") return "Encargados";
@@ -414,7 +447,7 @@ export const loadMessageSummaries = cache(
     }
 
     const seen = new Set<string>();
-    return rows
+    const drafts = rows
       .map((row) => {
         if (seen.has(row.id)) return null;
         seen.add(row.id);
@@ -469,7 +502,7 @@ export const loadMessageSummaries = cache(
         const recipientScope = parseRecipientScope(row.recipient_scope);
         const listMeta = buildListMeta(row, threadRecipients, mine, last);
 
-        return {
+        const summary = {
           id: row.id,
           subject: row.subject?.trim() || "(Sin asunto)",
           audience,
@@ -499,9 +532,21 @@ export const loadMessageSummaries = cache(
           ccCount: listMeta.ccCount,
           listTags: listMeta.listTags,
           isFavorite,
+          avatarUrl: null,
         } satisfies MessageThreadSummary;
+        return {
+          ...summary,
+          avatarProfileId: listAvatarProfileId({
+            mine,
+            audience,
+            createdBy: row.created_by,
+            lastAuthorId: last?.author_profile_id,
+            recipients: threadRecipients,
+          }),
+        };
       })
-      .filter((row): row is MessageThreadSummary => row !== null);
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+    return fillListAvatars(session.actor, drafts);
   },
 );
 
@@ -546,7 +591,7 @@ export const loadCircularSentHistory = cache(
       attachmentCount.set(row.thread_id, (attachmentCount.get(row.thread_id) ?? 0) + 1);
     }
 
-    return rows.map((row) => {
+    const drafts = rows.map((row) => {
       const threadRecipients = recipientRows.filter((item) => item.thread_id === row.id);
       const threadMessages = messageRows.filter((item) => item.thread_id === row.id);
       const last = threadMessages[threadMessages.length - 1];
@@ -558,7 +603,7 @@ export const loadCircularSentHistory = cache(
       const recipientScope = parseRecipientScope(row.recipient_scope);
       const listMeta = buildListMeta(row, threadRecipients, true, last);
 
-      return {
+      const summary = {
         id: row.id,
         subject: row.subject?.trim() || "(Sin asunto)",
         audience: audienceKind,
@@ -584,8 +629,20 @@ export const loadCircularSentHistory = cache(
         ccCount: listMeta.ccCount,
         listTags: listMeta.listTags,
         isFavorite: false,
+        avatarUrl: null,
       } satisfies MessageThreadSummary;
+      return {
+        ...summary,
+        avatarProfileId: listAvatarProfileId({
+          mine: true,
+          audience: audienceKind,
+          createdBy: row.created_by,
+          lastAuthorId: last?.author_profile_id,
+          recipients: threadRecipients,
+        }),
+      };
     });
+    return fillListAvatars(session.actor, drafts);
   },
 );
 
@@ -686,43 +743,61 @@ export const loadThreadDetail = cache(
       last ? { ...last, thread_id: threadId } : undefined,
     );
 
+    const summary: MessageThreadSummary = {
+      id: row.id,
+      subject: row.subject?.trim() || "(Sin asunto)",
+      audience,
+      className,
+      counterpart: mine
+        ? formatSentCounterpart(
+            recipientNames,
+            audience,
+            className,
+            recipientRows.length,
+            detailLabels,
+            recipientScope,
+          )
+        : nameOf(row.profiles) || "Administración",
+      authorName: listMeta.authorName,
+      preview: last ? docToPlainText(last.body).slice(0, 140) : "",
+      lastMessageAt: row.last_message_at,
+      unread: false,
+      recipientCount: recipientRows.length,
+      recipientScope,
+      attachmentCount: attachments.length,
+      mine,
+      folder: resolveThreadFolder(
+        stateRow?.folder,
+        mine,
+        last?.author_profile_id,
+        session.userId,
+      ),
+      allowReplies: row.allow_replies,
+      ccCount: listMeta.ccCount,
+      listTags: listMeta.listTags,
+      isFavorite: stateRow?.is_favorite ?? false,
+      avatarUrl: null,
+    };
+    const avatarProfileId = listAvatarProfileId({
+      mine,
+      audience,
+      createdBy: row.created_by,
+      lastAuthorId: last?.author_profile_id,
+      recipients: recipientRows,
+    });
+    const urls = await avatarUrlsByProfileId(session.actor, [
+      ...(avatarProfileId ? [avatarProfileId] : []),
+      ...messageRows.flatMap((message) =>
+        message.author_profile_id ? [message.author_profile_id] : [],
+      ),
+    ]);
     return {
       allowReplies: row.allow_replies,
       classId: row.class_id,
       broadcastFilter: null,
       summary: {
-        id: row.id,
-        subject: row.subject?.trim() || "(Sin asunto)",
-        audience,
-        className,
-        counterpart: mine
-          ? formatSentCounterpart(
-              recipientNames,
-              audience,
-              className,
-              recipientRows.length,
-              detailLabels,
-              recipientScope,
-            )
-          : nameOf(row.profiles) || "Administración",
-        authorName: listMeta.authorName,
-        preview: last ? docToPlainText(last.body).slice(0, 140) : "",
-        lastMessageAt: row.last_message_at,
-        unread: false,
-        recipientCount: recipientRows.length,
-        recipientScope,
-        attachmentCount: attachments.length,
-        mine,
-        folder: resolveThreadFolder(
-          stateRow?.folder,
-          mine,
-          last?.author_profile_id,
-          session.userId,
-        ),
-        allowReplies: row.allow_replies,
-        ccCount: listMeta.ccCount,
-        listTags: listMeta.listTags,
-        isFavorite: stateRow?.is_favorite ?? false,
+        ...summary,
+        avatarUrl: avatarProfileId ? (urls.get(avatarProfileId) ?? null) : null,
       },
       messages: messageRows.map((message) => ({
         id: message.id,
@@ -730,6 +805,9 @@ export const loadThreadDetail = cache(
         body: injectEmbedUrls(message.body, signedUrls) ?? message.body,
         createdAt: message.created_at,
         mine: message.author_profile_id === session.userId,
+        avatarUrl: message.author_profile_id
+          ? (urls.get(message.author_profile_id) ?? null)
+          : null,
       })),
       recipients: recipientRows.map((recipient) => ({
         profileId: recipient.profile_id ?? recipient.recipient_key ?? "",

@@ -8,7 +8,7 @@ import type {
   MessageItem,
   MessageRecipient,
 } from "@/lib/dashboard/messages";
-import { contactAvatarColor, contactInitial } from "@/lib/comms/chat-display";
+import { ChatAvatar } from "@/components/comms/chat-avatar";
 import {
   formatComposeLongSent,
 } from "@/lib/comms/compose-display-utils";
@@ -97,15 +97,11 @@ export function ThreadMessageHistory({
                 <p className="mb-4 text-sm font-medium text-foreground/45">{sectionLabel}:</p>
               ) : null}
               <header className="flex items-start gap-3">
-                <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[16px] font-semibold text-white"
-                  style={{
-                    backgroundImage: `linear-gradient(140deg, ${contactAvatarColor(authorName)}, color-mix(in srgb, ${contactAvatarColor(authorName)} 62%, #000))`,
-                  }}
-                  aria-hidden
-                >
-                  {contactInitial(authorName)}
-                </span>
+                <ChatAvatar
+                  name={authorName}
+                  imageUrl={message.avatarUrl}
+                  className="h-11 w-11 text-[16px]"
+                />
                 <div className="min-w-0 flex-1 space-y-3">
                   <MetaRow label={t("comms.historyFrom")} value={authorName} />
                   <MetaRow label={t("comms.toLabel")} value={toLabel} />

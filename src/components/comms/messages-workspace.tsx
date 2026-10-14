@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { ACTION_NAV_LINK } from "@/lib/ui/action-button";
 import { useT } from "@/lib/i18n/use-i18n";
 import { COMMS_COMPOSE, COMMS_MESSAGES, COMMS_SETTINGS } from "@/lib/comms/paths";
-import { contactAvatarColor, contactInitial } from "@/lib/comms/chat-display";
+import { ChatAvatar } from "@/components/comms/chat-avatar";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import {
   messageTrashExit,
@@ -86,17 +86,18 @@ const MAIL_LIST_PANE =
 const MAIL_READ_PANE =
   "flex min-h-0 min-w-[16rem] w-[65%] max-w-[65%] shrink-0 basis-[65%] flex-col overflow-hidden";
 
-function PersonAvatar({ name, unread = false }: { name: string; unread?: boolean }) {
+function PersonAvatar({
+  name,
+  imageUrl,
+  unread = false,
+}: {
+  name: string;
+  imageUrl?: string | null;
+  unread?: boolean;
+}) {
   return (
     <span className="relative mt-0.5 inline-flex h-10 w-10 shrink-0" aria-hidden>
-      <span
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-semibold text-white"
-        style={{
-          backgroundImage: `linear-gradient(140deg, ${contactAvatarColor(name)}, color-mix(in srgb, ${contactAvatarColor(name)} 62%, #000))`,
-        }}
-      >
-        {contactInitial(name)}
-      </span>
+      <ChatAvatar name={name} imageUrl={imageUrl} className="h-10 w-10 text-[15px]" />
       {unread ? (
         <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-[#0f766e]" />
       ) : null}
@@ -934,6 +935,7 @@ export function MessagesWorkspace({
                               ? thread.counterpart
                               : (thread.authorName ?? thread.counterpart)
                           }
+                          imageUrl={thread.avatarUrl}
                           unread={thread.unread}
                         />
                       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-1.5 gap-y-0.5">

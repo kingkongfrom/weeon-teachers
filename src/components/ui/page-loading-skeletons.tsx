@@ -265,39 +265,74 @@ export function ComunicacionHubActivitySkeleton() {
   );
 }
 
-/** {@link MessagesWorkspace} — folders + thread list + reading pane. */
+function MailThreadRowSkeleton() {
+  return (
+    <div className="flex gap-3 border-b border-border/60 px-3 py-3">
+      <Skeleton className="mt-0.5 h-10 w-10 shrink-0 rounded-full" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 max-w-[10rem] flex-1" />
+          <Skeleton className="h-3 w-10 shrink-0" />
+        </div>
+        <Skeleton className="h-3 w-full max-w-md" />
+        <Skeleton className="h-3 w-4/5 max-w-sm" />
+      </div>
+    </div>
+  );
+}
+
+function ChatListRowSkeleton() {
+  return (
+    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+      <Skeleton className="h-[49px] w-[49px] shrink-0 rounded-full" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex gap-2">
+          <Skeleton className="h-4 flex-1 max-w-[9rem]" />
+          <Skeleton className="h-3 w-12 shrink-0" />
+        </div>
+        <Skeleton className="h-3 w-full max-w-xs" />
+      </div>
+    </div>
+  );
+}
+
+/** {@link MessagesWorkspace} — folders, 35% list, 65% reading pane. */
 export function MessagesWorkspaceSkeleton() {
   return (
-    <div className="flex w-full flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Skeleton className="h-10 w-56 rounded-xl lg:w-48" />
-        <Skeleton className="h-10 w-full max-w-md flex-1 rounded-xl" />
-        <Skeleton className="h-10 w-28 rounded-xl" />
-        <Skeleton className="h-10 w-10 rounded-xl" />
-        <Skeleton className="h-10 w-10 rounded-xl" />
-      </div>
-      <div className="flex h-[calc(100dvh-8rem)] min-h-[28rem] w-full overflow-hidden rounded-2xl border border-border bg-surface">
-        <div className="hidden w-56 shrink-0 flex-col gap-1 border-r border-border px-2 py-3 lg:flex">
-          <Skeleton className="mx-2 mb-2 h-3 w-20" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-9 w-full rounded-lg" />
-          ))}
-        </div>
-        <div className="flex w-full min-w-[16rem] max-w-[22rem] shrink-0 flex-col border-r border-border">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex gap-3 border-b border-border/60 px-3 py-3">
-              <Skeleton className="mt-1.5 h-2 w-2 shrink-0 rounded-full" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-3 w-4/5" />
-              </div>
+    <div
+      className="flex h-[calc(100dvh-12rem)] min-h-[28rem] flex-col gap-3 md:h-[calc(100dvh-9rem)]"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <Skeleton className="h-6 w-44 shrink-0" />
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <aside className="hidden w-44 shrink-0 flex-col border-r border-border lg:flex lg:w-52">
+          <div className="flex h-14 shrink-0 items-center border-b border-border px-3">
+            <Skeleton className="h-9 w-full rounded-full" />
+          </div>
+          <div className="flex flex-col gap-1 px-2 py-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full rounded-lg" />
+            ))}
+          </div>
+        </aside>
+        <div className="flex min-h-0 min-w-0 flex-1">
+          <div className="flex min-w-[14rem] w-[35%] max-w-[35%] shrink-0 basis-[35%] flex-col border-r border-border">
+            <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
+              <Skeleton className="h-9 w-9 rounded-lg lg:hidden" />
+              <Skeleton className="h-9 min-w-0 flex-1 rounded-lg" />
             </div>
-          ))}
-        </div>
-        <div className="hidden min-w-[12rem] flex-1 flex-col gap-4 p-6 md:flex">
-          <Skeleton className="h-7 w-2/3 max-w-sm" />
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-32 w-full rounded-xl" />
+            {Array.from({ length: 7 }).map((_, i) => (
+              <MailThreadRowSkeleton key={i} />
+            ))}
+          </div>
+          <div className="hidden min-w-[16rem] w-[65%] max-w-[65%] shrink-0 basis-[65%] flex-col gap-4 p-6 md:flex">
+            <Skeleton className="h-7 w-2/3 max-w-sm" />
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-36 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
         </div>
       </div>
     </div>
@@ -307,29 +342,40 @@ export function MessagesWorkspaceSkeleton() {
 /** {@link ChatWorkspace} — list + thread panes. */
 export function ChatWorkspaceSkeleton() {
   return (
-    <div className="flex h-[min(576px,calc(100vh-12rem))] min-h-[304px] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)]">
-        <aside className="flex min-h-0 flex-col border-b border-border lg:border-b-0 lg:border-r">
-          <div className="space-y-1.5 border-b border-border px-3 py-2">
-            <Skeleton className="h-8 w-full rounded-xl" />
-            <Skeleton className="h-8 w-full rounded-xl" />
-            <Skeleton className="h-8 w-full rounded-xl" />
-          </div>
-          <div className="flex flex-col gap-1 p-1.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-2 rounded-xl px-2 py-2">
-                <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-3 w-2/3" />
-                </div>
+    <div
+      className="h-[calc(100dvh-12rem)] min-h-[28rem] md:h-[calc(100dvh-9rem)]"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex h-full min-h-0 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
+          <aside className="flex min-h-0 flex-col border-r border-border bg-surface-muted/20">
+            <div className="shrink-0 space-y-3 px-4 pb-3 pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-7 w-36" />
+                <Skeleton className="h-10 w-10 rounded-full" />
               </div>
-            ))}
+              <Skeleton className="h-10 w-full rounded-full" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-24 rounded-full" />
+                <Skeleton className="h-8 w-28 rounded-full" />
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 space-y-0.5 overflow-hidden px-2 pb-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ChatListRowSkeleton key={i} />
+              ))}
+            </div>
+          </aside>
+          <div className="hidden min-h-0 flex-col gap-4 p-6 lg:flex">
+            <div className="flex items-center gap-3 border-b border-border pb-4">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <Skeleton className="h-5 w-40" />
+            </div>
+            <Skeleton className="min-h-[12rem] flex-1 w-full rounded-2xl" />
+            <Skeleton className="h-12 w-full rounded-full" />
           </div>
-        </aside>
-        <div className="hidden min-h-0 flex-col p-4 lg:flex">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="mt-4 h-full min-h-[12rem] w-full rounded-xl" />
         </div>
       </div>
     </div>
@@ -370,6 +416,30 @@ export function CalendarioBoardSkeleton() {
         </div>
       </div>
     </>
+  );
+}
+
+/** Full email thread (`CommsThreadClient` / thread detail route). */
+export function CommsThreadDetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-8" role="status" aria-live="polite" aria-busy="true">
+      <header className="flex flex-col gap-3">
+        <BackLinkSkeleton />
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-full max-w-lg" />
+          <Skeleton className="h-4 w-56 max-w-full" />
+        </div>
+      </header>
+      <div className="rounded-2xl border border-border bg-surface p-5">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="mt-2 h-4 w-64 max-w-full" />
+        <div className="mt-4 flex flex-col gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
