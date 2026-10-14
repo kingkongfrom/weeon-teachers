@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { loadTeacherRosterIds } from "@/lib/dashboard/teacher-scope";
 import { createSessionClient } from "@/lib/supabase/session";
 
 export type AssignedSubject = {
@@ -56,4 +58,37 @@ export async function loadTeacherSubjectsByClass(
     );
   }
   return result;
+}
+
+/** Unique subjects this teacher is assigned on the timetable, across groups. */
+export async function loadSignedInTeacherSubjects(): Promise<AssignedSubject[]> {
+  const session = await getTeacherSession();
+  if (!session) return [];
+
+  const supabase = await createSessionClient();
+  const teacherIds = await loadTeacherRosterIds(supabase, session.userId);
+  if (teacherIds.length === 0) return [];
+
+  const { data } = await supabase
+    .from("class_lessons")
+    .select("subject_id, subjects(id, name, color)")
+    .in("teacher_id", teacherIds)
+    .not("subject_id", "is", null);
+
+  const byId = new Map<string, AssignedSubject>();
+  for (const row of data ?? []) {
+    const subjectRaw = row.subjects as
+      | { id: string; name: string; color: string | null }
+      | Array<{ id: string; name: string; color: string | null }>
+      | null;
+    const subject = Array.isArray(subjectRaw) ? subjectRaw[0] : subjectRaw;
+    if (!subject?.id || byId.has(subject.id)) continue;
+    byId.set(subject.id, {
+      id: subject.id,
+      name: subject.name,
+      color: subject.color,
+    });
+  }
+
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
 }

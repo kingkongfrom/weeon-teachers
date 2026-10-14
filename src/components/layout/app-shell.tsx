@@ -25,6 +25,7 @@ export type AppUser = {
   tenantName: string | null;
   logoUrl: string | null;
   avatarStoragePath: string | null;
+  subjects: { id: string; name: string; color: string | null }[];
 };
 
 type AppShellProps = {

@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadPanelAttention } from "@/lib/dashboard/panel-attention";
 import { loadSchoolLogoUrl, loadSchoolName } from "@/lib/dashboard/school";
+import { loadSignedInTeacherSubjects } from "@/lib/dashboard/teacher-assignments";
 import { requireSupabasePublicEnv } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect("/crear-contrasena");
   }
 
-  const [tenantName, logoUrl, attention] = await Promise.all([
+  const [tenantName, logoUrl, attention, subjects] = await Promise.all([
     loadSchoolName(session.tenantId),
     loadSchoolLogoUrl(session.tenantId),
     loadPanelAttention(),
+    loadSignedInTeacherSubjects(),
   ]);
   const supabasePublic = requireSupabasePublicEnv();
 
@@ -40,6 +42,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         tenantName,
         logoUrl,
         avatarStoragePath: session.avatarStoragePath,
+        subjects,
       }}
     >
       {children}

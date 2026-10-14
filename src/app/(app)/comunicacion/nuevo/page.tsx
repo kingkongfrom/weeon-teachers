@@ -41,7 +41,7 @@ export default async function NewMessagePage({
       contacts={contacts}
       groups={groups}
       initialDraft={seed}
-      persistDraft={Boolean(initialDraft)}
+      persistDraft
       fromLabel={fromLabel}
     />
   );

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ChevronRight, Globe, Loader2, Lock, LogOut, Moon, X } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { useCenteredLogo } from "@/lib/dashboard/use-centered-logo";
+import { SubjectChips } from "@/components/grupos/subject-chips";
 import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
 import { Switch } from "@/components/ui/switch";
 import { useTheme, setTheme } from "@/lib/theme/theme-store";
@@ -237,6 +238,8 @@ export function SettingsDrawer({
                         </div>
                       </div>
 
+                      <SubjectChips subjects={user.subjects} size="md" className="mt-3" />
+
                       {photoNotice ? (
                         <p className="mt-2 text-sm font-medium text-foreground/70">{photoNotice}</p>
                       ) : null}
@@ -321,9 +324,9 @@ export function SettingsDrawer({
                       <form action={signOutTeacher}>
                         <button
                           type="submit"
-                          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[20px] border border-[#d94848] bg-transparent px-4 text-sm font-semibold text-[#d94848] transition-colors hover:bg-[#d94848]/14"
                         >
-                          <LogOut className="h-5 w-5" />
+                          <LogOut className="h-5 w-5 -scale-x-100" />
                           {t.drawer.logout}
                         </button>
                       </form>
