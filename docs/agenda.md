@@ -58,9 +58,9 @@ every period in grupos where they have gradebook or homeroom access.
 
 | Surface | Loader | Filter |
 | ------- | ------ | ------ |
-| Student mobile `/student/schedule` | `listMyLessons()` | RLS: enrolled grupos → **all** periods in those classes |
+| Student mobile `/student/agenda` (Horarios) | `listMyLessons()` | RLS: enrolled grupos → **all** periods in those classes |
 | Teacher web `/horarios` | `loadTeacherSchedule()` | `class_lessons.teacher_id IN teacher_roster_ids()` |
-| Teacher mobile `/teacher/horario`, **Hoy**, asistencia | `listAssignedLessons()` | Same filter as web |
+| Teacher mobile `/teacher/agenda` (Horarios), **Hoy**, asistencia | `listAssignedLessons()` | Same filter as web |
 
 Implementation: `src/lib/dashboard/schedule.ts` resolves roster ids via
 `loadTeacherRosterIds()` / RPC `teacher_roster_ids()`, then queries

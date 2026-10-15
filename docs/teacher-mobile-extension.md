@@ -48,7 +48,7 @@ Start at **[`weeon-mobile/docs/teacher-mobile.md`](../../weeon-mobile/docs/teach
 | Libro de clase (attendance) | `docs/aula-virtual.md` § Asistencia — **also on mobile** `/teacher/asistencia` |
 | Chat with guardians | `docs/comunicacion.md` § Chat |
 | Correo compose / reply | `docs/comunicacion.md` § Correo |
-| Horario + upcoming events | `docs/agenda.md` — **`listAssignedLessons()`** on mobile, same `teacher_id` filter as web |
+| Agenda (Horarios + Calendario) | `docs/agenda.md` — **`listAssignedLessons()`** on mobile Horarios, same `teacher_id` filter as web |
 
 Parent **Chat** on mobile is already live; teacher **Chat** on mobile is the
 natural next step using the same `chat_*` schema and Realtime patterns as web
