@@ -118,26 +118,6 @@ const es = {
       noEventsDay: "Sin eventos este día.",
       noUpcoming: "No hay eventos próximos.",
       more: (count: number) => `+${count} más`,
-      subscribe: {
-        toolbar: "Sincronizar",
-        title: "Calendario en tu teléfono",
-        dialogLead: "Elige tu dispositivo y escanea el código (solo lectura).",
-        choosePlatform: "¿Qué dispositivo vas a usar?",
-        platformAndroid: "Android",
-        platformApple: "Mac / iPhone",
-        scopeNote:
-          "Solo eventos del colegio — no tu horario ni exámenes del aula virtual.",
-        qrHintAndroid:
-          "Escanea con la cámara del celular. Abre con Google Calendar y confirma la suscripción.",
-        qrHintApple:
-          "iPhone o iPad: escanea con Cámara y elige «Suscribirse al calendario». Mac: mismo código o copia el enlace en Calendario → Nueva suscripción.",
-        advanced: "Más opciones",
-        copyGoogle: "Copiar enlace (Google Calendar)",
-        copyWebcal: "Copiar enlace (Calendario Apple)",
-        copied: "Enlace copiado",
-        rotate: "Invalidar enlace y generar otro",
-        rotateHint: "Usa esto si compartiste el código o el enlace por error.",
-      },
     },
     events: {
       empty: "No hay eventos próximos publicados por el colegio.",
@@ -350,6 +330,10 @@ const es = {
     create: "Crear",
     cancel: "Cancelar",
     error: "No se pudo crear el tema.",
+    delete: "Eliminar",
+    deleteConfirm: "¿Eliminar este tema?",
+    deleteBody: "Las tareas y materiales de este tema quedan en Sin tema.",
+    deleteError: "No se pudo eliminar el tema.",
     selectLabel: "Tema",
   },
   messages: {
@@ -1141,25 +1125,6 @@ const en: Messages = {
       noEventsDay: "No events this day.",
       noUpcoming: "No upcoming events.",
       more: (count: number) => `+${count} more`,
-      subscribe: {
-        toolbar: "Sync",
-        title: "Calendar on your phone",
-        dialogLead: "Pick your device, then scan the code (read-only feed).",
-        choosePlatform: "Which device will you use?",
-        platformAndroid: "Android",
-        platformApple: "Mac / iPhone",
-        scopeNote: "School events only — not your schedule or aula virtual exams.",
-        qrHintAndroid:
-          "Scan with your phone camera. Open in Google Calendar and confirm the subscription.",
-        qrHintApple:
-          "iPhone or iPad: scan with Camera and tap Subscribe to Calendar. Mac: same code, or paste the link in Calendar → New Subscription.",
-        advanced: "More options",
-        copyGoogle: "Copy link (Google Calendar)",
-        copyWebcal: "Copy link (Apple Calendar)",
-        copied: "Link copied",
-        rotate: "Revoke link and create a new one",
-        rotateHint: "Use this if you shared the code or link by mistake.",
-      },
     },
     events: {
       empty: "No upcoming events have been published by the school.",
@@ -1373,6 +1338,10 @@ const en: Messages = {
     create: "Create",
     cancel: "Cancel",
     error: "Couldn't create the topic.",
+    delete: "Delete",
+    deleteConfirm: "Delete this topic?",
+    deleteBody: "Assignments and materials in this topic move to No topic.",
+    deleteError: "Couldn't delete the topic.",
     selectLabel: "Topic",
   },
   messages: {

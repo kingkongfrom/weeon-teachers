@@ -130,29 +130,26 @@ Institution events are colour-coded by type (`STYLES` in the component); aula
 virtual exams use the **rose** tone. All times are 24h. Read-only — no
 create/delete here. There is no legend/sidebar (the grid carries the colours).
 
-### Subscribe (ICS / WebCal)
+### Sync to a phone (ICS / WebCal)
 
-Teachers can add the **institution calendar only** from `/agenda/calendario`:
+Syncing the institution calendar to a phone happens in the **teacher mobile
+app** (`weeon-mobile`), not here — see
+[`../../weeon-mobile/docs/agenda.md`](../../weeon-mobile/docs/agenda.md)
+(Agenda → Calendario → **Añadir a Google Calendar**). The web calendar no longer
+shows a QR/`Sincronizar` dialog; that path was redundant with the in-app button.
 
-- Toolbar **Sincronizar** (QR icon) opens a sheet/dialog — **Mac / iPhone** is the
-  default; pick **Android** to swap the QR (WebCal vs HTTPS). Copy-link and token
-  rotate under **Más opciones**.
-- `components/agenda/institution-calendar-subscribe.tsx` — trigger + modal;
-  wired from `calendar-view.tsx` when `feedLinks` is passed from the page.
-- `lib/calendar/institution-feed.ts` — mint/resolve `calendar_feed_tokens`
-  (service role), filter rows (`lesson_id` null, `event_type != exam`), audience
-  same intent as `calendar_events_member_select` (school admins see all
-  institution rows in the tenant).
-- `app/api/calendar/feed/[token]/route.ts` — public `text/calendar` response;
-  auth is the UUID token (optional `.ics` suffix). Set `WEEON_TEACHERS_ORIGIN`
-  in production so URLs and QR match `https://teachers.weeon.school`.
+- The feed token is minted by **`weeon-tenants`** `POST /api/calendar/feed-link`
+  and the ICS is served by the ERP `GET /api/calendar/feed/{token}.ics` (table
+  `calendar_feed_tokens`; visibility via `calendar_events_for_feed`). Teacher web
+  does not mint or serve the feed.
+- The feed includes every `calendar_events` row the member can see, **including
+  exams and activities tied to a lesson**, plus aula virtual exam due dates.
 
-**Not in the feed:** horario / `lesson_id` events, `event_type = exam`, and aula
-virtual `assessments` overlays (those stay in the in-app calendar only). **No
-horario / class-schedule ICS** — assigned `class_lessons` stay in-app only
-(`/horarios`).
+**Not in the feed:** the weekly horario (`class_lessons` blocks). Those stay
+in-app only (`/horarios`).
 
-Schema: `weeon-tenants` migration `20261006200000_calendar_feed_tokens.sql`.
+Schema: `weeon-tenants` migrations `20261006200000_calendar_feed_tokens.sql`,
+`20261014290000_calendar_events_for_feed.sql`.
 
 Route **`loading.tsx`** files for Agenda routes reuse
 `components/ui/page-loading-skeletons.tsx` (`CalendarioBoardSkeleton`, etc.).
