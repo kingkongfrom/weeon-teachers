@@ -22,6 +22,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Static assets are not authored source (e.g. vendored worker bundles).
+    "public/**",
   ]),
 ]);
 
