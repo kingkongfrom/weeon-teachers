@@ -98,11 +98,52 @@ export function hubTonePill(tone: Tone) {
   return {
     active: `${TONE_CARD[tone]} ${TONE_PILL_RING[tone]}`,
     wash: `${TONE_WASH[tone]} ${TONE_PILL_RING[tone]}`,
+    /** Soft tile fill without a ring — fused grids draw their own dividers. */
+    fill: TONE_WASH[tone],
     label: TONE_PILL_LABEL[tone],
     countOnActive: TONE_PILL_COUNT[tone],
     countIdle: TONE_COUNT_IDLE[tone],
     avatar: TONE_AVATAR[tone],
   };
+}
+
+/** Selected segment inside a track — wash and ink, no outline. */
+export function hubToneSegment(tone: Tone, active: boolean): string {
+  if (active) return `${TONE_WELL[tone]} shadow-sm`;
+  return "text-foreground/55 hover:bg-surface/80 hover:text-foreground";
+}
+
+/** Content-sized cluster. The selected item carries the wash; the rest stay quiet. */
+export const SEGMENT_TRACK =
+  "inline-flex w-fit max-w-full flex-wrap items-center gap-1 self-start";
+
+/** Wash, ring, and ink together — banners, event chips, and filter fills. */
+export function hubToneSurface(tone: Tone): string {
+  const pill = hubTonePill(tone);
+  return `${pill.wash} ${pill.label}`;
+}
+
+const EVENT_HUB_TONE: Record<string, Tone> = {
+  academic: "blue",
+  meeting: "purple",
+  holiday: "yellow",
+  activity: "green",
+  exam: "rose",
+};
+
+/** Agenda event type → hub tone. Institutional stays neutral. */
+export function eventHubTone(type: string): Tone | null {
+  return EVENT_HUB_TONE[type] ?? null;
+}
+
+export function eventHubChip(type: string): string {
+  const tone = eventHubTone(type);
+  return tone ? hubToneSurface(tone) : "border border-border bg-surface text-foreground/70";
+}
+
+export function eventHubDot(type: string): string {
+  const tone = eventHubTone(type);
+  return tone ? TONE_AVATAR[tone] : "bg-foreground/35";
 }
 
 export function hubFilterChipClass(tone: Tone, active: boolean): string {
@@ -124,9 +165,9 @@ export const TONE_PILL: Record<Tone, string> = {
 /** Per-item tone rotation for lists of cards (grupos, student subjects). */
 export const TONE_CYCLE: Tone[] = ["blue", "purple", "green", "yellow", "rose"];
 
-/** Aula virtual class cards — same chip / title / ring, one teal. */
+/** Aula virtual class cards — hub blue chip, title, and ring. */
 export const AULA_TEAL = {
-  card: "bg-surface shadow-sm ring-1 ring-[#7dd3e8]/80 dark:ring-[#155e75]/80",
-  label: "text-[#0e7490] dark:text-[#67e8f9]",
-  avatar: "bg-[#0891B2]",
+  card: "bg-surface shadow-sm ring-1 ring-border",
+  label: hubTonePill("blue").label,
+  avatar: TONE_AVATAR.blue,
 } as const;

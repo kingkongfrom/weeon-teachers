@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { loadUpcomingEvents } from "@/lib/dashboard/calendar";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 import { getT } from "@/lib/i18n/server";
+import { eventHubChip } from "@/lib/dashboard/tones";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -76,19 +77,11 @@ function DateChip({ date }: { date: string }) {
 }
 
 function EventTypeBadge({ type, label }: { type: TeacherCalendarEvent["eventType"]; label: string }) {
-  const tone =
-    type === "exam"
-      ? "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
-      : type === "holiday"
-        ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-        : type === "activity"
-          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-          : "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300";
   return (
     <span
       className={cn(
         "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-        tone,
+        eventHubChip(type),
       )}
     >
       {label}

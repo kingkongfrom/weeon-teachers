@@ -46,4 +46,5 @@ export type ChatContact = {
   classId?: string;
   /** Who this row is. Omitted on older guardian-only rows. */
   kind?: "admin" | "parent" | "student";
+  avatarUrl?: string | null;
 };

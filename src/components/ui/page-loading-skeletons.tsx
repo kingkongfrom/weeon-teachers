@@ -94,7 +94,7 @@ export function WeekNavigatorSkeleton() {
   );
 }
 
-/** Aula virtual {@link ClassCard} — rounded-3xl teal-style tile. */
+/** Aula virtual {@link ClassCard} — rounded-3xl hub tile. */
 export function ClassCardSkeleton() {
   return (
     <div className="flex flex-col overflow-hidden rounded-3xl border border-border bg-surface">
@@ -154,7 +154,7 @@ export function GrupoCardSkeleton() {
 /** `/aula-virtual/[classId]` hero banner. */
 export function AulaClassHeroSkeleton() {
   return (
-    <div className="rounded-3xl border border-border bg-teal-50/40 p-6 dark:bg-teal-950/20">
+    <div className="rounded-3xl border border-border bg-surface p-6">
       <div className="flex items-start gap-4">
         <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
         <div className="min-w-0 flex-1 space-y-2">
@@ -167,19 +167,19 @@ export function AulaClassHeroSkeleton() {
   );
 }
 
-/** {@link ClassTabs} tab bar (5 tabs). */
+/** {@link ClassTabs} tab bar. */
 export function ClassTabsBarSkeleton() {
   return (
-    <div className="flex gap-1 overflow-hidden border-b border-border">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="mb-1 h-10 w-24 shrink-0 rounded-t-lg sm:w-28" />
+    <div className="flex flex-wrap gap-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} className="h-8 w-24 rounded-full" />
       ))}
     </div>
   );
 }
 
-/** Stream / novedades tab — composer + post cards. */
-export function ClassStreamPanelSkeleton() {
+/** Class tab body while the workspace loads. */
+export function ClassTabPanelSkeleton() {
   return (
     <div className="flex flex-col gap-4 pt-5">
       <Skeleton className="h-12 w-full rounded-xl" />

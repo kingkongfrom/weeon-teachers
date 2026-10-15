@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TONE_PILL } from "@/lib/dashboard/tones";
+import { hubToneSegment, SEGMENT_TRACK } from "@/lib/dashboard/tones";
 import { useT } from "@/lib/i18n/client";
 import { AssessmentsPanel } from "@/components/assessments/assessments-panel";
 import { MaterialsPanel } from "@/components/classroom/materials-panel";
@@ -87,7 +87,7 @@ export function ClassworkPanel({
   return (
     <div className="flex flex-col gap-6">
       {subjects.length > 1 ? (
-        <div className="no-scrollbar flex flex-wrap gap-2">
+        <div className={SEGMENT_TRACK}>
           {subjects.map((option) => {
             const active = option.id === selectedSubjectId;
             return (
@@ -95,10 +95,8 @@ export function ClassworkPanel({
                 key={option.id}
                 href={`/aula-virtual/${classId}?subject=${option.id}&tab=trabajo`}
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
-                  active
-                    ? TONE_PILL.blue
-                    : "ui-hover border border-border bg-surface text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+                  "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                  hubToneSegment("blue", active),
                 )}
               >
                 {option.name}
@@ -112,16 +110,15 @@ export function ClassworkPanel({
         <span className="text-xs font-bold uppercase tracking-wide text-foreground/45">
           {t.topics.title}
         </span>
+        <div className={SEGMENT_TRACK}>
         {chips.map((chip) => (
           <button
             key={chip.id}
             type="button"
             onClick={() => setSelected(chip.id)}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-              selected === chip.id
-                ? TONE_PILL.purple
-                : "ui-hover border border-border bg-surface text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+              "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              hubToneSegment("purple", selected === chip.id),
             )}
           >
             {chip.label}
@@ -159,12 +156,13 @@ export function ClassworkPanel({
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground/55 transition-colors hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
             {t.topics.new}
           </button>
         )}
+        </div>
       </div>
 
       {error ? <p className="text-sm font-medium text-error">{error}</p> : null}

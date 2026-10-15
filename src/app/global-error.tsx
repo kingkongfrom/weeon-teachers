@@ -1,10 +1,33 @@
 "use client";
 
 import { useEffect } from "react";
-
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { ErrorScreen } from "@/components/brand/error-screen";
 import { reportRenderError } from "@/lib/observability/report-render-error";
+import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme/theme";
+import "./globals.css";
 
-/** Root error boundary — renders its own html/body (replaces the root layout). */
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+/**
+ * Root error boundary. Replaces the root layout, so it owns html/body, the
+ * theme class, and the global stylesheet. Dark and light follow the same
+ * `not-found-bg` field as the 404.
+ */
 export default function GlobalError({
   error,
   reset,
@@ -17,40 +40,18 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="es">
-      <body>
-        <div
-          style={{
-            minHeight: "100vh",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 12,
-            padding: 24,
-            textAlign: "center",
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <h1 style={{ fontSize: 20, fontWeight: 700 }}>Algo salió mal</h1>
-          <button
-            type="button"
-            onClick={reset}
-            style={{
-              marginTop: 8,
-              padding: "10px 18px",
-              borderRadius: 12,
-              border: "none",
-              background: "#2b59ff",
-              color: "#fff",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Reintentar
-          </button>
-        </div>
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+    >
+      <body className="flex min-h-full flex-col">
+        <script
+          id="weeon-theme"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
+        />
+        <ErrorScreen error={error} reset={reset} />
       </body>
     </html>
   );

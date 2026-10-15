@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { TONE_PILL, type Tone } from "@/lib/dashboard/tones";
+import { hubToneSegment, SEGMENT_TRACK, type Tone } from "@/lib/dashboard/tones";
 import { getT } from "@/lib/i18n/server";
 
 export type GrupoSection = "grades" | "attendance" | "conduct";
@@ -40,10 +40,7 @@ export async function GrupoSectionTabs({
   ];
 
   return (
-    <nav
-      className="no-scrollbar flex gap-2 overflow-x-auto"
-      aria-label={tabs.aria}
-    >
+    <nav className={SEGMENT_TRACK} aria-label={tabs.aria}>
       {items.map((item) => {
         const isActive = item.id === active;
         return (
@@ -51,10 +48,8 @@ export async function GrupoSectionTabs({
             key={item.id}
             href={item.href}
             className={cn(
-              "shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
-              isActive
-                ? TONE_PILL[SECTION_TONE[item.id]]
-                : "ui-hover border border-border bg-surface text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+              "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+              hubToneSegment(SECTION_TONE[item.id], isActive),
             )}
             aria-current={isActive ? "page" : undefined}
           >

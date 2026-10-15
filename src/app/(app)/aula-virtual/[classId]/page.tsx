@@ -8,7 +8,6 @@ import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassMaterials } from "@/lib/dashboard/materials";
 import { loadClassAssessments } from "@/lib/dashboard/assessments";
 import { loadClassTurnIns } from "@/lib/dashboard/submissions";
-import { loadClassStream } from "@/lib/dashboard/stream";
 import { loadClassTopics } from "@/lib/dashboard/topics";
 import { loadClassAttendance } from "@/lib/dashboard/attendance";
 import { loadJustificationInbox } from "@/lib/dashboard/justification-inbox";
@@ -42,12 +41,11 @@ export default async function AulaVirtualClassPage({
     lesson && /^[0-9a-fA-F-]{36}$/.test(lesson) ? lesson : null;
 
   const { grupo, students } = detail;
-  const [session, materials, rawAssessments, stream, topics, attendanceMarks, turnIns, pendingJustifications] =
+  const [session, materials, rawAssessments, topics, attendanceMarks, turnIns, pendingJustifications] =
     await Promise.all([
       getTeacherSession(),
       loadClassMaterials(classId),
       loadClassAssessments(classId),
-      loadClassStream(classId),
       loadClassTopics(classId),
       loadClassAttendance(classId, attendanceDate),
       loadClassTurnIns(classId, students),
@@ -107,7 +105,6 @@ export default async function AulaVirtualClassPage({
         students={students}
         materials={materials}
         assessments={assessments}
-        stream={stream}
         topics={topics}
         selectedSubjectId={selectedSubjectId}
         subjects={subjects.map((option) => ({ id: option.id, name: option.name }))}

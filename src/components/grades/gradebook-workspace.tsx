@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
-import { TONE_PILL } from "@/lib/dashboard/tones";
+import { hubToneSegment, SEGMENT_TRACK } from "@/lib/dashboard/tones";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EducationalSupportBadgeButton } from "@/components/educational-supports/support-badge-button";
 import { EducationalSupportWorkflowDialog } from "@/components/educational-supports/support-workflow-dialog";
@@ -437,7 +437,7 @@ export function GradebookWorkspace({
       </header>
 
       {classContext.subjects.length > 1 ? (
-        <div className="no-scrollbar flex gap-2 overflow-x-auto">
+        <div className={SEGMENT_TRACK}>
           {classContext.subjects.map((option) => {
             const active = option.id === subjectId;
             return (
@@ -447,9 +447,7 @@ export function GradebookWorkspace({
                 onClick={() => void changeSubject(option.id)}
                 className={cn(
                   "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
-                  active
-                    ? TONE_PILL.blue
-                    : "ui-hover border border-border bg-surface text-foreground/60 hover:bg-surface-muted hover:text-foreground",
+                  hubToneSegment("blue", active),
                 )}
               >
                 {option.name}

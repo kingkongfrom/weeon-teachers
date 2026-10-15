@@ -22,7 +22,7 @@ import { schoolCycleName } from "@/lib/dashboard/school-cycles";
 import { schoolWeekday } from "@/lib/attendance/model";
 import { EventFormDialog } from "@/components/agenda/event-form-dialog";
 import type { LessonChoice } from "@/lib/agenda/lesson-choice";
-import { hubTonePill, type Tone } from "@/lib/dashboard/tones";
+import { hubTonePill, eventHubChip, type Tone } from "@/lib/dashboard/tones";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 import type { TeacherLesson } from "@/lib/dashboard/schedule";
 
@@ -205,15 +205,18 @@ export function LessonCard({
                         {events.map((event) => (
                           <li
                             key={event.id}
-                            className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm dark:bg-amber-950/40"
+                            className={cn(
+                              "flex items-center gap-2 rounded-xl px-3 py-2 text-sm",
+                              eventHubChip(event.eventType),
+                            )}
                           >
-                            <span className="rounded-full bg-amber-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">
+                            <span className="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide dark:bg-white/15">
                               {event.eventType === "exam" ? a.types.exam : a.types.activity}
                             </span>
-                            <span className="min-w-0 flex-1 truncate font-semibold text-amber-900 dark:text-amber-100">
+                            <span className="min-w-0 flex-1 truncate font-semibold">
                               {event.title}
                             </span>
-                            <span className="shrink-0 text-xs font-medium text-amber-800/80 dark:text-amber-200/80">
+                            <span className="shrink-0 text-xs font-medium opacity-80">
                               {event.allDay || !event.startTime
                                 ? a.form.allDay
                                 : `${event.startTime}${event.endTime ? `–${event.endTime}` : ""}`}
@@ -241,7 +244,7 @@ export function LessonCard({
                         <Link
                           href={`/aula-virtual/${lesson.classId}?tab=asistencia&lesson=${lesson.id}`}
                           onClick={() => setOpen(false)}
-                          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
+                          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl brand-gradient px-4 text-sm font-semibold text-white transition-all hover:opacity-90"
                         >
                           <CalendarCheck className="h-4 w-4" />
                           {t.attendance.openRegister}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
+import { hubTonePill, TONE_AVATAR, type Tone } from "@/lib/dashboard/tones";
 import { cn } from "@/lib/utils";
 
 /** Matches the mobile home diamond (`GRID_CENTER_DIAMOND_SLOT` = 1.14× a cell). */
@@ -11,19 +12,10 @@ export type HubQuincunxItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** Accent used for the tile wash and icon well. */
-  accent: string;
+  /** Shared hub tone — same chips as the other teacher hubs and the schedule. */
+  tone: Tone;
   badgeCount?: number;
 };
-
-/** Soft accent wash on the page surface — light Panel general, and dark mode via `--surface`. */
-function wash(accent: string, amount: number): string {
-  return `color-mix(in srgb, ${accent} ${amount}%, var(--surface))`;
-}
-
-function labelInk(accent: string): string {
-  return `color-mix(in srgb, ${accent} 78%, var(--foreground))`;
-}
 
 function TileContent({
   item,
@@ -40,14 +32,15 @@ function TileContent({
   labelBoxClassName: string;
 }) {
   const Icon = item.icon;
+  const pill = hubTonePill(item.tone);
   return (
     <>
       <span
         className={cn(
-          "relative flex shrink-0 items-center justify-center text-white shadow-sm",
+          "relative flex shrink-0 items-center justify-center text-white",
+          TONE_AVATAR[item.tone],
           wellClassName,
         )}
-        style={{ backgroundColor: item.accent }}
       >
         <Icon className={iconClassName} strokeWidth={2.1} />
         {item.badgeCount && item.badgeCount > 0 ? (
@@ -57,9 +50,7 @@ function TileContent({
       <span
         className={cn("flex w-full items-start justify-center text-balance", labelBoxClassName)}
       >
-        <span className={labelClassName} style={{ color: labelInk(item.accent) }}>
-          {item.label}
-        </span>
+        <span className={cn(labelClassName, pill.label)}>{item.label}</span>
       </span>
     </>
   );
@@ -86,8 +77,10 @@ export function HubQuincunxGrid({
           <Link
             key={item.id}
             href={item.href}
-            className="flex items-center justify-center px-4 transition-[filter] hover:brightness-[0.98]"
-            style={{ backgroundColor: wash(item.accent, 11) }}
+            className={cn(
+              "flex items-center justify-center px-4 transition-colors hover:brightness-[0.98]",
+              hubTonePill(item.tone).fill,
+            )}
           >
             <span className="flex w-full max-w-[11rem] flex-col items-center gap-2.5 text-center">
               <TileContent
@@ -105,14 +98,16 @@ export function HubQuincunxGrid({
       <Link
         href={center.href}
         aria-label={center.label}
-        className="absolute z-10 flex items-center justify-center transition-[filter] hover:brightness-[0.98]"
+        className={cn(
+          "absolute z-10 flex items-center justify-center transition-colors hover:brightness-[0.98]",
+          hubTonePill(center.tone).fill,
+        )}
         style={{
           left: `${diamondInset}%`,
           top: `${diamondInset}%`,
           width: `${diamondPct}%`,
           height: `${diamondPct}%`,
           clipPath: "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)",
-          backgroundColor: wash(center.accent, 16),
         }}
       >
         <span className="flex w-[6.5rem] flex-col items-center gap-2.5 text-center">
@@ -127,7 +122,7 @@ export function HubQuincunxGrid({
       </Link>
 
       <svg
-        className="pointer-events-none absolute inset-0 z-20 text-foreground/25"
+        className="pointer-events-none absolute inset-0 z-20 text-border"
         viewBox="0 0 200 200"
         aria-hidden
       >

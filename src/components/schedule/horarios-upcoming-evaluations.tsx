@@ -1,5 +1,7 @@
 import { loadUpcomingTeacherEvaluations } from "@/lib/dashboard/calendar";
+import { hubToneSurface } from "@/lib/dashboard/tones";
 import { getT } from "@/lib/i18n/server";
+import { cn } from "@/lib/utils";
 
 export async function HorariosUpcomingEvaluations() {
   const t = await getT();
@@ -33,11 +35,10 @@ export async function HorariosUpcomingEvaluations() {
                 </p>
               </div>
               <span
-                className={
-                  item.kind === "activity"
-                    ? "hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800 sm:inline dark:bg-emerald-950/40 dark:text-emerald-200"
-                    : "hidden shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700 sm:inline dark:bg-rose-950/40 dark:text-rose-300"
-                }
+                className={cn(
+                  "hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide sm:inline",
+                  hubToneSurface(item.kind === "activity" ? "green" : "rose"),
+                )}
               >
                 {a.types[item.kind]}
               </span>

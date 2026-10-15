@@ -1,7 +1,7 @@
 import {
   AulaClassHeroSkeleton,
   BackLinkSkeleton,
-  ClassStreamPanelSkeleton,
+  ClassTabPanelSkeleton,
   ClassTabsBarSkeleton,
 } from "@/components/ui/page-loading-skeletons";
 
@@ -11,7 +11,7 @@ export default function AulaVirtualClassLoading() {
       <BackLinkSkeleton />
       <AulaClassHeroSkeleton />
       <ClassTabsBarSkeleton />
-      <ClassStreamPanelSkeleton />
+      <ClassTabPanelSkeleton />
     </div>
   );
 }

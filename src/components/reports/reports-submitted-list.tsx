@@ -13,6 +13,7 @@ import {
   type SubmittedReport,
 } from "@/lib/reports/submitted-view";
 import { schoolPeriodLabel } from "@/lib/dashboard/school-period";
+import { hubToneSurface } from "@/lib/dashboard/tones";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -161,7 +162,7 @@ function SubmittedReportDetail({ report }: { report: SubmittedReport }) {
           </span>
         ) : null}
         {resubmitted ? (
-          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", hubToneSurface("yellow"))}>
             {t.reportes.updated}
           </span>
         ) : null}

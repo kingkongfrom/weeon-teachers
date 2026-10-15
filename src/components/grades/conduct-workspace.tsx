@@ -20,7 +20,7 @@ import { useT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Dropdown } from "@/components/ui/dropdown";
-import { TONE_PILL } from "@/lib/dashboard/tones";
+import { hubToneSegment, SEGMENT_TRACK, TONE_PILL } from "@/lib/dashboard/tones";
 import {
   categoriesForKind,
   defaultCategoryForKind,
@@ -556,19 +556,15 @@ function AddConductDialog({
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold text-foreground/70">{c.kindLabel}</span>
-            <div className="flex gap-2">
+            <div className={SEGMENT_TRACK}>
               {(["merit", "demerit"] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
                   onClick={() => selectKind(option)}
                   className={cn(
-                    "flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
-                    kind === option
-                      ? option === "merit"
-                        ? TONE_PILL.green
-                        : TONE_PILL.rose
-                      : "border border-border bg-surface text-foreground/60 ui-hover hover:bg-surface-muted",
+                    "rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                    hubToneSegment(option === "merit" ? "green" : "rose", kind === option),
                   )}
                 >
                   {option === "merit" ? c.kindMerit : c.kindDemerit}

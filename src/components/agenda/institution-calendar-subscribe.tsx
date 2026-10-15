@@ -8,6 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import type { CalendarFeedLinks } from "@/lib/teachers/calendar-feed-actions";
 import { rotateCalendarFeedLinks } from "@/lib/teachers/calendar-feed-actions";
 import { cn } from "@/lib/utils";
+import { hubToneSurface } from "@/lib/dashboard/tones";
 import { useT } from "@/lib/i18n/client";
 
 type SubscribePlatform = "android" | "apple";
@@ -140,10 +141,7 @@ export function InstitutionCalendarSubscribe({ initialLinks }: { initialLinks: C
                       <div className="mt-5 flex flex-col items-center">
                         <div
                           className={cn(
-                            "rounded-2xl p-[3px] shadow-lg",
-                            platform === "apple"
-                              ? "bg-gradient-to-br from-sky-400/80 via-brand-500/70 to-violet-500/80"
-                              : "bg-gradient-to-br from-emerald-400/80 via-teal-500/70 to-brand-500/70",
+                            "rounded-2xl p-[3px] shadow-lg brand-gradient",
                           )}
                         >
                           <div className="rounded-[13px] bg-white p-4 dark:bg-zinc-950">
@@ -222,10 +220,10 @@ function PlatformChip({
       className={cn(
         "rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all",
         active && isApple
-          ? "border-sky-300/80 bg-sky-50 text-sky-900 shadow-sm ring-1 ring-sky-200/60 dark:border-sky-700/60 dark:bg-sky-950/50 dark:text-sky-100 dark:ring-sky-800/40"
+          ? hubToneSurface("blue")
           : active && !isApple
-            ? "border-emerald-300/80 bg-emerald-50 text-emerald-900 shadow-sm ring-1 ring-emerald-200/60 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-800/40"
-            : "border-border bg-surface text-foreground/50 hover:border-foreground/15 hover:bg-surface-muted hover:text-foreground/70",
+            ? hubToneSurface("green")
+            : "border border-border bg-surface text-foreground/50 hover:border-foreground/15 hover:bg-surface-muted hover:text-foreground/70",
       )}
     >
       {label}

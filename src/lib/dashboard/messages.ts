@@ -7,7 +7,7 @@ import {
   type CircularAudienceSlug,
 } from "@/lib/comms/circular-audience";
 import { counterpartLabels } from "@/lib/comms/counterpart-labels";
-import { avatarUrlsByProfileId } from "@/lib/comms/profile-avatar-urls";
+import { avatarUrlsBySubjectKey } from "@/lib/comms/profile-avatar-urls";
 import { collectEmbedPaths, injectEmbedUrls } from "@/lib/comms/rich-text-embeds";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
 import { formatSentCounterpart } from "@/lib/dashboard/message-counterpart";
@@ -198,21 +198,24 @@ function listAvatarProfileId(input: {
   audience: "individual" | "group";
   createdBy: string | null;
   lastAuthorId: string | null | undefined;
-  recipients: Array<{ profile_id: string | null; role: "to" | "cc" }>;
+  recipients: Array<{ profile_id: string | null; recipient_key?: string | null; role: "to" | "cc" }>;
 }): string | null {
   if (input.mine) {
     if (input.audience !== "individual") return null;
-    const tos = input.recipients.filter((row) => row.role === "to" && row.profile_id);
-    return tos.length === 1 ? tos[0].profile_id : null;
+    const tos = input.recipients.filter(
+      (row) => row.role === "to" && (row.profile_id || row.recipient_key),
+    );
+    if (tos.length !== 1) return null;
+    return tos[0].profile_id ?? tos[0].recipient_key ?? null;
   }
   return input.lastAuthorId ?? input.createdBy;
 }
 
 async function fillListAvatars(
-  client: Parameters<typeof avatarUrlsByProfileId>[0],
+  client: Parameters<typeof avatarUrlsBySubjectKey>[0],
   rows: Array<MessageThreadSummary & { avatarProfileId: string | null }>,
 ): Promise<MessageThreadSummary[]> {
-  const urls = await avatarUrlsByProfileId(
+  const urls = await avatarUrlsBySubjectKey(
     client,
     rows.flatMap((row) => (row.avatarProfileId ? [row.avatarProfileId] : [])),
   );
@@ -785,7 +788,7 @@ export const loadThreadDetail = cache(
       lastAuthorId: last?.author_profile_id,
       recipients: recipientRows,
     });
-    const urls = await avatarUrlsByProfileId(session.actor, [
+    const urls = await avatarUrlsBySubjectKey(session.actor, [
       ...(avatarProfileId ? [avatarProfileId] : []),
       ...messageRows.flatMap((message) =>
         message.author_profile_id ? [message.author_profile_id] : [],

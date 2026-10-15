@@ -15,7 +15,7 @@ Workspace map: `../AGENTS.md`.
 Phase 1 (login + grupos) is implemented. Phase 2 is partial: a rebuilt
 **gradebook spreadsheet** on `/grupos/[id]`, submit report, and a reportes
 list — not a full reports composer.
-The **Aula virtual** is a Google Classroom-style hub. *Novedades* is a stream.
+The **Aula virtual** is a Google Classroom-style hub.
 *Trabajo de clase* has an **assessment builder**, **document sharing**,
 **turn-in counts** (N de M entregadas + names) once a student submits on
 `weeon-mobile`, and **grading**: the assignment's **Entregas** list opens a
@@ -33,7 +33,7 @@ events), and **Calendario**.
 | `/crear-contrasena` | First password (also used by the mobile app) |
 | `/inicio` | Landing hub with the section cards + weekly schedule |
 | `/aula-virtual` | Classes grid (Classroom-style home) |
-| `/aula-virtual/[classId]` | Class page — Novedades / Trabajo de clase / Personas / Calificaciones |
+| `/aula-virtual/[classId]` | Class page — Trabajo de clase / Personas / Asistencia / Calificaciones |
 | `/aula-virtual/[classId]/evaluaciones/[assessmentId]` | Assessment builder — WYSIWYG, question types, draft/publish |
 | `/aula-virtual/[classId]/evaluaciones/[assessmentId]/entregas/[submissionId]` | Grader — student answers, scoring, feedback, return |
 | `/grupos` | Grupos this teacher is assigned to (`teaches_class`) |

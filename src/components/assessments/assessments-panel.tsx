@@ -12,6 +12,7 @@ import {
   type AssessmentSummary,
 } from "@/lib/assessments/model";
 import { SubmissionStatus } from "@/components/assessments/submission-status";
+import { TONE_WELL } from "@/lib/dashboard/tones";
 
 /** "Trabajo de clase" list of homeworks/exams the teacher has created. */
 export function AssessmentsPanel({
@@ -119,9 +120,7 @@ export function AssessmentsPanel({
                   <span
                     className={cn(
                       "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-                      assessment.kind === "exam"
-                        ? "bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300"
-                        : "bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300",
+                      assessment.kind === "exam" ? TONE_WELL.purple : TONE_WELL.blue,
                     )}
                   >
                     <Icon className="h-5 w-5" />
@@ -135,7 +134,7 @@ export function AssessmentsPanel({
                         className={cn(
                           "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
                           assessment.published
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                            ? TONE_WELL.green
                             : "bg-surface-muted text-foreground/50",
                         )}
                       >

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight, ClipboardCheck, FileCheck, Inbox, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PanelAttention } from "@/lib/dashboard/panel-attention";
+import { hubToneSurface, TONE_WELL, type Tone } from "@/lib/dashboard/tones";
 import { getT } from "@/lib/i18n/server";
 
 type PanelAttentionProps = {
@@ -12,6 +13,10 @@ type PanelAttentionProps = {
 /** Compact actionable row — only rendered when at least one count is non-zero. */
 export async function PanelAttentionStrip({ attention, className }: PanelAttentionProps) {
   const t = await getT();
+  const banner = (tone: Tone) => ({
+    tone: hubToneSurface(tone),
+    iconTone: TONE_WELL[tone],
+  });
   const items = [
     attention.gradingCount > 0
       ? {
@@ -19,8 +24,7 @@ export async function PanelAttentionStrip({ attention, className }: PanelAttenti
           href: "/aula-virtual/por-evaluar",
           icon: ClipboardCheck,
           label: t.panel.attention.grading(attention.gradingCount),
-          tone: "border-amber-200 bg-amber-50/80 text-amber-900 hover:bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100 dark:hover:bg-amber-950/45",
-          iconTone: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
+          ...banner("yellow"),
         }
       : null,
     attention.unreadChatCount > 0
@@ -29,8 +33,7 @@ export async function PanelAttentionStrip({ attention, className }: PanelAttenti
           href: "/comunicacion/chat",
           icon: MessageCircle,
           label: t.panel.attention.unreadChat(attention.unreadChatCount),
-          tone: "border-emerald-200 bg-emerald-50/80 text-emerald-900 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-100 dark:hover:bg-emerald-950/45",
-          iconTone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
+          ...banner("green"),
         }
       : null,
     attention.justificationCount > 0
@@ -39,8 +42,7 @@ export async function PanelAttentionStrip({ attention, className }: PanelAttenti
           href: attention.justificationHref ?? "/aula-virtual/justificaciones",
           icon: FileCheck,
           label: t.panel.attention.justifications(attention.justificationCount),
-          tone: "border-orange-200 bg-orange-50/80 text-orange-950 hover:bg-orange-50 dark:border-orange-900/50 dark:bg-orange-950/30 dark:text-orange-100 dark:hover:bg-orange-950/45",
-          iconTone: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
+          ...banner("rose"),
         }
       : null,
     attention.unreadInboxCount > 0
@@ -49,8 +51,7 @@ export async function PanelAttentionStrip({ attention, className }: PanelAttenti
           href: "/comunicacion/mensajes?folder=inbox",
           icon: Inbox,
           label: t.panel.attention.unreadInbox(attention.unreadInboxCount),
-          tone: "border-sky-200 bg-sky-50/80 text-sky-900 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-100 dark:hover:bg-sky-950/45",
-          iconTone: "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300",
+          ...banner("blue"),
         }
       : null,
   ].filter((item): item is NonNullable<typeof item> => item !== null);

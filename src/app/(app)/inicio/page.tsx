@@ -41,28 +41,28 @@ export default async function InicioPage() {
       label: t.panel.classroom.label,
       href: "/aula-virtual",
       icon: Presentation,
-      accent: "#4F8CFF",
+      tone: "blue",
     },
     {
       id: "grades",
       label: t.panel.grades.label,
       href: "/grupos",
       icon: GraduationCap,
-      accent: "#8B5CF6",
+      tone: "purple",
     },
     {
       id: "agenda",
       label: t.panel.agenda.label,
       href: "/agenda",
       icon: CalendarDays,
-      accent: "#F5A623",
+      tone: "yellow",
     },
     {
       id: "email",
       label: t.messages.hubMessagesTitle,
       href: "/comunicacion/mensajes",
       icon: Mail,
-      accent: "#4F8CFF",
+      tone: "rose",
       badgeCount: attention.unreadInboxCount,
     },
   ] as const satisfies readonly [
@@ -77,7 +77,7 @@ export default async function InicioPage() {
     label: t.messages.chatTitle,
     href: "/comunicacion/chat",
     icon: MessageCircle,
-    accent: "#00a884",
+    tone: "green",
     badgeCount: attention.unreadChatCount,
   };
 

@@ -5,17 +5,23 @@ import Link from "next/link";
 import { ArrowUpRight, ChevronRight, GraduationCap, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
+import { hubToneSegment, hubToneSurface, SEGMENT_TRACK, TONE_AVATAR, type Tone } from "@/lib/dashboard/tones";
 import { ClassworkPanel } from "@/components/classroom/classwork-panel";
-import { StreamPanel } from "@/components/classroom/stream-panel";
 import { AttendanceRegister } from "@/components/attendance/attendance-register";
 import type { AttendanceEntry } from "@/lib/attendance/model";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
-import type { StreamPost } from "@/lib/dashboard/stream";
 import type { ClassTopic } from "@/lib/dashboard/topics";
 import type { AssessmentSummary } from "@/lib/assessments/model";
 
-type TabId = "novedades" | "trabajo" | "personas" | "asistencia" | "calificaciones";
+type TabId = "trabajo" | "personas" | "asistencia" | "calificaciones";
+
+const TAB_TONE: Record<TabId, Tone> = {
+  trabajo: "purple",
+  personas: "green",
+  asistencia: "yellow",
+  calificaciones: "rose",
+};
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -31,7 +37,6 @@ export function ClassTabs({
   students,
   materials,
   assessments,
-  stream,
   topics,
   selectedSubjectId,
   subjects,
@@ -46,7 +51,6 @@ export function ClassTabs({
   students: TeacherStudent[];
   materials: ClassMaterial[];
   assessments: AssessmentSummary[];
-  stream: StreamPost[];
   topics: ClassTopic[];
   selectedSubjectId: string | null;
   subjects: { id: string; name: string }[];
@@ -57,15 +61,9 @@ export function ClassTabs({
   pendingJustifications?: number;
 }) {
   const t = useT();
-  const VALID_TABS: TabId[] = [
-    "novedades",
-    "trabajo",
-    "personas",
-    "asistencia",
-    "calificaciones",
-  ];
+  const VALID_TABS: TabId[] = ["trabajo", "personas", "asistencia", "calificaciones"];
   const [tab, setTab] = useState<TabId>(
-    VALID_TABS.includes(initialTab as TabId) ? (initialTab as TabId) : "novedades",
+    VALID_TABS.includes(initialTab as TabId) ? (initialTab as TabId) : "trabajo",
   );
   const [justificationBadge, setJustificationBadge] = useState(pendingJustifications);
 
@@ -74,7 +72,6 @@ export function ClassTabs({
   }, [pendingJustifications]);
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: "novedades", label: t.classroom.tabs.novedades },
     { id: "trabajo", label: t.classroom.tabs.trabajo },
     { id: "personas", label: t.classroom.tabs.personas },
     { id: "asistencia", label: t.classroom.tabs.asistencia },
@@ -86,7 +83,7 @@ export function ClassTabs({
       <div
         role="tablist"
         aria-label={t.classroom.tabs.aria}
-        className="no-scrollbar flex gap-1 overflow-x-auto border-b border-border"
+        className={SEGMENT_TRACK}
       >
         {tabs.map(({ id, label }) => {
           const active = tab === id;
@@ -98,25 +95,20 @@ export function ClassTabs({
               aria-selected={active}
               onClick={() => setTab(id)}
               className={cn(
-                "ui-hover relative shrink-0 rounded-t-lg px-4 py-3 text-sm font-semibold",
-                active
-                  ? "text-foreground"
-                  : "text-foreground/55 hover:text-foreground",
+                "inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                hubToneSegment(TAB_TONE[id], active),
               )}
             >
-              <span className="inline-flex items-center gap-1.5">
-                {label}
-                {id === "asistencia" && justificationBadge > 0 ? (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                    {justificationBadge > 9 ? "9+" : justificationBadge}
-                  </span>
-                ) : null}
-              </span>
-              {active ? (
+              {label}
+              {id === "asistencia" && justificationBadge > 0 ? (
                 <span
-                  aria-hidden
-                  className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-foreground"
-                />
+                  className={cn(
+                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white",
+                    TONE_AVATAR.rose,
+                  )}
+                >
+                  {justificationBadge > 9 ? "9+" : justificationBadge}
+                </span>
               ) : null}
             </button>
           );
@@ -124,10 +116,6 @@ export function ClassTabs({
       </div>
 
       <div className="pt-5">
-        {tab === "novedades" ? (
-          <StreamPanel classId={classId} posts={stream} />
-        ) : null}
-
         {tab === "trabajo" ? (
           <ClassworkPanel
             classId={classId}
@@ -178,20 +166,23 @@ export function ClassTabs({
             {justificationBadge > 0 ? (
               <Link
                 href="/aula-virtual/justificaciones"
-                className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 transition-colors hover:bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/35 dark:hover:bg-amber-950/50"
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors",
+                  hubToneSurface("rose"),
+                )}
               >
-                <span className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-red-500 px-2 text-xs font-bold text-white">
+                <span className={cn("flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full px-2 text-xs font-bold text-white", TONE_AVATAR.rose)}>
                   {justificationBadge > 9 ? "9+" : justificationBadge}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                  <p className="text-sm font-bold">
                     {t.attendance.inboxTitle}
                   </p>
-                  <p className="text-xs font-medium text-amber-900/80 dark:text-amber-200/80">
+                  <p className="text-xs font-medium opacity-80">
                     {t.panel.attention.justifications(justificationBadge)}
                   </p>
                 </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-amber-800/60 dark:text-amber-300/60" />
+                <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
               </Link>
             ) : null}
             <AttendanceRegister

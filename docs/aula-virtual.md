@@ -7,12 +7,12 @@ Read with `AGENTS.md` (this repo), `../AGENTS.md` (workspace), and
 ## One line
 
 Teachers and students already know **Google Classroom**, so we reproduce its
-shape — classes grid → class page with **Novedades / Trabajo de clase /
-Personas / Calificaciones** — and then improve on it by **unifying Classwork
+shape — classes grid → class page with **Trabajo de clase /
+Personas / Asistencia / Calificaciones** — and then improve on it by **unifying Classwork
 with the gradebook** (an assignment *is* a grade column) and keeping
 everything MEP- and tenant-aware.
 
-**P1–P3 and P5a–P5c are implemented: documents, stream, topics, the assessment
+**P1, P3, and P5a–P5c are implemented: documents, topics, the assessment
 builder, and teacher grading of student submissions.** Groups and
 students already come from the admin assignment — the teacher never adds them
 here. Editable PDFs come later; see § Documents vs assessments and § Build
@@ -21,10 +21,10 @@ phases.
 ## Why Classroom
 
 - **Zero learning curve.** The flow is the product. Matching the mental model
-  (class cards, stream, classwork, people, grades) means we ship familiarity
+  (class cards, classwork, people, grades) means we ship familiarity
   instead of a tutorial.
-- **Proven information architecture.** Stream for communication, Classwork for
-  work, People for roster, Grades for marks — each has a clear job.
+- **Proven information architecture.** Classwork for work, People for the roster,
+  Grades for marks — each has a clear job. Class announcements go through Correo.
 - **But aim higher.** Classroom's biggest friction for teachers is duplication:
   an assignment lives in *Classwork*, its marks live in *Grades*, and a report
   is a third place. Weeon should make one object serve all three.
@@ -37,7 +37,7 @@ Route `loading.tsx` files mirror the live UI. Reuse
 | Route | Skeleton |
 | --- | --- |
 | `/aula-virtual` | `ClassCardSkeleton` grid (matches `ClassCard`) |
-| `/aula-virtual/[classId]` | `AulaClassHeroSkeleton` + `ClassTabsBarSkeleton` + `ClassStreamPanelSkeleton` |
+| `/aula-virtual/[classId]` | `AulaClassHeroSkeleton` + `ClassTabsBarSkeleton` + `ClassTabPanelSkeleton` |
 | `/aula-virtual/.../evaluaciones/[id]` | assessment editor blocks (existing route loader) |
 
 Grupos list uses `GrupoCardSkeleton`; gradebook detail keeps its grid-specific
@@ -53,7 +53,7 @@ loader (see `docs/grupos.md`).
 | Daily consumption (live grades, notices, student fill/submit) | `weeon-mobile` |
 | School structure (classes, subjects, enrollments, staff) | `weeon-tenants` (admin) |
 
-Product decision: authoring of announcements, classwork, materials, **and the
+Product decision: authoring of classwork, materials, **and the
 dated attendance register** moves to **teacher web**, while mobile keeps the
 daily-consumption surface. This is an intentional slice of the "daily classroom
 stays on mobile" rule in `weeon-teachers/AGENTS.md`; update that rule when a
@@ -67,11 +67,9 @@ Keeping the same labels and order is deliberate — it is the whole point.
 | --- | --- | --- | --- |
 | Classes home | Aula virtual | Virtual classroom | `/aula-virtual` |
 | Class page | (grupo) | (group) | `/aula-virtual/[classId]` |
-| Stream | Novedades | News | tab |
 | Classwork | Trabajo de clase | Classwork | tab |
 | People | Personas | People | tab |
 | Grades | Calificaciones | Grades | tab → gradebook |
-| Announcement | Anuncio | Announcement | stream post |
 | Assignment | Tarea | Assignment | classwork item |
 | Material | Material | Material | classwork item |
 | Topic | Tema | Topic | classwork grouping |
@@ -82,12 +80,10 @@ Keeping the same labels and order is deliberate — it is the whole point.
 Honest snapshot — do not assume the rest exists.
 
 - **`/aula-virtual`** — grid of `ClassCard`s (banner, school + section, subject
-  chips, student count, three disabled quick actions). Data from
+  chips, student count, quick actions for classwork and people). Data from
   `loadTeacherGrupos()` (`classes` + `enrollments` + `subjects`).
-- **`/aula-virtual/[classId]`** — class banner + `ClassTabs`:
-  - **Novedades** — **stream (P2)**: `StreamPanel` — the teacher posts
-    announcements, sees them newest-first with author + relative time, and
-    deletes their own.
+- **`/aula-virtual/[classId]`** — class banner + `ClassTabs`. The class opens on
+  **Trabajo de clase**.
   - **Trabajo de clase** — **assessments (P5a)** + **materials (P1)**:
     - *Tareas y exámenes*: `AssessmentsPanel` → the `AssessmentEditor`
       (`/aula-virtual/[classId]/evaluaciones/[id]`) builds a homework/exam with a
@@ -108,7 +104,7 @@ Honest snapshot — do not assume the rest exists.
       material upload.
     - *Materias*: when the class has more than one subject, the **subject badges
       live inside Classroom only** and filter its assessments + materials
-      (`?subject=<id>&tab=trabajo`); **Novedades / Personas / Calificaciones stay
+      (`?subject=<id>&tab=trabajo`); **Personas / Asistencia / Calificaciones stay
       class-wide**. New assessments and materials default to the active subject.
       Work is **strictly per subject**: a subject view lists only its own
       assessments/materials — unassigned items are not leaked into every subject.
@@ -206,8 +202,7 @@ Honest snapshot — do not assume the rest exists.
 > **Deploy note:** P1 needs `20260911130000_class_materials.sql`, P5a needs
 > `20260911150000_assessments.sql`, the typed gradebook needs
 > `20260911160000_assignments_assessment_link.sql` +
-> `20260911170000_assignments_kind.sql`, the stream needs
-> `20260911190000_class_stream.sql`, topics need
+> `20260911170000_assignments_kind.sql`, topics need
 > `20260911200000_classwork_topics.sql`, the attendance register needs
 > `20260912180000_attendance_ausencias.sql`, student turn-in needs
 > `20260912220000_assessment_submissions.sql`, and teacher `SELECT` of those
@@ -246,7 +241,7 @@ Teacher loaders: `src/lib/dashboard/submissions.ts` (`loadClassTurnIns`).
 | Route | Purpose |
 | --- | --- |
 | `/aula-virtual` | Class grid. Create-class stays admin-owned (tenancy); show `Próximamente` until product decides otherwise. |
-| `/aula-virtual/[classId]` | Class shell: banner + tabs (Novedades default). |
+| `/aula-virtual/[classId]` | Class shell: banner + tabs (Trabajo de clase default). |
 | `/aula-virtual/[classId]/trabajo` | Classwork: topics, assignments, materials, grades view. |
 | `/aula-virtual/[classId]/t/[topicId]` | Classwork filtered to a topic. |
 | `/aula-virtual/[classId]/a/[assignmentId]` | Assignment detail: instructions, attachments, student work + grading. |
@@ -326,8 +321,6 @@ member-read / teacher-write RLS, the trial write-gate trigger, and the private
 | Table | Key columns |
 | --- | --- |
 | `classwork_topics` *(implemented, P3 — Temas)* | `id`, `tenant_id`, `class_id`, `name`, `position`, `created_at`, `updated_at`; `assessments.topic_id` and `class_materials.topic_id` (nullable, on delete set null) — migration `20260911200000_classwork_topics.sql` |
-| `class_stream_posts` *(implemented, P2 — announcements)* | `id`, `tenant_id`, `class_id`, `author_profile_id`, `kind` (`announcement`), `body`, `created_at`, `updated_at` — migration `20260911190000_class_stream.sql` |
-| `class_stream_comments` | `id`, `tenant_id`, `post_id`, `author_profile_id`, `body`, `created_at` |
 
 Reuse the **existing** `submissions` table for turn-in in P4 — do not create a
 new one. A generic `attachments` table is **not** planned: each object carries
@@ -546,13 +539,12 @@ a follow-up (kept simple first: FINAL = mean of column percentages).
    from the admin assignment; the teacher never adds them here.
 2. **Share a document (P1)** — Trabajo de clase → *Añadir material* → upload
    file(s) + title/description → publish. Students see it on web and mobile.
-3. **Announce (P2)** — Novedades composer → post (optional attachments).
-4. **Create work (P3)** — *Crear* → Tarea: title, instructions, due date,
+3. **Create work (P3)** — *Crear* → Tarea: title, instructions, due date,
    points, topic, **subject**; it creates the grade column.
-5. **Grade (P4)** — assignment detail lists students; enter marks (reuses the
+4. **Grade (P4)** — assignment detail lists students; enter marks (reuses the
    gradebook cell editor); return work with a comment.
-6. **Report** — submit the subject report; it appears in `/reportes`.
-7. **People** — see the roster; later co-teachers.
+5. **Report** — submit the subject report; it appears in `/reportes`.
+6. **People** — see the roster; later co-teachers.
 
 ## Build phases
 
@@ -560,7 +552,7 @@ a follow-up (kept simple first: FINAL = mean of column percentages).
 | --- | --- | --- |
 | **P0** *(done)* | Hub grid, class page, tabs, Personas, gradebook link. | — |
 | **P1** *(done)* | **Materials / documents**: upload, list, download, delete per group. | `class_materials`, `class-materials` bucket, `MaterialsPanel` |
-| **P2** *(done)* | Stream announcements **+ comments** (any class member comments; author/teacher/admin can delete). | `class_stream_posts`, `class_stream_comments` |
+| **P2** *(removed)* | Class announcement stream. Taken out of teacher web and the mobile apps. | — |
 | **P3** | Assignments / homework: topics, authoring, unified with gradebook. | `assignments` columns, `classwork_topics` |
 | **P4** | Submissions + grading flow (turn-in state, return + comment). | existing `submissions` table |
 | **P5a** *(done)* | **Assessment builder**: WYSIWYG homework/exam authoring + preview. | `assessments` |

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { ChevronRight, ClipboardCheck } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { loadGradingInbox } from "@/lib/dashboard/grading-inbox";
+import { hubToneSurface, TONE_WELL } from "@/lib/dashboard/tones";
 import { getT } from "@/lib/i18n/server";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +32,7 @@ export default async function PorEvaluarPage() {
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-16 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className={cn("flex h-12 w-12 items-center justify-center rounded-xl", TONE_WELL.green)}>
             <ClipboardCheck className="h-6 w-6" strokeWidth={2.2} />
           </span>
           <p className="text-sm font-medium text-foreground/60">{g.allGraded}</p>
@@ -61,7 +63,7 @@ export default async function PorEvaluarPage() {
                       {[item.assessmentTitle, item.groupName, when].filter(Boolean).join(" · ")}
                     </p>
                   </div>
-                  <span className="hidden shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-700 sm:inline-flex dark:bg-amber-950/40 dark:text-amber-300">
+                  <span className={cn("hidden shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide sm:inline-flex", hubToneSurface("yellow"))}>
                     {g.pendingBadge}
                   </span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-foreground/30" />

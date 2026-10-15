@@ -2,6 +2,7 @@
 
 import { HandHeart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TONE_WELL } from "@/lib/dashboard/tones";
 import { useT } from "@/lib/i18n/client";
 
 export function EducationalSupportBadgeButton({
@@ -38,9 +39,7 @@ export function EducationalSupportBadgeButton({
       title={title}
       className={cn(
         "inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-[10px] font-bold uppercase tracking-wide transition-colors",
-        pending
-          ? "bg-amber-100 text-amber-900 ring-1 ring-amber-300/80 hover:bg-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-800"
-          : "bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300",
+        pending ? TONE_WELL.yellow : TONE_WELL.blue,
         className,
       )}
     >

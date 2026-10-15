@@ -5,6 +5,7 @@ import { ChevronRight, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/lib/i18n/client";
 import type { SubmissionSummary } from "@/lib/dashboard/submissions";
+import { hubToneSurface, TONE_ICON } from "@/lib/dashboard/tones";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -60,11 +61,11 @@ export function AssessmentSubmissions({
           ) : null}
         </div>
         {pendingCount > 0 ? (
-          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+          <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide", hubToneSurface("yellow"))}>
             {g.pendingCount(pendingCount)}
           </span>
         ) : submissions.length > 0 ? (
-          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide", hubToneSurface("green"))}>
             {g.statusReturned}
           </span>
         ) : null}
@@ -100,9 +101,7 @@ export function AssessmentSubmissions({
                   <span
                     className={cn(
                       "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
-                      returned
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                        : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+                      returned ? hubToneSurface("green") : hubToneSurface("yellow"),
                     )}
                   >
                     {returned
@@ -118,7 +117,7 @@ export function AssessmentSubmissions({
       )}
 
       {submissions.length > 0 && pendingCount === 0 ? (
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+        <p className={cn("flex items-center gap-1.5 text-xs font-semibold", TONE_ICON.green)}>
           <ClipboardCheck className="h-3.5 w-3.5" />
           {g.allGraded}
         </p>

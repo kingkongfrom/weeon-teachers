@@ -22,16 +22,19 @@ Shell width: `app-shell.tsx` uses `max-w-[77rem]`.
 ## Hub grid
 
 `components/dashboard/hub-quincunx-grid.tsx` — fused 2×2 plus a center rhombus.
-Light surface, soft accent wash, icon centered over its label. Comunicación
-shows an unread badge when chat + inbox > 0.
+Tiles use the shared hub tones (the same washes and icon chips as grupos and
+the schedule): Aula blue, Calificaciones purple, Agenda yellow, Correo rose,
+Chat green. Light surface, soft accent wash, icon centered over its label.
 
-| Tile | Place | Route |
-| ---- | ----- | ----- |
-| Aula virtual | Top left | `/aula-virtual` |
-| Calificaciones | Top right | `/grupos` |
-| Agenda | Bottom left | `/agenda` |
-| Comunicación | Bottom right | `/comunicacion` |
-| Reportes | Center diamond | `/reportes` |
+| Tile | Place | Route | Tone |
+| ---- | ----- | ----- | ---- |
+| Aula virtual | Top left | `/aula-virtual` | blue |
+| Calificaciones | Top right | `/grupos` | purple |
+| Agenda | Bottom left | `/agenda` | yellow |
+| Correo | Bottom right | `/comunicacion/mensajes` | rose |
+| Chat | Center diamond | `/comunicacion/chat` | green |
+
+Correo and Chat keep an unread count on the icon when there is one.
 
 `HubModuleCard` remains for other hubs (Agenda).
 

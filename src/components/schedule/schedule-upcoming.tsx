@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { schoolWeekday } from "@/lib/attendance/model";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 import { isLessonLiveNow } from "@/lib/dashboard/upcoming";
-import { hubTonePill, type Tone } from "@/lib/dashboard/tones";
+import { hubTonePill, eventHubChip, type Tone } from "@/lib/dashboard/tones";
 import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule";
 import { WEEKDAYS } from "@/lib/dashboard/schedule";
 import { getLocale, getT } from "@/lib/i18n/server";
@@ -194,7 +194,7 @@ export async function ScheduleUpcoming({
                 {todayEvents.map((event) => (
                   <li
                     key={event.id}
-                    className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                    className={cn("rounded-lg px-3 py-2 text-xs font-semibold", eventHubChip(event.eventType))}
                   >
                     <span>{event.title}</span>
                     {event.groupName ? (

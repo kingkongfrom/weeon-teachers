@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { avatarUrlsBySubjectKey } from "@/lib/comms/profile-avatar-urls";
 import { createSessionClient } from "@/lib/supabase/session";
 
 export type AdminTeacherChatSummary = {
@@ -36,42 +37,6 @@ type ConversationListRow = {
   unread: boolean | null;
 };
 
-const PROFILE_AVATARS_BUCKET = "profile-avatars";
-const PROFILE_AVATAR_TTL_SEC = 60 * 60 * 6;
-
-async function avatarUrlsByProfileId(
-  client: Awaited<ReturnType<typeof createSessionClient>>,
-  profileIds: string[],
-): Promise<Map<string, string>> {
-  const urls = new Map<string, string>();
-  const unique = [...new Set(profileIds.filter((id) => /^[0-9a-f-]{36}$/i.test(id)))];
-  if (unique.length === 0) return urls;
-
-  const { data } = await client
-    .from("profiles")
-    .select("id, avatar_storage_path")
-    .in("id", unique);
-  const rows = (data ?? []) as Array<{ id: string; avatar_storage_path: string | null }>;
-  const paths = rows
-    .map((row) => row.avatar_storage_path)
-    .filter((path): path is string => Boolean(path));
-  if (paths.length === 0) return urls;
-
-  const { data: signed } = await client.storage
-    .from(PROFILE_AVATARS_BUCKET)
-    .createSignedUrls(paths, PROFILE_AVATAR_TTL_SEC);
-  const byPath = new Map<string, string>();
-  for (const row of signed ?? []) {
-    if (row.path && row.signedUrl) byPath.set(row.path, row.signedUrl);
-  }
-  for (const row of rows) {
-    if (!row.avatar_storage_path) continue;
-    const url = byPath.get(row.avatar_storage_path);
-    if (url) urls.set(row.id, url);
-  }
-  return urls;
-}
-
 /** Admin ↔ teacher conversations where the signed-in user is the teacher. */
 export const loadAdminTeacherChatConversations = cache(
   async (): Promise<AdminTeacherChatSummary[]> => {
@@ -94,7 +59,7 @@ export const loadAdminTeacherChatConversations = cache(
         row.admin_profile_id,
       ]),
     );
-    const avatarUrls = await avatarUrlsByProfileId(supabase, [...adminByConv.values()]);
+    const avatarUrls = await avatarUrlsBySubjectKey(supabase, [...adminByConv.values()]);
 
     return rows.map((row) => {
       const adminId = adminByConv.get(row.id);
@@ -145,19 +110,13 @@ export const loadAdminTeacherChatDetail = cache(
         .select("id, body, created_at, author_profile_id")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true }),
-      supabase.from("profiles").select("name, avatar_storage_path").eq("id", row.admin_profile_id).maybeSingle(),
+      supabase.from("profiles").select("name").eq("id", row.admin_profile_id).maybeSingle(),
     ]);
 
-    const admin = adminProfile as { name?: string; avatar_storage_path?: string | null } | null;
+    const admin = adminProfile as { name?: string } | null;
     const adminName = admin?.name?.trim() || "Administración";
-    const avatarPath = admin?.avatar_storage_path?.trim() || "";
-    let avatarUrl: string | null = null;
-    if (avatarPath) {
-      const signed = await supabase.storage
-        .from(PROFILE_AVATARS_BUCKET)
-        .createSignedUrl(avatarPath, PROFILE_AVATAR_TTL_SEC);
-      avatarUrl = signed.data?.signedUrl ?? null;
-    }
+    const photos = await avatarUrlsBySubjectKey(supabase, [row.admin_profile_id]);
+    const avatarUrl = photos.get(row.admin_profile_id) ?? null;
 
     return {
       id: row.id,

@@ -14,8 +14,7 @@ Comunicación has **three** channels on `/comunicacion`:
   estudiantes. Two-way realtime on `admin_teacher_chat_*` (teacher ↔ admin) and
   `chat_*` (teacher ↔ roster).
 
-Panel general **Comunicación** → `/comunicacion`. **Novedades** stays in aula
-virtual — not part of Comunicación.
+Panel general **Comunicación** → `/comunicacion`.
 
 ### Nav + hub feedback (Oct 2026)
 

@@ -47,10 +47,9 @@ gradebook. **Students** live in the aula virtual **Personas** tab
 (per group) and in the gradebook rows; selecting one opens `/estudiantes/[id]`, a
 per-student **transcript** across every subject the teacher teaches.
 **Aula virtual** is a Google Classroom-style hub (`/aula-virtual` +
-`/aula-virtual/[classId]`): classes grid, stream/classwork tabs, people, and a
+`/aula-virtual/[classId]`): classes grid, classwork, people, attendance, and a
 gradebook link. Built: **P1 documents** (`class_materials` + private
-`class-materials` bucket, `MaterialsPanel`), **P2 stream** (`class_stream_posts`,
-`StreamPanel` announcements), **P3 topics** (`classwork_topics`, `ClassworkPanel`
+`class-materials` bucket, `MaterialsPanel`), **P3 topics** (`classwork_topics`, `ClassworkPanel`
 Temas), and **P5a assessment builder** (`assessments`;
 TipTap WYSIWYG homework/exam editor at
 `/aula-virtual/[classId]/evaluaciones/[id]`; publishing creates its grade column).
@@ -60,19 +59,18 @@ built per assessment:** the assignment **Entregas** list opens a grader
 (`/aula-virtual/[classId]/evaluaciones/[assessmentId]/entregas/[submissionId]`)
 with answer-key auto-suggestions, per-question points/comments, and **Guardar y
 devolver** → writes `grades`, so the student transcript and gradebook update.
-**P2.1 stream comments** are built (any class member comments on a Novidad;
-author/teacher/admin deletes), and so is the cross-group **"Por evaluar" inbox**
-(`/aula-virtual/por-evaluar`, from a banner on `/aula-virtual`).
+The cross-group **"Por evaluar" inbox**
+(`/aula-virtual/por-evaluar`, from a banner on `/aula-virtual`) is built.
 Read `docs/aula-virtual.md` (especially § Submit vs grade) before touching it —
 the aula virtual needs
 `20260911130000_class_materials.sql`, `20260911150000_assessments.sql`,
 `20260911160000_assignments_assessment_link.sql`,
-`20260911170000_assignments_kind.sql`, `20260911190000_class_stream.sql`,
+`20260911170000_assignments_kind.sql`,
 `20260911200000_classwork_topics.sql`,
 `20260912180000_attendance_ausencias.sql`,
 `20260912220000_assessment_submissions.sql`, and
-`20260912230000_teacher_sees_submissions.sql`, `20260913000000_assessment_grading.sql`,
-and comments need `20260913150000_class_stream_comments.sql` in `weeon-tenants`.
+`20260912230000_teacher_sees_submissions.sql`, `20260913000000_assessment_grading.sql`
+in `weeon-tenants`.
 **Comunicación is built** (`/comunicacion`) as a hub with two channels:
 **Mensajes** — school mail (subject + TipTap rich body +
 **drag-&-drop attachments**, optional replies) to hand-picked parents or a
@@ -163,8 +161,8 @@ calendar) must stay aligned with this repo's loaders and RPCs.
   exam/activity from a class tile), `/estudiantes/[id]` (per-student transcript — reached from aula virtual
   **Personas** or the gradebook; there is no standalone students section),
   `/reportes`.
-  **Aula virtual mirrors Google Classroom** (classes grid → Novedades /
-  Trabajo de clase / Personas / Calificaciones); the target design, schema, and
+  **Aula virtual mirrors Google Classroom** (classes grid → Trabajo de clase /
+  Personas / Asistencia / Calificaciones); the target design, schema, and
   phases live in [`docs/aula-virtual.md`](docs/aula-virtual.md).
   **Navigation is a landing + cards, not a dashboard/sidebar.** `AppShell`
   renders a single top bar with only the brand lockup pinned upper-left (links

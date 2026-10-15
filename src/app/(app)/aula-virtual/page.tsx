@@ -9,6 +9,8 @@ import { loadTeacherGrupos } from "@/lib/dashboard/grupos";
 import { loadGradingInbox } from "@/lib/dashboard/grading-inbox";
 import { loadJustificationInbox } from "@/lib/dashboard/justification-inbox";
 import { getT } from "@/lib/i18n/server";
+import { hubToneSurface, TONE_WELL } from "@/lib/dashboard/tones";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -39,38 +41,44 @@ export default async function AulaVirtualPage() {
       {inbox.length > 0 ? (
         <Link
           href="/aula-virtual/por-evaluar"
-          className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 transition-colors hover:bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30 dark:hover:bg-amber-950/50"
+          className={cn(
+            "flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors",
+            hubToneSurface("yellow"),
+          )}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", TONE_WELL.yellow)}>
             <ClipboardCheck className="h-5 w-5" strokeWidth={2.2} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+            <p className="text-sm font-bold">
               {t.assessments.grading.inboxTitle}
             </p>
-            <p className="text-xs font-medium text-amber-800/80 dark:text-amber-200/80">
+            <p className="text-xs font-medium opacity-80">
               {t.assessments.grading.pendingCount(inbox.length)}
             </p>
           </div>
-          <ChevronRight className="h-4 w-4 shrink-0 text-amber-700/60 dark:text-amber-300/60" />
+          <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
         </Link>
       ) : null}
 
       {justifications.length > 0 ? (
         <Link
           href="/aula-virtual/justificaciones"
-          className="flex items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50/70 px-4 py-3 transition-colors hover:bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/30 dark:hover:bg-sky-950/50"
+          className={cn(
+            "flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors",
+            hubToneSurface("rose"),
+          )}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
+          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", TONE_WELL.rose)}>
             <FileCheck className="h-5 w-5" strokeWidth={2.2} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-sky-950 dark:text-sky-100">{t.attendance.inboxTitle}</p>
-            <p className="text-xs font-medium text-sky-900/80 dark:text-sky-200/80">
+            <p className="text-sm font-bold">{t.attendance.inboxTitle}</p>
+            <p className="text-xs font-medium opacity-80">
               {t.panel.attention.justifications(justifications.length)}
             </p>
           </div>
-          <ChevronRight className="h-4 w-4 shrink-0 text-sky-800/60 dark:text-sky-300/60" />
+          <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
         </Link>
       ) : null}
 

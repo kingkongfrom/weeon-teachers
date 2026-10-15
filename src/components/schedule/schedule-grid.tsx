@@ -6,7 +6,7 @@ import {
 import { isoDate, weekDates } from "@/lib/dashboard/week";
 import { getT } from "@/lib/i18n/server";
 import { LessonCard } from "@/components/schedule/lesson-card";
-import { hubTonePill, type Tone } from "@/lib/dashboard/tones";
+import { hubTonePill, eventHubChip, type Tone } from "@/lib/dashboard/tones";
 import { cn } from "@/lib/utils";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 
@@ -86,7 +86,7 @@ export async function ScheduleGrid({
                 {dayEvents.map((event) => (
                   <li
                     key={event.id}
-                    className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                    className={cn("rounded-lg px-2.5 py-1.5 text-xs font-semibold", eventHubChip(event.eventType))}
                   >
                     {event.title}
                     {!event.allDay && event.startTime ? (

@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
+import { avatarUrlsBySubjectKey } from "@/lib/comms/profile-avatar-urls";
 import {
   loadGuardianChatDirectory,
   lookupGuardianStudentContext,
@@ -76,7 +77,15 @@ export const loadChatGuardianContacts = cache(async (): Promise<ChatContact[]> =
     if (byClass !== 0) return byClass;
     return a.name.localeCompare(b.name, "es");
   });
-  return contacts;
+
+  const photos = await avatarUrlsBySubjectKey(
+    supabase,
+    contacts.map((contact) => contact.key),
+  );
+  return contacts.map((contact) => ({
+    ...contact,
+    avatarUrl: photos.get(contact.key) ?? null,
+  }));
 });
 
 /** Guardian + school-admin conversations for the signed-in teacher. */
@@ -105,6 +114,7 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
     const contactByKeyClass = new Map(
       contacts.map((contact) => [`${contact.key}::${contact.context}`, contact]),
     );
+    const avatarUrls = await avatarUrlsBySubjectKey(supabase, [...recipientKeyById.values()]);
 
     for (const row of listRes.data as ConversationListRow[]) {
       const recipientKey = recipientKeyById.get(row.id) ?? "";
@@ -142,7 +152,7 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
         lastBody: row.last_body ?? "",
         lastAt: row.last_at ?? new Date(0).toISOString(),
         unread: Boolean(row.unread),
-        avatarUrl: null,
+        avatarUrl: recipientKey ? (avatarUrls.get(recipientKey) ?? null) : null,
       });
     }
   }
@@ -228,11 +238,15 @@ export const loadChatConversation = cache(
     const classLabel = contact?.context || fromMap?.classLabel || "";
     const studentName = contact?.studentName || fromMap?.studentName || "";
 
-    const { data: messages } = await supabase
-      .from("chat_messages")
-      .select("id, body, author_profile_id, created_at")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true });
+    const counterpartKey = mine ? row.recipient_key : row.teacher_profile_id;
+    const [photos, { data: messages }] = await Promise.all([
+      avatarUrlsBySubjectKey(supabase, [counterpartKey]),
+      supabase
+        .from("chat_messages")
+        .select("id, body, author_profile_id, created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true }),
+    ]);
 
     return {
       id: conversationId,
@@ -241,7 +255,7 @@ export const loadChatConversation = cache(
       classLabel,
       studentName,
       otherReadAt: otherReadAt ?? null,
-      avatarUrl: null,
+      avatarUrl: photos.get(counterpartKey) ?? null,
       messages: (
         (messages ?? []) as Array<{
           id: string;

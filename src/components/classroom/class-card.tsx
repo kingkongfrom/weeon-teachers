@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FolderOpen, Megaphone, Presentation, Users } from "lucide-react";
+import { FolderOpen, Presentation, Users } from "lucide-react";
 import { SubjectChips } from "@/components/grupos/subject-chips";
 import { getT } from "@/lib/i18n/server";
 import type { TeacherGrupo } from "@/lib/dashboard/grupos";
@@ -18,11 +18,6 @@ export async function ClassCard({
   const t = await getT();
   const base = `/aula-virtual/${grupo.id}`;
   const actions = [
-    {
-      label: t.classroom.tabs.novedades,
-      icon: Megaphone,
-      href: `${base}?tab=novedades`,
-    },
     {
       label: t.classroom.tabs.trabajo,
       icon: FolderOpen,
