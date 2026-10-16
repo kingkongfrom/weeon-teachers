@@ -549,49 +549,39 @@ function FilterRow({
   const over = reorderTargetId === categoryReorderId && draggingCategoryId != null;
   const handleDragging = draggingCategoryId === categoryReorderId;
 
+  // A draggable handle cannot live inside a <button> (buttons swallow drag).
+  // The row is a flex <div>; the handle is a sibling drag source, the label a
+  // click target, sharing the drop handlers for circulars/category reorder.
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onDragOver={
-        droppable
-          ? (event) => {
-              if (!event.dataTransfer.types.includes(CIRCULAR_MIME)) return;
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "move";
-            }
-          : undefined
-      }
-      onDrop={
-        droppable
-          ? (event) => {
-              event.preventDefault();
-              const documentId = event.dataTransfer.getData(CIRCULAR_MIME);
-              if (documentId) {
-                onMoveCircular?.(documentId, dropCategoryId ?? null);
-                return;
-              }
-              const dragCategoryId = event.dataTransfer.getData(CATEGORY_MIME);
-              if (dragCategoryId) onCategoryDrop?.(dragCategoryId);
-            }
-          : undefined
-      }
-      onDragOverCapture={
-        reorderable
-          ? (event) => {
-              if (!event.dataTransfer.types.includes(CATEGORY_MIME)) return;
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "move";
-              onCategoryDragOver?.();
-            }
-          : undefined
-      }
+    <div
+      onDragOver={(event) => {
+        if (!droppable && !reorderable) return;
+        const types = event.dataTransfer.types;
+        if (!types.includes(CIRCULAR_MIME) && !types.includes(CATEGORY_MIME)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        if (reorderable && types.includes(CATEGORY_MIME)) onCategoryDragOver?.();
+      }}
       onDragLeave={reorderable ? () => onCategoryDragLeave?.() : undefined}
+      onDrop={(event) => {
+        event.preventDefault();
+        const documentId = event.dataTransfer.getData(CIRCULAR_MIME);
+        if (documentId) {
+          onMoveCircular?.(documentId, dropCategoryId ?? null);
+          onCategoryDragEnd?.();
+          return;
+        }
+        const dragCategoryId = event.dataTransfer.getData(CATEGORY_MIME);
+        if (dragCategoryId) {
+          onCategoryDrop?.(dragCategoryId);
+          onCategoryDragEnd?.();
+        }
+      }}
       className={cn(
-        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] transition-colors",
+        "flex items-center gap-1 rounded-xl px-1.5 py-1 transition-colors",
         active
-          ? "bg-[var(--wa-active)] font-semibold text-[var(--wa-text)]"
-          : "font-medium text-[var(--wa-text)] hover:bg-[var(--wa-hover)]",
+          ? "bg-[var(--wa-active)]"
+          : "hover:bg-[var(--wa-hover)]",
         droppable && draggingId && "ring-1 ring-inset ring-[var(--wa-ring)]/40",
         over && "bg-[var(--wa-active)] ring-2 ring-[var(--wa-accent)]",
         handleDragging && "opacity-50",
@@ -603,25 +593,33 @@ function FilterRow({
           role="button"
           tabIndex={-1}
           aria-label={label}
-          onClick={(event) => event.stopPropagation()}
           onDragStart={(event) => {
             event.dataTransfer.setData(CATEGORY_MIME, categoryReorderId);
             event.dataTransfer.effectAllowed = "move";
             onCategoryDragStart?.();
           }}
           onDragEnd={() => onCategoryDragEnd?.()}
-          className="-ml-1 inline-flex h-5 w-3.5 shrink-0 cursor-grab items-center justify-center text-[var(--wa-muted)] active:cursor-grabbing"
+          className="inline-flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-[var(--wa-muted)] active:cursor-grabbing"
         >
           <GripVertical className="h-3.5 w-3.5" />
         </span>
       ) : null}
-      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
-      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
-      {count != null ? (
-        <span className="text-[12px] tabular-nums text-[var(--wa-muted)]">
-          {count > 99 ? "99+" : count}
-        </span>
-      ) : null}
-    </button>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[14px]",
+          active ? "font-semibold text-[var(--wa-text)]" : "font-medium text-[var(--wa-text)]",
+        )}
+      >
+        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+        {count != null ? (
+          <span className="text-[12px] tabular-nums text-[var(--wa-muted)]">
+            {count > 99 ? "99+" : count}
+          </span>
+        ) : null}
+      </button>
+    </div>
   );
 }

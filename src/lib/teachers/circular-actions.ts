@@ -256,7 +256,9 @@ export async function reorderTeacherCircularCategories(
   const { data: owned } = await session.actor
     .from("document_categories")
     .select("id")
-    .eq("tenant_id", session.tenantId);
+    .eq("tenant_id", session.tenantId)
+    .eq("scope", "teacher")
+    .eq("owner_profile_id", session.userId);
   const ownedIds = new Set((owned ?? []).map((row) => row.id as string));
   const unique = [...new Set(parsed.data)];
   if (unique.length !== ownedIds.size || unique.some((id) => !ownedIds.has(id))) {
