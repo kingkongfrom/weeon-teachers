@@ -114,28 +114,31 @@ export function PdfReaderDialog({
             transition={{ duration: 0.2 }}
             className="relative flex h-[min(94vh,920px)] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-border bg-surface shadow-2xl sm:rounded-2xl"
           >
-            <header className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-foreground">{name}</p>
-              </div>
-              <a
-                href={url}
-                download={name}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold text-foreground/70 hover:bg-surface-muted hover:text-foreground"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t("comms.documents.download")}</span>
-              </a>
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-foreground/55 hover:bg-surface-muted hover:text-foreground"
-                aria-label={t("common.close")}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </header>
-            <PdfViewport key={url} url={url} />
+            <PdfViewport
+              key={url}
+              url={url}
+              topBar={
+                <>
+                  <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{name}</p>
+                  <a
+                    href={url}
+                    download={name}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold text-foreground/70 hover:bg-surface-muted hover:text-foreground"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{t("comms.documents.download")}</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-foreground/55 hover:bg-surface-muted hover:text-foreground"
+                    aria-label={t("common.close")}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </>
+              }
+            />
           </motion.div>
         </div>
       ) : null}
@@ -149,12 +152,15 @@ export function PdfViewport({
   url,
   showChrome = true,
   onExpand,
+  topBar,
 }: {
   url: string;
   /** Show the page count + zoom toolbar. Hidden for the compact inline preview. */
   showChrome?: boolean;
   /** When set, a floating expand button opens the full-screen reader. */
   onExpand?: () => void;
+  /** Optional content rendered at the left of the toolbar row (e.g. title + actions). */
+  topBar?: ReactNode;
 }) {
   const t = useT();
   const frameRef = useRef<HTMLDivElement>(null);
@@ -218,16 +224,27 @@ export function PdfViewport({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-[#eef1f6] dark:bg-[#1a2030]">
-      {showChrome ? (
-        <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-surface/95 px-4 py-2">
-          <p className="text-xs font-semibold text-foreground/55">
-            {status === "ready"
-              ? pages.length === 1
-                ? t("pdf.onePage")
-                : t("pdf.pages", { count: pages.length })
-              : " "}
-          </p>
-          <div className="flex items-center gap-1">
+      {showChrome || topBar ? (
+        <div className="flex items-center gap-3 border-b border-border/70 bg-surface/95 px-4 py-2">
+          {topBar ? (
+            <div className="flex min-w-0 flex-1 items-center gap-3">{topBar}</div>
+          ) : (
+            <p className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground/55">
+              {status === "ready"
+                ? pages.length === 1
+                  ? t("pdf.onePage")
+                  : t("pdf.pages", { count: pages.length })
+                : " "}
+            </p>
+          )}
+          <div className="flex shrink-0 items-center gap-1">
+            <span className="mr-1 hidden text-xs font-semibold tabular-nums text-foreground/45 sm:inline">
+              {status === "ready"
+                ? pages.length === 1
+                  ? t("pdf.onePage")
+                  : t("pdf.pages", { count: pages.length })
+                : ""}
+            </span>
             <button
               type="button"
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-foreground/60 hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
