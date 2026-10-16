@@ -18,6 +18,7 @@ import {
   fetchTeacherCircularDetail,
   moveTeacherCircularCategory,
   reorderTeacherCircularCategories,
+  reorderTeacherCirculars,
   restoreTeacherCircular,
   trashTeacherCircular,
 } from "@/lib/teachers/circular-actions";
@@ -83,6 +84,10 @@ export function CircularesWorkspace({
   const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null);
   const [reorderTarget, setReorderTarget] = useState<{ id: string; after: boolean } | null>(null);
   const [categoryOrderOverride, setCategoryOrderOverride] = useState<string | null>(null);
+  const [docOrder, setDocOrder] = useState<string[] | null>(null);
+  const [reorderDocTarget, setReorderDocTarget] = useState<{ id: string; after: boolean } | null>(
+    null,
+  );
 
   const categorySignature = categories.map((row) => row.id).join("|");
   const orderedCategories = useMemo(() => {
@@ -128,12 +133,24 @@ export function CircularesWorkspace({
   }, [withLocalCategory]);
 
   const scopedDocuments = useMemo(() => {
-    if (view === "uncategorized") return withLocalCategory.filter((row) => !row.categoryName);
-    if (view === "category" && categoryId) {
-      return withLocalCategory.filter((row) => row.categoryId === categoryId);
+    let rows: TeacherCircularRow[];
+    if (view === "uncategorized") rows = withLocalCategory.filter((row) => !row.categoryName);
+    else if (view === "category" && categoryId) {
+      rows = withLocalCategory.filter((row) => row.categoryId === categoryId);
+    } else rows = scoped;
+    // Apply a local optimistic order (drag-reorder) over the visible set.
+    if (docOrder) {
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      const ordered = docOrder.flatMap((id) => {
+        const row = byId.get(id);
+        return row ? [row] : [];
+      });
+      const known = new Set(docOrder);
+      const rest = rows.filter((row) => !known.has(row.id));
+      return [...ordered, ...rest];
     }
-    return scoped;
-  }, [withLocalCategory, scoped, view, categoryId]);
+    return rows;
+  }, [withLocalCategory, scoped, view, categoryId, docOrder]);
 
   const filteredDocuments = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -233,6 +250,50 @@ export function CircularesWorkspace({
         setCategoryOrder(null);
         setCategoryOrderOverride(null);
         return;
+      }
+      router.refresh();
+    })();
+  }
+
+  /** Reorder the visible circulares (within the current folder). */
+  function applyDocReorder(dragId: string, targetId: string | null, insertAfter: boolean) {
+    if (targetId === null) return;
+    if (dragId === targetId) return;
+    const visible = scopedDocuments.map((row) => row.id);
+    const from = visible.indexOf(dragId);
+    if (from < 0) return;
+    const next = [...visible];
+    const [moved] = next.splice(from, 1);
+    if (!moved) return;
+    const targetAfterRemoval = next.indexOf(targetId);
+    const insertAt = insertAfter ? targetAfterRemoval + 1 : targetAfterRemoval;
+    next.splice(insertAt, 0, moved);
+    setDocOrder(next);
+    void (async () => {
+      const res = await reorderTeacherCirculars(next);
+      if (!res.ok) {
+        setDocOrder(null);
+                return;
+      }
+      router.refresh();
+    })();
+  }
+
+  /** Move a dragged circular to the last position in the visible list. */
+  function applyDocReorderToEnd(dragId: string) {
+    const visible = scopedDocuments.map((row) => row.id);
+    const from = visible.indexOf(dragId);
+    if (from < 0) return;
+    const next = [...visible];
+    const [moved] = next.splice(from, 1);
+    if (!moved) return;
+    next.push(moved);
+    setDocOrder(next);
+    void (async () => {
+      const res = await reorderTeacherCirculars(next);
+      if (!res.ok) {
+        setDocOrder(null);
+                return;
       }
       router.refresh();
     })();
@@ -404,67 +465,142 @@ export function CircularesWorkspace({
                 <ul className="flex flex-col gap-0.5">
                   {filteredDocuments.map((row) => {
                     const active = row.id === selectedId;
+                    const isDocTarget =
+                      reorderDocTarget?.id === row.id && draggingId != null && draggingId !== row.id;
+                    const docInsertAfter = isDocTarget && reorderDocTarget?.after === true;
                     return (
                       <li key={row.id}>
-                        <button
-                          type="button"
-                          draggable={!inTrash}
-                          onDragStart={
+                        <div
+                          data-circular-row={row.id}
+                          onDragOver={
                             inTrash
                               ? undefined
                               : (event) => {
-                                  event.dataTransfer.setData(CIRCULAR_MIME, row.id);
-                                  event.dataTransfer.effectAllowed = "move";
-                                  setDraggingId(row.id);
+                                  if (!event.dataTransfer.types.includes(CIRCULAR_MIME)) return;
+                                  event.preventDefault();
+                                  event.dataTransfer.dropEffect = "move";
+                                  const rect = event.currentTarget.getBoundingClientRect();
+                                  setReorderDocTarget({
+                                    id: row.id,
+                                    after: event.clientY > rect.top + rect.height / 2,
+                                  });
                                 }
                           }
-                          onDragEnd={inTrash ? undefined : () => setDraggingId(null)}
-                          onClick={() => {
-                            if (active) {
-                              clearSelection();
-                              return;
-                            }
-                            void openPreview(row.id);
-                          }}
+                          onDragLeave={
+                            inTrash
+                              ? undefined
+                              : () =>
+                                  setReorderDocTarget((current) =>
+                                    current?.id === row.id ? null : current,
+                                  )
+                          }
+                          onDrop={
+                            inTrash
+                              ? undefined
+                              : (event) => {
+                                  const dragId = event.dataTransfer.getData(CIRCULAR_MIME);
+                                  event.preventDefault();
+                                  setReorderDocTarget(null);
+                                  if (dragId) {
+                                    applyDocReorder(
+                                      dragId,
+                                      row.id,
+                                      reorderDocTarget?.after === true,
+                                    );
+                                  }
+                                  setDraggingId(null);
+                                }
+                          }
                           className={cn(
-                            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                            "group relative flex items-stretch rounded-xl transition-colors",
                             active ? "bg-[var(--wa-active)]" : "hover:bg-[var(--wa-hover)]",
-                            !inTrash && "cursor-grab active:cursor-grabbing",
                             draggingId === row.id && "opacity-50",
+                            isDocTarget &&
+                              reorderDocTarget?.after === false &&
+                              "before:absolute before:inset-x-2 before:-top-px before:h-[2px] before:rounded-full before:bg-[var(--wa-accent)]",
+                            docInsertAfter &&
+                              "after:absolute after:inset-x-2 after:-bottom-px after:h-[2px] after:rounded-full after:bg-[var(--wa-accent)]",
                           )}
                         >
-                          <span
-                            className="inline-flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-full text-white"
-                            style={{ backgroundColor: row.categoryColor || "#5e25cc" }}
-                            aria-hidden
+                          {!inTrash ? (
+                            <button
+                              type="button"
+                              draggable
+                              tabIndex={-1}
+                              aria-label={row.title}
+                              onDragStart={(event) => {
+                                event.dataTransfer.setData(CIRCULAR_MIME, row.id);
+                                event.dataTransfer.effectAllowed = "move";
+                                setDraggingId(row.id);
+                              }}
+                              onDragEnd={() => {
+                                setDraggingId(null);
+                                setReorderDocTarget(null);
+                              }}
+                              className="flex w-5 shrink-0 cursor-grab items-center justify-center text-[var(--wa-muted)] opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 active:cursor-grabbing lg:opacity-60"
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (active) {
+                                clearSelection();
+                                return;
+                              }
+                              void openPreview(row.id);
+                            }}
+                            className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-left"
                           >
-                            <FileText className="h-5 w-5" />
-                          </span>
-                          <span className="flex min-w-0 flex-1 flex-col gap-1">
-                            <span className="flex items-baseline gap-2">
-                              <span className="min-w-0 flex-1 truncate text-[16px] text-[var(--wa-text)]">
-                                {row.title}
-                              </span>
-                              <span className="shrink-0 text-[12px] text-[var(--wa-muted)]">
-                                {formatListTime(row.publishedAt)}
-                              </span>
+                            <span
+                              className="inline-flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-full text-white"
+                              style={{ backgroundColor: row.categoryColor || "#5e25cc" }}
+                              aria-hidden
+                            >
+                              <FileText className="h-5 w-5" />
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--wa-muted)]">
-                              {t("comms.recipientsCount", { n: row.targetCount })}
-                            </span>
-                            {row.categoryName ? (
-                              <span
-                                className="w-fit rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide"
-                                style={categoryBadgeStyle(row.categoryColor || "#5e25cc")}
-                              >
-                                {row.categoryName}
+                            <span className="flex min-w-0 flex-1 flex-col gap-1">
+                              <span className="flex items-baseline gap-2">
+                                <span className="min-w-0 flex-1 truncate text-[16px] text-[var(--wa-text)]">
+                                  {row.title}
+                                </span>
+                                <span className="shrink-0 text-[12px] text-[var(--wa-muted)]">
+                                  {formatListTime(row.publishedAt)}
+                                </span>
                               </span>
-                            ) : null}
-                          </span>
-                        </button>
+                              <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--wa-muted)]">
+                                {t("comms.recipientsCount", { n: row.targetCount })}
+                              </span>
+                              {row.categoryName ? (
+                                <span
+                                  className="w-fit rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide"
+                                  style={categoryBadgeStyle(row.categoryColor || "#5e25cc")}
+                                >
+                                  {row.categoryName}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                        </div>
                       </li>
                     );
                   })}
+                  {draggingId && !inTrash ? (
+                    <CategoryTailDropZone
+                      active={reorderDocTarget?.id === "__tail__"}
+                      onOver={() => setReorderDocTarget({ id: "__tail__", after: true })}
+                      onLeave={() =>
+                        setReorderDocTarget((current) =>
+                          current?.id === "__tail__" ? null : current,
+                        )
+                      }
+                      onDrop={(dragId) => {
+                        setReorderDocTarget(null);
+                        applyDocReorderToEnd(dragId);
+                      }}
+                    />
+                  ) : null}
                 </ul>
               )}
             </div>
@@ -659,7 +795,7 @@ function FilterRow({
       className={cn(
         "relative flex items-center gap-1 rounded-xl px-1.5 py-1 transition-colors",
         active ? "bg-[var(--wa-active)]" : "hover:bg-[var(--wa-hover)]",
-        droppable && draggingId && "ring-1 ring-inset ring-[var(--wa-ring)]/40",
+        droppable && draggingId && "ring-1 ring-inset ring-[var(--wa-ring)]/50",
         isTarget &&
           !insertAfter &&
           "before:absolute before:inset-x-2 before:-top-px before:h-[2px] before:rounded-full before:bg-[var(--wa-accent)]",

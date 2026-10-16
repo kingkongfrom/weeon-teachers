@@ -241,6 +241,49 @@ export async function moveTeacherCircularCategory(
   return { ok: true, documentId };
 }
 
+/** Reorder the teacher's circulares (position). */
+export async function reorderTeacherCirculars(
+  orderedIds: string[],
+): Promise<CircularActionResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+
+  const parsed = z.array(z.string().uuid()).safeParse(orderedIds);
+  if (!parsed.success || parsed.data.length === 0) {
+    return { ok: false, error: "Orden no válido." };
+  }
+
+  const { data: owned } = await session.actor
+    .from("published_documents")
+    .select("id")
+    .eq("tenant_id", session.tenantId)
+    .eq("scope", "teacher")
+    .eq("published_by", session.userId)
+    .is("deleted_at", null);
+  const ownedIds = new Set((owned ?? []).map((row) => row.id as string));
+  const unique = [...new Set(parsed.data)];
+  if (unique.length === 0 || unique.some((id) => !ownedIds.has(id))) {
+    return { ok: false, error: "Orden no válido." };
+  }
+
+  const results = await Promise.all(
+    unique.map((id, index) =>
+      session.actor
+        .from("published_documents")
+        .update({ position: index })
+        .eq("id", id)
+        .eq("published_by", session.userId)
+        .eq("tenant_id", session.tenantId),
+    ),
+  );
+  if (results.some((result) => result.error)) {
+    return { ok: false, error: "No se pudo reordenar las circulares." };
+  }
+
+  revalidatePath(TEACHER_CIRCULARS);
+  return { ok: true, documentId: unique[0] };
+}
+
 /** Reorder the school's circular categories (folders) by position. */
 export async function reorderTeacherCircularCategories(
   orderedIds: string[],
