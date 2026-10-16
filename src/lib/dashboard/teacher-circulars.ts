@@ -66,7 +66,7 @@ export const loadTeacherCirculars = cache(
   },
 );
 
-/** Categories available to file a circular under. */
+/** The teacher's own circular categories (independent from the school's). */
 export const loadCircularCategories = cache(async (): Promise<CircularCategory[]> => {
   const session = await getCommsActor();
   if (!session) return [];
@@ -74,6 +74,8 @@ export const loadCircularCategories = cache(async (): Promise<CircularCategory[]
   const { data } = await session.actor
     .from("document_categories")
     .select("id, name, color")
+    .eq("scope", "teacher")
+    .eq("owner_profile_id", session.userId)
     .order("position", { ascending: true })
     .order("name", { ascending: true });
   return (data ?? []).map((row) => ({

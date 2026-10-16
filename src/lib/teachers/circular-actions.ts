@@ -295,7 +295,13 @@ export async function createTeacherCircularCategory(input: {
 
   const { data, error } = await session.actor
     .from("document_categories")
-    .insert({ tenant_id: session.tenantId, name: parsed.data.name, color: parsed.data.color })
+    .insert({
+      tenant_id: session.tenantId,
+      name: parsed.data.name,
+      color: parsed.data.color,
+      scope: "teacher",
+      owner_profile_id: session.userId,
+    })
     .select("id")
     .single();
   if (error || !data) return { ok: false, error: "No se pudo crear la categoría." };
