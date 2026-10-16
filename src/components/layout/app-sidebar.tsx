@@ -11,6 +11,7 @@ import {
   Presentation,
   BellRing,
   FileBarChart,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -48,6 +49,11 @@ export function AppSidebar({
       label: t.messages.hubMessagesTitle,
       icon: Mail,
       badgeCount: commsNavAttention?.unreadInboxCount,
+    },
+    {
+      href: "/comunicacion/circulares",
+      label: t.circulares.title,
+      icon: FileText,
     },
     {
       href: "/comunicacion/chat",
