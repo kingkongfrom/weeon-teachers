@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowLeft, Download, Loader2, RotateCcw, Trash2, Users } from "lucide-react";
+import { PdfReaderDialog, PdfViewport } from "@/components/ui/pdf-reader";
 import type { TeacherCircularDetail } from "@/lib/dashboard/teacher-circulars";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
@@ -34,6 +36,7 @@ export function CircularPreviewPane({
 }) {
   const t = useT();
   const primary = detail?.attachments[0];
+  const [pdfFullscreen, setPdfFullscreen] = useState(false);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--wa-header)]">
@@ -75,11 +78,11 @@ export function CircularPreviewPane({
           </div>
         ) : primary?.kind === "pdf" && primary.url ? (
           <div className="flex min-h-[280px] flex-1 flex-col overflow-hidden rounded-xl border border-[var(--wa-border)]">
-            <iframe
+            <PdfViewport
               key={primary.url}
-              src={primary.url}
-              title={primary.name}
-              className="h-full min-h-[280px] w-full flex-1 bg-white"
+              url={primary.url}
+              showChrome={false}
+              onExpand={() => setPdfFullscreen(true)}
             />
           </div>
         ) : primary?.kind === "image" && primary.url ? (
@@ -165,6 +168,15 @@ export function CircularPreviewPane({
           ) : null}
         </div>
       </div>
+
+      {primary?.kind === "pdf" && primary.url ? (
+        <PdfReaderDialog
+          open={pdfFullscreen}
+          url={primary.url}
+          name={primary.name}
+          onClose={() => setPdfFullscreen(false)}
+        />
+      ) : null}
     </div>
   );
 }
