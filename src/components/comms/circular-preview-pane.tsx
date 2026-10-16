@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ArrowLeft, Download, Loader2, RotateCcw, Trash2, Users } from "lucide-react";
 import { PdfReaderDialog, PdfViewport } from "@/components/ui/pdf-reader";
 import type { TeacherCircularDetail } from "@/lib/dashboard/teacher-circulars";
-import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
 
 function categoryBadgeStyle(color: string) {
@@ -159,12 +158,6 @@ export function CircularPreviewPane({
             >
               <Trash2 className="h-4 w-4" />
             </button>
-          ) : null}
-          {primary?.url ? (
-            <a href={primary.url} download={primary.name} className={cn(primaryButton)}>
-              <Download className="h-4 w-4" />
-              {t("comms.documents.download")}
-            </a>
           ) : null}
         </div>
       </div>
