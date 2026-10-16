@@ -36,3 +36,30 @@ export async function createTopic(input: {
   revalidatePath(`/aula-virtual/${parsed.data.classId}`);
   return { ok: true, id: data.id };
 }
+
+/** Removes a Classwork topic. Linked tasks and materials keep their rows; topic_id becomes null. */
+export async function deleteTopic(input: {
+  classId: string;
+  topicId: string;
+}): Promise<TopicActionResult> {
+  const t = await getT();
+  const parsed = z
+    .object({ classId: z.string().uuid(), topicId: z.string().uuid() })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: t.topics.deleteError };
+
+  const detail = await loadTeacherGrupo(parsed.data.classId);
+  if (!detail) return { ok: false, error: t.topics.deleteError };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase
+    .from("classwork_topics")
+    .delete()
+    .eq("id", parsed.data.topicId)
+    .eq("class_id", parsed.data.classId);
+
+  if (error) return { ok: false, error: t.topics.deleteError };
+
+  revalidatePath(`/aula-virtual/${parsed.data.classId}`);
+  return { ok: true };
+}

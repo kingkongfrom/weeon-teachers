@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Tooltip } from "@/components/ui/tooltip";
+import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
+import type { TeacherStudent } from "@/lib/dashboard/grupos";
 import { saveAttendance } from "@/lib/teachers/attendance-actions";
 import {
   ATTENDANCE_CODE,
@@ -22,12 +24,10 @@ import {
   type AttendanceStatus,
 } from "@/lib/attendance/model";
 
-export type AttendanceStudent = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  secondLastName: string | null;
-};
+export type AttendanceStudent = Pick<
+  TeacherStudent,
+  "id" | "firstName" | "lastName" | "secondLastName" | "avatarUrl"
+>;
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -271,9 +271,17 @@ export function AttendanceRegister({
             return (
               <li key={student.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-                    {displayName(student)}
-                  </span>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <ProfileAvatarDisplay
+                      name={displayName(student)}
+                      imageUrl={student.avatarUrl}
+                      size="sm"
+                      className="rounded-full"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                      {displayName(student)}
+                    </span>
+                  </div>
                   <div
                     role="radiogroup"
                     aria-label={displayName(student)}

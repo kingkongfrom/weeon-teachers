@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Download, Loader2, RotateCcw, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Pencil, RotateCcw, Trash2, Users } from "lucide-react";
 import { PdfReaderDialog, PdfViewport } from "@/components/ui/pdf-reader";
 import type { TeacherCircularDetail } from "@/lib/dashboard/teacher-circulars";
 import { useT } from "@/lib/i18n/use-i18n";
@@ -112,12 +112,13 @@ export function CircularPreviewPane({
       </div>
 
       {detail?.description ? (
-        <div className="shrink-0 border-t border-[var(--wa-border)] px-5 py-3 text-sm font-medium text-[var(--wa-text)]">
+        <div className="shrink-0 border-t border-border px-5 py-3 text-sm font-medium text-[var(--wa-text)]">
           {detail.description}
         </div>
       ) : null}
 
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[var(--wa-border)] bg-[var(--wa-header)] px-4 py-3">
+      <div className="border-t border-border">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-[var(--wa-header)] px-4 py-3">
         <span
           className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--wa-muted)]"
           title={detail?.recipientsLabel}
@@ -128,6 +129,14 @@ export function CircularPreviewPane({
           {detail?.recipientsLabel}
         </span>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled
+            title={t("comms.comingSoon")}
+            className="inline-flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-muted)]"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
           {onRestore ? (
             <button
               type="button"
@@ -154,22 +163,13 @@ export function CircularPreviewPane({
               onClick={onDelete}
               aria-label={t("comms.folderTrash")}
               title={t("comms.folderTrash")}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-icon)] hover:bg-[var(--wa-hover)]"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-error/25 text-error hover:bg-error/5"
             >
               <Trash2 className="h-4 w-4" />
             </button>
           ) : null}
-          {primary?.url ? (
-            <a
-              href={primary.url}
-              download={primary.name}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--wa-accent)] px-4 text-sm font-semibold text-white hover:brightness-105"
-            >
-              <Download className="h-4 w-4" />
-              {t("comms.documents.download")}
-            </a>
-          ) : null}
         </div>
+      </div>
       </div>
 
       {primary?.kind === "pdf" && primary.url ? (

@@ -6,18 +6,22 @@ import { ArrowUpRight, ChevronRight, GraduationCap, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { hubToneSegment, hubToneSurface, SEGMENT_TRACK, TONE_AVATAR, type Tone } from "@/lib/dashboard/tones";
+import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
 import { ClassworkPanel } from "@/components/classroom/classwork-panel";
+import { ExamDatesPanel } from "@/components/assessments/exam-dates-panel";
 import { AttendanceRegister } from "@/components/attendance/attendance-register";
 import type { AttendanceEntry } from "@/lib/attendance/model";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
+import type { ClassLessonDay, ExamDate } from "@/lib/dashboard/exam-dates";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
 import type { ClassTopic } from "@/lib/dashboard/topics";
 import type { AssessmentSummary } from "@/lib/assessments/model";
 
-type TabId = "trabajo" | "personas" | "asistencia" | "calificaciones";
+type TabId = "trabajo" | "examenes" | "personas" | "asistencia" | "calificaciones";
 
 const TAB_TONE: Record<TabId, Tone> = {
   trabajo: "purple",
+  examenes: "rose",
   personas: "green",
   asistencia: "yellow",
   calificaciones: "rose",
@@ -34,9 +38,12 @@ function initialsOf(name: string): string {
 export function ClassTabs({
   classId,
   teacherName,
+  teacherAvatarUrl = null,
   students,
   materials,
   assessments,
+  examDates = [],
+  lessonDays = [],
   topics,
   selectedSubjectId,
   subjects,
@@ -48,9 +55,12 @@ export function ClassTabs({
 }: {
   classId: string;
   teacherName: string;
+  teacherAvatarUrl?: string | null;
   students: TeacherStudent[];
   materials: ClassMaterial[];
   assessments: AssessmentSummary[];
+  examDates?: ExamDate[];
+  lessonDays?: ClassLessonDay[];
   topics: ClassTopic[];
   selectedSubjectId: string | null;
   subjects: { id: string; name: string }[];
@@ -61,7 +71,7 @@ export function ClassTabs({
   pendingJustifications?: number;
 }) {
   const t = useT();
-  const VALID_TABS: TabId[] = ["trabajo", "personas", "asistencia", "calificaciones"];
+  const VALID_TABS: TabId[] = ["trabajo", "personas", "asistencia", "calificaciones", "examenes"];
   const [tab, setTab] = useState<TabId>(
     VALID_TABS.includes(initialTab as TabId) ? (initialTab as TabId) : "trabajo",
   );
@@ -73,6 +83,7 @@ export function ClassTabs({
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "trabajo", label: t.classroom.tabs.trabajo },
+    { id: "examenes", label: t.classroom.tabs.examenes },
     { id: "personas", label: t.classroom.tabs.personas },
     { id: "asistencia", label: t.classroom.tabs.asistencia },
     { id: "calificaciones", label: t.classroom.tabs.calificaciones },
@@ -128,13 +139,33 @@ export function ClassTabs({
           />
         ) : null}
 
+        {tab === "examenes" ? (
+          <ExamDatesPanel
+            classId={classId}
+            examDates={examDates}
+            lessonDays={
+              selectedSubjectId
+                ? lessonDays.filter((lesson) => lesson.subjectId === selectedSubjectId)
+                : lessonDays
+            }
+            materials={materials}
+            subjects={subjects}
+            selectedSubjectId={selectedSubjectId}
+          />
+        ) : null}
+
         {tab === "personas" ? (
           <div className="flex flex-col gap-6">
             <section>
               <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
                 {t.classroom.teachers}
               </h3>
-              <PersonRow name={teacherName} subtitle={t.classroom.teacherFallback} tone="brand" />
+              <PersonRow
+                name={teacherName}
+                subtitle={t.classroom.teacherFallback}
+                tone="brand"
+                imageUrl={teacherAvatarUrl}
+              />
             </section>
 
             <section>
@@ -151,6 +182,7 @@ export function ClassTabs({
                     <li key={student.id}>
                       <PersonRow
                         name={`${student.lastName} ${student.firstName}`.trim()}
+                        imageUrl={student.avatarUrl}
                         href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/aula-virtual/${classId}?tab=personas`)}`}
                       />
                     </li>
@@ -227,11 +259,13 @@ function PersonRow({
   name,
   subtitle,
   tone = "muted",
+  imageUrl,
   href,
 }: {
   name: string;
   subtitle?: string | null;
   tone?: "brand" | "muted";
+  imageUrl?: string | null;
   href?: string;
 }) {
   const content = (
@@ -241,14 +275,23 @@ function PersonRow({
         href ? "ui-hover -mx-2 rounded-lg px-2" : "px-1",
       )}
     >
-      <span
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
-          tone === "brand" ? "brand-gradient" : "bg-foreground/30",
-        )}
-      >
-        {initialsOf(name)}
-      </span>
+      {imageUrl !== undefined ? (
+        <ProfileAvatarDisplay
+          name={name}
+          imageUrl={imageUrl}
+          size="sm"
+          className="rounded-full"
+        />
+      ) : (
+        <span
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
+            tone === "brand" ? "brand-gradient" : "bg-foreground/30",
+          )}
+        >
+          {initialsOf(name)}
+        </span>
+      )}
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
         {subtitle ? (

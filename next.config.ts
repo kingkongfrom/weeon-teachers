@@ -28,6 +28,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Native/ESM-heavy deps used server-side to render document thumbnails
+  // (`thumbnail.server.ts`): keep them out of the bundle so the native
+  // `@napi-rs/canvas` binding loads at runtime instead of being traced.
+  serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas"],
   experimental: {
     serverActions: {
       bodySizeLimit: "26mb",

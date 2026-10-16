@@ -84,7 +84,9 @@ Honest snapshot — do not assume the rest exists.
   `loadTeacherGrupos()` (`classes` + `enrollments` + `subjects`).
 - **`/aula-virtual/[classId]`** — class banner + `ClassTabs`. The class opens on
   **Trabajo de clase**.
-  - **Trabajo de clase** — **assessments (P5a)** + **materials (P1)**:
+  - **Trabajo de clase** — **assessments (P5a)** + **materials (P1)**, stacked on a
+    narrow window and **side by side** from the `xl` breakpoint so both lists
+    stay on screen:
     - *Tareas y exámenes*: `AssessmentsPanel` → the `AssessmentEditor`
       (`/aula-virtual/[classId]/evaluaciones/[id]`) builds a homework/exam with a
       TipTap WYSIWYG, question types, a **Materia** selector, preview, and
@@ -99,19 +101,24 @@ Honest snapshot — do not assume the rest exists.
       — with a **Por evaluar / Evaluada** status and the mark. See
       § Submit vs grade and § Grades & evaluation.
     - *Materiales*: `MaterialsPanel` uploads/lists/downloads/removes documents.
-    - *Temas*: `ClassworkPanel` — topic chips (Temas) create topics and filter
-      assessments + materials; topics are set on the assessment/column and on the
-      material upload.
-    - *Materias*: when the class has more than one subject, the **subject badges
+      The file uses the subject already selected on Trabajo de clase; the
+      upload dialog does not ask for Materia again.
+    - *Temas*: `ClassworkPanel` — a plain text row (not pills, not a menu)
+      filters assessments + materials. **Nuevo tema** sits at the end of that
+      row and becomes an inline name field. The active topic shows **Eliminar**;
+      deleting it sets linked tasks and materials back to no topic. Topics are set on the
+      assessment/column and on the material upload.
+    - *Materias*: when the class has more than one subject, the **subject pills
       live inside Classroom only** and filter its assessments + materials
-      (`?subject=<id>&tab=trabajo`); **Personas / Asistencia / Calificaciones stay
-      class-wide**. New assessments and materials default to the active subject.
+      (`?subject=<id>&tab=trabajo`); the same pills on **Fechas de examen**
+      keep that tab (`?tab=examenes`). **Personas / Asistencia / Calificaciones stay
+      class-wide**. New assessments and materials use that active subject.
       Work is **strictly per subject**: a subject view lists only its own
       assessments/materials — unassigned items are not leaked into every subject.
       Every class banner uses the shared Panel General green tone (per-subject
       pastels flipped to white ink in dark mode and lost contrast); the active
-      subject is not repeated on the banner — it is chosen/seen in Trabajo de
-      clase. The tone palette is defined once in `src/lib/dashboard/tones.ts`
+      subject is not repeated on the banner — it is chosen with the Trabajo de
+      clase subject pills. The tone palette is defined once in `src/lib/dashboard/tones.ts`
       and shared with the hub and lesson tiles.
   - **Personas** — teacher row + enrolled students; each student opens their
     transcript (`/estudiantes/[id]`). This is the home for the roster — there is
@@ -180,7 +187,8 @@ Honest snapshot — do not assume the rest exists.
   percentage (`max_marks` → column `points` → 100), and averages graded items per
   subject, per group, and overall (pass ≥ 70). **Columns with no `subject_id`
   (untagged) are excluded** — they are not a real subject and never render a
-  "No subject" bucket. The hero shows an overall ring + status and the group name
+  "No subject" bucket. The hero shows the student's photo (initials when none),
+  an overall ring + status, and the group name
   with its MEP level (`1B Elementary` / `1B Primaria`, 1–6 vs 7+); a KPI row
   (promedio, evaluaciones, materias, ausencias) and a group filter follow, then one
   card per group whose **subject rows start collapsed** (average, status, bar) and
@@ -209,8 +217,10 @@ Honest snapshot — do not assume the rest exists.
 > rows needs `20260912230000_teacher_sees_submissions.sql`, and grading needs
 > `20260913000000_assessment_grading.sql` (`submission_answers.score`/`feedback`
 > + the `grade_assessment_submission` RPC), applied in
-> `weeon-tenants`. The teacher repo is untyped, so it builds without a type
-> refresh, but the migrations are required at runtime.
+> `weeon-tenants`. **Exam dates (P5a.3)** need
+> `20261016140000_exam_dates.sql` + `20261016150000_exam_date_calendar_link.sql`.
+> The teacher repo is untyped, so it builds without a type refresh, but the
+> migrations are required at runtime.
 > (`20260911180000_backup_academic_tables.sql` is the tenants backup change.)
 
 ## Submit vs grade (do not confuse these)
@@ -470,6 +480,57 @@ Instructions and question prompts can include images (PNG/JPEG/WebP/GIF,
   Never pass raw TipTap `getJSON()` output straight into a server action.
 - **Mobile:** `weeon-mobile` parses the same JSON and renders the images (see
   `weeon-mobile/docs/aula-virtual.md`).
+
+### Exam dates (P5a.3) — a first-class feature
+
+Defining an exam date **moved out of the schedule** and is **its own feature**,
+independent of the assessment builder. A teacher may schedule an exam date
+before deciding what the exam actually is; the date is what **parents and
+students see in their apps**. It is its own tab on the class page,
+**Fechas de examen**, next to *Trabajo de clase* — not a section inside the
+classwork stream. The tab is a Monday–Friday month calendar: days without a
+class for the subject are quiet numbers on the same white grid, class days stay
+full ink with a dot, and exam days carry a chip. Double-clicking a class day opens the exam dialog with that date chosen.
+The dialog shows the same calendar inline. The selected day opens beside the
+grid with its time, room, and materials. Past exams stay on the calendar.
+
+- **Constrained calendar** (`components/assessments/lesson-date-picker.tsx`):
+  only the weekdays the class has a period **for the exam's subject** are
+  selectable; other days are disabled. Days with a period get a dot. Source of
+  truth is the class's `class_lessons` (`loadClassLessonDays`,
+  `lib/dashboard/exam-dates.ts`).
+- **The subject is fixed by the subject pills** — the dialog has **no Materia
+  dropdown** (the subject is already chosen on this tab) and shows it as a
+  read-only label. Title starts **empty** (never prefilled).
+- **Subject-locked slots.** The period list is filtered by the exam's subject,
+  so a **Ciencias** exam can only land on a **Ciencias** period — never a
+  Matemática period that happens to fall on the same day. If a subject has more
+  than one period on the chosen weekday, the teacher picks the block; the slot's
+  **time + room** are then shown.
+- **The date must fall on a class day.** Enforced both in the UI (disabled days)
+  and server-side (`saveExamDate` rejects a date whose weekday ≠ the period's).
+- **Study material.** An exam date can attach documents already shared with the
+  class for that subject (`StudyMaterialPicker` over `class_materials`, filtered
+  by subject) — no re-upload. Stored in **`exam_date_materials`**
+  (`exam_date_id`, `material_id`, `position`).
+- **Parents & students see it.** Saving mirrors the exam date into a single
+  **`calendar_events`** row (`event_type = 'exam'`, audience `group`, tied to the
+  period; `calendar_events.exam_date_id` link). Both the teacher Agenda and the
+  **mobile** apps already read `calendar_events`, so the date surfaces in their
+  calendars with **no mobile changes**.
+
+Schema (additive): **`exam_dates`** (class, subject, `lesson_id`, `exam_date`,
+title, notes) + **`exam_date_materials`**, RLS mirroring the
+class-material/calendar policies (`teaches_class` / enrolled / guardian).
+
+> **Deploy note (P5a.3):** needs `20261016140000_exam_dates.sql` and
+> `20261016150000_exam_date_calendar_link.sql`. (An earlier draft put the date in
+> the assessment editor with `assessments.lesson_id` / `assessment_materials` —
+> `20261016120000`/`20261016130000` — since reverted and superseded by the
+> `exam_dates` tables.)
+
+**Schedule:** Horarios no longer offers *Agregar examen o actividad*. A teacher
+sets the date from **Aula virtual → Fechas de examen**.
 
 ## Grades & evaluation (P5b/P5c + the new gradebook)
 

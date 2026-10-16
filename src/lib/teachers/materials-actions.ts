@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/session";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
+import { renderThumbnail } from "@/lib/materials/thumbnail.server";
 import { getT } from "@/lib/i18n/server";
 import {
   MATERIAL_BUCKET,
@@ -85,6 +86,23 @@ export async function uploadMaterial(formData: FormData): Promise<MaterialAction
     return { ok: false, error: t.classroom.materialsPanel.errorGeneric };
   }
 
+  // Best-effort page-1 preview (PDF) or downscaled image. A failure here never
+  // blocks the upload — the UI falls back to a file-type tile.
+  let thumbnailPath: string | null = null;
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const preview = await renderThumbnail(bytes, file.type || null, fileName);
+    if (preview) {
+      const thumbPath = `${tenantId}/${classId}/${materialId}/thumb.png`;
+      const { error: thumbError } = await supabase.storage
+        .from(MATERIAL_BUCKET)
+        .upload(thumbPath, preview, { contentType: "image/png", upsert: true });
+      if (!thumbError) thumbnailPath = thumbPath;
+    }
+  } catch {
+    thumbnailPath = null;
+  }
+
   const { error: insertError } = await supabase.from("class_materials").insert({
     id: materialId,
     tenant_id: tenantId,
@@ -94,6 +112,7 @@ export async function uploadMaterial(formData: FormData): Promise<MaterialAction
     topic_id: topicId,
     subject_id: subjectId,
     storage_path: path,
+    thumbnail_path: thumbnailPath,
     file_name: fileName,
     mime_type: file.type || null,
     size_bytes: file.size,
@@ -101,8 +120,9 @@ export async function uploadMaterial(formData: FormData): Promise<MaterialAction
   });
 
   if (insertError) {
-    // Roll back the orphaned object so storage and the table never diverge.
-    await supabase.storage.from(MATERIAL_BUCKET).remove([path]);
+    // Roll back the orphaned objects so storage and the table never diverge.
+    const orphans = thumbnailPath ? [path, thumbnailPath] : [path];
+    await supabase.storage.from(MATERIAL_BUCKET).remove(orphans);
     return { ok: false, error: t.classroom.materialsPanel.errorGeneric };
   }
 
@@ -127,13 +147,16 @@ export async function deleteMaterial(input: {
   const supabase = await createSessionClient();
   const { data: row } = await supabase
     .from("class_materials")
-    .select("storage_path")
+    .select("storage_path, thumbnail_path")
     .eq("id", id)
     .eq("class_id", classId)
     .maybeSingle();
 
-  if (row?.storage_path) {
-    await supabase.storage.from(MATERIAL_BUCKET).remove([row.storage_path]);
+  const paths = [row?.storage_path, row?.thumbnail_path].filter(
+    (path): path is string => typeof path === "string" && path.length > 0,
+  );
+  if (paths.length > 0) {
+    await supabase.storage.from(MATERIAL_BUCKET).remove(paths);
   }
 
   const { error } = await supabase

@@ -85,7 +85,7 @@ export function SettingsDrawer({
   if (!user) return null;
 
   const { tenantId, userId } = user;
-  const roleLabel = user.role === "admin" ? t.drawer.roleAdmin : t.drawer.roleTeacher;
+  const roleLabel = t.drawer.roleTeacher;
   const loginHandle = user.username?.trim() ?? "";
   const showLoginHandle =
     loginHandle.length > 0 &&

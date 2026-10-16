@@ -167,7 +167,7 @@ export function ClassworkPanel({
 
       {error ? <p className="text-sm font-medium text-error">{error}</p> : null}
 
-      <div className="flex flex-col gap-8">
+      <div className="grid items-start gap-8 xl:grid-cols-2 xl:gap-6">
         <AssessmentsPanel
           classId={classId}
           assessments={shownAssessments}
@@ -179,7 +179,6 @@ export function ClassworkPanel({
           classId={classId}
           materials={shownMaterials}
           topics={topics}
-          subjects={subjects}
           defaultTopicId={defaultTopicId}
           defaultSubjectId={selectedSubjectId}
         />

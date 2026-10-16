@@ -108,7 +108,6 @@ export async function ScheduleGrid({
                     key={lesson.id}
                     lesson={lesson}
                     dayLabel={t.schedule.weekdays[index]}
-                    dateISO={dateISO ?? undefined}
                     events={dayEvents.filter((event) => event.lessonId === lesson.id)}
                   />
                 ))

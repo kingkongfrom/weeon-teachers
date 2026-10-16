@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowUpRight,
   CalendarCheck,
   CalendarDays,
-  CalendarPlus,
   Clock,
   DoorOpen,
   GraduationCap,
@@ -20,8 +18,6 @@ import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { schoolCycleName } from "@/lib/dashboard/school-cycles";
 import { schoolWeekday } from "@/lib/attendance/model";
-import { EventFormDialog } from "@/components/agenda/event-form-dialog";
-import type { LessonChoice } from "@/lib/agenda/lesson-choice";
 import { hubTonePill, eventHubChip, type Tone } from "@/lib/dashboard/tones";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 import type { TeacherLesson } from "@/lib/dashboard/schedule";
@@ -56,34 +52,20 @@ const LESSON_TONE: Record<string, Tone> = {
 export function LessonCard({
   lesson,
   dayLabel,
-  dateISO,
   events = [],
 }: {
   lesson: TeacherLesson;
   dayLabel: string;
-  /** Selected week's date for this day — enables "add event" prefilled. */
-  dateISO?: string;
   /** Exams/activities attached to this lesson (for that day). */
   events?: TeacherCalendarEvent[];
 }) {
   const t = useT();
   const locale = useLocale();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [eventOpen, setEventOpen] = useState(false);
   const pill = hubTonePill(LESSON_TONE[lesson.color] ?? "blue");
   const cycle = lesson.grade ? schoolCycleName(lesson.grade, locale) : "";
   const isToday = schoolWeekday() === lesson.weekday;
-  const canAddEvent = Boolean(dateISO);
   const a = t.agenda.events;
-  const lessonChoice: LessonChoice = {
-    id: lesson.id,
-    subject: lesson.title,
-    groupName: lesson.groupName,
-    weekday: lesson.weekday,
-    startTime: lesson.startTime,
-    endTime: lesson.endTime,
-  };
 
   useEffect(() => {
     if (!open) return;
@@ -227,19 +209,6 @@ export function LessonCard({
                     ) : null}
 
                     <div className="mt-5 flex flex-col gap-2">
-                      {canAddEvent ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpen(false);
-                            setEventOpen(true);
-                          }}
-                          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-border px-4 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
-                        >
-                          <CalendarPlus className="h-4 w-4" />
-                          {a.addButton}
-                        </button>
-                      ) : null}
                       {isToday ? (
                         <Link
                           href={`/aula-virtual/${lesson.classId}?tab=asistencia&lesson=${lesson.id}`}
@@ -274,16 +243,6 @@ export function LessonCard({
             document.body,
           )
         : null}
-
-      {canAddEvent ? (
-        <EventFormDialog
-          open={eventOpen}
-          lesson={lessonChoice}
-          initialDate={dateISO}
-          onClose={() => setEventOpen(false)}
-          onSaved={() => router.refresh()}
-        />
-      ) : null}
     </>
   );
 }

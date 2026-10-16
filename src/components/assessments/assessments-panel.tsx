@@ -59,7 +59,7 @@ export function AssessmentsPanel({
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
           {a.title}
         </h3>

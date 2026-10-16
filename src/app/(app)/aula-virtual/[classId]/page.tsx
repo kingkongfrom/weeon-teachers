@@ -7,6 +7,7 @@ import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassMaterials } from "@/lib/dashboard/materials";
 import { loadClassAssessments } from "@/lib/dashboard/assessments";
+import { loadClassExamDates, loadClassLessonDays } from "@/lib/dashboard/exam-dates";
 import { loadClassTurnIns } from "@/lib/dashboard/submissions";
 import { loadClassTopics } from "@/lib/dashboard/topics";
 import { loadClassAttendance } from "@/lib/dashboard/attendance";
@@ -41,16 +42,27 @@ export default async function AulaVirtualClassPage({
     lesson && /^[0-9a-fA-F-]{36}$/.test(lesson) ? lesson : null;
 
   const { grupo, students } = detail;
-  const [session, materials, rawAssessments, topics, attendanceMarks, turnIns, pendingJustifications] =
-    await Promise.all([
-      getTeacherSession(),
-      loadClassMaterials(classId),
-      loadClassAssessments(classId),
-      loadClassTopics(classId),
-      loadClassAttendance(classId, attendanceDate),
-      loadClassTurnIns(classId, students),
-      loadJustificationInbox().then((rows) => rows.filter((row) => row.classId === classId).length),
-    ]);
+  const [
+    session,
+    materials,
+    rawAssessments,
+    topics,
+    attendanceMarks,
+    turnIns,
+    pendingJustifications,
+    examDates,
+    lessonDays,
+  ] = await Promise.all([
+    getTeacherSession(),
+    loadClassMaterials(classId),
+    loadClassAssessments(classId),
+    loadClassTopics(classId),
+    loadClassAttendance(classId, attendanceDate),
+    loadClassTurnIns(classId, students),
+    loadJustificationInbox().then((rows) => rows.filter((row) => row.classId === classId).length),
+    loadClassExamDates(classId),
+    loadClassLessonDays(classId),
+  ]);
   const schoolName = session ? await loadSchoolName(session.tenantId) : null;
   const t = await getT();
 
@@ -105,6 +117,8 @@ export default async function AulaVirtualClassPage({
         students={students}
         materials={materials}
         assessments={assessments}
+        examDates={examDates}
+        lessonDays={lessonDays}
         topics={topics}
         selectedSubjectId={selectedSubjectId}
         subjects={subjects.map((option) => ({ id: option.id, name: option.name }))}

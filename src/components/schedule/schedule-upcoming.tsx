@@ -104,7 +104,7 @@ export async function ScheduleUpcoming({
     return (
       <div className={cn("flex flex-col gap-2 rounded-xl p-3", pill.wash)}>
         <Link
-          href={`/aula-virtual/${lesson.classId}`}
+          href={`/aula-virtual/${lesson.classId}?subject=${encodeURIComponent(lesson.gradebookSubjectId)}&tab=trabajo`}
           className="flex items-center gap-3 transition-opacity hover:opacity-95 active:scale-[0.99]"
         >
           <div className="min-w-0 flex-1">

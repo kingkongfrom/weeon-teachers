@@ -11,21 +11,40 @@ import {
   Presentation,
   BellRing,
   FileBarChart,
-  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ComponentType } from "react";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
 import type { PanelAttention } from "@/lib/dashboard/panel-attention-model";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
+type NavIcon = LucideIcon | ComponentType<{ className?: string; strokeWidth?: number }>;
+
 type NavLink = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: NavIcon;
   badgeCount?: number;
 };
+
+/** Tenant-parity megaphone glyph for Circulares (the admin sidebar's icon). */
+function MegaphoneIcon({ className, strokeWidth }: { className?: string; strokeWidth?: number }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      strokeWidth={strokeWidth}
+    >
+      <path d="M3 11h4l4-7v18l-4-7H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 8a4 4 0 0 1 0 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M19 5a8 8 0 0 1 0 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export function AppSidebar({
   open,
@@ -44,6 +63,10 @@ export function AppSidebar({
     { href: "/inicio", label: t.panel.title, icon: Home },
     { href: "/aula-virtual", label: t.panel.classroom.label, icon: Presentation },
     { href: "/grupos", label: t.panel.grades.label, icon: GraduationCap },
+    { href: "/reportes", label: t.reportes.title, icon: FileBarChart },
+  ];
+
+  const comunicacion: NavLink[] = [
     {
       href: "/comunicacion/mensajes",
       label: t.messages.hubMessagesTitle,
@@ -51,17 +74,16 @@ export function AppSidebar({
       badgeCount: commsNavAttention?.unreadInboxCount,
     },
     {
-      href: "/comunicacion/circulares",
-      label: t.circulares.title,
-      icon: FileText,
-    },
-    {
       href: "/comunicacion/chat",
       label: t.messages.chatTitle,
       icon: MessageCircle,
       badgeCount: commsNavAttention?.unreadChatCount,
     },
-    { href: "/reportes", label: t.reportes.title, icon: FileBarChart },
+    {
+      href: "/comunicacion/circulares",
+      label: t.circulares.title,
+      icon: MegaphoneIcon,
+    },
   ];
 
   const agenda: NavLink[] = [
@@ -82,6 +104,17 @@ export function AppSidebar({
       {collapsed ? <div className="my-2 hidden h-px w-6 bg-border md:block" /> : null}
       <Section label={t.panel.title} collapsed={collapsed} />
       {primary.map((item) => (
+        <NavItem
+          key={item.href}
+          item={item}
+          pathname={pathname}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+      ))}
+      {collapsed ? <div className="my-2 hidden h-px w-6 bg-border md:block" /> : null}
+      <Section label={t.messages.comunicacionSection} collapsed={collapsed} />
+      {comunicacion.map((item) => (
         <NavItem
           key={item.href}
           item={item}

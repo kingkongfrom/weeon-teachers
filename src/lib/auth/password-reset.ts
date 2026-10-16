@@ -28,8 +28,8 @@ export type ResetTarget = {
 };
 
 /**
- * Finds a teacher (or, for real-email access, an existing school admin) by the
- * email they use to sign in — either `email` or `auth_email` on profiles.
+ * Finds a teacher by the email they use to sign in — either `email` or
+ * `auth_email` on profiles. School admins are not reset from this portal.
  * Returns null for any other user or when not found, so callers stay
  * enumeration-safe.
  */
@@ -49,7 +49,7 @@ export async function findTeacherResetTarget(
   const unique = new Map<string, (typeof byEmail)[number]>();
   for (const row of [...(byEmail ?? []), ...(byAuthEmail ?? [])]) {
     const role = String(row.role ?? "");
-    if (role !== "teacher" && role !== "admin") continue;
+    if (role !== "teacher") continue;
     if (String(row.account_status ?? "") === "pending_first_login") continue;
     unique.set(String(row.id), row);
   }

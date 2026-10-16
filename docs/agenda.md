@@ -40,8 +40,9 @@ semana** section now shows the **current week's dates** like `/horarios`.
 - `ScheduleGrid` receives `weekStart` + the week's `events`; day headers show the
   real date and each day lists its events (amber chip) above the lessons.
 - **Each class tile shows room and an exam/activity indicator**; clicking it opens
-  a preview with the day, time, **room**, students, the **exams/activities**
-  attached to that class, and **Agregar examen o actividad**.
+  a preview with the day, time, **room**, students, and the **exams/activities**
+  already attached to that class. New exam dates are set in **Aula virtual →
+  Fechas de examen**, not from this preview.
 - Preview shortcuts preserve the **materia** from the clicked lesson
   (`gradebookSubjectId` = `subjects.id` or `lesson:<class_lessons.id>`):
   - **Abrir Aula Virtual** → `/aula-virtual/[classId]?subject=…&tab=trabajo`

@@ -178,11 +178,12 @@ calendar) must stay aligned with this repo's loaders and RPCs.
 
 1. Teacher enters **username or email only**. The school comes from
    `roster_accounts` / `profiles` (`tenant_id`). Do not ask for Código SABER.
-   An existing school admin or teacher may use their real email and current
-   password — do **not** rewrite that profile to `teacher`.
-2. Server looks up `profiles` (email) or `roster_accounts` (`role = teacher`).
-   Unknown user → one generic error. Same username in two tenants → ask for
-   email. Do not leak role.
+   **Only `profiles.role = teacher`.** A school admin (`profiles.role = admin`)
+   signs in on `app.weeon.school` and is refused here, even with the same email
+   and password. Do **not** rewrite that profile to `teacher`.
+2. Server looks up `profiles` (email, role teacher) or `roster_accounts`
+   (`role = teacher`). Unknown user → one generic error. A school-admin email
+   → tell them to use the ERP. Same username in two tenants → ask for email.
 3. If no `auth_user_id`, create Auth (`email_confirm`, `user_metadata.tenant_id`
    required by `handle_new_user`) with synthetic
    `{username}@{slug}.accounts.weeon.school` unless a real email exists.

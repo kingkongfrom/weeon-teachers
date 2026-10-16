@@ -24,6 +24,7 @@ import {
 } from "@/lib/dashboard/tones";
 import { ATTENDANCE_CODE, type AttendanceCounts } from "@/lib/attendance/model";
 import { StudentEducationalSupportsPanel } from "@/components/educational-supports/student-supports-panel";
+import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
 import type { EducationalSupport } from "@/lib/educational-supports/model";
 import type {
   StudentGradeItem,
@@ -67,12 +68,6 @@ function scoreBar(score: number | null): string {
   if (score >= 70) return "bg-emerald-500";
   if (score >= 50) return "bg-amber-500";
   return "bg-rose-500";
-}
-
-function initials(report: StudentReport): string {
-  return (
-    `${report.firstName?.[0] ?? ""}${report.lastName?.[0] ?? ""}`.toUpperCase() || "?"
-  );
 }
 
 function formatDay(value: string, locale: string): string {
@@ -142,9 +137,12 @@ export function StudentGradesView({
           className="brand-gradient pointer-events-none absolute inset-x-0 -top-24 h-40 opacity-[0.08] blur-2xl"
         />
         <div className="relative flex flex-wrap items-center gap-5">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl brand-gradient text-xl font-bold text-white shadow-sm">
-            {initials(report)}
-          </div>
+          <ProfileAvatarDisplay
+            name={fullName(report)}
+            imageUrl={report.avatarUrl}
+            size="lg"
+            className="h-16 w-16 rounded-2xl text-xl"
+          />
           <div className="min-w-0 flex-1">
             <h1 className="brand-page-title truncate text-2xl font-bold text-foreground sm:text-3xl">
               {fullName(report)}

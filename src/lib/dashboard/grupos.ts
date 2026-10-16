@@ -5,6 +5,7 @@ import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
 import { loadTeacherSubjectsByClass } from "@/lib/dashboard/teacher-assignments";
 import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
+import { signedUrlsForStoragePaths } from "@/lib/comms/profile-avatar-urls";
 
 export type GrupoSubject = {
   id: string;
@@ -28,6 +29,7 @@ export type TeacherStudent = {
   lastName: string;
   secondLastName: string | null;
   grade: string | null;
+  avatarUrl: string | null;
 };
 
 function displayGrupoName(row: {
@@ -136,7 +138,9 @@ export const loadTeacherGrupo = cache(
       .maybeSingle(),
     supabase
       .from("enrollments")
-      .select("student_id, students(id, first_name, last_name, second_last_name, grade, guardians)")
+      .select(
+        "student_id, students(id, first_name, last_name, second_last_name, grade, guardians, avatar_storage_path)",
+      )
       .eq("class_id", classId)
       .is("dropped_at", null),
   ]);
@@ -146,36 +150,39 @@ export const loadTeacherGrupo = cache(
 
   const enrollmentRows = enrollmentRes.data ?? [];
 
-  const students: TeacherStudent[] = [];
+  type StudentRow = {
+    id: string;
+    first_name: string;
+    last_name: string;
+    second_last_name: string | null;
+    grade: string | null;
+    avatar_storage_path: string | null;
+  };
+
+  const studentRows: StudentRow[] = [];
   for (const row of enrollmentRows) {
-    const raw = row as {
-      students:
-        | {
-            id: string;
-            first_name: string;
-            last_name: string;
-            second_last_name: string | null;
-            grade: string | null;
-          }
-        | {
-            id: string;
-            first_name: string;
-            last_name: string;
-            second_last_name: string | null;
-            grade: string | null;
-          }[]
-        | null;
-    };
+    const raw = row as { students: StudentRow | StudentRow[] | null };
     const student = Array.isArray(raw.students) ? raw.students[0] : raw.students;
     if (!student) continue;
-    students.push({
+    studentRows.push(student);
+  }
+
+  const signedAvatars = await signedUrlsForStoragePaths(
+    studentRows.map((student) => student.avatar_storage_path ?? ""),
+    supabase,
+  );
+
+  const students: TeacherStudent[] = studentRows.map((student) => {
+    const path = student.avatar_storage_path?.trim();
+    return {
       id: student.id,
       firstName: student.first_name,
       lastName: student.last_name,
       secondLastName: student.second_last_name,
       grade: student.grade,
-    });
-  }
+      avatarUrl: path ? (signedAvatars.get(path) ?? null) : null,
+    };
+  });
 
   students.sort((a, b) =>
     `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`, "es"),

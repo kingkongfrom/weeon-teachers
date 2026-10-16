@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isTeacherPortalRole } from "@/lib/auth/portal-role";
 import { authCookieOptions } from "@/lib/supabase/auth-cookie";
 
 function redirectWithSession(url: URL, sessionResponse: NextResponse) {
@@ -53,7 +54,36 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const needsSession = pathname.startsWith("/grupos") || pathname === "/crear-contrasena";
+  const needsSession =
+    pathname.startsWith("/grupos") ||
+    pathname.startsWith("/inicio") ||
+    pathname.startsWith("/aula-virtual") ||
+    pathname.startsWith("/comunicacion") ||
+    pathname.startsWith("/agenda") ||
+    pathname.startsWith("/horarios") ||
+    pathname.startsWith("/estudiantes") ||
+    pathname.startsWith("/reportes") ||
+    pathname === "/crear-contrasena";
+
+  if (user) {
+    const claimRole = user.app_metadata?.role;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const teacher = isTeacherPortalRole(profile?.role) && claimRole !== "admin";
+    if (profile && !teacher) {
+      await supabase.auth.signOut({ scope: "local" });
+      if (pathname !== "/") {
+        const loginUrl = request.nextUrl.clone();
+        loginUrl.pathname = "/";
+        loginUrl.search = "aviso=admin";
+        return redirectWithSession(loginUrl, supabaseResponse);
+      }
+      return supabaseResponse;
+    }
+  }
 
   if (!user && needsSession) {
     const loginUrl = request.nextUrl.clone();
@@ -68,6 +98,14 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
+    "/inicio",
+    "/inicio/:path*",
+    "/aula-virtual",
+    "/aula-virtual/:path*",
+    "/comunicacion",
+    "/comunicacion/:path*",
+    "/agenda",
+    "/agenda/:path*",
     "/crear-contrasena",
     "/grupos",
     "/grupos/:path*",

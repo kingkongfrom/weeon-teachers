@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isTeacherPortalRole, TEACHER_PORTAL_ONLY_ERROR } from "@/lib/auth/portal-role";
 import { authEmailFor, isEmailLogin, normalizeUsername } from "@/lib/auth/school";
 import { randomTempPassword } from "@/lib/auth/password";
 
@@ -74,12 +75,15 @@ async function findExistingEmailLogin(
   for (const row of [...(byEmail ?? []), ...(byAuthEmail ?? [])]) {
     unique.set(String(row.id), row as Record<string, unknown>);
   }
-  const matches = [...unique.values()].filter((row) => {
-    const role = String(row.role ?? "");
-    return role === "teacher" || role === "admin";
-  });
+  const rows = [...unique.values()];
+  const matches = rows.filter((row) => isTeacherPortalRole(row.role));
 
-  if (matches.length === 0) return { error: LOOKUP_ERROR };
+  if (matches.length === 0) {
+    if (rows.some((row) => String(row.role ?? "") === "admin")) {
+      return { error: TEACHER_PORTAL_ONLY_ERROR };
+    }
+    return { error: LOOKUP_ERROR };
+  }
   if (matches.length > 1) return { error: AMBIGUOUS_ERROR };
 
   const profile = matches[0];
@@ -280,6 +284,9 @@ export async function prepareTeacherLogin(
   }
 
   const linkedRole = await resolveLinkedProfileRole(userId, tenant.id);
+  if (linkedRole !== "teacher") {
+    return { error: TEACHER_PORTAL_ONLY_ERROR };
+  }
 
   if (needsPassword && !signInPassword) {
     const tempPassword = randomTempPassword();

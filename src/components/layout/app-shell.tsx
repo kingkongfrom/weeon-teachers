@@ -20,7 +20,7 @@ export type AppUser = {
   userId: string;
   tenantId: string;
   name: string;
-  role: "teacher" | "admin";
+  role: "teacher";
   username: string | null;
   tenantName: string | null;
   logoUrl: string | null;

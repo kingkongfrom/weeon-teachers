@@ -4,6 +4,7 @@ import { cache } from "react";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
 import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
+import { signedUrlsForStoragePaths } from "@/lib/comms/profile-avatar-urls";
 import {
   categoryFor,
   type AssignmentCategory,
@@ -77,6 +78,7 @@ export type StudentReport = {
   lastName: string;
   secondLastName: string | null;
   grade: string | null;
+  avatarUrl: string | null;
   /** Mean of every graded percentage across the student's groups. */
   overall: number | null;
   gradedCount: number;
@@ -115,11 +117,17 @@ export const loadTeacherStudentReport = cache(
 
     const { data: student, error: studentError } = await supabase
       .from("students")
-      .select("id, first_name, last_name, second_last_name, grade")
+      .select("id, first_name, last_name, second_last_name, grade, avatar_storage_path")
       .eq("id", studentId)
       .is("deleted_at", null)
       .maybeSingle();
     if (studentError || !student) return null;
+
+    const avatarPath =
+      typeof student.avatar_storage_path === "string" ? student.avatar_storage_path.trim() : "";
+    const signedAvatars = avatarPath
+      ? await signedUrlsForStoragePaths([avatarPath], supabase)
+      : new Map<string, string>();
 
     const { data: enrollmentRows } = await supabase
       .from("enrollments")
@@ -162,6 +170,7 @@ export const loadTeacherStudentReport = cache(
       lastName: student.last_name,
       secondLastName: student.second_last_name,
       grade: student.grade,
+      avatarUrl: avatarPath ? (signedAvatars.get(avatarPath) ?? null) : null,
       overall: null,
       gradedCount: 0,
       totalCount: 0,

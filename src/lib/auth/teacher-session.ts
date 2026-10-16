@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { isTeacherPortalRole } from "@/lib/auth/portal-role";
 import { createSessionClient } from "@/lib/supabase/session";
 
 export type TeacherSession = {
@@ -8,7 +9,7 @@ export type TeacherSession = {
   tenantId: string;
   username: string | null;
   name: string;
-  role: "teacher" | "admin";
+  role: "teacher";
   accountStatus: string;
   avatarStoragePath: string | null;
 };
@@ -21,14 +22,18 @@ export const getTeacherSession = cache(
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("tenant_id, role, username, name, account_status, avatar_storage_path")
     .eq("id", user.id)
     .maybeSingle();
 
-  const role = profile?.role === "admin" || profile?.role === "teacher" ? profile.role : null;
-  if (!profile || !role || !profile.tenant_id) {
+  if (error || !profile) return null;
+
+  const claimRole = user.app_metadata?.role;
+  const teacher = isTeacherPortalRole(profile.role) && claimRole !== "admin";
+  if (!teacher || !profile.tenant_id) {
+    await supabase.auth.signOut({ scope: "local" });
     return null;
   }
 
@@ -36,8 +41,8 @@ export const getTeacherSession = cache(
     userId: user.id,
     tenantId: profile.tenant_id as string,
     username: (profile.username as string | null) ?? null,
-    name: (profile.name as string) || (role === "admin" ? "Administración" : "Docente"),
-    role,
+    name: (profile.name as string) || "Docente",
+    role: "teacher",
     accountStatus: (profile.account_status as string) || "active",
     avatarStoragePath:
       typeof profile.avatar_storage_path === "string" && profile.avatar_storage_path.length > 0

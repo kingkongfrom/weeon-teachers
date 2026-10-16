@@ -78,14 +78,12 @@ export function MaterialsPanel({
   materials,
   topics = [],
   defaultTopicId = null,
-  subjects = [],
   defaultSubjectId = null,
 }: {
   classId: string;
   materials: ClassMaterial[];
   topics?: ClassTopic[];
   defaultTopicId?: string | null;
-  subjects?: { id: string; name: string }[];
   defaultSubjectId?: string | null;
 }) {
   const t = useT();
@@ -170,7 +168,7 @@ export function MaterialsPanel({
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
           {tPanel.heading}
         </h3>
@@ -212,9 +210,20 @@ export function MaterialsPanel({
                 key={material.id}
                 className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                  <Icon className="h-5 w-5" />
-                </span>
+                {material.thumbnailUrl ? (
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={material.thumbnailUrl}
+                      alt={material.title}
+                      className="h-full w-full object-cover object-top"
+                    />
+                  </span>
+                ) : (
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground">
                     {material.title}
@@ -271,7 +280,6 @@ export function MaterialsPanel({
                   initialFile={pendingFile}
                   topics={topics}
                   defaultTopicId={defaultTopicId}
-                  subjects={subjects}
                   defaultSubjectId={defaultSubjectId}
                   onClose={() => {
                     setOpen(false);
@@ -305,7 +313,6 @@ function UploadDialog({
   initialFile,
   topics,
   defaultTopicId,
-  subjects,
   defaultSubjectId,
   onClose,
 }: {
@@ -313,7 +320,6 @@ function UploadDialog({
   initialFile: File | null;
   topics: ClassTopic[];
   defaultTopicId: string | null;
-  subjects: { id: string; name: string }[];
   defaultSubjectId: string | null;
   onClose: () => void;
 }) {
@@ -323,7 +329,6 @@ function UploadDialog({
   const [title, setTitle] = useState(initialFile ? initialFile.name.replace(/\.[^.]+$/, "") : "");
   const [description, setDescription] = useState("");
   const [topic, setTopic] = useState(defaultTopicId ?? "none");
-  const [subject, setSubject] = useState(defaultSubjectId ?? "none");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -385,7 +390,7 @@ function UploadDialog({
     formData.set("title", title.trim());
     formData.set("description", description.trim());
     if (topic !== "none") formData.set("topicId", topic);
-    if (subject !== "none") formData.set("subjectId", subject);
+    if (defaultSubjectId) formData.set("subjectId", defaultSubjectId);
     formData.set("file", file);
 
     setPending(true);
@@ -533,27 +538,6 @@ function UploadDialog({
                 options={[
                   { value: "none", label: t.topics.none },
                   ...topics.map((option) => ({
-                    value: option.id,
-                    label: option.name,
-                  })),
-                ]}
-              />
-            </div>
-          ) : null}
-
-          {subjects.length > 0 ? (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-foreground/70">
-                {t.assessments.subject}
-              </span>
-              <Dropdown
-                value={subject}
-                onChange={setSubject}
-                ariaLabel={t.assessments.subject}
-                placeholder={t.assessments.subject}
-                options={[
-                  { value: "none", label: t.assessments.subject },
-                  ...subjects.map((option) => ({
                     value: option.id,
                     label: option.name,
                   })),

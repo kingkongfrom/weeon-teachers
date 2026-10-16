@@ -114,32 +114,18 @@ export function PdfReaderDialog({
             transition={{ duration: 0.2 }}
             className="relative flex h-[min(94vh,920px)] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-border bg-surface shadow-2xl sm:rounded-2xl"
           >
-            <PdfViewport
-              key={url}
-              url={url}
-              downloadName={name}
-              topBar={
-                <>
-                  <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{name}</p>
-                  <a
-                    href={url}
-                    download={name}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold text-foreground/70 hover:bg-surface-muted hover:text-foreground"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{t("comms.documents.download")}</span>
-                  </a>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-foreground/55 hover:bg-surface-muted hover:text-foreground"
-                    aria-label={t("common.close")}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </>
-              }
-            />
+            <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2.5">
+              <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{name}</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-foreground/55 hover:bg-surface-muted hover:text-foreground"
+                aria-label={t("common.close")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+            <PdfViewport key={url} url={url} downloadName={name} />
           </motion.div>
         </div>
       ) : null}
