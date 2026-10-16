@@ -578,12 +578,12 @@ function FilterRow({
         }
       }}
       className={cn(
-        "flex items-center gap-1 rounded-xl px-1.5 py-1 transition-colors",
+        "relative flex items-center gap-1 rounded-xl px-1.5 py-1 transition-colors",
         active
           ? "bg-[var(--wa-active)]"
           : "hover:bg-[var(--wa-hover)]",
         droppable && draggingId && "ring-1 ring-inset ring-[var(--wa-ring)]/40",
-        over && "bg-[var(--wa-active)] ring-2 ring-[var(--wa-accent)]",
+        over && "before:absolute before:inset-x-2 before:-top-px before:h-[2px] before:rounded-full before:bg-[var(--wa-accent)]",
         handleDragging && "opacity-50",
       )}
     >
