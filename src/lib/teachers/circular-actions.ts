@@ -4,12 +4,30 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { inferAttachmentMimeType, isAllowedAttachmentMime } from "@/lib/comms/attachment-mime";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
+import {
+  loadTeacherCircularDetail,
+  type TeacherCircularDetail,
+} from "@/lib/dashboard/teacher-circulars";
 import { tRequest } from "@/lib/i18n/server";
 
 export type CircularActionResult = { ok: true; documentId: string } | { ok: false; error: string };
 
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const TEACHER_CIRCULARS = "/comunicacion/circulares";
+
+const uuidSchema = z.string().uuid();
+
+/**
+ * Detail for one of the teacher's own published circulares, with signed
+ * `school-documents` URLs for the reading pane. Teacher RLS restricts this to
+ * rows they published.
+ */
+export async function fetchTeacherCircularDetail(
+  documentId: string,
+): Promise<TeacherCircularDetail | null> {
+  if (!uuidSchema.safeParse(documentId).success) return null;
+  return loadTeacherCircularDetail(documentId);
+}
 
 const targetSchema = z.object({
   classId: z.string().uuid(),

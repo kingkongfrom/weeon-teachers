@@ -1,0 +1,368 @@
+"use client";
+
+import { useMemo, useRef, useState } from "react";
+import { FileText, Plus, Search, X } from "lucide-react";
+import { CircularPreviewPane } from "@/components/comms/circular-preview-pane";
+import { PublishCircularDialog } from "@/components/comms/publish-circular-dialog";
+import type { CommsGroupWithGrade } from "@/lib/comms/broadcast-filter";
+import type {
+  CircularCategory,
+  TeacherCircularDetail,
+  TeacherCircularRow,
+} from "@/lib/dashboard/teacher-circulars";
+import { fetchTeacherCircularDetail } from "@/lib/teachers/circular-actions";
+import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/use-i18n";
+
+type View = "all" | "uncategorized" | "category";
+
+function formatListTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("es-CR", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function categoryBadgeStyle(color: string) {
+  return {
+    backgroundColor: `${color}22`,
+    color,
+  };
+}
+
+/**
+ * Teacher circulares — ERP Documents workspace style, scoped to the teacher's
+ * own published notices (no trash, delete, or category management).
+ */
+export function CircularesWorkspace({
+  circulars,
+  categories,
+  groups,
+}: {
+  circulars: TeacherCircularRow[];
+  categories: CircularCategory[];
+  groups: CommsGroupWithGrade[];
+}) {
+  const t = useT();
+  const previewRequest = useRef(0);
+  const [query, setQuery] = useState("");
+  const [view, setView] = useState<View>("all");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewDetail, setPreviewDetail] = useState<TeacherCircularDetail | null>(null);
+
+  const totalCount = circulars.length;
+  const uncategorizedCount = useMemo(
+    () => circulars.filter((row) => !row.categoryName).length,
+    [circulars],
+  );
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of circulars) {
+      if (!row.categoryName) continue;
+      counts.set(row.categoryName, (counts.get(row.categoryName) ?? 0) + 1);
+    }
+    return counts;
+  }, [circulars]);
+
+  const scopedDocuments = useMemo(() => {
+    if (view === "uncategorized") return circulars.filter((row) => !row.categoryName);
+    if (view === "category" && categoryId) {
+      return circulars.filter((row) => row.categoryName === categoryId);
+    }
+    return circulars;
+  }, [circulars, view, categoryId]);
+
+  const filteredDocuments = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return scopedDocuments;
+    return scopedDocuments.filter(
+      (row) =>
+        row.title.toLowerCase().includes(term) ||
+        (row.categoryName ?? "").toLowerCase().includes(term) ||
+        (row.description ?? "").toLowerCase().includes(term),
+    );
+  }, [scopedDocuments, query]);
+
+  function selectView(next: View, nextCategoryId: string | null = null) {
+    setView(next);
+    setCategoryId(nextCategoryId);
+    setSelectedId(null);
+    setPreviewDetail(null);
+    setPreviewLoading(false);
+  }
+
+  function clearSelection() {
+    previewRequest.current += 1;
+    setSelectedId(null);
+    setPreviewDetail(null);
+    setPreviewLoading(false);
+  }
+
+  async function openPreview(documentId: string) {
+    const request = ++previewRequest.current;
+    setSelectedId(documentId);
+    setPreviewLoading(true);
+    setPreviewDetail(null);
+    const detail = await fetchTeacherCircularDetail(documentId);
+    if (request !== previewRequest.current) return;
+    setPreviewDetail(detail);
+    setPreviewLoading(false);
+  }
+
+  const showPane = selectedId != null;
+  const selectedSummary = circulars.find((row) => row.id === selectedId) ?? null;
+
+  return (
+    <>
+      <div className="wa-chat flex h-full min-h-0 overflow-hidden rounded-2xl border border-[var(--wa-border)] bg-[var(--wa-panel)] shadow-[var(--wa-shadow)]">
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
+          <aside
+            className={cn(
+              "flex min-h-0 flex-col border-[var(--wa-border)] bg-[var(--wa-header)]",
+              showPane ? "hidden lg:flex lg:border-r" : "flex",
+            )}
+          >
+            <div className="shrink-0 px-4 pb-3 pt-4">
+              <div className="mb-3.5 flex items-center justify-between gap-3">
+                <div className="flex items-baseline gap-2.5">
+                  <h1 className="text-[22px] font-bold tracking-tight text-[var(--wa-text)]">
+                    {t("comms.documents.circularsTitle")}
+                  </h1>
+                  {totalCount > 0 ? (
+                    <span className="rounded-full bg-[var(--wa-accent-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--wa-accent)]">
+                      {totalCount > 99 ? "99+" : totalCount}
+                    </span>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPublishOpen(true)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--wa-fab)] px-3.5 text-[13px] font-semibold text-[var(--wa-fab-ink)] shadow-sm transition-all hover:brightness-105 active:scale-95"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  {t("comms.newCircular")}
+                </button>
+              </div>
+              <label className="flex items-center gap-2.5 rounded-full border border-transparent bg-[var(--wa-search)] px-3.5 py-2.5 transition-colors focus-within:border-[var(--wa-ring)] focus-within:ring-2 focus-within:ring-[var(--wa-ring-soft)]">
+                <Search className="h-[17px] w-[17px] shrink-0 text-[var(--wa-muted)]" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={t("comms.documents.search")}
+                  className="h-5 w-full bg-transparent text-[14px] text-[var(--wa-text)] outline-none placeholder:text-[var(--wa-muted)]"
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label={t("common.cancel")}
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] hover:text-[var(--wa-text)]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </label>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+              <nav className="flex flex-col gap-0.5 px-1 pt-1">
+                <FilterRow
+                  active={view === "all"}
+                  label={t("comms.documents.all")}
+                  count={totalCount}
+                  onClick={() => selectView("all")}
+                  icon={<FileText className="h-4 w-4 text-[var(--wa-muted)]" />}
+                />
+                <FilterRow
+                  active={view === "uncategorized"}
+                  label={t("comms.documents.uncategorized")}
+                  count={uncategorizedCount}
+                  onClick={() => selectView("uncategorized")}
+                  icon={<span className="h-2.5 w-2.5 rounded-full bg-[var(--wa-muted)]" />}
+                />
+                {categories.map((category) => {
+                  const active = view === "category" && categoryId === category.id;
+                  return (
+                    <FilterRow
+                      key={category.id}
+                      active={active}
+                      label={category.name}
+                      count={categoryCounts.get(category.name) ?? 0}
+                      onClick={() => selectView("category", category.id)}
+                      icon={
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: category.color ?? "#5e25cc" }}
+                        />
+                      }
+                    />
+                  );
+                })}
+              </nav>
+              <div className="mx-3 my-2 border-t border-[var(--wa-border)]" />
+
+              {circulars.length === 0 ? (
+                <div className="mx-2 mt-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--wa-chip-line)] bg-[var(--wa-search)] px-5 py-10 text-center">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wa-accent-soft)]">
+                    <FileText className="h-7 w-7 text-[var(--wa-accent)]" aria-hidden />
+                  </span>
+                  <p className="text-sm font-semibold text-[var(--wa-text)]">
+                    {t("comms.documents.empty")}
+                  </p>
+                  <p className="max-w-[220px] text-xs leading-relaxed text-[var(--wa-muted)]">
+                    {t("comms.documents.emptyBody")}
+                  </p>
+                </div>
+              ) : filteredDocuments.length === 0 ? (
+                <p className="px-4 py-10 text-center text-sm text-[var(--wa-muted)]">
+                  {t("comms.documents.empty")}
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-0.5">
+                  {filteredDocuments.map((row) => {
+                    const active = row.id === selectedId;
+                    return (
+                      <li key={row.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (active) {
+                              clearSelection();
+                              return;
+                            }
+                            void openPreview(row.id);
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                            active ? "bg-[var(--wa-active)]" : "hover:bg-[var(--wa-hover)]",
+                          )}
+                        >
+                          <span
+                            className="inline-flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-full text-white"
+                            style={{
+                              backgroundColor: row.categoryColor || "#5e25cc",
+                            }}
+                            aria-hidden
+                          >
+                            <FileText className="h-5 w-5" />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col gap-1">
+                            <span className="flex items-baseline gap-2">
+                              <span className="min-w-0 flex-1 truncate text-[16px] text-[var(--wa-text)]">
+                                {row.title}
+                              </span>
+                              <span className="shrink-0 text-[12px] text-[var(--wa-muted)]">
+                                {formatListTime(row.publishedAt)}
+                              </span>
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--wa-muted)]">
+                              {t("comms.recipientsCount", { n: row.targetCount })}
+                            </span>
+                            {row.categoryName ? (
+                              <span
+                                className="w-fit rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide"
+                                style={categoryBadgeStyle(row.categoryColor || "#5e25cc")}
+                              >
+                                {row.categoryName}
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </aside>
+
+          <section
+            className={cn(
+              "h-full min-h-0 min-w-0 flex-col",
+              showPane ? "flex" : "hidden lg:flex",
+            )}
+          >
+            {showPane && selectedSummary ? (
+              <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+                <CircularPreviewPane
+                  detail={previewDetail}
+                  loading={previewLoading}
+                  onClose={clearSelection}
+                />
+              </div>
+            ) : (
+              <div className="chat-wallpaper flex h-full flex-1 flex-col items-center justify-center gap-4 px-8 py-10 text-center">
+                <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wa-search)] shadow-inner">
+                  <FileText
+                    className="h-11 w-11 text-[var(--wa-muted)]"
+                    strokeWidth={1.25}
+                    aria-hidden
+                  />
+                </span>
+                <div className="max-w-md space-y-2">
+                  <p className="text-[28px] font-light text-[var(--wa-text)]">
+                    {t("comms.documents.circularsTitle")}
+                  </p>
+                  <p className="text-sm text-[var(--wa-muted)]">
+                    {t("comms.documents.selectPrompt")}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+
+      <PublishCircularDialog
+        open={publishOpen}
+        categories={categories}
+        groups={groups}
+        onClose={() => setPublishOpen(false)}
+        onPublished={() => clearSelection()}
+      />
+    </>
+  );
+}
+
+function FilterRow({
+  active,
+  label,
+  count,
+  icon,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  count?: number;
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] transition-colors",
+        active
+          ? "bg-[var(--wa-active)] font-semibold text-[var(--wa-text)]"
+          : "font-medium text-[var(--wa-text)] hover:bg-[var(--wa-hover)]",
+      )}
+    >
+      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
+      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      {count != null ? (
+        <span className="text-[12px] tabular-nums text-[var(--wa-muted)]">
+          {count > 99 ? "99+" : count}
+        </span>
+      ) : null}
+    </button>
+  );
+}
