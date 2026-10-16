@@ -133,9 +133,12 @@ Honest snapshot — do not assume the rest exists.
     `America/Costa_Rica`** (`src/lib/attendance/model.ts`) and is normally
     entered from today's lesson — a lesson card for the current weekday links
     to `?tab=asistencia&lesson=<id>`. Default is Presente (a normal day is zero
-    taps); each exception is one tap and autosaves (debounced batch upsert via
-    `saveAttendance`, `src/lib/teachers/attendance-actions.ts`). Prev/next-day
-    and the date picker exist only for corrections. Writes are RLS-limited to
+    taps). Each row shows **one status chip**; the other MEP codes open from
+    that chip, and a late or absence stays on the colored chip. Summary chips
+    **filter** the list. **Marcar todos presentes** asks before it clears
+    exceptions. From `lg` the roll is two columns. Edits autosave (debounced
+    batch upsert via `saveAttendance`, `src/lib/teachers/attendance-actions.ts`).
+    Prev/next-day and the date picker exist only for corrections. Writes are RLS-limited to
     `teaches_class`/admin; reads to class members. Requires
     `20260912180000_attendance_ausencias.sql` in `weeon-tenants`.
     **Guardian justifications** (note + optional PDF/photo on
