@@ -1,20 +1,28 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { FileText, Plus, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FileText, Plus, Search, Trash2, X } from "lucide-react";
 import { CircularPreviewPane } from "@/components/comms/circular-preview-pane";
+import { NewCategoryDialog } from "@/components/comms/new-category-dialog";
 import { PublishCircularDialog } from "@/components/comms/publish-circular-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { CommsGroupWithGrade } from "@/lib/comms/broadcast-filter";
 import type {
   CircularCategory,
   TeacherCircularDetail,
   TeacherCircularRow,
 } from "@/lib/dashboard/teacher-circulars";
-import { fetchTeacherCircularDetail } from "@/lib/teachers/circular-actions";
+import {
+  deleteTeacherCircular,
+  fetchTeacherCircularDetail,
+  restoreTeacherCircular,
+  trashTeacherCircular,
+} from "@/lib/teachers/circular-actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
 
-type View = "all" | "uncategorized" | "category";
+type View = "all" | "uncategorized" | "category" | "trash";
 
 function formatListTime(iso: string): string {
   const date = new Date(iso);
@@ -36,27 +44,35 @@ function categoryBadgeStyle(color: string) {
 
 /**
  * Teacher circulares — ERP Documents workspace style, scoped to the teacher's
- * own published notices (no trash, delete, or category management).
+ * own published notices (with trash + categories).
  */
 export function CircularesWorkspace({
   circulars,
+  trash,
   categories,
   groups,
 }: {
   circulars: TeacherCircularRow[];
+  trash: TeacherCircularRow[];
   categories: CircularCategory[];
   groups: CommsGroupWithGrade[];
 }) {
   const t = useT();
+  const router = useRouter();
   const previewRequest = useRef(0);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>("all");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewDetail, setPreviewDetail] = useState<TeacherCircularDetail | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TeacherCircularRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
+  const inTrash = view === "trash";
+  const scoped = inTrash ? trash : circulars;
   const totalCount = circulars.length;
   const uncategorizedCount = useMemo(
     () => circulars.filter((row) => !row.categoryName).length,
@@ -66,8 +82,8 @@ export function CircularesWorkspace({
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const row of circulars) {
-      if (!row.categoryName) continue;
-      counts.set(row.categoryName, (counts.get(row.categoryName) ?? 0) + 1);
+      if (!row.categoryId) continue;
+      counts.set(row.categoryId, (counts.get(row.categoryId) ?? 0) + 1);
     }
     return counts;
   }, [circulars]);
@@ -75,10 +91,10 @@ export function CircularesWorkspace({
   const scopedDocuments = useMemo(() => {
     if (view === "uncategorized") return circulars.filter((row) => !row.categoryName);
     if (view === "category" && categoryId) {
-      return circulars.filter((row) => row.categoryName === categoryId);
+      return circulars.filter((row) => row.categoryId === categoryId);
     }
-    return circulars;
-  }, [circulars, view, categoryId]);
+    return scoped;
+  }, [circulars, scoped, view, categoryId]);
 
   const filteredDocuments = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -117,8 +133,28 @@ export function CircularesWorkspace({
     setPreviewLoading(false);
   }
 
+  async function handleTrash(row: TeacherCircularRow) {
+    const res = inTrash
+      ? await restoreTeacherCircular(row.id)
+      : await trashTeacherCircular(row.id);
+    if (!res.ok) return;
+    if (selectedId === row.id) clearSelection();
+    router.refresh();
+  }
+
+  async function handlePermanentDelete() {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    const res = await deleteTeacherCircular(deleteTarget.id);
+    setDeleting(false);
+    if (!res.ok) return;
+    if (selectedId === deleteTarget.id) clearSelection();
+    setDeleteTarget(null);
+    router.refresh();
+  }
+
   const showPane = selectedId != null;
-  const selectedSummary = circulars.find((row) => row.id === selectedId) ?? null;
+  const selectedSummary = scopedDocuments.find((row) => row.id === selectedId) ?? null;
 
   return (
     <>
@@ -188,37 +224,48 @@ export function CircularesWorkspace({
                   onClick={() => selectView("uncategorized")}
                   icon={<span className="h-2.5 w-2.5 rounded-full bg-[var(--wa-muted)]" />}
                 />
-                {categories.map((category) => {
-                  const active = view === "category" && categoryId === category.id;
-                  return (
-                    <FilterRow
-                      key={category.id}
-                      active={active}
-                      label={category.name}
-                      count={categoryCounts.get(category.name) ?? 0}
-                      onClick={() => selectView("category", category.id)}
-                      icon={
-                        <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: category.color ?? "#5e25cc" }}
-                        />
-                      }
-                    />
-                  );
-                })}
+                {categories.map((category) => (
+                  <FilterRow
+                    key={category.id}
+                    active={view === "category" && categoryId === category.id}
+                    label={category.name}
+                    count={categoryCounts.get(category.id) ?? 0}
+                    onClick={() => selectView("category", category.id)}
+                    icon={
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: category.color ?? "#5e25cc" }}
+                      />
+                    }
+                  />
+                ))}
+                <FilterRow
+                  active={view === "trash"}
+                  label={t("comms.folderTrash")}
+                  onClick={() => selectView("trash")}
+                  icon={<Trash2 className="h-4 w-4 text-[var(--wa-muted)]" />}
+                />
+                <button
+                  type="button"
+                  onClick={() => setNewCategoryOpen(true)}
+                  className="mt-0.5 inline-flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[14px] font-medium text-[var(--wa-muted)] transition-colors hover:bg-[var(--wa-hover)] hover:text-[var(--wa-text)]"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t("comms.documents.newCategory")}
+                </button>
               </nav>
               <div className="mx-3 my-2 border-t border-[var(--wa-border)]" />
 
-              {circulars.length === 0 ? (
+              {scopedDocuments.length === 0 ? (
                 <div className="mx-2 mt-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--wa-chip-line)] bg-[var(--wa-search)] px-5 py-10 text-center">
                   <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wa-accent-soft)]">
                     <FileText className="h-7 w-7 text-[var(--wa-accent)]" aria-hidden />
                   </span>
                   <p className="text-sm font-semibold text-[var(--wa-text)]">
-                    {t("comms.documents.empty")}
+                    {inTrash ? t("comms.documents.emptyTrash") : t("comms.documents.empty")}
                   </p>
                   <p className="max-w-[220px] text-xs leading-relaxed text-[var(--wa-muted)]">
-                    {t("comms.documents.emptyBody")}
+                    {inTrash ? t("comms.documents.emptyTrashBody") : t("comms.documents.emptyBody")}
                   </p>
                 </div>
               ) : filteredDocuments.length === 0 ? (
@@ -247,9 +294,7 @@ export function CircularesWorkspace({
                         >
                           <span
                             className="inline-flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-full text-white"
-                            style={{
-                              backgroundColor: row.categoryColor || "#5e25cc",
-                            }}
+                            style={{ backgroundColor: row.categoryColor || "#5e25cc" }}
                             aria-hidden
                           >
                             <FileText className="h-5 w-5" />
@@ -285,10 +330,7 @@ export function CircularesWorkspace({
           </aside>
 
           <section
-            className={cn(
-              "h-full min-h-0 min-w-0 flex-col",
-              showPane ? "flex" : "hidden lg:flex",
-            )}
+            className={cn("h-full min-h-0 min-w-0 flex-col", showPane ? "flex" : "hidden lg:flex")}
           >
             {showPane && selectedSummary ? (
               <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
@@ -296,16 +338,15 @@ export function CircularesWorkspace({
                   detail={previewDetail}
                   loading={previewLoading}
                   onClose={clearSelection}
+                  onDelete={!inTrash ? () => void handleTrash(selectedSummary) : undefined}
+                  onRestore={inTrash ? () => void handleTrash(selectedSummary) : undefined}
+                  onPermanentDelete={inTrash ? () => setDeleteTarget(selectedSummary) : undefined}
                 />
               </div>
             ) : (
               <div className="chat-wallpaper flex h-full flex-1 flex-col items-center justify-center gap-4 px-8 py-10 text-center">
                 <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--wa-search)] shadow-inner">
-                  <FileText
-                    className="h-11 w-11 text-[var(--wa-muted)]"
-                    strokeWidth={1.25}
-                    aria-hidden
-                  />
+                  <FileText className="h-11 w-11 text-[var(--wa-muted)]" strokeWidth={1.25} aria-hidden />
                 </span>
                 <div className="max-w-md space-y-2">
                   <p className="text-[28px] font-light text-[var(--wa-text)]">
@@ -327,6 +368,24 @@ export function CircularesWorkspace({
         groups={groups}
         onClose={() => setPublishOpen(false)}
         onPublished={() => clearSelection()}
+      />
+
+      <NewCategoryDialog
+        open={newCategoryOpen}
+        onClose={() => setNewCategoryOpen(false)}
+        onCreated={() => router.refresh()}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget != null}
+        title={t("comms.deletePermanently")}
+        description={t("comms.documents.deleteConfirm", { title: deleteTarget?.title ?? "" })}
+        confirmLabel={t("comms.deletePermanently")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={() => void handlePermanentDelete()}
+        onCancel={() => setDeleteTarget(null)}
+        destructive
+        pending={deleting}
       />
     </>
   );

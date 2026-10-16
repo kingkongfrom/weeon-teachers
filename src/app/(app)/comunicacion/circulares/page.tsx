@@ -16,8 +16,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Teacher circulares: official PDF notices to the teacher's own groups. */
 export default async function TeacherCircularesPage() {
-  const [circulars, groups, categories] = await Promise.all([
-    loadTeacherCirculars(),
+  const [circulars, trash, groups, categories] = await Promise.all([
+    loadTeacherCirculars(false),
+    loadTeacherCirculars(true),
     loadCommsGroups(),
     loadCircularCategories(),
   ]);
@@ -26,6 +27,7 @@ export default async function TeacherCircularesPage() {
     <div className="h-[calc(100dvh-12rem)] min-h-[28rem] md:h-[calc(100dvh-9rem)]">
       <CircularesWorkspace
         circulars={circulars}
+        trash={trash}
         categories={categories}
         groups={groups}
       />

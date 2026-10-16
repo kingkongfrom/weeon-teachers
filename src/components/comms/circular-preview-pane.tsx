@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, Loader2, Users } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RotateCcw, Trash2, Users } from "lucide-react";
 import type { TeacherCircularDetail } from "@/lib/dashboard/teacher-circulars";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
@@ -21,10 +21,16 @@ export function CircularPreviewPane({
   detail,
   loading,
   onClose,
+  onDelete,
+  onRestore,
+  onPermanentDelete,
 }: {
   detail: TeacherCircularDetail | null;
   loading: boolean;
   onClose: () => void;
+  onDelete?: () => void;
+  onRestore?: () => void;
+  onPermanentDelete?: () => void;
 }) {
   const t = useT();
   const primary = detail?.attachments[0];
@@ -120,6 +126,37 @@ export function CircularPreviewPane({
           {detail?.recipientsLabel}
         </span>
         <div className="flex items-center gap-2">
+          {onRestore ? (
+            <button
+              type="button"
+              onClick={onRestore}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--wa-border)] px-3 text-sm font-semibold text-[var(--wa-text)] hover:bg-[var(--wa-hover)]"
+            >
+              <RotateCcw className="h-4 w-4" />
+              {t("comms.documents.restore")}
+            </button>
+          ) : null}
+          {onPermanentDelete ? (
+            <button
+              type="button"
+              onClick={onPermanentDelete}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-transparent bg-error/10 px-3 text-sm font-semibold text-error hover:bg-error/15"
+            >
+              <Trash2 className="h-4 w-4" />
+              {t("comms.deletePermanently")}
+            </button>
+          ) : null}
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={t("comms.folderTrash")}
+              title={t("comms.folderTrash")}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-icon)] hover:bg-[var(--wa-hover)]"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ) : null}
           {primary?.url ? (
             <a href={primary.url} download={primary.name} className={cn(primaryButton)}>
               <Download className="h-4 w-4" />

@@ -134,3 +134,106 @@ export async function publishTeacherCircular(formData: FormData): Promise<Circul
   revalidatePath(TEACHER_CIRCULARS);
   return { ok: true, documentId };
 }
+
+const documentIdSchema = z.string().uuid();
+
+/** Move one of the teacher's circulars to trash (soft delete). */
+export async function trashTeacherCircular(documentId: string): Promise<CircularActionResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+  if (!documentIdSchema.safeParse(documentId).success) {
+    return { ok: false, error: "Circular no válida." };
+  }
+
+  const { error } = await session.actor
+    .from("published_documents")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", documentId)
+    .eq("published_by", session.userId)
+    .eq("tenant_id", session.tenantId);
+  if (error) return { ok: false, error: "No se pudo mover a la papelera." };
+
+  revalidatePath(TEACHER_CIRCULARS);
+  return { ok: true, documentId };
+}
+
+/** Restore one of the teacher's trashed circulars. */
+export async function restoreTeacherCircular(documentId: string): Promise<CircularActionResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+  if (!documentIdSchema.safeParse(documentId).success) {
+    return { ok: false, error: "Circular no válida." };
+  }
+
+  const { error } = await session.actor
+    .from("published_documents")
+    .update({ deleted_at: null })
+    .eq("id", documentId)
+    .eq("published_by", session.userId)
+    .eq("tenant_id", session.tenantId);
+  if (error) return { ok: false, error: "No se pudo restaurar la circular." };
+
+  revalidatePath(TEACHER_CIRCULARS);
+  return { ok: true, documentId };
+}
+
+/** Permanently delete one of the teacher's trashed circulars and its PDF. */
+export async function deleteTeacherCircular(documentId: string): Promise<CircularActionResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+  if (!documentIdSchema.safeParse(documentId).success) {
+    return { ok: false, error: "Circular no válida." };
+  }
+
+  const { data: attachments } = await session.actor
+    .from("document_attachments")
+    .select("storage_path")
+    .eq("document_id", documentId)
+    .eq("tenant_id", session.tenantId);
+
+  const paths = (attachments ?? [])
+    .map((row) => row.storage_path as string | null)
+    .filter((path): path is string => !!path);
+
+  await session.actor.from("document_recipient_targets").delete().eq("document_id", documentId);
+  await session.actor.from("document_attachments").delete().eq("document_id", documentId);
+
+  const { error } = await session.actor
+    .from("published_documents")
+    .delete()
+    .eq("id", documentId)
+    .eq("published_by", session.userId)
+    .eq("tenant_id", session.tenantId);
+  if (error) return { ok: false, error: "No se pudo eliminar la circular." };
+
+  if (paths.length > 0) {
+    await session.actor.storage.from("school-documents").remove(paths);
+  }
+
+  revalidatePath(TEACHER_CIRCULARS);
+  return { ok: true, documentId };
+}
+
+/** Create a circular category for the teacher's school. */
+export async function createTeacherCircularCategory(input: {
+  name: string;
+  color: string;
+}): Promise<CircularActionResult & { categoryId?: string }> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+
+  const parsed = z
+    .object({ name: z.string().trim().min(1).max(60), color: z.string().regex(/^#[0-9A-Fa-f]{6}$/) })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Nombre de categoría no válido." };
+
+  const { data, error } = await session.actor
+    .from("document_categories")
+    .insert({ tenant_id: session.tenantId, name: parsed.data.name, color: parsed.data.color })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false, error: "No se pudo crear la categoría." };
+
+  revalidatePath(TEACHER_CIRCULARS);
+  return { ok: true, documentId: data.id as string, categoryId: data.id as string };
+}
