@@ -129,8 +129,26 @@ production deploy on teacher web.
 
 CSP allowlists Dropbox in `next.config.ts`.
 
+## Circulares (teacher-published PDF notices)
+
+`/comunicacion/circulares` (sidebar entry) is the teacher Circulares workspace:
+
+- **List** of the circulares this teacher published (`list_my_published_circulars`
+  RPC) and a **Nueva circular** dialog: title, description, category, **group +
+  Encargados/Estudiantes** selection, and a **PDF** upload.
+- Publish: `publishTeacherCircular` (`lib/teachers/circular-actions.ts`) uploads
+  the PDF to the `school-documents` bucket at `<tenant>/<documentId>/<file>`, then
+  calls the **`create_teacher_circular`** RPC (`weeon-tenants`
+  `20261016030000_teacher_circulares.sql`). The RPC re-validates **every** target
+  against `teaches_class` — a teacher can only publish to **their own groups**
+  (parents and/or students).
+- Families read circulares in **`weeon-mobile`** (Comunicación → Correo →
+  Circulares). See `../weeon-mobile/docs/circulars.md`.
+- Files: `components/comms/teacher-circulars-workspace.tsx`,
+  `lib/dashboard/teacher-circulars.ts`, `lib/teachers/circular-actions.ts`.
+
 ## Deferred
 
-- Documents hub (admin-only in tenants for now).
+- School-wide documents hub (admin-only in tenants for now).
 - Realtime inbox for mail threads; mobile two-way reply UX polish.
 - Cc in thread list metadata only until mobile consumes cc rows.
