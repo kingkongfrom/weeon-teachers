@@ -241,6 +241,45 @@ export async function moveTeacherCircularCategory(
   return { ok: true, documentId };
 }
 
+/** Reorder the school's circular categories (folders) by position. */
+export async function reorderTeacherCircularCategories(
+  orderedIds: string[],
+): Promise<CircularActionResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+
+  const parsed = z.array(z.string().uuid()).safeParse(orderedIds);
+  if (!parsed.success || parsed.data.length === 0) {
+    return { ok: false, error: "Orden no válido." };
+  }
+
+  const { data: owned } = await session.actor
+    .from("document_categories")
+    .select("id")
+    .eq("tenant_id", session.tenantId);
+  const ownedIds = new Set((owned ?? []).map((row) => row.id as string));
+  const unique = [...new Set(parsed.data)];
+  if (unique.length !== ownedIds.size || unique.some((id) => !ownedIds.has(id))) {
+    return { ok: false, error: "Orden no válido." };
+  }
+
+  const results = await Promise.all(
+    unique.map((id, index) =>
+      session.actor
+        .from("document_categories")
+        .update({ position: index })
+        .eq("id", id)
+        .eq("tenant_id", session.tenantId),
+    ),
+  );
+  if (results.some((result) => result.error)) {
+    return { ok: false, error: "No se pudo reordenar las categorías." };
+  }
+
+  revalidatePath(TEACHER_CIRCULARS);
+  return { ok: true, documentId: unique[0] };
+}
+
 /** Create a circular category for the teacher's school. */
 export async function createTeacherCircularCategory(input: {
   name: string;

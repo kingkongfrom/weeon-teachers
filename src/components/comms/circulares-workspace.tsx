@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Plus, Search, Trash2, X } from "lucide-react";
+import { FileText, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
 import { CircularPreviewPane } from "@/components/comms/circular-preview-pane";
 import { NewCategoryDialog } from "@/components/comms/new-category-dialog";
 import { PublishCircularDialog } from "@/components/comms/publish-circular-dialog";
@@ -17,6 +17,7 @@ import {
   deleteTeacherCircular,
   fetchTeacherCircularDetail,
   moveTeacherCircularCategory,
+  reorderTeacherCircularCategories,
   restoreTeacherCircular,
   trashTeacherCircular,
 } from "@/lib/teachers/circular-actions";
@@ -26,6 +27,7 @@ import { useT } from "@/lib/i18n/use-i18n";
 type View = "all" | "uncategorized" | "category" | "trash";
 
 const CIRCULAR_MIME = "application/x-weeon-circular";
+const CATEGORY_MIME = "application/x-weeon-category-reorder";
 
 function formatListTime(iso: string): string {
   const date = new Date(iso);
@@ -77,6 +79,21 @@ export function CircularesWorkspace({
   const [localCategoriesByDoc, setLocalCategoriesByDoc] = useState<Record<string, string | null>>(
     {},
   );
+  const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
+  const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null);
+  const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
+  const [categoryOrderOverride, setCategoryOrderOverride] = useState<string | null>(null);
+
+  const categorySignature = categories.map((row) => row.id).join("|");
+  const orderedCategories = useMemo(() => {
+    if (!categoryOrder || categoryOrderOverride !== categorySignature) return categories;
+    const byId = new Map(categories.map((row) => [row.id, row]));
+    const next = categoryOrder.flatMap((id) => {
+      const row = byId.get(id);
+      return row ? [row] : [];
+    });
+    return next.length === categories.length ? next : categories;
+  }, [categories, categoryOrder, categoryOrderOverride, categorySignature]);
 
   const inTrash = view === "trash";
   const withLocalCategory = useMemo(
@@ -194,6 +211,29 @@ export function CircularesWorkspace({
     })();
   }
 
+  function applyCategoryReorder(dragId: string, targetId: string) {
+    if (dragId === targetId) return;
+    const from = orderedCategories.findIndex((row) => row.id === dragId);
+    const to = orderedCategories.findIndex((row) => row.id === targetId);
+    if (from < 0 || to < 0) return;
+    const next = [...orderedCategories];
+    const [moved] = next.splice(from, 1);
+    if (!moved) return;
+    next.splice(to, 0, moved);
+    const ids = next.map((row) => row.id);
+    setCategoryOrder(ids);
+    setCategoryOrderOverride(categorySignature);
+    void (async () => {
+      const res = await reorderTeacherCircularCategories(ids);
+      if (!res.ok) {
+        setCategoryOrder(null);
+        setCategoryOrderOverride(null);
+        return;
+      }
+      router.refresh();
+    })();
+  }
+
   const showPane = selectedId != null;
   const selectedSummary = scopedDocuments.find((row) => row.id === selectedId) ?? null;
 
@@ -268,7 +308,7 @@ export function CircularesWorkspace({
                   draggingId={draggingId}
                   onMoveCircular={moveToCategory}
                 />
-                {categories.map((category) => (
+                {orderedCategories.map((category) => (
                   <FilterRow
                     key={category.id}
                     active={view === "category" && categoryId === category.id}
@@ -284,6 +324,22 @@ export function CircularesWorkspace({
                     dropCategoryId={category.id}
                     draggingId={draggingId}
                     onMoveCircular={moveToCategory}
+                    categoryReorderId={category.id}
+                    draggingCategoryId={draggingCategoryId}
+                    reorderTargetId={reorderTargetId}
+                    onCategoryDragStart={() => setDraggingCategoryId(category.id)}
+                    onCategoryDragEnd={() => {
+                      setDraggingCategoryId(null);
+                      setReorderTargetId(null);
+                    }}
+                    onCategoryDragOver={() => setReorderTargetId(category.id)}
+                    onCategoryDragLeave={() =>
+                      setReorderTargetId((current) => (current === category.id ? null : current))
+                    }
+                    onCategoryDrop={(dragId) => {
+                      setReorderTargetId(null);
+                      applyCategoryReorder(dragId, category.id);
+                    }}
                   />
                 ))}
                 <FilterRow
@@ -460,6 +516,14 @@ function FilterRow({
   dropCategoryId,
   draggingId,
   onMoveCircular,
+  categoryReorderId,
+  draggingCategoryId,
+  reorderTargetId,
+  onCategoryDragStart,
+  onCategoryDragEnd,
+  onCategoryDragOver,
+  onCategoryDragLeave,
+  onCategoryDrop,
 }: {
   active: boolean;
   label: string;
@@ -470,9 +534,20 @@ function FilterRow({
   dropCategoryId?: string | null;
   draggingId?: string | null;
   onMoveCircular?: (documentId: string, categoryId: string | null) => void;
+  /** When set, the row is a draggable category (reorder by position). */
+  categoryReorderId?: string;
+  draggingCategoryId?: string | null;
+  reorderTargetId?: string | null;
+  onCategoryDragStart?: () => void;
+  onCategoryDragEnd?: () => void;
+  onCategoryDragOver?: () => void;
+  onCategoryDragLeave?: () => void;
+  onCategoryDrop?: (dragId: string) => void;
 }) {
   const droppable = dropCategoryId !== undefined && onMoveCircular != null;
-  const [over, setOver] = useState(false);
+  const reorderable = categoryReorderId !== undefined;
+  const over = reorderTargetId === categoryReorderId && draggingCategoryId != null;
+  const handleDragging = draggingCategoryId === categoryReorderId;
 
   return (
     <button
@@ -484,21 +559,34 @@ function FilterRow({
               if (!event.dataTransfer.types.includes(CIRCULAR_MIME)) return;
               event.preventDefault();
               event.dataTransfer.dropEffect = "move";
-              if (!over) setOver(true);
             }
           : undefined
       }
-      onDragLeave={droppable ? () => setOver(false) : undefined}
       onDrop={
         droppable
           ? (event) => {
               event.preventDefault();
-              setOver(false);
               const documentId = event.dataTransfer.getData(CIRCULAR_MIME);
-              if (documentId) onMoveCircular?.(documentId, dropCategoryId ?? null);
+              if (documentId) {
+                onMoveCircular?.(documentId, dropCategoryId ?? null);
+                return;
+              }
+              const dragCategoryId = event.dataTransfer.getData(CATEGORY_MIME);
+              if (dragCategoryId) onCategoryDrop?.(dragCategoryId);
             }
           : undefined
       }
+      onDragOverCapture={
+        reorderable
+          ? (event) => {
+              if (!event.dataTransfer.types.includes(CATEGORY_MIME)) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              onCategoryDragOver?.();
+            }
+          : undefined
+      }
+      onDragLeave={reorderable ? () => onCategoryDragLeave?.() : undefined}
       className={cn(
         "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] transition-colors",
         active
@@ -506,8 +594,27 @@ function FilterRow({
           : "font-medium text-[var(--wa-text)] hover:bg-[var(--wa-hover)]",
         droppable && draggingId && "ring-1 ring-inset ring-[var(--wa-ring)]/40",
         over && "bg-[var(--wa-active)] ring-2 ring-[var(--wa-accent)]",
+        handleDragging && "opacity-50",
       )}
     >
+      {reorderable ? (
+        <span
+          draggable
+          role="button"
+          tabIndex={-1}
+          aria-label={label}
+          onClick={(event) => event.stopPropagation()}
+          onDragStart={(event) => {
+            event.dataTransfer.setData(CATEGORY_MIME, categoryReorderId);
+            event.dataTransfer.effectAllowed = "move";
+            onCategoryDragStart?.();
+          }}
+          onDragEnd={() => onCategoryDragEnd?.()}
+          className="-ml-1 inline-flex h-5 w-3.5 shrink-0 cursor-grab items-center justify-center text-[var(--wa-muted)] active:cursor-grabbing"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </span>
+      ) : null}
       <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
       <span className="min-w-0 flex-1 truncate text-left">{label}</span>
       {count != null ? (
