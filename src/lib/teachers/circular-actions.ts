@@ -136,6 +136,7 @@ export async function publishTeacherCircular(formData: FormData): Promise<Circul
 }
 
 const documentIdSchema = z.string().uuid();
+const categoryIdSchema = z.string().uuid();
 
 /** Move one of the teacher's circulars to trash (soft delete). */
 export async function trashTeacherCircular(documentId: string): Promise<CircularActionResult> {
@@ -209,6 +210,32 @@ export async function deleteTeacherCircular(documentId: string): Promise<Circula
   if (paths.length > 0) {
     await session.actor.storage.from("school-documents").remove(paths);
   }
+
+  revalidatePath(TEACHER_CIRCULARS);
+  return { ok: true, documentId };
+}
+
+/** Move one of the teacher's circulars to a category (or out of one). */
+export async function moveTeacherCircularCategory(
+  documentId: string,
+  categoryId: string | null,
+): Promise<CircularActionResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+  if (!documentIdSchema.safeParse(documentId).success) {
+    return { ok: false, error: "Circular no válida." };
+  }
+  if (categoryId !== null && !categoryIdSchema.safeParse(categoryId).success) {
+    return { ok: false, error: "Categoría no válida." };
+  }
+
+  const { error } = await session.actor
+    .from("published_documents")
+    .update({ category_id: categoryId })
+    .eq("id", documentId)
+    .eq("published_by", session.userId)
+    .eq("tenant_id", session.tenantId);
+  if (error) return { ok: false, error: "No se pudo mover la circular." };
 
   revalidatePath(TEACHER_CIRCULARS);
   return { ok: true, documentId };

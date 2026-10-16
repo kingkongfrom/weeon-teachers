@@ -16,6 +16,7 @@ import type {
 import {
   deleteTeacherCircular,
   fetchTeacherCircularDetail,
+  moveTeacherCircularCategory,
   restoreTeacherCircular,
   trashTeacherCircular,
 } from "@/lib/teachers/circular-actions";
@@ -23,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-i18n";
 
 type View = "all" | "uncategorized" | "category" | "trash";
+
+const CIRCULAR_MIME = "application/x-weeon-circular";
 
 function formatListTime(iso: string): string {
   const date = new Date(iso);
@@ -70,31 +73,50 @@ export function CircularesWorkspace({
   const [previewDetail, setPreviewDetail] = useState<TeacherCircularDetail | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeacherCircularRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [localCategoriesByDoc, setLocalCategoriesByDoc] = useState<Record<string, string | null>>(
+    {},
+  );
 
   const inTrash = view === "trash";
-  const scoped = inTrash ? trash : circulars;
-  const totalCount = circulars.length;
+  const withLocalCategory = useMemo(
+    () =>
+      circulars.map((row) => {
+        if (!(row.id in localCategoriesByDoc)) return row;
+        const nextId = localCategoriesByDoc[row.id];
+        const category = categories.find((item) => item.id === nextId) ?? null;
+        return {
+          ...row,
+          categoryId: nextId,
+          categoryName: category?.name ?? null,
+          categoryColor: category?.color ?? null,
+        };
+      }),
+    [circulars, localCategoriesByDoc, categories],
+  );
+  const scoped = inTrash ? trash : withLocalCategory;
+  const totalCount = withLocalCategory.length;
   const uncategorizedCount = useMemo(
-    () => circulars.filter((row) => !row.categoryName).length,
-    [circulars],
+    () => withLocalCategory.filter((row) => !row.categoryName).length,
+    [withLocalCategory],
   );
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const row of circulars) {
+    for (const row of withLocalCategory) {
       if (!row.categoryId) continue;
       counts.set(row.categoryId, (counts.get(row.categoryId) ?? 0) + 1);
     }
     return counts;
-  }, [circulars]);
+  }, [withLocalCategory]);
 
   const scopedDocuments = useMemo(() => {
-    if (view === "uncategorized") return circulars.filter((row) => !row.categoryName);
+    if (view === "uncategorized") return withLocalCategory.filter((row) => !row.categoryName);
     if (view === "category" && categoryId) {
-      return circulars.filter((row) => row.categoryId === categoryId);
+      return withLocalCategory.filter((row) => row.categoryId === categoryId);
     }
     return scoped;
-  }, [circulars, scoped, view, categoryId]);
+  }, [withLocalCategory, scoped, view, categoryId]);
 
   const filteredDocuments = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -151,6 +173,25 @@ export function CircularesWorkspace({
     if (selectedId === deleteTarget.id) clearSelection();
     setDeleteTarget(null);
     router.refresh();
+  }
+
+  function moveToCategory(documentId: string, nextCategoryId: string | null) {
+    const current = withLocalCategory.find((row) => row.id === documentId);
+    if (!current || (current.categoryId ?? null) === nextCategoryId) return;
+    // Optimistic: reflect the move immediately, then persist.
+    setLocalCategoriesByDoc((prev) => ({ ...prev, [documentId]: nextCategoryId }));
+    void (async () => {
+      const res = await moveTeacherCircularCategory(documentId, nextCategoryId);
+      if (!res.ok) {
+        setLocalCategoriesByDoc((prev) => {
+          const copy = { ...prev };
+          delete copy[documentId];
+          return copy;
+        });
+        return;
+      }
+      router.refresh();
+    })();
   }
 
   const showPane = selectedId != null;
@@ -223,6 +264,9 @@ export function CircularesWorkspace({
                   count={uncategorizedCount}
                   onClick={() => selectView("uncategorized")}
                   icon={<span className="h-2.5 w-2.5 rounded-full bg-[var(--wa-muted)]" />}
+                  dropCategoryId={null}
+                  draggingId={draggingId}
+                  onMoveCircular={moveToCategory}
                 />
                 {categories.map((category) => (
                   <FilterRow
@@ -237,6 +281,9 @@ export function CircularesWorkspace({
                         style={{ backgroundColor: category.color ?? "#5e25cc" }}
                       />
                     }
+                    dropCategoryId={category.id}
+                    draggingId={draggingId}
+                    onMoveCircular={moveToCategory}
                   />
                 ))}
                 <FilterRow
@@ -280,6 +327,17 @@ export function CircularesWorkspace({
                       <li key={row.id}>
                         <button
                           type="button"
+                          draggable={!inTrash}
+                          onDragStart={
+                            inTrash
+                              ? undefined
+                              : (event) => {
+                                  event.dataTransfer.setData(CIRCULAR_MIME, row.id);
+                                  event.dataTransfer.effectAllowed = "move";
+                                  setDraggingId(row.id);
+                                }
+                          }
+                          onDragEnd={inTrash ? undefined : () => setDraggingId(null)}
                           onClick={() => {
                             if (active) {
                               clearSelection();
@@ -290,6 +348,8 @@ export function CircularesWorkspace({
                           className={cn(
                             "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
                             active ? "bg-[var(--wa-active)]" : "hover:bg-[var(--wa-hover)]",
+                            !inTrash && "cursor-grab active:cursor-grabbing",
+                            draggingId === row.id && "opacity-50",
                           )}
                         >
                           <span
@@ -397,22 +457,55 @@ function FilterRow({
   count,
   icon,
   onClick,
+  dropCategoryId,
+  draggingId,
+  onMoveCircular,
 }: {
   active: boolean;
   label: string;
   count?: number;
   icon: React.ReactNode;
   onClick: () => void;
+  /** When set, the row accepts dropped circulares and moves them here. */
+  dropCategoryId?: string | null;
+  draggingId?: string | null;
+  onMoveCircular?: (documentId: string, categoryId: string | null) => void;
 }) {
+  const droppable = dropCategoryId !== undefined && onMoveCircular != null;
+  const [over, setOver] = useState(false);
+
   return (
     <button
       type="button"
       onClick={onClick}
+      onDragOver={
+        droppable
+          ? (event) => {
+              if (!event.dataTransfer.types.includes(CIRCULAR_MIME)) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              if (!over) setOver(true);
+            }
+          : undefined
+      }
+      onDragLeave={droppable ? () => setOver(false) : undefined}
+      onDrop={
+        droppable
+          ? (event) => {
+              event.preventDefault();
+              setOver(false);
+              const documentId = event.dataTransfer.getData(CIRCULAR_MIME);
+              if (documentId) onMoveCircular?.(documentId, dropCategoryId ?? null);
+            }
+          : undefined
+      }
       className={cn(
         "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] transition-colors",
         active
           ? "bg-[var(--wa-active)] font-semibold text-[var(--wa-text)]"
           : "font-medium text-[var(--wa-text)] hover:bg-[var(--wa-hover)]",
+        droppable && draggingId && "ring-1 ring-inset ring-[var(--wa-ring)]/40",
+        over && "bg-[var(--wa-active)] ring-2 ring-[var(--wa-accent)]",
       )}
     >
       <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
