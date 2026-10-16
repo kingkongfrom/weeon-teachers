@@ -348,6 +348,25 @@ export function CircularesWorkspace({
                     }}
                   />
                 ))}
+                {draggingCategoryId ? (
+                  <CategoryTailDropZone
+                    active={reorderTarget?.id === "__tail__"}
+                    onOver={() => setReorderTarget({ id: "__tail__", after: true })}
+                    onLeave={() =>
+                      setReorderTarget((current) =>
+                        current?.id === "__tail__" ? null : current,
+                      )
+                    }
+                    onDrop={(dragId) => {
+                      setReorderTarget(null);
+                      applyCategoryReorder(
+                        dragId,
+                        orderedCategories[orderedCategories.length - 1]?.id ?? dragId,
+                        true,
+                      );
+                    }}
+                  />
+                ) : null}
                 <FilterRow
                   active={view === "trash"}
                   label={t("comms.folderTrash")}
@@ -510,6 +529,48 @@ export function CircularesWorkspace({
         pending={deleting}
       />
     </>
+  );
+}
+
+/**
+ * Trailing reorder target shown while dragging a category. Dropping here moves
+ * the dragged category to the LAST position — the intuitive "make it last".
+ */
+function CategoryTailDropZone({
+  active,
+  onOver,
+  onLeave,
+  onDrop,
+}: {
+  active: boolean;
+  onOver: () => void;
+  onLeave: () => void;
+  onDrop: (dragId: string) => void;
+}) {
+  return (
+    <div
+      onDragOver={(event) => {
+        if (!event.dataTransfer.types.includes(CATEGORY_MIME)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        onOver();
+      }}
+      onDragLeave={onLeave}
+      onDrop={(event) => {
+        event.preventDefault();
+        const dragId = event.dataTransfer.getData(CATEGORY_MIME);
+        if (dragId) onDrop(dragId);
+      }}
+      className="relative h-6"
+      aria-hidden
+    >
+      <span
+        className={cn(
+          "absolute inset-x-2 top-1/2 h-[2px] -translate-y-1/2 rounded-full transition-opacity",
+          active ? "bg-[var(--wa-accent)] opacity-100" : "opacity-0",
+        )}
+      />
+    </div>
   );
 }
 
