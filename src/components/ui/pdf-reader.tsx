@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { Download, Loader2, Maximize2, Minus, Plus, X } from "lucide-react";
+import { Download, Loader2, Maximize2, Minus, Plus, RotateCw, X } from "lucide-react";
 import { useT } from "@/lib/i18n/use-i18n";
 
 const ZOOM_STEPS = [0.75, 1, 1.25, 1.5, 2] as const;
 
 type PdfPageHandle = {
-  getViewport: (params: { scale: number }) => { width: number; height: number };
+  getViewport: (params: { scale: number; rotation?: number }) => { width: number; height: number };
   render: (params: {
     canvas: HTMLCanvasElement;
     viewport: { width: number; height: number };
@@ -117,6 +117,7 @@ export function PdfReaderDialog({
             <PdfViewport
               key={url}
               url={url}
+              downloadName={name}
               topBar={
                 <>
                   <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{name}</p>
@@ -153,6 +154,7 @@ export function PdfViewport({
   showChrome = true,
   onExpand,
   topBar,
+  downloadName,
 }: {
   url: string;
   /** Show the page count + zoom toolbar. Hidden for the compact inline preview. */
@@ -161,12 +163,15 @@ export function PdfViewport({
   onExpand?: () => void;
   /** Optional content rendered at the left of the toolbar row (e.g. title + actions). */
   topBar?: ReactNode;
+  /** When set, the toolbar shows a download button saving as this name. */
+  downloadName?: string;
 }) {
   const t = useT();
   const frameRef = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<PdfPageHandle[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [zoomIndex, setZoomIndex] = useState(1);
+  const [rotation, setRotation] = useState(0);
   const [frameWidth, setFrameWidth] = useState(0);
   const zoom = ZOOM_STEPS[zoomIndex] ?? 1;
 
@@ -266,6 +271,28 @@ export function PdfViewport({
             >
               <Plus className="h-4 w-4" />
             </button>
+            <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-foreground/60 hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+              aria-label={t("pdf.rotate")}
+              title={t("pdf.rotate")}
+              disabled={status !== "ready"}
+              onClick={() => setRotation((value) => (value + 90) % 360)}
+            >
+              <RotateCw className="h-4 w-4" />
+            </button>
+            {downloadName ? (
+              <a
+                href={url}
+                download={downloadName}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-foreground/60 hover:bg-surface-muted hover:text-foreground"
+                aria-label={t("comms.documents.download")}
+                title={t("comms.documents.download")}
+              >
+                <Download className="h-4 w-4" />
+              </a>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -299,7 +326,7 @@ export function PdfViewport({
         {status === "ready" ? (
           <div className="flex flex-col items-center gap-4 px-6 py-6">
             {pages.map((page, index) => (
-              <PdfPageCanvas key={index} page={page} width={pageWidth} />
+              <PdfPageCanvas key={index} page={page} width={pageWidth} rotation={rotation} />
             ))}
           </div>
         ) : null}
@@ -308,14 +335,14 @@ export function PdfViewport({
   );
 }
 
-function PdfPageCanvas({ page, width }: { page: PdfPageHandle; width: number }) {
+function PdfPageCanvas({ page, width, rotation = 0 }: { page: PdfPageHandle; width: number; rotation?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || width < 1) return;
     const base = page.getViewport({ scale: 1 });
-    const viewport = page.getViewport({ scale: width / base.width });
+    const viewport = page.getViewport({ scale: width / base.width, rotation });
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.floor(viewport.width * pixelRatio);
     canvas.height = Math.floor(viewport.height * pixelRatio);
@@ -335,7 +362,7 @@ function PdfPageCanvas({ page, width }: { page: PdfPageHandle; width: number }) 
     return () => {
       task.cancel();
     };
-  }, [page, width]);
+  }, [page, width, rotation]);
 
   return (
     <canvas
