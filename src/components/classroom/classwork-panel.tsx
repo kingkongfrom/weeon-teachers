@@ -168,17 +168,17 @@ export function ClassworkPanel({
       {error ? <p className="text-sm font-medium text-error">{error}</p> : null}
 
       <div className="grid items-start gap-8 xl:grid-cols-2 xl:gap-6">
-        <AssessmentsPanel
-          classId={classId}
-          assessments={shownAssessments}
-          studentCount={studentCount}
-          defaultTopicId={defaultTopicId}
-          defaultSubjectId={selectedSubjectId}
-        />
         <MaterialsPanel
           classId={classId}
           materials={shownMaterials}
           topics={topics}
+          defaultTopicId={defaultTopicId}
+          defaultSubjectId={selectedSubjectId}
+        />
+        <AssessmentsPanel
+          classId={classId}
+          assessments={shownAssessments}
+          studentCount={studentCount}
           defaultTopicId={defaultTopicId}
           defaultSubjectId={selectedSubjectId}
         />

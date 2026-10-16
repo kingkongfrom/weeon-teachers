@@ -85,8 +85,8 @@ Honest snapshot — do not assume the rest exists.
 - **`/aula-virtual/[classId]`** — class banner + `ClassTabs`. The class opens on
   **Trabajo de clase**.
   - **Trabajo de clase** — **assessments (P5a)** + **materials (P1)**, stacked on a
-    narrow window and **side by side** from the `xl` breakpoint so both lists
-    stay on screen:
+    narrow window and **side by side** from the `xl` breakpoint, with
+    **Materiales de estudio** on the left and **Tareas y exámenes** on the right:
     - *Tareas y exámenes*: `AssessmentsPanel` → the `AssessmentEditor`
       (`/aula-virtual/[classId]/evaluaciones/[id]`) builds a homework/exam with a
       TipTap WYSIWYG, question types, a **Materia** selector, preview, and
@@ -100,7 +100,7 @@ Honest snapshot — do not assume the rest exists.
       `/aula-virtual/[classId]/evaluaciones/[assessmentId]/entregas/[submissionId]`
       — with a **Por evaluar / Evaluada** status and the mark. See
       § Submit vs grade and § Grades & evaluation.
-    - *Materiales*: `MaterialsPanel` uploads/lists/downloads/removes documents.
+    - *Materiales de estudio*: `MaterialsPanel` uploads/lists/downloads/removes documents.
       The file uses the subject already selected on Trabajo de clase; the
       upload dialog does not ask for Materia again.
     - *Temas*: `ClassworkPanel` — a plain text row (not pills, not a menu)

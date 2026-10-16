@@ -881,10 +881,10 @@ const es = {
     gradebookBody: "Agrega evaluaciones y registra las calificaciones de esta clase.",
     openGrades: "Abrir calificaciones",
     publish: "Publicar",
-    materials: "Materiales",
+    materials: "Materiales de estudio",
     moreOptions: "Más opciones",
     materialsPanel: {
-      heading: "Materiales",
+      heading: "Materiales de estudio",
       add: "Añadir material",
       emptyTitle: "Aún no hay materiales",
       emptyBody:
@@ -1966,10 +1966,10 @@ const en: Messages = {
     gradebookBody: "Add evaluations and record this class's grades.",
     openGrades: "Open grades",
     publish: "Publish",
-    materials: "Materials",
+    materials: "Study materials",
     moreOptions: "More options",
     materialsPanel: {
-      heading: "Materials",
+      heading: "Study materials",
       add: "Add material",
       emptyTitle: "No materials yet",
       emptyBody: "Share documents (PDF, images, spreadsheets) with this group.",
