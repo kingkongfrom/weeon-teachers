@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ChevronRight, GraduationCap, Users } from "lucide-react";
+import { ArrowUpRight, ChevronRight, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { hubToneSegment, hubToneSurface, SEGMENT_TRACK, TONE_AVATAR, type Tone } from "@/lib/dashboard/tones";
@@ -160,12 +160,15 @@ export function ClassTabs({
               <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
                 {t.classroom.teachers}
               </h3>
-              <PersonRow
-                name={teacherName}
-                subtitle={t.classroom.teacherFallback}
-                tone="brand"
-                imageUrl={teacherAvatarUrl}
-              />
+              <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <li>
+                  <PersonCard
+                    name={teacherName}
+                    subtitle={t.classroom.teacherFallback}
+                    imageUrl={teacherAvatarUrl}
+                  />
+                </li>
+              </ul>
             </section>
 
             <section>
@@ -177,10 +180,10 @@ export function ClassTabs({
                   {t.classroom.noStudents}
                 </p>
               ) : (
-                <ul className="mt-1 flex flex-col divide-y divide-border">
+                <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {students.map((student) => (
                     <li key={student.id}>
-                      <PersonRow
+                      <PersonCard
                         name={`${student.lastName} ${student.firstName}`.trim()}
                         imageUrl={student.avatarUrl}
                         href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/aula-virtual/${classId}?tab=personas`)}`}
@@ -255,40 +258,29 @@ export function ClassTabs({
   );
 }
 
-function PersonRow({
+function PersonCard({
   name,
   subtitle,
-  tone = "muted",
   imageUrl,
   href,
 }: {
   name: string;
   subtitle?: string | null;
-  tone?: "brand" | "muted";
   imageUrl?: string | null;
   href?: string;
 }) {
   const content = (
     <div
       className={cn(
-        "flex items-center gap-3 py-3",
-        href ? "ui-hover -mx-2 rounded-lg px-2" : "px-1",
+        "flex h-full items-center gap-3 rounded-2xl border border-border bg-surface p-3",
+        href &&
+          "transition-colors hover:border-brand-200 hover:bg-brand-50/40 dark:hover:bg-brand-950/20",
       )}
     >
       {imageUrl !== undefined ? (
-        <ProfileAvatarDisplay
-          name={name}
-          imageUrl={imageUrl}
-          size="sm"
-          className="rounded-full"
-        />
+        <ProfileAvatarDisplay name={name} imageUrl={imageUrl} size="md" className="rounded-full" />
       ) : (
-        <span
-          className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
-            tone === "brand" ? "brand-gradient" : "bg-foreground/30",
-          )}
-        >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground/30 text-xs font-bold text-white">
           {initialsOf(name)}
         </span>
       )}
@@ -298,16 +290,11 @@ function PersonRow({
           <span className="block truncate text-xs font-medium text-foreground/50">{subtitle}</span>
         ) : null}
       </span>
-      {tone === "brand" ? (
-        <Users className="ml-auto h-4 w-4 text-foreground/30" aria-hidden />
-      ) : href ? (
-        <ChevronRight className="ml-auto h-4 w-4 text-foreground/30" aria-hidden />
-      ) : null}
     </div>
   );
 
   return href ? (
-    <Link href={href} className="block">
+    <Link href={href} className="block h-full">
       {content}
     </Link>
   ) : (

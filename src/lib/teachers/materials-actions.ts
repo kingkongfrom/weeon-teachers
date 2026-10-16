@@ -172,12 +172,16 @@ export async function deleteMaterial(input: {
   return { ok: true };
 }
 
-/** Short-lived signed URL for downloading a material. */
+/** Short-lived signed URL for a material. `download` attaches a filename so the
+ * browser saves the file; the PDF reader uses an inline URL instead. */
 export async function getMaterialDownloadUrl(input: {
   id: string;
+  download?: boolean;
 }): Promise<MaterialUrlResult> {
   const t = await getT();
-  const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
+  const parsed = z
+    .object({ id: z.string().uuid(), download: z.boolean().optional() })
+    .safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: t.classroom.materialsPanel.errorDownload };
   }
@@ -193,9 +197,14 @@ export async function getMaterialDownloadUrl(input: {
     return { ok: false, error: t.classroom.materialsPanel.errorDownload };
   }
 
+  const asDownload = parsed.data.download !== false;
   const { data, error } = await supabase.storage
     .from(MATERIAL_BUCKET)
-    .createSignedUrl(row.storage_path, 60, { download: row.file_name });
+    .createSignedUrl(
+      row.storage_path,
+      asDownload ? 60 : 60 * 15,
+      asDownload ? { download: row.file_name } : undefined,
+    );
 
   if (error || !data?.signedUrl) {
     return { ok: false, error: t.classroom.materialsPanel.errorDownload };

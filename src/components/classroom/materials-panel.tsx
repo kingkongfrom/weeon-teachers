@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dropdown } from "@/components/ui/dropdown";
+import { isPdfFile, PdfReaderDialog } from "@/components/ui/pdf-reader";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
 import type { ClassTopic } from "@/lib/dashboard/topics";
 import {
@@ -91,6 +92,8 @@ export function MaterialsPanel({
   const [open, setOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [reader, setReader] = useState<{ url: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClassMaterial | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +127,22 @@ export function MaterialsPanel({
     if (!file) return;
     setPendingFile(file);
     setOpen(true);
+  }
+
+  async function openMaterial(material: ClassMaterial) {
+    setError(null);
+    setOpeningId(material.id);
+    const res = await getMaterialDownloadUrl({ id: material.id, download: false });
+    setOpeningId(null);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    if (isPdfFile(material.fileName, material.mimeType)) {
+      setReader({ url: res.url, name: material.title || material.fileName });
+      return;
+    }
+    window.open(res.url, "_blank", "noopener,noreferrer");
   }
 
   async function handleDownload(id: string) {
@@ -205,40 +224,53 @@ export function MaterialsPanel({
             const Icon = fileIcon(material.mimeType);
             const size = formatBytes(material.sizeBytes);
             const busy = busyId === material.id;
+            const opening = openingId === material.id;
             return (
               <li
                 key={material.id}
-                className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4"
+                className="flex items-start gap-1 rounded-2xl border border-border bg-surface p-2 transition-colors hover:border-brand-200 hover:bg-brand-50/40 dark:hover:bg-brand-950/20"
               >
-                {material.thumbnailUrl ? (
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={material.thumbnailUrl}
-                      alt={material.title}
-                      className="h-full w-full object-cover object-top"
-                    />
+                <button
+                  type="button"
+                  onClick={() => void openMaterial(material)}
+                  disabled={opening}
+                  aria-label={tPanel.view}
+                  className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-2 text-left disabled:opacity-60"
+                >
+                  {opening ? (
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </span>
+                  ) : material.thumbnailUrl ? (
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={material.thumbnailUrl}
+                        alt=""
+                        className="h-full w-full object-cover object-top"
+                      />
+                    </span>
+                  ) : (
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-foreground">
+                      {material.title}
+                    </span>
+                    {material.description ? (
+                      <span className="mt-0.5 line-clamp-2 block text-xs font-medium text-foreground/55">
+                        {material.description}
+                      </span>
+                    ) : null}
+                    <span className="mt-1 block truncate text-[11px] font-medium text-foreground/40">
+                      {material.fileName}
+                      {size ? ` · ${size}` : ""}
+                    </span>
                   </span>
-                ) : (
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-foreground">
-                    {material.title}
-                  </p>
-                  {material.description ? (
-                    <p className="mt-0.5 line-clamp-2 text-xs font-medium text-foreground/55">
-                      {material.description}
-                    </p>
-                  ) : null}
-                  <p className="mt-1 truncate text-[11px] font-medium text-foreground/40">
-                    {material.fileName}
-                    {size ? ` · ${size}` : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
+                </button>
+                <div className="flex shrink-0 items-center gap-1 pt-1">
                   <button
                     type="button"
                     onClick={() => void handleDownload(material.id)}
@@ -291,6 +323,13 @@ export function MaterialsPanel({
             document.body,
           )
         : null}
+
+      <PdfReaderDialog
+        open={reader !== null}
+        url={reader?.url ?? null}
+        name={reader?.name ?? ""}
+        onClose={() => setReader(null)}
+      />
 
       <ConfirmDialog
         open={deleteTarget !== null}
@@ -409,7 +448,7 @@ function UploadDialog({
         type="button"
         aria-label={tPanel.cancel}
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-black/40"
+        className="absolute inset-0 bg-black/40"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

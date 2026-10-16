@@ -151,6 +151,7 @@ export function MessagesWorkspace({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MessageThreadSummary | null>(null);
+  const [trashTargetId, setTrashTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [favoriteOverrides, setFavoriteOverrides] = useState<Record<string, boolean>>({});
   const [localLabels, setLocalLabels] = useState(labels);
@@ -462,7 +463,7 @@ export function MessagesWorkspace({
           isMine: openThreadSummary.mine,
           busy: busyId === openId,
           onToggleFavorite: () => void setFavorite(openId, !isThreadFavorite(openThreadSummary)),
-          onMoveToTrash: () => void moveTo(openId, "trash"),
+          onMoveToTrash: () => setTrashTargetId(openId),
           onRestore:
             folder === "trash"
               ? () => void moveTo(openId, openThreadSummary.mine ? "sent" : "inbox")
@@ -487,6 +488,10 @@ export function MessagesWorkspace({
       if (!threadId) return;
       if (folder === "favorite" && target !== "trash") {
         void setFavorite(threadId, false);
+        return;
+      }
+      if (target === "trash") {
+        setTrashTargetId(threadId);
         return;
       }
       void moveTo(threadId, target);
@@ -920,7 +925,7 @@ export function MessagesWorkspace({
                             aria-label={t("comms.moveToTrash")}
                             onClick={(event) => {
                               event.stopPropagation();
-                              void moveTo(thread.id, "trash");
+                              setTrashTargetId(thread.id);
                             }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-foreground/45 hover:bg-error/10 hover:text-error"
                           >
@@ -1038,6 +1043,20 @@ export function MessagesWorkspace({
           setLocalMailboxSettings(next);
           router.refresh();
         }}
+      />
+
+      <ConfirmDialog
+        open={trashTargetId != null}
+        title={t("comms.moveToTrashConfirm")}
+        description={t("comms.moveToTrashBody")}
+        confirmLabel={t("comms.moveToTrash")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={() => {
+          const id = trashTargetId;
+          setTrashTargetId(null);
+          if (id) void moveTo(id, "trash");
+        }}
+        onCancel={() => setTrashTargetId(null)}
       />
 
       <ConfirmDialog

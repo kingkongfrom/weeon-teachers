@@ -500,7 +500,7 @@ function AddConductDialog({
         type="button"
         aria-label={t.common.close}
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-black/40"
+        className="absolute inset-0 bg-black/40"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

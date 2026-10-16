@@ -98,6 +98,7 @@ export function AssessmentEditor({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [removeIndex, setRemoveIndex] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -434,7 +435,7 @@ export function AssessmentEditor({
             onMoveUp={() => moveQuestion(index, -1)}
             onMoveDown={() => moveQuestion(index, 1)}
             onDuplicate={() => duplicateQuestion(index)}
-            onRemove={() => removeQuestion(index)}
+            onRemove={() => setRemoveIndex(index)}
           />
         ))}
 
@@ -478,7 +479,7 @@ export function AssessmentEditor({
                     type="button"
                     aria-label={a.close}
                     onClick={() => setPreviewOpen(false)}
-                    className="fixed inset-0 cursor-default bg-black/40"
+                    className="fixed inset-0 bg-black/40"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -515,6 +516,18 @@ export function AssessmentEditor({
             document.body,
           )
         : null}
+
+      <ConfirmDialog
+        open={removeIndex !== null}
+        title={a.removeQuestionConfirm}
+        confirmLabel={a.removeQuestion}
+        cancelLabel={t.common.cancel}
+        onConfirm={() => {
+          if (removeIndex !== null) removeQuestion(removeIndex);
+          setRemoveIndex(null);
+        }}
+        onCancel={() => setRemoveIndex(null)}
+      />
 
       <ConfirmDialog
         open={closeOpen}

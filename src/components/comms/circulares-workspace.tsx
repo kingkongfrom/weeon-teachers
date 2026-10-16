@@ -75,6 +75,7 @@ export function CircularesWorkspace({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewDetail, setPreviewDetail] = useState<TeacherCircularDetail | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeacherCircularRow | null>(null);
+  const [trashTarget, setTrashTarget] = useState<TeacherCircularRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [localCategoriesByDoc, setLocalCategoriesByDoc] = useState<Record<string, string | null>>(
@@ -615,7 +616,7 @@ export function CircularesWorkspace({
                   detail={previewDetail}
                   loading={previewLoading}
                   onClose={clearSelection}
-                  onDelete={!inTrash ? () => void handleTrash(selectedSummary) : undefined}
+                  onDelete={!inTrash ? () => setTrashTarget(selectedSummary) : undefined}
                   onRestore={inTrash ? () => void handleTrash(selectedSummary) : undefined}
                   onPermanentDelete={inTrash ? () => setDeleteTarget(selectedSummary) : undefined}
                 />
@@ -651,6 +652,20 @@ export function CircularesWorkspace({
         open={newCategoryOpen}
         onClose={() => setNewCategoryOpen(false)}
         onCreated={() => router.refresh()}
+      />
+
+      <ConfirmDialog
+        open={trashTarget != null}
+        title={t("comms.moveToTrashConfirm")}
+        description={t("comms.moveToTrashBody")}
+        confirmLabel={t("comms.moveToTrash")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={() => {
+          const row = trashTarget;
+          setTrashTarget(null);
+          if (row) void handleTrash(row);
+        }}
+        onCancel={() => setTrashTarget(null)}
       />
 
       <ConfirmDialog

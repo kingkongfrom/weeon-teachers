@@ -39,6 +39,7 @@ import type { MessageDraftRecord } from "@/lib/comms/message-draft";
 import type { MessageContact } from "@/lib/dashboard/messages";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useT } from "@/lib/i18n/use-i18n";
 
 /** Matches `composeSchema.recipients.max` in comms-actions. */
@@ -74,6 +75,7 @@ export function UnifiedMessageComposer({
 }) {
   const t = useT();
   const router = useRouter();
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [toSelected, setToSelected] = useState<PickerSelection[]>(
     () => (initialDraft?.toSelected ?? []) as PickerSelection[],
   );
@@ -370,7 +372,7 @@ export function UnifiedMessageComposer({
             )}
             <button
               type="button"
-              onClick={discardCompose}
+              onClick={() => setDiscardOpen(true)}
               className={cn(toolbarBtn, "text-error/90 hover:bg-error/5")}
             >
               <Trash2 className="h-4 w-4 shrink-0" />
@@ -579,11 +581,22 @@ export function UnifiedMessageComposer({
         mode="regular"
         allowBulk={false}
       />
+      <ConfirmDialog
+        open={discardOpen}
+        title={t("comms.discardConfirm")}
+        description={t("comms.discardBody")}
+        confirmLabel={t("comms.discard")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={() => {
+          setDiscardOpen(false);
+          discardCompose();
+        }}
+        onCancel={() => setDiscardOpen(false)}
+      />
     </div>
   );
 }
 
-/** Classic email header rows (Para / Cc / Asunto). */
 function ComposeEmailFields({
   fromLabel = "",
   fromFieldLabel = "",

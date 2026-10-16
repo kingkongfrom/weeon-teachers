@@ -55,6 +55,7 @@ export function ThreadView({
   const [moving, setMoving] = useState(false);
   const [trashing, setTrashing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const trashPending = useRef(false);
 
@@ -174,7 +175,7 @@ export function ThreadView({
             <button
               type="button"
               disabled={moving}
-              onClick={() => void moveFolder("trash")}
+              onClick={() => setTrashOpen(true)}
               className="ui-hover inline-flex h-9 items-center gap-2 rounded-xl border border-border px-3 text-sm font-semibold text-foreground/70 hover:text-error disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
@@ -331,6 +332,22 @@ export function ThreadView({
           </section>
         ) : null}
       </motion.div>
+
+      <ConfirmDialog
+        open={trashOpen}
+        title={t("comms.moveToTrashConfirm")}
+        description={t("comms.moveToTrashBody")}
+        confirmLabel={t("comms.moveToTrash")}
+        cancelLabel={t("common.cancel")}
+        pending={moving}
+        onConfirm={() => {
+          setTrashOpen(false);
+          void moveFolder("trash");
+        }}
+        onCancel={() => {
+          if (!moving) setTrashOpen(false);
+        }}
+      />
 
       <ConfirmDialog
         open={deleteOpen}

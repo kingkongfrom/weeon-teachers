@@ -110,6 +110,38 @@
   * {
     border-color: var(--border);
   }
+
+  /* The pointing hand on every control that can be activated. Text fields stay
+     an I-beam. Disabled controls stay a blocked cursor. */
+  a[href],
+  button:not(:disabled),
+  summary,
+  label,
+  select:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="link"]:not([aria-disabled="true"]),
+  input:not(:disabled):is(
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    [type="checkbox"],
+    [type="radio"],
+    [type="file"],
+    [type="range"]
+  ) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 body {

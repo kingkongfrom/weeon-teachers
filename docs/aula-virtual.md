@@ -101,8 +101,10 @@ Honest snapshot — do not assume the rest exists.
       — with a **Por evaluar / Evaluada** status and the mark. See
       § Submit vs grade and § Grades & evaluation.
     - *Materiales de estudio*: `MaterialsPanel` uploads/lists/downloads/removes documents.
-      The file uses the subject already selected on Trabajo de clase; the
-      upload dialog does not ask for Materia again.
+      Clicking a PDF opens it in the shared `PdfReaderDialog` (the same reader
+      as Circulares). Other files open in a new tab. The file uses the subject
+      already selected on Trabajo de clase; the upload dialog does not ask for
+      Materia again.
     - *Temas*: `ClassworkPanel` — a plain text row (not pills, not a menu)
       filters assessments + materials. **Nuevo tema** sits at the end of that
       row and becomes an inline name field. The active topic shows **Eliminar**;
@@ -120,7 +122,7 @@ Honest snapshot — do not assume the rest exists.
       subject is not repeated on the banner — it is chosen with the Trabajo de
       clase subject pills. The tone palette is defined once in `src/lib/dashboard/tones.ts`
       and shared with the hub and lesson tiles.
-  - **Personas** — teacher row + enrolled students; each student opens their
+  - **Personas** — teacher and enrolled students as a card grid; each student opens their
     transcript (`/estudiantes/[id]`). This is the home for the roster — there is
     no separate students section in the hub.
   - **Asistencia** — the **dated class register** (`AttendanceRegister`):
