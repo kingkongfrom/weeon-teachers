@@ -81,7 +81,7 @@ export function CircularesWorkspace({
   );
   const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
   const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null);
-  const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
+  const [reorderTarget, setReorderTarget] = useState<{ id: string; after: boolean } | null>(null);
   const [categoryOrderOverride, setCategoryOrderOverride] = useState<string | null>(null);
 
   const categorySignature = categories.map((row) => row.id).join("|");
@@ -211,15 +211,19 @@ export function CircularesWorkspace({
     })();
   }
 
-  function applyCategoryReorder(dragId: string, targetId: string) {
+  function applyCategoryReorder(dragId: string, targetId: string, insertAfter: boolean) {
     if (dragId === targetId) return;
     const from = orderedCategories.findIndex((row) => row.id === dragId);
-    const to = orderedCategories.findIndex((row) => row.id === targetId);
-    if (from < 0 || to < 0) return;
+    const targetIndex = orderedCategories.findIndex((row) => row.id === targetId);
+    if (from < 0 || targetIndex < 0) return;
     const next = [...orderedCategories];
     const [moved] = next.splice(from, 1);
     if (!moved) return;
-    next.splice(to, 0, moved);
+    // Recompute the destination after removal so "insert after" lands correctly
+    // whether the dragged item came from above or below the target.
+    const targetAfterRemoval = next.findIndex((row) => row.id === targetId);
+    const insertAt = insertAfter ? targetAfterRemoval + 1 : targetAfterRemoval;
+    next.splice(insertAt, 0, moved);
     const ids = next.map((row) => row.id);
     setCategoryOrder(ids);
     setCategoryOrderOverride(categorySignature);
@@ -326,19 +330,21 @@ export function CircularesWorkspace({
                     onMoveCircular={moveToCategory}
                     categoryReorderId={category.id}
                     draggingCategoryId={draggingCategoryId}
-                    reorderTargetId={reorderTargetId}
+                    reorderTarget={reorderTarget}
                     onCategoryDragStart={() => setDraggingCategoryId(category.id)}
                     onCategoryDragEnd={() => {
                       setDraggingCategoryId(null);
-                      setReorderTargetId(null);
+                      setReorderTarget(null);
                     }}
-                    onCategoryDragOver={() => setReorderTargetId(category.id)}
+                    onCategoryDragOver={(after) => setReorderTarget({ id: category.id, after })}
                     onCategoryDragLeave={() =>
-                      setReorderTargetId((current) => (current === category.id ? null : current))
+                      setReorderTarget((current) =>
+                        current?.id === category.id ? null : current,
+                      )
                     }
-                    onCategoryDrop={(dragId) => {
-                      setReorderTargetId(null);
-                      applyCategoryReorder(dragId, category.id);
+                    onCategoryDrop={(dragId, after) => {
+                      setReorderTarget(null);
+                      applyCategoryReorder(dragId, category.id, after);
                     }}
                   />
                 ))}
@@ -518,7 +524,7 @@ function FilterRow({
   onMoveCircular,
   categoryReorderId,
   draggingCategoryId,
-  reorderTargetId,
+  reorderTarget,
   onCategoryDragStart,
   onCategoryDragEnd,
   onCategoryDragOver,
@@ -537,30 +543,42 @@ function FilterRow({
   /** When set, the row is a draggable category (reorder by position). */
   categoryReorderId?: string;
   draggingCategoryId?: string | null;
-  reorderTargetId?: string | null;
+  reorderTarget?: { id: string; after: boolean } | null;
   onCategoryDragStart?: () => void;
   onCategoryDragEnd?: () => void;
-  onCategoryDragOver?: () => void;
+  onCategoryDragOver?: (insertAfter: boolean) => void;
   onCategoryDragLeave?: () => void;
-  onCategoryDrop?: (dragId: string) => void;
+  onCategoryDrop?: (dragId: string, insertAfter: boolean) => void;
 }) {
+  const rowRef = useRef<HTMLDivElement>(null);
   const droppable = dropCategoryId !== undefined && onMoveCircular != null;
   const reorderable = categoryReorderId !== undefined;
-  const over = reorderTargetId === categoryReorderId && draggingCategoryId != null;
+  const isTarget = reorderTarget?.id === categoryReorderId && draggingCategoryId != null;
+  const insertAfter = isTarget && reorderTarget?.after === true;
   const handleDragging = draggingCategoryId === categoryReorderId;
+
+  /** Which half of the row the pointer is over → insert before/after. */
+  function pointerIsInBottomHalf(event: React.DragEvent): boolean {
+    const rect = rowRef.current?.getBoundingClientRect();
+    if (!rect) return false;
+    return event.clientY > rect.top + rect.height / 2;
+  }
 
   // A draggable handle cannot live inside a <button> (buttons swallow drag).
   // The row is a flex <div>; the handle is a sibling drag source, the label a
   // click target, sharing the drop handlers for circulars/category reorder.
   return (
     <div
+      ref={rowRef}
       onDragOver={(event) => {
         if (!droppable && !reorderable) return;
         const types = event.dataTransfer.types;
         if (!types.includes(CIRCULAR_MIME) && !types.includes(CATEGORY_MIME)) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
-        if (reorderable && types.includes(CATEGORY_MIME)) onCategoryDragOver?.();
+        if (reorderable && types.includes(CATEGORY_MIME)) {
+          onCategoryDragOver?.(pointerIsInBottomHalf(event));
+        }
       }}
       onDragLeave={reorderable ? () => onCategoryDragLeave?.() : undefined}
       onDrop={(event) => {
@@ -573,17 +591,20 @@ function FilterRow({
         }
         const dragCategoryId = event.dataTransfer.getData(CATEGORY_MIME);
         if (dragCategoryId) {
-          onCategoryDrop?.(dragCategoryId);
+          onCategoryDrop?.(dragCategoryId, pointerIsInBottomHalf(event));
           onCategoryDragEnd?.();
         }
       }}
       className={cn(
         "relative flex items-center gap-1 rounded-xl px-1.5 py-1 transition-colors",
-        active
-          ? "bg-[var(--wa-active)]"
-          : "hover:bg-[var(--wa-hover)]",
+        active ? "bg-[var(--wa-active)]" : "hover:bg-[var(--wa-hover)]",
         droppable && draggingId && "ring-1 ring-inset ring-[var(--wa-ring)]/40",
-        over && "before:absolute before:inset-x-2 before:-top-px before:h-[2px] before:rounded-full before:bg-[var(--wa-accent)]",
+        isTarget &&
+          !insertAfter &&
+          "before:absolute before:inset-x-2 before:-top-px before:h-[2px] before:rounded-full before:bg-[var(--wa-accent)]",
+        isTarget &&
+          insertAfter &&
+          "after:absolute after:inset-x-2 after:-bottom-px after:h-[2px] after:rounded-full after:bg-[var(--wa-accent)]",
         handleDragging && "opacity-50",
       )}
     >
