@@ -27,7 +27,10 @@ section is opened. Phase 2 is **partial**: `/grupos/[id]` was rebuilt as a
 **gradebook spreadsheet** — sticky student column, typed columns
 (Trabajo / Tarea / Examen / Prueba / Proyecto) with auto labels (`CW 1`,
 `EXAM 1`…), inline keyboard editing + autosave, per-student FINAL and
-per-column averages, density toggle and CSV export — plus **report composer**
+per-column averages, density toggle and CSV export — plus **weighted rubros**
+(`grade_rubros`, peso per category, FIN = renormalised weighted mean from
+`src/lib/dashboard/grade-weights.ts`, first-run wizard; see
+`docs/calificaciones-rubros.md`), **report composer**
 (`/grupos/[id]/reporte` from **Subir reporte**; snapshots grades + conduct +
 asistencia with expandable detail logs) and `/reportes` to list submitted
 reports. See `docs/reportes.md`. **Asistencia** is the middle tab on `/grupos/[id]` (`?tab=asistencia`): read-only
@@ -203,6 +206,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | **Agenda (schedule, upcoming events, institution ICS)** | `docs/agenda.md` |
 | **Comunicación (messaging)** | `docs/comunicacion.md` |
 | **Mis grupos (Calificaciones / Asistencia / Conducta)** | `docs/grupos.md` |
+| **Rubros ponderados (built P1–P4)** | `docs/calificaciones-rubros.md` |
 | **Asistencia tab (Grupos)** | `docs/asistencia-grupos.md` |
 | **Código de conducta** | `docs/conducta.md` |
 | **Apoyos Eduativos** | `docs/educational-supports.md` (+ canonical `weeon-tenants/docs/educational-supports.md`) |

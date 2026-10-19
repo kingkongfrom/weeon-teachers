@@ -6,7 +6,13 @@ import {
   loadClassAttendanceLog,
 } from "@/lib/dashboard/attendance";
 import { loadClassConduct } from "@/lib/dashboard/conduct";
-import { loadClassExams } from "@/lib/dashboard/exams";
+import { loadClassExams, loadClassRubros } from "@/lib/dashboard/exams";
+import {
+  orderedRubros,
+  studentFinal,
+  type RubroColumn,
+  type RubroInput,
+} from "@/lib/dashboard/grade-weights";
 import { schoolAcademicYear, schoolPeriodLabel } from "@/lib/dashboard/school-period";
 import type {
   ReportAssignmentMeta,
@@ -16,6 +22,8 @@ import type {
   ReportConductSnapshot,
   ReportDraft,
   ReportGradesSnapshot,
+  ReportRubroMeta,
+  ReportFinalsSnapshot,
   ReportSummary,
 } from "@/lib/reports/model";
 import { createSessionClient } from "@/lib/supabase/session";
@@ -41,12 +49,14 @@ export async function buildReportDraft(input: {
   const supabase = await createSessionClient();
   const subjectId = input.subjectId ?? null;
 
-  const [exams, conductRecords, attendanceCounts, attendanceRecords] = await Promise.all([
-    loadClassExams(input.classId, subjectId),
-    loadClassConduct(input.classId),
-    loadClassAttendanceCounts(input.classId),
-    loadClassAttendanceLog(input.classId),
-  ]);
+  const [exams, rubros, conductRecords, attendanceCounts, attendanceRecords] =
+    await Promise.all([
+      loadClassExams(input.classId, subjectId),
+      loadClassRubros(input.classId, subjectId),
+      loadClassConduct(input.classId),
+      loadClassAttendanceCounts(input.classId),
+      loadClassAttendanceLog(input.classId),
+    ]);
 
   if (exams.length === 0) {
     return { error: "Agregue al menos una evaluación antes de subir el reporte." };
@@ -95,6 +105,16 @@ export async function buildReportDraft(input: {
   const gradesSnapshot: ReportGradesSnapshot = {};
   const assignmentTitles: Record<string, string> = {};
   const assignmentsMeta: Record<string, ReportAssignmentMeta> = {};
+  const rubroMeta: ReportRubroMeta = {};
+  const rubricById = new Map(rubros.map((rubro) => [rubro.id, rubro]));
+  for (const rubro of orderedRubros(rubros)) {
+    rubroMeta[rubro.id] = {
+      name: rubro.name,
+      peso: rubro.peso,
+      position: rubro.position,
+      archived: rubro.archived,
+    };
+  }
   for (const exam of exams) {
     gradesSnapshot[exam.id] = Object.fromEntries(
       Object.entries(exam.grades).map(([studentId, grade]) => [
@@ -103,12 +123,48 @@ export async function buildReportDraft(input: {
       ]),
     );
     assignmentTitles[exam.id] = exam.title;
+    // Rubro name/peso are frozen on the column too: a report must render
+    // without the live `grade_rubros` table (teacher list + future admin view).
+    const rubro = exam.rubroId ? rubricById.get(exam.rubroId) : undefined;
     assignmentsMeta[exam.id] = {
       title: exam.title,
       kind: exam.kind,
       category: exam.category,
       points: exam.points,
+      rubroId: exam.rubroId,
+      rubroName: rubro?.name ?? null,
+      rubroPeso: rubro?.peso ?? null,
+      rubroPosition: rubro?.position ?? null,
     };
+  }
+
+  // Weighted subject finals, using the same module as the gradebook, so the
+  // report snapshot never disagrees with what the teacher saw.
+  const weighted = rubros.length > 0 && exams.some((exam) => exam.rubroId);
+  const finalScores: ReportFinalsSnapshot = {};
+  if (weighted) {
+    const rubroInputs: RubroInput[] = rubros.map((rubro) => ({
+      id: rubro.id,
+      name: rubro.name,
+      peso: rubro.peso,
+      position: rubro.position,
+      archived: rubro.archived,
+    }));
+    const columns: RubroColumn[] = exams.map((exam) => ({
+      id: exam.id,
+      rubroId: exam.rubroId,
+      points: exam.points,
+      grades: Object.fromEntries(
+        Object.entries(exam.grades).map(([studentId, grade]) => [
+          studentId,
+          { mark: grade.mark, maxMarks: grade.maxMarks, status: "graded" as const },
+        ]),
+      ),
+    }));
+    for (const studentId of studentIds) {
+      const percent = studentFinal(rubroInputs, columns, studentId).percent;
+      if (percent != null) finalScores[studentId] = Math.round(percent);
+    }
   }
 
   const gradedIds = new Set<string>();
@@ -170,6 +226,8 @@ export async function buildReportDraft(input: {
     grades: gradesSnapshot,
     assignmentTitles,
     assignmentsMeta,
+    rubros: rubroMeta,
+    finals: finalScores,
     studentNames,
     studentIds,
     conduct,

@@ -5,7 +5,7 @@ import type {
   ReportConductLogEntry,
   ReportGradesSnapshot,
 } from "@/lib/reports/model";
-import { computeReportAverage } from "@/lib/reports/grades";
+import { reportStudentPercent } from "@/lib/reports/grades";
 
 export type AssignmentBreakdownRow = {
   assignmentId: string;
@@ -74,12 +74,13 @@ export function buildConductCategoryBreakdown(
 export function classGradeStats(
   grades: ReportGradesSnapshot,
   studentIds: string[],
+  finals?: Record<string, number>,
 ): { average: number | null; passed: number; graded: number } {
   let sum = 0;
   let count = 0;
   let passed = 0;
   for (const studentId of studentIds) {
-    const pct = computeReportAverage(grades, studentId);
+    const pct = reportStudentPercent(grades, studentId, finals);
     if (pct === null) continue;
     sum += pct;
     count += 1;

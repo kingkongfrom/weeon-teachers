@@ -170,6 +170,41 @@ async function syncGradeColumn(
     const tenantId = user?.app_metadata?.tenant_id ?? user?.user_metadata?.tenant_id;
     if (typeof tenantId !== "string") return;
 
+    // Published columns must land in a rubro, or the weighted final would
+    // silently ignore them. Prefer the first active rubro; fall back to the
+    // same "General 100%" rubro the migration backfill uses.
+    let rubroId: string | null = null;
+    try {
+      const { data: rubro } = await supabase
+        .from("grade_rubros")
+        .select("id")
+        .eq("class_id", input.classId)
+        .eq("subject_id", subjectId)
+        .eq("archived", false)
+        .order("position")
+        .limit(1)
+        .maybeSingle();
+      rubroId = rubro?.id ?? null;
+
+      if (!rubroId) {
+        const { data: created } = await supabase
+          .from("grade_rubros")
+          .insert({
+            tenant_id: tenantId,
+            class_id: input.classId,
+            subject_id: subjectId,
+            name: "General",
+            peso: 100,
+            position: 0,
+          })
+          .select("id")
+          .single();
+        rubroId = created?.id ?? null;
+      }
+    } catch {
+      rubroId = null;
+    }
+
     await supabase.from("assignments").insert({
       tenant_id: tenantId,
       class_id: input.classId,
@@ -179,6 +214,7 @@ async function syncGradeColumn(
       kind: input.kind,
       category: categoryFor(input.kind),
       assessment_id: input.assessmentId,
+      rubro_id: rubroId,
     });
   } catch {
     // Link columns not migrated yet — ignore; the assessment still saves.

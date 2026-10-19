@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
@@ -13,6 +13,7 @@ import {
   Minimize2,
   Plus,
   Search,
+  SlidersHorizontal,
   Trash2,
   Undo2,
   X,
@@ -41,9 +42,15 @@ import {
   restoreExamColumn,
   saveGrade,
 } from "@/lib/teachers/exams-actions";
-import type { AssignmentKind, ExamColumn } from "@/lib/dashboard/exams";
+import type { AssignmentKind, ExamColumn, GradeRubro } from "@/lib/dashboard/exams";
 import type { ClassOption } from "@/lib/dashboard/gradebook";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
+import {
+  rubroPercentForStudent,
+  studentFinal,
+  totalPeso,
+} from "@/lib/dashboard/grade-weights";
+import { RubricDialog } from "@/components/grades/rubric-dialog";
 const PASS = 70;
 
 /** Display order of the header groups: each type forms one contiguous group. */
@@ -94,9 +101,7 @@ function studentAverage(exams: ExamColumn[], studentId: string): number | null {
   return average(exams.map((column) => columnPct(column, studentId)));
 }
 
-function columnAverage(column: ExamColumn, students: TeacherStudent[]): number | null {
-  return average(students.map((student) => columnPct(column, student.id)));
-}
+
 
 /* Grade tints — the same palette the marketing site shows for the gradebook
    (see weeon-marketing/docs/design-tokens.md). Solid enough to read as pills. */
@@ -113,15 +118,37 @@ function tintFor(pct: number | null): string {
   return TINT_FAIL;
 }
 
-/** Consecutive columns of the same type share one header group cell. */
-function buildGroups(
+/** Consecutive columns sharing one rubro. */
+type RubroGroup = {
+  key: string;
+  rubroId: string | null;
+  name: string | null;
+  peso: number | null;
+  columns: ExamColumn[];
+};
+
+/** Consecutive columns sharing the same rubro become one weighted header. */
+function buildRubroGroups(
   columns: ExamColumn[],
-): { key: string; kind: AssignmentKind; count: number }[] {
-  const groups: { key: string; kind: AssignmentKind; count: number }[] = [];
+  rubros: GradeRubro[],
+): RubroGroup[] {
+  const byId = new Map(rubros.map((rubro) => [rubro.id, rubro]));
+  const groups: RubroGroup[] = [];
   for (const column of columns) {
+    const rubro = column.rubroId ? byId.get(column.rubroId) : undefined;
+    const key = column.rubroId ?? "__none";
     const last = groups[groups.length - 1];
-    if (last && last.kind === column.kind) last.count += 1;
-    else groups.push({ key: column.id, kind: column.kind, count: 1 });
+    if (last && last.key === key) {
+      last.columns.push(column);
+    } else {
+      groups.push({
+        key,
+        rubroId: column.rubroId,
+        name: rubro?.name ?? null,
+        peso: rubro?.peso ?? null,
+        columns: [column],
+      });
+    }
   }
   return groups;
 }
@@ -140,6 +167,7 @@ export function GradebookWorkspace({
   classContext,
   initialSubjectId,
   initialExams,
+  initialRubros = [],
   supportFlags = {},
 }: {
   classId: string;
@@ -148,12 +176,16 @@ export function GradebookWorkspace({
   classContext: ClassOption;
   initialSubjectId: string | null;
   initialExams: ExamColumn[];
+  initialRubros?: GradeRubro[];
   supportFlags?: ClassEducationalSupportFlags;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
+  const copy = w.rubros;
   const [subjectId, setSubjectId] = useState(initialSubjectId);
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
+  const [rubros, setRubros] = useState<GradeRubro[]>(initialRubros);
+  const [rubricMode, setRubricMode] = useState<"wizard" | "edit" | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [density, setDensity] = useState<Density>("cozy");
@@ -181,6 +213,24 @@ export function GradebookWorkspace({
       if (res.ok) setLocalFlags(res.flags);
     });
   }, [classId, subjectId]);
+
+  // First open after the rubric migration (or a brand-new subject with columns):
+  // invite the teacher to define the weights once. Skipping is remembered per
+  // user+subject, and the "Crear rubros" card is the way back.
+  useEffect(() => {
+    if (!subjectId || loading || rubros.length > 0 || exams.length === 0) return;
+    try {
+      if (
+        window.localStorage.getItem(`weeon:rubro-skip:${classId}:${subjectId}`) === "1"
+      ) {
+        return;
+      }
+    } catch {
+      // Storage unavailable; still show the wizard.
+    }
+    const timer = window.setTimeout(() => setRubricMode("wizard"), 0);
+    return () => window.clearTimeout(timer);
+  }, [classId, subjectId, loading, rubros.length, exams.length]);
 
   async function openSupportReview(student: TeacherStudent) {
     const res = await fetchStudentEducationalSupports(student.id, { subjectId });
@@ -212,6 +262,66 @@ export function GradebookWorkspace({
   const subject = classContext.subjects.find((s) => s.id === subjectId) ?? null;
   const subjectName = subject?.name ?? (classContext.subjects.length <= 1 ? null : w.title);
 
+  const pendingSupportStudent = students.find((student) => {
+    const flag = localFlags[student.id];
+    return flag ? supportActionPending(flag) : false;
+  });
+
+  /** Rubric edits are a grade policy write: same Apoyos gate as a cell. */
+  function guardSupports(): boolean {
+    if (!pendingSupportStudent) return true;
+    setError(copy.supportsPending);
+    void openSupportReview(pendingSupportStudent);
+    return false;
+  }
+
+  async function openRubric(mode: "wizard" | "edit") {
+    if (!guardSupports()) return;
+    // Re-read the rubric before opening: a page loaded before a migration or a
+    // backfill must not send a partial payload to the save RPC.
+    const res = await fetchSubjectExams({ classId, subjectId });
+    if (res.ok) {
+      setExams(res.exams);
+      setRubros(res.rubros);
+      const anyActive = res.rubros.some((rubro) => !rubro.archived);
+      setRubricMode(mode === "wizard" && anyActive ? "edit" : mode);
+      return;
+    }
+    setRubricMode(mode);
+  }
+
+  async function openAddColumn() {
+    if (!guardSupports()) return;
+    if (!subjectId) {
+      setAddOpen(true);
+      return;
+    }
+    const res = await fetchSubjectExams({ classId, subjectId });
+    if (res.ok) {
+      setExams(res.exams);
+      setRubros(res.rubros);
+    }
+    const current = (res.ok ? res.rubros : rubros).filter(
+      (rubro) => !rubro.archived,
+    );
+    if (current.length === 0) setRubricMode("wizard");
+    else setAddOpen(true);
+  }
+
+  function closeRubric() {
+    if (rubricMode === "wizard" && rubros.length === 0 && subjectId) {
+      try {
+        window.localStorage.setItem(
+          `weeon:rubro-skip:${classId}:${subjectId}`,
+          "1",
+        );
+      } catch {
+        // Storage is optional (private mode); the card stays as the way back.
+      }
+    }
+    setRubricMode(null);
+  }
+
   // Density drives every cell, not just the grade columns, so the toggle is
   // visible on a subject that has no columns yet.
   const rowY = dense ? "py-0.5" : "py-1.5";
@@ -222,6 +332,8 @@ export function GradebookWorkspace({
     : density === "cozy"
       ? "w-[5.5rem]"
       : "w-[9rem]";
+  // One narrow subtotal column closes every rubro group.
+  const subtotalWidth = dense ? "w-[2.5rem]" : "w-[3.25rem]";
   const colTop = dense ? "top-8" : "top-9";
   const colHeadH = dense ? "h-8" : "h-10";
 
@@ -229,11 +341,20 @@ export function GradebookWorkspace({
     studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
   );
 
-  // Columns are displayed sorted by type, so every type is a single group and a
-  // header cell never repeats. Order within a type is preserved (stable sort).
-  const orderedExams = [...exams].sort(
-    (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
-  );
+  // Columns are displayed grouped by rubro (weight order), then by kind inside
+  // the rubro, so each weighted header is one contiguous block.
+  const rubroById = new Map(rubros.map((rubro) => [rubro.id, rubro]));
+  const orderedExams = [...exams]
+    .filter((column) => {
+      const rubro = column.rubroId ? rubroById.get(column.rubroId) : null;
+      return !rubro?.archived;
+    })
+    .sort((a, b) => {
+      const pa = a.rubroId ? (rubroById.get(a.rubroId)?.position ?? 999) : 999;
+      const pb = b.rubroId ? (rubroById.get(b.rubroId)?.position ?? 999) : 999;
+      if (pa !== pb) return pa - pb;
+      return KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind);
+    });
 
   // Auto label per column: short code + sequence among that type (CW 1) for the
   // compact view, and the full kind name (Classwork 1) for the expanded view.
@@ -252,7 +373,14 @@ export function GradebookWorkspace({
     });
   }
 
-  const groups = buildGroups(orderedExams);
+  const groups = buildRubroGroups(orderedExams, rubros);
+  const activeRubros = rubros.filter((rubro) => !rubro.archived);
+  const orderedIndex = new Map(orderedExams.map((column, index) => [column.id, index]));
+  const pesoTotal = totalPeso(rubros);
+  // Weights must add up to 100 %; reopening the editor is the fix.
+  const pesoIncomplete = activeRubros.length > 0 && pesoTotal !== 100;
+  // Weighted only when the rubric exists and at least one column is assigned.
+  const weighted = activeRubros.length > 0 && orderedExams.some((c) => c.rubroId);
 
   /** Auto title for a new column: type + its sequence among that type. */
   function nextTitleFor(kind: AssignmentKind): string {
@@ -260,11 +388,61 @@ export function GradebookWorkspace({
     return `${w.kinds[kind]} ${count + 1}`;
   }
 
-  const overall = average(
-    visibleStudents.flatMap((student) =>
-      exams.map((column) => columnPct(column, student.id)),
-    ),
-  );
+  function finalForStudent(studentId: string): number | null {
+    if (!weighted) return studentAverage(exams, studentId);
+    const percent = studentFinal(rubros, exams, studentId).percent;
+    // FINAL is always a whole percentage in the matrix and CSV.
+    return percent == null ? null : Math.round(percent);
+  }
+
+  function groupAverageForVisible(group: RubroGroup): number | null {
+    if (!group.rubroId || !weighted) return null;
+    return average(
+      visibleStudents.map((student) =>
+        rubroPercentForStudent(exams, group.rubroId!, student.id),
+      ),
+    );
+  }
+
+  /**
+   * This student's contribution of one rubro to the final: rubro % × peso.
+   * Capped by construction at the rubro's peso (Tareas 30 → max 30). Kept to
+   * one decimal so the three subtotals add up to the FIN.
+   */
+  function rubroTotalForStudent(group: RubroGroup, studentId: string): number | null {
+    if (!group.rubroId || !weighted) return null;
+    const percent = rubroPercentForStudent(exams, group.rubroId, studentId);
+    if (percent == null) return null;
+    const peso = group.peso ?? 0;
+    return Math.round((percent * peso) / 10) / 10;
+  }
+
+  function rubroPercentForGroupStudent(
+    group: RubroGroup,
+    studentId: string,
+  ): number | null {
+    if (!group.rubroId || !weighted) return null;
+    return rubroPercentForStudent(exams, group.rubroId, studentId);
+  }
+
+  const overall = (() => {
+    if (!weighted) {
+      return average(
+        visibleStudents.flatMap((student) =>
+          exams.map((column) => columnPct(column, student.id)),
+        ),
+      );
+    }
+    let sum = 0;
+    let weight = 0;
+    for (const group of groups) {
+      const avg = groupAverageForVisible(group);
+      if (avg == null || group.peso == null) continue;
+      sum += avg * group.peso;
+      weight += group.peso;
+    }
+    return weight > 0 ? Math.round(sum / weight) : null;
+  })();
 
   async function changeSubject(nextId: string | null) {
     setSubjectId(nextId);
@@ -272,18 +450,35 @@ export function GradebookWorkspace({
     setLoading(true);
     const res = await fetchSubjectExams({ classId, subjectId: nextId });
     setLoading(false);
-    if (res.ok) setExams(res.exams);
-    else setError(res.error);
+    if (res.ok) {
+      setExams(res.exams);
+      setRubros(res.rubros);
+    } else setError(res.error);
   }
 
   async function refresh() {
     const res = await fetchSubjectExams({ classId, subjectId });
-    if (res.ok) setExams(res.exams);
+    if (res.ok) {
+      setExams(res.exams);
+      setRubros(res.rubros);
+    }
   }
 
-  async function handleCreate(title: string, points: number | null, kind: AssignmentKind) {
+  async function handleCreate(
+    title: string,
+    points: number | null,
+    kind: AssignmentKind,
+    rubroId: string,
+  ) {
     setError(null);
-    const res = await addExamColumn({ classId, title, points, subjectId, kind });
+    const res = await addExamColumn({
+      classId,
+      title,
+      points,
+      subjectId,
+      kind,
+      rubroId,
+    });
     if (!res.ok) {
       setError(res.error);
       return false;
@@ -321,6 +516,13 @@ export function GradebookWorkspace({
     await refresh();
   }
 
+  // The undo toast disappears on its own after 30 seconds.
+  useEffect(() => {
+    if (!undoColumn) return;
+    const timer = window.setTimeout(() => setUndoColumn(null), 30_000);
+    return () => window.clearTimeout(timer);
+  }, [undoColumn]);
+
   async function handleUndo() {
     if (!undoColumn) return;
     const column = undoColumn;
@@ -337,6 +539,7 @@ export function GradebookWorkspace({
       assignmentId: column.id,
       title: column.title,
       points: column.points,
+      rubroId: column.rubroId,
       grades,
     });
     if (!res.ok) {
@@ -348,6 +551,13 @@ export function GradebookWorkspace({
   }
 
   function exportCsv() {
+    const groupFor = (columnId: string): RubroGroup | undefined =>
+      groups.find((group) => group.columns.some((column) => column.id === columnId));
+    const rubroRow = orderedExams.map((column) => {
+      const group = groupFor(column.id);
+      if (!group?.name) return "";
+      return group.peso == null ? group.name : `${group.name} ${group.peso}%`;
+    });
     const header = [
       t.gradebook.headers.student,
       ...orderedExams.map((column) => {
@@ -356,8 +566,9 @@ export function GradebookWorkspace({
       }),
       `${w.final} ${w.finalPercentSuffix}`.trim(),
     ];
+    const rubroHeader = [t.gradebook.headers.student, ...rubroRow, ""];
     const rows = visibleStudents.map((student) => {
-      const finalPct = studentAverage(orderedExams, student.id);
+      const finalPct = finalForStudent(student.id);
       return [
         studentName(student),
         ...orderedExams.map((column) => {
@@ -366,10 +577,10 @@ export function GradebookWorkspace({
           const max = cellMax(column, student.id);
           return `${grade.mark}/${max}`;
         }),
-        finalPct == null ? "" : `${finalPct}${w.finalPercentSuffix}`,
+        finalPct == null ? "" : `${Math.round(finalPct)}${w.finalPercentSuffix}`,
       ];
     });
-    const csv = [header, ...rows]
+    const csv = [rubroHeader, header, ...rows]
       .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
@@ -393,6 +604,16 @@ export function GradebookWorkspace({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {subjectId ? (
+            <button
+              type="button"
+              onClick={() => void openRubric(activeRubros.length === 0 ? "wizard" : "edit")}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {copy.edit}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() =>
@@ -427,7 +648,7 @@ export function GradebookWorkspace({
           />
           <button
             type="button"
-            onClick={() => setAddOpen(true)}
+            onClick={() => void openAddColumn()}
             className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -482,6 +703,17 @@ export function GradebookWorkspace({
         </div>
       </div>
 
+      {pesoIncomplete && !rubricMode ? (
+        <button
+          type="button"
+          onClick={() => void openRubric("edit")}
+          className="flex items-center justify-between gap-3 rounded-xl border border-[#f5d88a] bg-[#fdeecd] px-4 py-2.5 text-left text-sm font-semibold text-[#92400e] dark:border-[#5b4318] dark:bg-[#3a2a12] dark:text-[#fde68a]"
+        >
+          <span>{copy.pesoWarning(pesoTotal)}</span>
+          <span className="shrink-0 underline">{copy.edit}</span>
+        </button>
+      ) : null}
+
       {error ? (
         <div className="rounded-xl border border-error/30 bg-error/10 px-4 py-2.5 text-sm font-medium text-error">
           {error}
@@ -489,17 +721,41 @@ export function GradebookWorkspace({
       ) : null}
 
       {undoColumn ? (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-muted/60 px-4 py-2 text-sm">
-          <span className="font-medium text-foreground/70">
-            {w.deleteColumn}: {labels.get(undoColumn.id)?.medium ?? undoColumn.title}
-          </span>
+        <div className="fixed bottom-5 right-5 z-[90] flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm shadow-lg">
           <button
             type="button"
             onClick={() => void handleUndo()}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold text-[#7c3aed] transition-colors hover:bg-[#e6defb] dark:text-[#b9a3f7] dark:hover:bg-[#241b45]"
+            className="inline-flex items-center gap-1.5 font-semibold text-[#7c3aed] transition-colors hover:opacity-80 dark:text-[#b9a3f7]"
           >
             <Undo2 className="h-4 w-4" />
             {t.gradebook.undo}
+          </button>
+          <button
+            type="button"
+            onClick={() => setUndoColumn(null)}
+            aria-label={t.common.close}
+            className="flex h-6 w-6 items-center justify-center rounded text-foreground/45 hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+
+      {subjectId && activeRubros.length === 0 ? (
+        <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-border bg-surface-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold text-foreground">{copy.noRubros}</p>
+            <p className="mt-0.5 max-w-2xl text-xs font-medium text-foreground/55">
+              {copy.noRubrosHint}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void openRubric("wizard")}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+          >
+            <Plus className="h-4 w-4" />
+            {copy.create}
           </button>
         </div>
       ) : null}
@@ -535,19 +791,32 @@ export function GradebookWorkspace({
                   {groups.map((group) => (
                     <th
                       key={group.key}
-                      colSpan={group.count}
+                      colSpan={group.columns.length + 1}
                       className={cn(
-                        "sticky top-0 z-40 border-b border-l border-border bg-surface-muted px-2 text-center text-[10px] font-bold uppercase leading-none tracking-[0.14em] text-foreground/55",
+                        "sticky top-0 z-40 border-b border-l-2 border-foreground/25 bg-surface-muted px-2 text-center leading-none",
                         dense ? "h-8" : "h-9",
                       )}
                     >
-                      {w.kinds[group.kind]}
+                      {group.name ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="max-w-[10rem] truncate text-[10px] font-bold uppercase tracking-[0.12em] text-foreground/65">
+                            {group.name}
+                          </span>
+                          <span className="rounded bg-[#e6defb] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]">
+                            {group.peso ?? 0}%
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-foreground/45">
+                          {copy.noRubro}
+                        </span>
+                      )}
                     </th>
                   ))}
                   <th
                     rowSpan={2}
                     className={cn(
-                      "sticky right-0 top-0 z-50 w-[4.5rem] border-b border-l border-border bg-surface px-1 text-center align-middle",
+                      "sticky right-0 top-0 z-50 w-[4.5rem] border-b border-l-2 border-l-foreground/25 bg-surface px-1 text-center align-middle",
                       headY,
                     )}
                   >
@@ -564,42 +833,59 @@ export function GradebookWorkspace({
 
                 {/* Column labels row */}
                 <tr>
-                  {orderedExams.map((column) => {
-                    const label = labels.get(column.id) ?? {
-                      short: column.title,
-                      medium: column.title,
-                      full: column.title,
-                    };
-                    return (
+                  {groups.map((group) => (
+                    <Fragment key={group.key}>
+                      {group.columns.map((column, columnIndex) => {
+                        const label = labels.get(column.id) ?? {
+                          short: column.title,
+                          medium: column.title,
+                          full: column.title,
+                        };
+                        return (
+                          <th
+                            key={column.id}
+                            className={cn(
+                              "sticky z-30 border-b border-r border-border bg-surface px-1 text-center align-middle",
+                              columnIndex === 0 && "border-l-2 border-l-foreground/25",
+                              colTop,
+                              colHeadH,
+                              colWidth,
+                            )}
+                          >
+                            <ColumnHeader
+                              column={column}
+                              label={label}
+                              density={density}
+                              onDelete={() => setDeleteTarget(column)}
+                              onClose={
+                                column.assessmentId || column.closedAt
+                                  ? undefined
+                                  : () => setCloseTarget(column)
+                              }
+                            />
+                          </th>
+                        );
+                      })}
                       <th
-                        key={column.id}
                         className={cn(
-                          "sticky z-30 border-b border-r border-border bg-surface px-1 text-center align-middle",
+                          "sticky z-30 border-b border-r border-border bg-surface-muted px-0.5 text-center align-middle",
                           colTop,
                           colHeadH,
-                          colWidth,
+                          subtotalWidth,
                         )}
                       >
-                        <ColumnHeader
-                          column={column}
-                          label={label}
-                          density={density}
-                          onDelete={() => setDeleteTarget(column)}
-                          onClose={
-                            column.assessmentId || column.closedAt
-                              ? undefined
-                              : () => setCloseTarget(column)
-                          }
-                        />
+                        <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#7c3aed] dark:text-[#b9a3f7]">
+                          {copy.subtotal}
+                        </span>
                       </th>
-                    );
-                  })}
+                    </Fragment>
+                  ))}
                 </tr>
               </thead>
 
               <tbody>
                 {visibleStudents.map((student, rowIndex) => {
-                  const final = studentAverage(exams, student.id);
+                  const final = finalForStudent(student.id);
                   return (
                     <tr key={student.id} className={cn("group", dense ? "h-8" : "h-9")}>
                       <td className={cn("sticky left-0 z-20 border-b border-r border-border bg-surface px-2 text-center text-xs font-semibold text-foreground/35", rowY)}>
@@ -624,28 +910,68 @@ export function GradebookWorkspace({
                           />
                         </div>
                       </td>
-                      {orderedExams.map((column, colIndex) => (
-                        <td key={column.id} className="border-b border-r border-border px-0.5">
-                          <GradeCell
-                            key={`${column.id}:${student.id}`}
-                            classId={classId}
-                            column={column}
-                            label={labels.get(column.id)?.medium ?? column.title}
-                            studentId={student.id}
-                            row={rowIndex}
-                            col={colIndex}
-                            dense={dense}
-                            supportPending={supportActionPending({
-                              needsReview: localFlags[student.id]?.needsReview ?? false,
-                              needsPeriodRegistration:
-                                localFlags[student.id]?.needsPeriodRegistration ?? false,
-                            })}
-                            onRequireReview={() => void openSupportReview(student)}
-                            onSaved={refresh}
-                          />
-                        </td>
+                      {groups.map((group) => (
+                        <Fragment key={group.key}>
+                          {group.columns.map((column, columnIndex) => {
+                            const colIndex = orderedIndex.get(column.id) ?? 0;
+                            return (
+                              <td
+                                key={column.id}
+                                className={cn(
+                                  "border-b border-r border-border px-0.5",
+                                  columnIndex === 0 && "border-l-2 border-l-foreground/25",
+                                )}
+                              >
+                                <GradeCell
+                                  key={`${column.id}:${student.id}`}
+                                  classId={classId}
+                                  column={column}
+                                  label={labels.get(column.id)?.medium ?? column.title}
+                                  studentId={student.id}
+                                  row={rowIndex}
+                                  col={colIndex}
+                                  dense={dense}
+                                  supportPending={supportActionPending({
+                                    needsReview: localFlags[student.id]?.needsReview ?? false,
+                                    needsPeriodRegistration:
+                                      localFlags[student.id]?.needsPeriodRegistration ?? false,
+                                  })}
+                                  onRequireReview={() => void openSupportReview(student)}
+                                  onSaved={refresh}
+                                />
+                              </td>
+                            );
+                          })}
+                          <td
+                            className={cn(
+                              "border-b border-r border-border bg-surface-muted/30 px-1 text-center",
+                              rowY,
+                              subtotalWidth,
+                            )}
+                          >
+                            {(() => {
+                              const total = rubroTotalForStudent(group, student.id);
+                              const pct = rubroPercentForGroupStudent(group, student.id);
+                              const title =
+                                pct == null || group.peso == null || total == null
+                                  ? `${group.name ?? copy.noRubro} · ${copy.grade}`
+                                  : `${group.name ?? copy.noRubro}: ${Math.round(pct)}% × ${group.peso}% = ${total.toFixed(1)}%`;
+                              return (
+                                <span
+                                  title={title}
+                                  className={cn(
+                                    "inline-block rounded-md px-1.5 py-0.5 text-xs font-bold tabular-nums",
+                                    total == null ? "text-foreground/35" : TINT_FINAL,
+                                  )}
+                                >
+                                  {total == null ? "—" : `${total.toFixed(1)}${w.finalPercentSuffix}`}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                        </Fragment>
                       ))}
-                      <td className={cn("sticky right-0 z-20 w-[4.5rem] border-b border-l border-border bg-surface px-2 text-center", rowY)}>
+                      <td className={cn("sticky right-0 z-20 w-[4.5rem] border-b border-l-2 border-l-foreground/25 bg-surface px-2 text-center", rowY)}>
                         <span className={cn("inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none tabular-nums", final == null ? "text-foreground/40" : TINT_FINAL)}>
                           {final == null ? "—" : `${final}${w.finalPercentSuffix}`}
                         </span>
@@ -659,25 +985,41 @@ export function GradebookWorkspace({
                 <tr className={dense ? "h-8" : "h-10"}>
                   <td className={cn("sticky bottom-0 left-0 z-40 border-r border-t border-border bg-surface-muted px-2", headY)} />
                   <td className={cn("sticky bottom-0 left-10 z-40 border-r border-t border-border bg-surface-muted px-3 text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
-                    {w.columnAverage}
+                    {weighted ? copy.grade : w.columnAverage}
                   </td>
-                  {orderedExams.map((column) => {
-                    const avg = columnAverage(column, visibleStudents);
+                  {groups.map((group) => {
+                    const avg = groupAverageForVisible(group);
                     return (
                       <td
-                        key={column.id}
-                        className="sticky bottom-0 z-30 border-r border-t border-border bg-surface-muted px-1 py-1 text-center text-xs font-bold"
+                        key={group.key}
+                        colSpan={group.columns.length + 1}
+                        title={
+                          group.name
+                            ? `${group.name} · ${copy.pesoTotalValue(group.peso ?? 0)}`
+                            : copy.noRubro
+                        }
+                        className="sticky bottom-0 z-30 border-r border-t border-l-2 border-l-foreground/25 border-border bg-surface-muted px-1 py-1 text-center text-xs font-bold"
                       >
-                        <span className={cn("inline-block rounded-md px-2 py-0.5 font-bold tabular-nums", avg == null ? "text-foreground/40" : tintFor(avg))}>
-                          {avg == null ? "—" : `${avg}${w.finalPercentSuffix}`}
-                        </span>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="max-w-full truncate text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/45">
+                            {group.name ?? copy.noRubro}
+                          </span>
+                          <span className={cn("inline-block rounded-md px-2 py-0.5 font-bold tabular-nums", avg == null ? "text-foreground/40" : TINT_FINAL)}>
+                            {avg == null ? "—" : `${avg}${w.finalPercentSuffix}`}
+                          </span>
+                        </div>
                       </td>
                     );
                   })}
-                  <td className={cn("sticky bottom-0 right-0 z-40 w-[4.5rem] border-l border-t border-border bg-surface-muted px-2 text-center text-xs font-bold", headY)}>
-                    <span className={cn("inline-block rounded-md px-2 py-0.5 tabular-nums", overall == null ? "text-foreground/40" : TINT_FINAL)}>
-                      {overall == null ? "—" : `${overall}${w.finalPercentSuffix}`}
-                    </span>
+                  <td className={cn("sticky bottom-0 right-0 z-40 w-[4.5rem] border-l-2 border-t border-l-foreground/25 border-border bg-surface-muted px-2 text-center text-xs font-bold", headY)}>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/45">
+                        {copy.average}
+                      </span>
+                      <span className={cn("inline-block rounded-md px-2 py-0.5 tabular-nums", overall == null ? "text-foreground/40" : TINT_FINAL)}>
+                        {overall == null ? "—" : `${overall}${w.finalPercentSuffix}`}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               </tfoot>
@@ -694,6 +1036,27 @@ export function GradebookWorkspace({
                   onCreate={handleCreate}
                   onClose={() => setAddOpen(false)}
                   titleFor={nextTitleFor}
+                  rubros={activeRubros}
+                  defaultRubroId={
+                    activeRubros.find((rubro) =>
+                      exams.some((exam) => exam.rubroId === rubro.id),
+                    )?.id ??
+                    activeRubros[0]?.id ??
+                    ""
+                  }
+                />
+              ) : null}
+              {rubricMode && subjectId ? (
+                <RubricDialog
+                  key="rubric-dialog"
+                  mode={rubricMode}
+                  subjectLabel={subjectName}
+                  classId={classId}
+                  subjectId={subjectId}
+                  rubros={rubros}
+                  columns={exams}
+                  onClose={closeRubric}
+                  onSaved={refresh}
                 />
               ) : null}
             </AnimatePresence>,
@@ -933,26 +1296,39 @@ function AddColumnDialog({
   onCreate,
   onClose,
   titleFor,
+  rubros,
+  defaultRubroId,
 }: {
-  onCreate: (title: string, points: number | null, kind: AssignmentKind) => Promise<boolean>;
+  onCreate: (
+    title: string,
+    points: number | null,
+    kind: AssignmentKind,
+    rubroId: string,
+  ) => Promise<boolean>;
   onClose: () => void;
   titleFor: (kind: AssignmentKind) => string;
+  rubros: GradeRubro[];
+  defaultRubroId: string;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
+  const copy = w.rubros;
   const kinds: AssignmentKind[] = ["homework", "exam", "quiz", "classwork", "project"];
   const [points, setPoints] = useState("100");
   const [kind, setKind] = useState<AssignmentKind>("homework");
+  const [rubroId, setRubroId] = useState(defaultRubroId);
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!rubroId) return;
     setPending(true);
     const parsed = points.trim() === "" ? null : Number(points.replace(",", "."));
     const ok = await onCreate(
       titleFor(kind),
       parsed == null || Number.isNaN(parsed) ? null : parsed,
       kind,
+      rubroId,
     );
     setPending(false);
     if (ok) onClose();
@@ -992,6 +1368,25 @@ function AddColumnDialog({
           </button>
         </div>
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-foreground/70">
+              {copy.columnRubro}
+            </span>
+            <select
+              value={rubroId}
+              onChange={(event) => setRubroId(event.target.value)}
+              className="h-10 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground outline-none focus:border-brand-400"
+            >
+              {rubros.map((rubro) => (
+                <option key={rubro.id} value={rubro.id}>
+                  {rubro.name} · {rubro.peso}%
+                </option>
+              ))}
+            </select>
+            <span className="text-xs font-medium text-foreground/50">
+              {copy.columnRubroHint}
+            </span>
+          </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold text-foreground/70">{w.columnPoints}</span>
             <input

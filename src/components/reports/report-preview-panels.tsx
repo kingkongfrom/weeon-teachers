@@ -14,7 +14,6 @@ import {
 import { signedPoints } from "@/lib/conduct/model";
 import { TONE_PILL } from "@/lib/dashboard/tones";
 import {
-  buildAssignmentBreakdown,
   buildConductCategoryBreakdown,
   classGradeStats,
   isAbsenceAttendanceStatus,
@@ -22,10 +21,15 @@ import {
 } from "@/lib/reports/breakdowns";
 import {
   collectReportStudentIds,
-  computeReportAverage,
   formatGradeCell,
   isReportPassing,
 } from "@/lib/reports/grades";
+import {
+  buildReportRubroGroups,
+  buildReportRubroSummary,
+  buildReportStudentRows,
+  reportIsWeighted,
+} from "@/lib/reports/rubros";
 import type { ReportDraft } from "@/lib/reports/model";
 
 const ATTENDANCE_COLUMNS: AttendanceStatus[] = [
@@ -53,6 +57,20 @@ function attendanceTone(status: AttendanceStatus): string {
   if (status === "late_unjustified") return TONE_PILL.rose;
   if (status === "absence_justified") return TONE_PILL.blue;
   return TONE_PILL.rose;
+}
+
+function attendanceDot(status: AttendanceStatus): string {
+  if (status === "present") return "bg-emerald-500";
+  if (status === "late_justified") return "bg-amber-500";
+  if (status === "late_unjustified") return "bg-rose-500";
+  if (status === "absence_justified") return "bg-sky-500";
+  return "bg-rose-500";
+}
+
+function initials(name: string | undefined): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((part) => part.charAt(0).toUpperCase()).join("");
 }
 
 export type ReportPreviewVariant = "composer" | "archive";
@@ -161,7 +179,7 @@ function attendanceSummaryLine(
 function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
   const t = useT();
   const c = t.composer;
-  const locale = useLocale();
+  const w = t.gradebook.workspace.rubros;
   const assignmentIds = Object.keys(draft.grades);
   const studentIds = collectReportStudentIds(
     {
@@ -171,13 +189,28 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
     },
     draft.studentIds,
   );
-  const stats = useMemo(
-    () => classGradeStats(draft.grades, studentIds),
-    [draft.grades, studentIds],
+  const assignmentKey = assignmentIds.join("|");
+  const weighted = reportIsWeighted(draft.assignmentsMeta, draft.rubros);
+  const groups = useMemo(
+    () =>
+      buildReportRubroGroups(
+        assignmentKey.length > 0 ? assignmentKey.split("|") : [],
+        draft.assignmentsMeta,
+        draft.rubros,
+      ),
+    [assignmentKey, draft.assignmentsMeta, draft.rubros],
   );
-  const breakdown = useMemo(
-    () => buildAssignmentBreakdown(draft.grades, draft.assignmentsMeta, studentIds.length),
-    [draft.grades, draft.assignmentsMeta, studentIds.length],
+  const rows = useMemo(
+    () => buildReportStudentRows(groups, draft.grades, studentIds, draft.finals),
+    [groups, draft.grades, studentIds, draft.finals],
+  );
+  const rubroSummary = useMemo(
+    () => buildReportRubroSummary(groups, draft.grades, studentIds),
+    [groups, draft.grades, studentIds],
+  );
+  const stats = useMemo(
+    () => classGradeStats(draft.grades, studentIds, draft.finals),
+    [draft.grades, studentIds, draft.finals],
   );
 
   return (
@@ -196,53 +229,85 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
           <div className="overflow-x-auto">
             <table className="w-fit min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-foreground/50">
-                  <th className="px-4 py-2.5 font-medium">{c.student}</th>
-                  {assignmentIds.map((assignmentId) => (
-                    <th key={assignmentId} className="px-4 py-2.5 text-right font-medium">
-                      {draft.assignmentTitles[assignmentId] ?? c.exam}
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-foreground/50">
+                  <th rowSpan={2} className="px-4 py-2 text-left font-medium">
+                    {c.student}
+                  </th>
+                  {groups.map((group) => (
+                    <th
+                      key={group.id ?? "none"}
+                      colSpan={weighted ? group.columns.length + 1 : group.columns.length}
+                      className="border-l border-border px-3 py-2 text-center font-medium"
+                    >
+                      {group.name ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-foreground/70">{group.name}</span>
+                          {group.peso != null ? (
+                            <span className="rounded bg-[#e6defb] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]">
+                              {group.peso}%
+                            </span>
+                          ) : null}
+                        </span>
+                      ) : (
+                        <span className="text-foreground/45">{w.noRubro}</span>
+                      )}
                     </th>
                   ))}
-                  <th className="px-4 py-2.5 text-right font-medium">{c.average}</th>
-                  <th className="px-4 py-2.5 font-medium">{c.status}</th>
+                  <th
+                    rowSpan={2}
+                    className="border-l-2 border-l-foreground/25 px-4 py-2 text-right align-middle font-medium"
+                  >
+                    {c.finalLabel}
+                  </th>
+                </tr>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-foreground/45">
+                  {groups.map((group) => (
+                    <ReportColumnSubheads
+                      key={`cols-${group.id ?? "none"}`}
+                      group={group}
+                      titles={draft.assignmentTitles}
+                      fallback={c.exam}
+                      showTotal={weighted}
+                      totalLabel={w.subtotal}
+                    />
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
-                {studentIds.map((studentId, index) => {
-                  const pct = computeReportAverage(draft.grades, studentId);
-                  const passed = isReportPassing(pct);
+                {rows.map((row, index) => {
+                  const passed = isReportPassing(row.final);
                   return (
                     <tr
-                      key={studentId}
+                      key={row.studentId}
                       className={index % 2 === 1 ? "bg-surface-muted/30" : undefined}
                     >
                       <td className="px-4 py-2 font-medium text-foreground">
-                        {draft.studentNames[studentId] ?? studentId.slice(0, 6)}
+                        {draft.studentNames[row.studentId] ??
+                          row.studentId.slice(0, 6)}
                       </td>
-                      {assignmentIds.map((assignmentId) => (
-                        <td
-                          key={assignmentId}
-                          className="px-4 py-2 text-right tabular-nums text-foreground"
-                        >
-                          {formatGradeCell(draft.grades[assignmentId]?.[studentId])}
-                        </td>
+                      {groups.map((group) => (
+                        <ReportStudentGroupCells
+                          key={`${row.studentId}-${group.id ?? "none"}`}
+                          group={group}
+                          row={row}
+                          grades={draft.grades}
+                          showTotal={weighted}
+                        />
                       ))}
-                      <td className="px-4 py-2 text-right tabular-nums">
-                        {pct === null ? (
+                      <td className="border-l-2 border-l-foreground/25 px-4 py-2 text-right tabular-nums">
+                        {row.final === null ? (
                           <span className="text-foreground/40">—</span>
                         ) : (
-                          <span className="font-semibold text-foreground">{Math.round(pct)}%</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {passed === null ? (
-                          <span className="text-xs font-medium text-foreground/40">—</span>
-                        ) : (
-                          <StatusPill
-                            passed={passed}
-                            passedLabel={c.passed}
-                            failedLabel={c.failed}
-                          />
+                          <span className="inline-flex items-center justify-end gap-3">
+                            <span className="w-10 text-right font-semibold text-foreground">
+                              {row.final}%
+                            </span>
+                            <StatusPill
+                              passed={passed === true}
+                              passedLabel={c.passed}
+                              failedLabel={c.failed}
+                            />
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -252,30 +317,30 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
             </table>
           </div>
 
-          {breakdown.length > 0 ? (
+          {rubroSummary.length > 0 ? (
             <ReportExpandable
-              title={c.gradesBreakdownTitle}
-              subtitle={c.gradesBreakdownHint}
-              badge={c.itemCount(breakdown.length)}
+              title={c.rubroBreakdownTitle}
+              subtitle={c.rubroBreakdownHint}
+              badge={c.categoryCount(rubroSummary.length)}
             >
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {breakdown.map((row) => {
-                  const kindLabel =
-                    t.gradebook.workspace.kinds[row.meta.kind] ?? row.meta.kind;
-                  const pct = row.avgPct === null ? null : Math.round(row.avgPct);
+                {rubroSummary.map((row) => {
+                  const pct = row.average;
                   const passing = pct !== null && pct >= 70;
                   return (
                     <div
-                      key={row.assignmentId}
+                      key={row.id ?? "none"}
                       className="rounded-xl border border-border bg-surface px-4 py-3 shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-semibold leading-snug text-foreground">
-                          {row.meta.title}
+                          {row.name ?? w.noRubro}
                         </p>
-                        <span className="shrink-0 rounded-md bg-brand-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
-                          {kindLabel}
-                        </span>
+                        {row.peso != null ? (
+                          <span className="shrink-0 rounded bg-[#e6defb] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]">
+                            {row.peso}%
+                          </span>
+                        ) : null}
                       </div>
                       <div className="mt-3 flex items-end justify-between gap-3">
                         <div>
@@ -292,11 +357,11 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
                             {pct === null ? "—" : `${pct}%`}
                           </p>
                           <p className="mt-0.5 text-[11px] font-medium text-foreground/45">
-                            {c.assignmentAvg}
+                            {c.rubroAvg}
                           </p>
                         </div>
                         <p className="text-right text-xs font-medium text-foreground/50">
-                          {c.gradedOf(row.gradedCount, row.totalStudents)}
+                          {c.rubroColumns(row.columnCount)}
                         </p>
                       </div>
                       {pct !== null ? (
@@ -319,6 +384,86 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
         </>
       )}
     </ReportSectionCard>
+  );
+}
+
+function ReportColumnSubheads({
+  group,
+  titles,
+  fallback,
+  showTotal,
+  totalLabel,
+}: {
+  group: ReturnType<typeof buildReportRubroGroups>[number];
+  titles: Record<string, string>;
+  fallback: string;
+  showTotal: boolean;
+  totalLabel: string;
+}) {
+  return (
+    <>
+      {group.columns.map((column, index) => (
+        <th
+          key={column.assignmentId}
+          className={cn(
+            "px-3 py-1.5 text-right font-medium",
+            index === 0 && "border-l border-border",
+          )}
+        >
+          {titles[column.assignmentId] ?? fallback}
+        </th>
+      ))}
+      {showTotal ? (
+        <th className="bg-surface-muted/40 px-3 py-1.5 text-right font-bold text-[#7c3aed] dark:text-[#b9a3f7]">
+          {totalLabel}
+        </th>
+      ) : null}
+    </>
+  );
+}
+
+function ReportStudentGroupCells({
+  group,
+  row,
+  grades,
+  showTotal,
+}: {
+  group: ReturnType<typeof buildReportRubroGroups>[number];
+  row: ReturnType<typeof buildReportStudentRows>[number];
+  grades: ReportDraft["grades"];
+  showTotal: boolean;
+}) {
+  const key = group.id ?? "none";
+  const contribution = row.contributions[key];
+  const percent = row.rubroPercents[key];
+  return (
+    <>
+      {group.columns.map((column, index) => (
+        <td
+          key={column.assignmentId}
+          className={cn(
+            "px-3 py-2 text-right tabular-nums text-foreground",
+            index === 0 && "border-l border-border",
+          )}
+        >
+          {formatGradeCell(grades[column.assignmentId]?.[row.studentId])}
+        </td>
+      ))}
+      {showTotal ? (
+        <td
+          title={
+            percent == null || group.peso == null
+              ? group.name ?? undefined
+              : `${group.name}: ${Math.round(percent)}% x ${group.peso}% = ${
+                  contribution?.toFixed(1) ?? "—"
+                }%`
+          }
+          className="bg-surface-muted/30 px-3 py-2 text-right font-bold tabular-nums text-[#7c3aed] dark:text-[#b9a3f7]"
+        >
+          {contribution == null ? "—" : `${contribution.toFixed(1)}%`}
+        </td>
+      ) : null}
+    </>
   );
 }
 
@@ -534,6 +679,13 @@ function ReportAttendancePanel({
   const absenceCount = draft.attendanceLog.filter((r) =>
     isAbsenceAttendanceStatus(r.status),
   ).length;
+  const columnTotals = ATTENDANCE_COLUMNS.map((status) => ({
+    status,
+    total: summaryRows.reduce(
+      (sum, studentId) => sum + (draft.attendance[studentId]?.[status] ?? 0),
+      0,
+    ),
+  }));
 
   const body =
     summaryRows.length === 0 ? (
@@ -541,38 +693,110 @@ function ReportAttendancePanel({
     ) : (
       <>
           <div className="overflow-x-auto">
-            <table className="w-fit min-w-full border-collapse text-sm">
+            <table className="w-full min-w-[36rem] border-collapse text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-foreground/50">
-                  <th className="px-4 py-2.5 font-medium">{c.student}</th>
+                <tr className="border-b border-border">
+                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/50">
+                    {c.student}
+                  </th>
                   {ATTENDANCE_COLUMNS.map((status) => (
-                    <th key={status} className="px-4 py-2.5 text-right font-medium">
-                      {ATTENDANCE_CODE[status]}
+                    <th
+                      key={status}
+                      className="w-[4.5rem] px-2 py-3 text-center"
+                      title={t.attendance.statuses[status]}
+                    >
+                      <span
+                        className={cn(
+                          "inline-flex h-6 min-w-9 items-center justify-center rounded-md px-1.5 text-[11px] font-bold tracking-wide",
+                          attendanceTone(status),
+                        )}
+                      >
+                        {ATTENDANCE_CODE[status]}
+                      </span>
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/70">
-                {summaryRows.map((studentId, index) => {
+              <tbody className="divide-y divide-border/60">
+                {summaryRows.map((studentId) => {
                   const counts = draft.attendance[studentId]!;
+                  const issues =
+                    counts.late_justified +
+                    counts.late_unjustified +
+                    counts.absence_justified +
+                    counts.absence_unjustified;
                   return (
                     <tr
                       key={studentId}
-                      className={index % 2 === 1 ? "bg-surface-muted/30" : undefined}
+                      className="transition-colors hover:bg-surface-muted/40"
                     >
-                      <td className="px-4 py-2 font-medium text-foreground">
-                        {draft.studentNames[studentId] ?? studentId.slice(0, 6)}
+                      <td className="px-5 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[11px] font-bold text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+                            {initials(draft.studentNames[studentId])}
+                          </span>
+                          <span className="truncate font-semibold text-foreground">
+                            {draft.studentNames[studentId] ?? studentId.slice(0, 6)}
+                          </span>
+                          {issues === 0 ? (
+                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                              {c.attendanceClean}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
-                      {ATTENDANCE_COLUMNS.map((status) => (
-                        <td key={status} className="px-4 py-2 text-right tabular-nums">
-                          {counts[status] > 0 ? counts[status] : "—"}
-                        </td>
-                      ))}
+                      {ATTENDANCE_COLUMNS.map((status) => {
+                        const value = counts[status];
+                        return (
+                          <td key={status} className="px-2 py-2.5 text-center">
+                            {value > 0 ? (
+                              <span
+                                className={cn(
+                                  "inline-flex h-7 min-w-7 items-center justify-center rounded-lg px-1.5 text-sm font-bold tabular-nums",
+                                  attendanceTone(status),
+                                )}
+                              >
+                                {value}
+                              </span>
+                            ) : (
+                              <span className="text-foreground/20">·</span>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr className="border-t border-border bg-surface-muted/50">
+                  <td className="px-5 py-2.5 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                    {c.attendanceTotals}
+                  </td>
+                  {columnTotals.map(({ status, total }) => (
+                    <td
+                      key={status}
+                      className="px-2 py-2.5 text-center text-sm font-bold tabular-nums text-foreground/70"
+                    >
+                      {total > 0 ? total : <span className="text-foreground/25">0</span>}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
             </table>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border/60 px-5 py-2.5 text-[11px] font-medium text-foreground/50">
+            {ATTENDANCE_COLUMNS.map((status) => (
+              <span key={status} className="inline-flex items-center gap-1.5">
+                <span
+                  className={cn("h-2.5 w-2.5 rounded-full", attendanceDot(status))}
+                />
+                <span className="font-bold text-foreground/65">
+                  {ATTENDANCE_CODE[status]}
+                </span>
+                {t.attendance.statuses[status]}
+              </span>
+            ))}
           </div>
 
           {draft.attendanceLog.length > 0 ? (
@@ -745,7 +969,7 @@ function StatusPill({
   return (
     <span
       className={cn(
-        "inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+        "inline-flex w-[5.25rem] items-center justify-center rounded-full px-2 py-0.5 text-center text-[11px] font-semibold leading-5",
         passed
           ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
           : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",

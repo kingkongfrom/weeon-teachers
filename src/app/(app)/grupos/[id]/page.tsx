@@ -5,7 +5,7 @@ import { AttendanceGroupWorkspace } from "@/components/grades/tardias-workspace"
 import { GrupoSectionTabs } from "@/components/grades/grupo-section-tabs";
 import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
-import { loadClassExams } from "@/lib/dashboard/exams";
+import { loadClassExams, loadClassRubros } from "@/lib/dashboard/exams";
 import { loadClassTardias } from "@/lib/dashboard/attendance";
 import { loadGradebookContext } from "@/lib/dashboard/gradebook";
 import { loadClassConduct } from "@/lib/dashboard/conduct";
@@ -46,8 +46,9 @@ export default async function GrupoDetailPage({
     selectedSubject = subjects[0]?.id ?? null;
   }
 
-  const [exams, tardias, conduct, supportFlags, t, locale] = await Promise.all([
+  const [exams, rubros, tardias, conduct, supportFlags, t, locale] = await Promise.all([
     section === "grades" ? loadClassExams(id, selectedSubject) : Promise.resolve([]),
+    section === "grades" ? loadClassRubros(id, selectedSubject) : Promise.resolve([]),
     section === "attendance" ? loadClassTardias(id) : Promise.resolve([]),
     section === "conduct" ? loadClassConduct(id) : Promise.resolve([]),
     loadClassEducationalSupportFlags(
@@ -107,6 +108,7 @@ export default async function GrupoDetailPage({
           }
           initialSubjectId={selectedSubject}
           initialExams={exams}
+          initialRubros={rubros}
           supportFlags={supportFlags}
         />
       )}

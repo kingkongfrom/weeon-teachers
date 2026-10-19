@@ -43,9 +43,20 @@ export type ExamColumn = {
   kind: AssignmentKind;
   /** Coarse group used for weighting. */
   category: AssignmentCategory;
+  /** Weighted rubro this column belongs to (null only for legacy rows). */
+  rubroId: string | null;
   assessmentId: string | null;
   closedAt: string | null;
   grades: Record<string, ExamGrade>;
+};
+
+export type GradeRubro = {
+  id: string;
+  name: string;
+  peso: number;
+  position: number;
+  archived: boolean;
+  color: string | null;
 };
 
 type AssignmentRow = {
@@ -54,8 +65,40 @@ type AssignmentRow = {
   points: number | null;
   category?: string | null;
   kind?: string | null;
+  rubro_id?: string | null;
   assessment_id?: string | null;
 };
+
+/**
+ * Loads the rubros for a class + subject. Resilient by design: before the
+ * `grade_rubros` migration is applied the query fails, and the gradebook falls
+ * back to the legacy unweighted average instead of breaking.
+ */
+export async function loadClassRubros(
+  classId: string,
+  subjectId: string | null,
+): Promise<GradeRubro[]> {
+  if (!subjectId) return [];
+  const supabase = await createSessionClient();
+
+  const { data, error } = await supabase
+    .from("grade_rubros")
+    .select("id, name, peso, position, archived, color")
+    .eq("class_id", classId)
+    .eq("subject_id", subjectId)
+    .order("position");
+
+  if (error) return [];
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    peso: row.peso,
+    position: row.position,
+    archived: row.archived,
+    color: row.color,
+  }));
+}
 
 /**
  * Loads the grade columns (assignments) for a class + subject, with each
@@ -74,7 +117,7 @@ export async function loadClassExams(
 
   let extendedQuery = supabase
     .from("assignments")
-    .select("id, title, points, category, kind, assessment_id, closed_at")
+    .select("id, title, points, category, kind, rubro_id, assessment_id, closed_at")
     .eq("class_id", classId);
   let baseQuery = supabase
     .from("assignments")
@@ -118,6 +161,7 @@ export async function loadClassExams(
       points: row.points,
       kind,
       category: categoryFor(kind),
+      rubroId: row.rubro_id ?? null,
       assessmentId: row.assessment_id ?? null,
       closedAt: (row as { closed_at?: string | null }).closed_at ?? null,
       grades: {},

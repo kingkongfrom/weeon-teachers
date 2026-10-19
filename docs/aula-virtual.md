@@ -599,6 +599,16 @@ Everything else (`grades`, `assignments.points`, `submissions`) already exists.
 Weighted category percentages and an `FINAL` policy beyond the column average are
 a follow-up (kept simple first: FINAL = mean of column percentages).
 
+**Rubros ponderados (P1–P4 built).** The follow-up above is specced and built
+per [`docs/calificaciones-rubros.md`](calificaciones-rubros.md): rubros per
+(class, subject) with a peso, shown in the matrix header, FIN = renormalised
+weighted mean computed by one shared pure module
+(`src/lib/dashboard/grade-weights.ts`). Schema:
+`20261019160000_grade_rubros.sql` (`grade_rubros` + `assignments.rubro_id` +
+`replace_rubros`). Published assessments join the first active rubro (or a
+`General 100 %` fallback). The transcript uses the same module. Reports still
+use the column average (separate sprint; gradebook shows a banner).
+
 ## Teacher flows (target)
 
 1. **Open a class** — grid card → class page. Groups and students already come

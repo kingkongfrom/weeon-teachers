@@ -83,6 +83,7 @@ export async function submitClassReport(input: {
       student_names: built.studentNames,
       assignment_titles: built.assignmentTitles,
       assignments_meta: built.assignmentsMeta,
+      finals_snapshot: built.finals,
       conduct_snapshot: built.conduct,
       conduct_log: built.conductLog,
       attendance_snapshot: built.attendance,

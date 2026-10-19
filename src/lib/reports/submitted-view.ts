@@ -38,6 +38,8 @@ export function submittedReportAsDraft(report: SubmittedReport): ReportDraft {
     grades: report.grades,
     assignmentTitles: report.assignmentTitles,
     assignmentsMeta: report.assignmentsMeta,
+    rubros: report.rubros ?? {},
+    finals: report.finals ?? {},
     studentNames: report.studentNames,
     studentIds,
     conduct: report.conduct,

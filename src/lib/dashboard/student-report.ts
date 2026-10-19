@@ -15,6 +15,11 @@ import {
   normalizeAttendanceStatus,
   type AttendanceCounts,
 } from "@/lib/attendance/model";
+import {
+  studentFinal,
+  type RubroColumn,
+  type RubroInput,
+} from "@/lib/dashboard/grade-weights";
 
 const KINDS: AssignmentKind[] = ["classwork", "homework", "exam", "quiz", "project"];
 
@@ -30,6 +35,7 @@ type AssignmentRow = {
   kind: string | null;
   category: string | null;
   points: number | null;
+  rubro_id?: string | null;
   due_date: string | null;
   created_at: string;
 };
@@ -183,7 +189,9 @@ export const loadTeacherStudentReport = cache(
     const [assignmentsRes, gradesRes, attendanceRes] = await Promise.all([
       supabase
         .from("assignments")
-        .select("id, class_id, subject_id, title, kind, category, points, due_date, created_at")
+        .select(
+          "id, class_id, subject_id, title, kind, category, points, rubro_id, due_date, created_at",
+        )
         .in("class_id", visibleClassIds)
         .order("created_at"),
       supabase
@@ -198,6 +206,26 @@ export const loadTeacherStudentReport = cache(
         .eq("student_id", studentId)
         .in("class_id", visibleClassIds),
     ]);
+
+    // Rubrics powering the weighted subject final. Resilient: before the
+    // migration the query fails and the transcript keeps the plain mean.
+    const rubrosBySubject = new Map<string, RubroInput[]>();
+    const { data: rubroRows } = await supabase
+      .from("grade_rubros")
+      .select("id, class_id, subject_id, name, peso, position, archived")
+      .in("class_id", visibleClassIds);
+    for (const rubro of rubroRows ?? []) {
+      const key = `${rubro.class_id}:${rubro.subject_id}`;
+      const list = rubrosBySubject.get(key) ?? [];
+      list.push({
+        id: rubro.id,
+        name: rubro.name,
+        peso: rubro.peso,
+        position: rubro.position,
+        archived: rubro.archived,
+      });
+      rubrosBySubject.set(key, list);
+    }
 
     const gradeByAssignment = new Map<string, { mark: number; maxMarks: number }>();
     for (const row of gradesRes.data ?? []) {
@@ -251,6 +279,7 @@ export const loadTeacherStudentReport = cache(
         );
 
         const bySubject = new Map<string, StudentSubjectReport>();
+        const columnsBySubject = new Map<string, RubroColumn[]>();
         const classPcts: number[] = [];
 
         for (const row of rows) {
@@ -290,17 +319,49 @@ export const loadTeacherStudentReport = cache(
             allPcts.push(pct);
           }
           bySubject.set(row.subject_id, subject);
+
+          const columns = columnsBySubject.get(row.subject_id) ?? [];
+          columns.push({
+            id: row.id,
+            rubroId: row.rubro_id ?? null,
+            points: row.points,
+            grades: grade
+              ? {
+                  [student.id]: {
+                    mark: grade.mark,
+                    maxMarks,
+                    status: "graded" as const,
+                  },
+                }
+              : {},
+          });
+          columnsBySubject.set(row.subject_id, columns);
         }
 
         const subjects = [...bySubject.values()]
-          .map((subject) => ({
-            ...subject,
-            average: mean(
-              subject.items
-                .map((item) => item.pct)
-                .filter((value): value is number => value != null),
-            ),
-          }))
+          .map((subject) => {
+            const rubros = subject.id
+              ? (rubrosBySubject.get(`${klass.id}:${subject.id}`) ?? [])
+              : [];
+            const columns = subject.id
+              ? (columnsBySubject.get(subject.id) ?? [])
+              : [];
+            const weightedAverage =
+              rubros.length > 0 && columns.some((column) => column.rubroId)
+                ? studentFinal(rubros, columns, student.id).percent
+                : null;
+            return {
+              ...subject,
+              average:
+                weightedAverage != null
+                  ? Math.round(weightedAverage)
+                  : mean(
+                      subject.items
+                        .map((item) => item.pct)
+                        .filter((value): value is number => value != null),
+                    ),
+            };
+          })
           .sort((a, b) => (a.name || "\uffff").localeCompare(b.name || "\uffff", "es"));
 
         return {

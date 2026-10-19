@@ -28,6 +28,7 @@ type ReportQueryRow = {
   student_names: unknown;
   assignment_titles: unknown;
   assignments_meta: unknown;
+  finals_snapshot?: unknown;
   conduct_snapshot: unknown;
   conduct_log: unknown;
   attendance_snapshot: unknown;
@@ -52,7 +53,7 @@ export const loadMyReports = cache(async (): Promise<SubmittedReport[]> => {
   const { data: reports, error } = await supabase
     .from("class_reports")
     .select(
-      "class_id, subject_id, period, academic_year, submitted_at, updated_at, grades_snapshot, student_names, assignment_titles, assignments_meta, conduct_snapshot, conduct_log, attendance_snapshot, attendance_log, summary, classes(id, name, grade, section)",
+      "class_id, subject_id, period, academic_year, submitted_at, updated_at, grades_snapshot, student_names, assignment_titles, assignments_meta, finals_snapshot, conduct_snapshot, conduct_log, attendance_snapshot, attendance_log, summary, classes(id, name, grade, section)",
     )
     .order("updated_at", { ascending: false });
 
@@ -116,6 +117,7 @@ export const loadMyReports = cache(async (): Promise<SubmittedReport[]> => {
       studentNames: (row.student_names ?? {}) as SubmittedReport["studentNames"],
       assignmentTitles,
       assignmentsMeta,
+      finals: (row.finals_snapshot ?? {}) as Record<string, number>,
       gradedStudents: summary.gradedStudents ?? 0,
       totalStudents: summary.totalStudents ?? 0,
       conduct: (row.conduct_snapshot ?? {}) as ReportConductSnapshot,

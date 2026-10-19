@@ -56,6 +56,18 @@ Page loader: `src/app/(app)/grupos/[id]/page.tsx`
 
 Full gradebook behaviour: [`docs/aula-virtual.md`](aula-virtual.md) § Gradebook.
 
+**Rubros ponderados (built, P1–P4):** each rubric (Tareas, Exámenes, Proyectos
++ teacher-created ones) carries a **peso** that splits the subject final. The
+matrix header shows `Tareas · 30%`, the footer shows the rubro grade, and FIN
+is a renormalised weighted mean computed by one shared pure module
+(`src/lib/dashboard/grade-weights.ts`). Column **puntos** keep their meaning
+*inside* a rubro. First open of a subject without rubros shows a two-step
+wizard (weights → column points) that is skippable. Reports still use the
+column average until the reports sprint (banner in the gradebook).
+Requirements, rules, schema and phases:
+[`docs/calificaciones-rubros.md`](calificaciones-rubros.md).
+
+
 ## Asistencia tab vs Aula virtual
 
 | Surface | Route | Role |

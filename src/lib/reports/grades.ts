@@ -30,6 +30,21 @@ export function isReportPassing(pct: number | null): boolean | null {
   return Math.round(pct) >= 70;
 }
 
+/**
+ * Report average for one student: the weighted final captured in the snapshot
+ * when the subject was graded with rubros, otherwise the plain column mean.
+ * Keeps reports aligned with the gradebook.
+ */
+export function reportStudentPercent(
+  grades: ReportGradesSnapshot,
+  studentId: string,
+  finals?: Record<string, number>,
+): number | null {
+  const weighted = finals?.[studentId];
+  if (weighted != null) return weighted;
+  return computeReportAverage(grades, studentId);
+}
+
 /** Union of student ids across assignments, optionally ordered by name. */
 export function collectReportStudentIds(
   report: ReportGradeView,
