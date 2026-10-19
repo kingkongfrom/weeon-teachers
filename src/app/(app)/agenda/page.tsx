@@ -2,6 +2,7 @@ import {
   BellRing,
   CalendarDays,
   Clock,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 import { HubModuleCard } from "@/components/dashboard/hub-module-card";
@@ -41,6 +42,14 @@ export default async function AgendaPage() {
       icon: BellRing,
       tone: "green",
       href: "/agenda/eventos",
+    },
+    {
+      id: "excursiones",
+      label: t.agenda.excursiones.label,
+      description: t.agenda.excursiones.description,
+      icon: MapPin,
+      tone: "yellow",
+      href: "/agenda/excursiones",
     },
     {
       id: "calendario",

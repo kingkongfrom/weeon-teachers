@@ -5,9 +5,10 @@ side is `weeon-mobile`.*
 
 ## One line
 
-**Agenda** (`/agenda`) is a hub with three cards: **Horarios** (weekly timetable
+**Agenda** (`/agenda`) is a hub with four cards: **Horarios** (weekly timetable
 with week navigation), **Próximos eventos** (read-only list of upcoming
-institution events), and **Calendario** (month/week/day/agenda calendar:
+institution events), **Excursiones** (trips this docente is responsible for),
+and **Calendario** (month/week/day/agenda calendar:
 institution events + the teacher's aula virtual exams).
 Teachers add **exams and activities** from a class tile in the schedule popover
 (not from the events page).
@@ -16,9 +17,10 @@ Teachers add **exams and activities** from a class tile in the schedule popover
 
 | Route | Purpose |
 | --- | --- |
-| `/agenda` | Hub: Horarios / Próximos eventos / Calendario |
+| `/agenda` | Hub: Horarios / Próximos eventos / Excursiones / Calendario |
 | `/horarios?week=YYYY-MM-DD` | Weekly timetable; `week` = any day of the target week |
 | `/agenda/eventos` | Read-only upcoming events (institution calendar) |
+| `/agenda/excursiones` | Cover preview of published trips where this docente is `teacher_profile_id`. Opening a preview shows the same trip detail as the school ERP (facts, PDF, autorizaciones) |
 | `/agenda/calendario?view=month\|week\|day\|agenda&date=YYYY-MM-DD` | Teacher calendar; `date` is the anchor day (defaults to today), `view` defaults to month |
 
 Panel general (`/inicio`) has an **Agenda** card → `/agenda`; its **Horario de la

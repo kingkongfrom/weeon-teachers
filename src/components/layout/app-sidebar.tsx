@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Home,
   Mail,
+  MapPin,
   MessageCircle,
   Presentation,
   BellRing,
@@ -89,6 +90,7 @@ export function AppSidebar({
   const agenda: NavLink[] = [
     { href: "/horarios", label: t.agenda.horarios.label, icon: Clock },
     { href: "/agenda/eventos", label: t.agenda.eventos.label, icon: BellRing },
+    { href: "/agenda/excursiones", label: t.agenda.excursiones.label, icon: MapPin },
     { href: "/agenda/calendario", label: t.agenda.calendario.label, icon: CalendarDays },
   ];
 
