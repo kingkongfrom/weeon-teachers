@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { MapPin, Wallet, X } from "lucide-react";
 import { PdfThumb } from "@/components/excursions/pdf-thumb";
-import { PdfFileButton, PdfReaderDialog, PdfViewport } from "@/components/ui/pdf-reader";
+import { PdfFileButton } from "@/components/ui/pdf-reader";
 import { useT } from "@/lib/i18n/client";
 import type { Messages } from "@/lib/i18n/messages";
 import {
@@ -341,31 +341,27 @@ function CoverPdfs({ materials }: { materials: TeacherExcursionMaterial[] }) {
 }
 
 function DetailPdfs({ materials }: { materials: TeacherExcursionMaterial[] }) {
-  const [expanded, setExpanded] = useState<TeacherExcursionMaterial | null>(null);
   if (materials.length === 0) return null;
   return (
-    <>
-      <ul className="flex flex-col gap-3">
-        {materials.map((material) => (
-          <li
-            key={material.id}
-            className="flex h-[420px] flex-col overflow-hidden rounded-xl border border-border"
+    <ul className="flex flex-wrap gap-2">
+      {materials.map((material) => (
+        <li key={material.id} className="w-16">
+          <PdfFileButton
+            url={material.url}
+            name={materialLabel(material.fileName)}
+            mimeType="application/pdf"
+            className="block w-full overflow-hidden rounded-lg border border-border bg-surface-muted p-0 text-left"
           >
-            <PdfViewport
-              url={material.url}
-              showChrome={false}
-              onExpand={() => setExpanded(material)}
-            />
-          </li>
-        ))}
-      </ul>
-      <PdfReaderDialog
-        open={expanded != null}
-        url={expanded?.url ?? null}
-        name={expanded ? materialLabel(expanded.fileName) : ""}
-        onClose={() => setExpanded(null)}
-      />
-    </>
+            <span className="block aspect-square overflow-hidden">
+              <PdfThumb url={material.url} />
+            </span>
+            <span className="block truncate px-1 py-1 text-[10px] font-semibold text-foreground">
+              {materialLabel(material.fileName)}
+            </span>
+          </PdfFileButton>
+        </li>
+      ))}
+    </ul>
   );
 }
 
