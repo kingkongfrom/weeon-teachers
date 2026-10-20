@@ -9,7 +9,6 @@ import { loadClassMaterials } from "@/lib/dashboard/materials";
 import { loadClassAssessments } from "@/lib/dashboard/assessments";
 import { loadClassExamDates, loadClassLessonDays } from "@/lib/dashboard/exam-dates";
 import { loadClassTurnIns } from "@/lib/dashboard/submissions";
-import { loadClassTopics } from "@/lib/dashboard/topics";
 import { loadClassAttendance } from "@/lib/dashboard/attendance";
 import { loadJustificationInbox } from "@/lib/dashboard/justification-inbox";
 import { normalizeAttendanceDate } from "@/lib/attendance/model";
@@ -46,7 +45,6 @@ export default async function AulaVirtualClassPage({
     session,
     materials,
     rawAssessments,
-    topics,
     attendanceMarks,
     turnIns,
     pendingJustifications,
@@ -56,7 +54,6 @@ export default async function AulaVirtualClassPage({
     getTeacherSession(),
     loadClassMaterials(classId),
     loadClassAssessments(classId),
-    loadClassTopics(classId),
     loadClassAttendance(classId, attendanceDate),
     loadClassTurnIns(classId, students),
     loadJustificationInbox().then((rows) => rows.filter((row) => row.classId === classId).length),
@@ -87,26 +84,44 @@ export default async function AulaVirtualClassPage({
     <div className="flex min-w-0 flex-col gap-5">
       <BackLink href="/aula-virtual" label={t.classroom.back} />
 
-      <section className={cn("relative overflow-hidden rounded-3xl border border-border p-6", AULA_TEAL.card)}>
-        <div className="flex items-start gap-4">
+      {/* Tinted card that matches the subject pills; no gradient bar. */}
+      <section className="relative overflow-hidden rounded-3xl border border-[#7dd3e8]/50 bg-[radial-gradient(120%_140%_at_0%_0%,#e6f7fb_0%,#f7fdff_45%,#ffffff_100%)] shadow-sm dark:border-[#155e75]/50 dark:bg-[radial-gradient(120%_140%_at_0%_0%,#0f2f36_0%,#0b1f25_55%,#0a1a1f_100%)]">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-4 p-6">
           <span
             className={cn(
-              "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white",
+              "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm",
               AULA_TEAL.avatar,
             )}
             aria-hidden
           >
-            <Presentation className="h-6 w-6" strokeWidth={2.2} />
+            <Presentation className="h-7 w-7" strokeWidth={2.2} />
           </span>
-          <div className="min-w-0">
-            <h1 className={cn("brand-page-title text-3xl font-bold sm:text-4xl", AULA_TEAL.label)}>{grupo.name}</h1>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/45">
+              {t.classroom.title}
+            </p>
+            <h1
+              className={cn(
+                "brand-page-title mt-0.5 truncate text-3xl font-bold leading-tight sm:text-4xl",
+                AULA_TEAL.label,
+              )}
+            >
+              {grupo.name}
+            </h1>
             <p className="mt-1 text-sm font-medium text-foreground/55">
               {schoolName ?? t.common.fallbackSchool} · {year}
             </p>
-            <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-foreground/55">
-              <Users className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 text-sm font-semibold text-foreground/70">
+              <Users className="h-4 w-4 text-foreground/45" />
               {t.grupos.studentsCount(grupo.studentCount)}
-            </p>
+            </span>
+            {subjects.length === 1 ? (
+              <span className="inline-flex h-9 items-center rounded-full bg-surface-muted px-3.5 text-sm font-semibold text-foreground/70">
+                {subjects[0].name}
+              </span>
+            ) : null}
           </div>
         </div>
       </section>
@@ -119,7 +134,6 @@ export default async function AulaVirtualClassPage({
         assessments={assessments}
         examDates={examDates}
         lessonDays={lessonDays}
-        topics={topics}
         selectedSubjectId={selectedSubjectId}
         subjects={subjects.map((option) => ({ id: option.id, name: option.name }))}
         initialTab={tab}

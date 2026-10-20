@@ -19,13 +19,11 @@ export function AssessmentsPanel({
   classId,
   assessments,
   studentCount,
-  defaultTopicId = null,
   defaultSubjectId = null,
 }: {
   classId: string;
   assessments: AssessmentSummary[];
   studentCount: number;
-  defaultTopicId?: string | null;
   defaultSubjectId?: string | null;
 }) {
   const t = useT();
@@ -42,7 +40,6 @@ export function AssessmentsPanel({
     const res = await createAssessment({
       classId,
       kind,
-      topicId: defaultTopicId,
       subjectId: defaultSubjectId,
     });
     setCreating(false);

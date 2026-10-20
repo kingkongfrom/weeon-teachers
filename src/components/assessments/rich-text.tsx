@@ -78,6 +78,7 @@ export function RichTextEditor({
   placeholder,
   className,
   editorClassName,
+  readOnly = false,
 }: {
   value: RichTextDoc;
   onChange: (doc: RichTextDoc) => void;
@@ -85,6 +86,8 @@ export function RichTextEditor({
   className?: string;
   /** Overrides the editable area min-height (default ~2.75rem). */
   editorClassName?: string;
+  /** Locks editing (assessment already has turn-ins). */
+  readOnly?: boolean;
 }) {
   const t = useT();
   const imageContext = useAssessmentImageContext();
@@ -158,6 +161,7 @@ export function RichTextEditor({
       Placeholder.configure({ placeholder: placeholder ?? "" }),
     ],
     content: value,
+    editable: !readOnly,
     immediatelyRender: false,
     editorProps: {
       attributes: {
@@ -286,6 +290,7 @@ export function RichTextEditor({
         checkLanguage={checkLanguage}
         onLanguageChange={changeLanguage}
         onToggleGrammar={toggleGrammar}
+        hidden={readOnly}
       />
       <EditorContent editor={editor} />
       {!grammarEnabled ? null : checkError ? (
@@ -376,6 +381,7 @@ function Toolbar({
   checkLanguage,
   onLanguageChange,
   onToggleGrammar,
+  hidden = false,
 }: {
   editor: Editor;
   imageContext: AssessmentImageContextValue | null;
@@ -384,6 +390,8 @@ function Toolbar({
   checkLanguage: string;
   onLanguageChange: (value: string) => void;
   onToggleGrammar: () => void;
+  /** Read-only document: no formatting controls. */
+  hidden?: boolean;
 }) {
   const t = useT();
   const e = t.editor;
@@ -467,6 +475,8 @@ function Toolbar({
       setUploading(false);
     }
   }
+
+  if (hidden) return null;
 
   return (
     <div>

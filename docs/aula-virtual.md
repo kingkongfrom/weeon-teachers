@@ -105,11 +105,12 @@ Honest snapshot — do not assume the rest exists.
       as Circulares). Other files open in a new tab. The file uses the subject
       already selected on Trabajo de clase; the upload dialog does not ask for
       Materia again.
-    - *Temas*: `ClassworkPanel` — a plain text row (not pills, not a menu)
-      filters assessments + materials. **Nuevo tema** sits at the end of that
-      row and becomes an inline name field. The active topic shows **Eliminar**;
-      deleting it sets linked tasks and materials back to no topic. Topics are set on the
-      assessment/column and on the material upload.
+    - *Temas*: **removed from the teacher UI** (19 Oct 2026). Teachers no
+      longer see the topic chips, **Nuevo tema**, the topic picker in the new
+      material dialog, or the topic dropdown in the assessment editor. The
+      tables (classwork_topics, 	opic_id) and the server actions stay: the
+      mobile app still reads topics for the class overview, and existing rows
+      keep their topic. ClassworkPanel filters by subject only.
     - *Materias*: when the class has more than one subject, the **subject pills
       live inside Classroom only** and filter its assessments + materials
       (`?subject=<id>&tab=trabajo`); the same pills on **Fechas de examen**
@@ -413,8 +414,27 @@ Decision: **assessments are native, structured content — not PDFs.** The teach
 builds homeworks/exams in a WYSIWYG block editor; the **definition JSON is the
 source of truth**; a PDF is only an export.
 
+- **Class page layout (revised 19 Oct 2026):** the banner is a card with a
+  soft teal tint (a very light radial gradient, dark equivalent in dark mode)
+  and a teal-tinted border matching the subject pills - no gradient bar -, a rounded icon, an uppercase *Aula virtual*
+  eyebrow above the class name, and the school · year plus the student count as
+  a bordered pill on the right (the subject name appears there only when the
+  class has one subject). Sections are no longer coloured chips for each tab:
+  one tab row with a bottom rule, the active tab tinted, everything else quiet.
+  Subjects sit on their own row under a **Materias** label with bordered pills
+  (teal when active) so they read as a filter, not as more tabs.
 - **Editor (teacher web):** title, kind (`homework` | `exam`), instructions,
   due date, and questions.
+- **Editor layout (19 Oct 2026):** the top bar groups **Vista previa** and
+  **Guardar** into one segmented pill, keeps **Publicar** as the only filled
+  action (amber once published, since it becomes **Volver a borrador**),
+  demotes **Cerrar evaluación** to a quiet text action and the delete icon to a
+  muted control. The header card shows the subject as a top band, the
+  kind/status as compact labels next to an icon row (preguntas · puntos), a
+  borderless 3xl title, and the due date; instructions live in a divided
+  section. With no questions the list shows an empty state, and **Añadir
+  pregunta** opens an inline panel with an icon and a one-line hint per type
+  instead of a floating menu.
 - **Question types (v1):** multiple choice, multiple answer, true/false, short
   answer, paragraph, number. (Later: matching, file/drawing upload, math.)
 - **WYSIWYG:** rich-text prompts/instructions via **TipTap**, stored as a
@@ -426,6 +446,22 @@ source of truth**; a PDF is only an export.
   (questions + keys + points). Question ids are **stable uuids inside the JSON**
   so future submissions/answers can reference them.
 - **Publishing:** draft → published. Published items reach students (P5b, mobile).
+- **Locked once a student turns it in (immutable definition).** From the first
+  `submitted` (or `returned`) turn-in, the questions, options and **points** can
+  no longer change: a score is `mark / points`, so raising 10 pts to 20 would
+  re-score an answer the student never saw differently. The editor opens in
+  read-only (no save, no publish toggle, no add/remove/duplicate question, no
+  due-date or topic change) with an amber banner. Deleting **all** turn-ins
+  unlocks it, so nothing is stranded. Enforced in:
+  `saveAssessment` (server action) and the DB trigger
+  `assessments_freeze_after_submission`
+  (`20261019223000_freeze_submitted_assessments.sql`).
+- **Column points are frozen once graded.** The gradebook column
+  (`assignments.points`) keeps its maximum after its first grade, whether it
+  came from an assessment or a manual column: `updateExamColumn`,
+  `syncGradeColumn` and the trigger `assignments_freeze_points_after_grades`
+  refuse the change. Title and rubro stay editable; re-weighting means a new
+  column.
 - **Grading (P5c):** objective types suggest a score from the answer key
   (teacher confirms/overrides); open types are scored manually; the per-question
   sum flows into the gradebook (Classwork = gradebook) via

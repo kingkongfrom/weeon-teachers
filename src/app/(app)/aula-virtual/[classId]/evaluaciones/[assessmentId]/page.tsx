@@ -3,7 +3,6 @@ import { AssessmentEditor } from "@/components/assessments/assessment-editor";
 import { loadAssessment } from "@/lib/dashboard/assessments";
 import { resolveAssessmentImages } from "@/lib/assessments/images.server";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
-import { loadClassTopics } from "@/lib/dashboard/topics";
 import { loadClassTurnIns } from "@/lib/dashboard/submissions";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +19,9 @@ export default async function AssessmentEditorPage({
 }) {
   const { classId, assessmentId } = await params;
 
-  const [rawAssessment, detail, topics] = await Promise.all([
+  const [rawAssessment, detail] = await Promise.all([
     loadAssessment(assessmentId),
     loadTeacherGrupo(classId),
-    loadClassTopics(classId),
   ]);
   if (!rawAssessment || rawAssessment.classId !== classId) notFound();
 
@@ -41,7 +39,6 @@ export default async function AssessmentEditorPage({
         detail?.grupo.subjects.find((subject) => subject.id === assessment.subjectId)?.name ??
         null
       }
-      topics={topics.map((topic) => ({ id: topic.id, name: topic.name }))}
       studentCount={students.length}
       submissions={stat?.submissions ?? []}
     />

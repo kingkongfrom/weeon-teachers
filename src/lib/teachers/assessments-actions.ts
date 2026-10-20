@@ -13,6 +13,23 @@ import {
 } from "@/lib/assessments/model";
 import { stripImageUrls } from "@/lib/assessments/rich-text-images";
 
+/**
+ * True when at least one student has turned the assessment in (`submitted` or
+ * already `returned`). From that moment the questions and their points are
+ * frozen: a student answered against the old rules, so re-scoring must not
+ * silently change their points. Drafts of the same student do not lock it.
+ */
+async function hasSubmittedWork(
+  supabase: Awaited<ReturnType<typeof createSessionClient>>,
+  assessmentId: string,
+): Promise<boolean> {
+  const { count } = await supabase
+    .from("submissions")
+    .select("id", { count: "exact", head: true })
+    .eq("assessment_id", assessmentId)
+    .in("state", ["submitted", "returned"]);
+  return (count ?? 0) > 0;
+}
 export type AssessmentActionResult =
   | { ok: true; id?: string }
   | { ok: false; error: string };
@@ -148,11 +165,19 @@ async function syncGradeColumn(
       .maybeSingle();
 
     if (existing?.id) {
+      // Never rewrite the points of a column that already has grades: the
+      // saved assessment content may predate the lock, but the gradebook
+      // denominator is frozen once students are scored.
+      const { count } = await supabase
+        .from("grades")
+        .select("id", { count: "exact", head: true })
+        .eq("assignment_id", existing.id);
+
       await supabase
         .from("assignments")
         .update({
           title: input.title,
-          points: input.points,
+          ...((count ?? 0) === 0 ? { points: input.points } : {}),
           subject_id: subjectId,
           kind: input.kind,
           category: categoryFor(input.kind),
@@ -245,6 +270,16 @@ export async function saveAssessment(input: {
     return { ok: false, error: t.assessments.errors.tooManyQuestions };
   }
 
+  const supabase = await createSessionClient();
+
+  // Locked once a student has turned it in: changing the questions or their
+  // points after a submission would score that answer against different rules.
+  // Deleting all turn-ins is the only way back, so the lock is fully reversible
+  // and never strands a teacher.
+  if (await hasSubmittedWork(supabase, id)) {
+    return { ok: false, error: t.assessments.errors.lockedSubmitted };
+  }
+
   // Strip the transient signed `src` from inline images; only the durable
   // `path` is persisted (URLs are re-signed on every load).
   const safeInstructions = stripImageUrls(instructions as RichTextDoc | null) ?? emptyDoc();
@@ -258,7 +293,6 @@ export async function saveAssessment(input: {
   const pointsTotal = computePointsTotal(safeContent);
   const safeTitle = title || t.assessments.untitled;
 
-  const supabase = await createSessionClient();
   const { error } = await supabase
     .from("assessments")
     .update({

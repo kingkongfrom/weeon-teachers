@@ -35,6 +35,7 @@ export function QuestionEditor({
   onMoveDown,
   onDuplicate,
   onRemove,
+  readOnly = false,
 }: {
   question: AssessmentQuestion;
   index: number;
@@ -44,6 +45,8 @@ export function QuestionEditor({
   onMoveDown: () => void;
   onDuplicate: () => void;
   onRemove: () => void;
+  /** Locked because students already turned the assessment in. */
+  readOnly?: boolean;
 }) {
   const t = useT();
   const a = t.assessments;
@@ -92,13 +95,19 @@ export function QuestionEditor({
   const multiple = question.type === "multiple_answer";
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4">
+    <section
+      className={cn(
+        "flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4",
+        readOnly && "[&_input]:cursor-not-allowed [&_input]:opacity-70",
+      )}
+    >
       <div className="flex items-center gap-2">
         <span className="text-sm font-bold text-foreground/40">{index + 1}</span>
         <select
           value={question.type}
           onChange={(event) => changeType(event.target.value as QuestionType)}
-          className="h-9 rounded-lg border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-brand-400"
+          disabled={readOnly}
+          className="h-9 rounded-lg border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-brand-400 disabled:cursor-not-allowed"
         >
           {TYPE_ORDER.map((type) => (
             <option key={type} value={type}>
@@ -107,50 +116,69 @@ export function QuestionEditor({
           ))}
         </select>
 
-        <label className="ml-2 flex items-center gap-1.5 text-xs font-semibold text-foreground/60">
-          {a.pointsLabel}
+        {/* Points are the weight of the answer, so they read as a badge, not as
+            one more grey field. */}
+        <label
+          className={cn(
+            "ml-2 inline-flex h-9 items-center gap-1 rounded-xl border border-brand-200 bg-brand-50 px-2 pl-2.5 dark:border-brand-900/60 dark:bg-brand-950/40",
+            readOnly && "opacity-70",
+          )}
+          title={a.pointsLabel}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+            {a.pointsLabel}
+          </span>
           <input
             type="number"
             min={0}
             max={1000}
             value={question.points}
+            readOnly={readOnly}
+            disabled={readOnly}
+            aria-label={a.pointsLabel}
             onChange={(event) =>
               patch({ points: Math.max(0, Number(event.target.value) || 0) })
             }
-            className="h-9 w-16 rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-brand-400"
+            className="h-7 w-12 rounded-lg border-0 bg-transparent text-center text-base font-bold tabular-nums text-brand-800 outline-none focus:bg-surface focus:ring-2 focus:ring-brand-300 dark:text-brand-100"
           />
+          <span className="pr-0.5 text-xs font-semibold text-brand-700/70 dark:text-brand-300/70">
+            pts
+          </span>
         </label>
 
-        <div className="ml-auto flex items-center gap-0.5">
-          <IconButton label={a.moveUp} onClick={onMoveUp} disabled={index === 0}>
-            <ArrowUp className="h-4 w-4" />
-          </IconButton>
-          <IconButton
-            label={a.moveDown}
-            onClick={onMoveDown}
-            disabled={index === total - 1}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </IconButton>
-          <IconButton label={a.duplicate} onClick={onDuplicate}>
-            <Copy className="h-4 w-4" />
-          </IconButton>
-          <IconButton label={a.removeQuestion} onClick={onRemove} danger>
-            <Trash2 className="h-4 w-4" />
-          </IconButton>
-        </div>
+        {readOnly ? null : (
+          <div className="ml-auto flex items-center gap-0.5">
+            <IconButton label={a.moveUp} onClick={onMoveUp} disabled={index === 0}>
+              <ArrowUp className="h-4 w-4" />
+            </IconButton>
+            <IconButton
+              label={a.moveDown}
+              onClick={onMoveDown}
+              disabled={index === total - 1}
+            >
+              <ArrowDown className="h-4 w-4" />
+            </IconButton>
+            <IconButton label={a.duplicate} onClick={onDuplicate}>
+              <Copy className="h-4 w-4" />
+            </IconButton>
+            <IconButton label={a.removeQuestion} onClick={onRemove} danger>
+              <Trash2 className="h-4 w-4" />
+            </IconButton>
+          </div>
+        )}
       </div>
 
       <RichTextEditor
         value={question.prompt}
         onChange={(prompt) => patch({ prompt })}
         placeholder={a.questionPromptPlaceholder}
+        readOnly={readOnly}
       />
 
       {choice ? (
         <div className="flex flex-col gap-2">
           {question.type === "true_false" ? (
-            <TrueFalseOptions question={question} onToggle={toggleCorrect} />
+            <TrueFalseOptions question={question} onToggle={toggleCorrect} readOnly={readOnly} />
           ) : (
             <>
               {question.options.map((option) => {
@@ -160,6 +188,7 @@ export function QuestionEditor({
                     <button
                       type="button"
                       onClick={() => toggleCorrect(option.id)}
+                      disabled={readOnly}
                       aria-pressed={correct}
                       title={a.correctAnswer}
                       className={cn(
@@ -174,6 +203,8 @@ export function QuestionEditor({
                     </button>
                     <input
                       value={option.text}
+                      readOnly={readOnly}
+                      disabled={readOnly}
                       onChange={(event) =>
                         patch({
                           options: question.options.map((current) =>
@@ -186,6 +217,7 @@ export function QuestionEditor({
                       placeholder={a.optionPlaceholder}
                       className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400"
                     />
+                    {readOnly ? null : (
                     <IconButton
                       label={a.removeQuestion}
                       onClick={() =>
@@ -201,9 +233,11 @@ export function QuestionEditor({
                     >
                       <X className="h-4 w-4" />
                     </IconButton>
+                    )}
                   </div>
                 );
               })}
+              {readOnly ? null : (
               <button
                 type="button"
                 onClick={() =>
@@ -219,6 +253,7 @@ export function QuestionEditor({
                 <Plus className="h-4 w-4" />
                 {a.addOption}
               </button>
+              )}
             </>
           )}
         </div>
@@ -232,6 +267,8 @@ export function QuestionEditor({
           <input
             type={question.type === "number" ? "number" : "text"}
             value={question.answerKey ?? ""}
+            readOnly={readOnly}
+            disabled={readOnly}
             onChange={(event) => patch({ answerKey: event.target.value || null })}
             placeholder={a.answerKeyPlaceholder}
             className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400"
@@ -245,9 +282,11 @@ export function QuestionEditor({
 function TrueFalseOptions({
   question,
   onToggle,
+  readOnly = false,
 }: {
   question: AssessmentQuestion;
   onToggle: (id: string) => void;
+  readOnly?: boolean;
 }) {
   const t = useT();
   return (
@@ -259,6 +298,7 @@ function TrueFalseOptions({
             key={option.id}
             type="button"
             onClick={() => onToggle(option.id)}
+            disabled={readOnly}
             aria-pressed={correct}
             className={cn(
               "flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors",

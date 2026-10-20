@@ -6,21 +6,26 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  AlignLeft,
   ArrowLeft,
-  ChevronDown,
+  Award,
+  CheckCheck,
   Eye,
+  Hash,
+  ListChecks,
   Loader2,
   Lock,
   Plus,
   Save,
+  ToggleLeft,
   Trash2,
+  Type,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dropdown } from "@/components/ui/dropdown";
 import { RichTextEditor } from "@/components/assessments/rich-text";
 import { AssessmentImageProvider } from "@/components/assessments/assessment-image-context";
 import { AssessmentPreview } from "@/components/assessments/assessment-preview";
@@ -45,6 +50,15 @@ import {
 import { AssessmentSubmissions } from "@/components/assessments/assessment-submissions";
 import type { SubmissionSummary } from "@/lib/dashboard/submissions";
 
+const QUESTION_TYPE_ICON = {
+  multiple_choice: ListChecks,
+  multiple_answer: CheckCheck,
+  true_false: ToggleLeft,
+  short_answer: Type,
+  paragraph: AlignLeft,
+  number: Hash,
+} satisfies Record<QuestionType, typeof ListChecks>;
+
 const ADD_TYPES: QuestionType[] = [
   "multiple_choice",
   "multiple_answer",
@@ -66,7 +80,6 @@ function toDateOnly(iso: string): string {
 export function AssessmentEditor({
   initial,
   subjectName = null,
-  topics,
   studentCount = 0,
   submissions = [],
 }: {
@@ -74,13 +87,19 @@ export function AssessmentEditor({
   /** Read-only: the subject comes from the active subject tab / the row itself,
    * so it is shown, not chosen. */
   subjectName?: string | null;
-  topics: { id: string; name: string }[];
   studentCount?: number;
   submissions?: SubmissionSummary[];
 }) {
   const t = useT();
   const a = t.assessments;
   const router = useRouter();
+
+  // Once a student turns it in, the questions and their points are frozen:
+  // changing them would re-score an answer against different rules. Deleting
+  // every turn-in unlocks it again, so nothing is permanently stranded.
+  const locked = submissions.some(
+    (submission) => submission.state === "submitted" || submission.state === "returned",
+  );
 
   const [draft, setDraft] = useState<AssessmentDraft>({
     title: initial.title,
@@ -96,7 +115,9 @@ export function AssessmentEditor({
   const [error, setError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
+  // A new assessment opens with the type picker already shown: the questions
+  // must be visible immediately, not behind an extra click.
+  const [addOpen, setAddOpen] = useState(initial.content.questions.length === 0);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -104,6 +125,8 @@ export function AssessmentEditor({
   const [closing, setClosing] = useState(false);
 
   const total = Math.round(computePointsTotal(draft.content));
+  // Keep the empty state out of the way while the picker is open.
+  const allowEmptyPrompt = draft.content.questions.length === 0 && !addOpen;
 
   function update(patch: Partial<AssessmentDraft>) {
     setDraft((current) => ({ ...current, ...patch }));
@@ -174,7 +197,7 @@ export function AssessmentEditor({
       title: draft.title,
       kind: draft.kind,
       subjectId: draft.subjectId,
-      topicId: draft.topicId,
+      topicId: null,
       dueAt: draft.dueAt,
       instructions: plain(draft.instructions),
       content: plain(draft.content),
@@ -244,48 +267,55 @@ export function AssessmentEditor({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={`/aula-virtual/${initial.classId}`}
-          className="-ml-2.5 inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-base font-semibold text-foreground/70 transition-all hover:bg-surface-muted hover:text-foreground active:scale-[0.98]"
+          className="-ml-2.5 inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-foreground/60 transition-all hover:bg-surface-muted hover:text-foreground active:scale-[0.98]"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4" />
           {a.back}
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={cn(
-              "text-xs font-semibold",
+              "mr-1 text-xs font-semibold",
               dirty ? "text-amber-600 dark:text-amber-400" : "text-foreground/40",
             )}
           >
             {dirty ? a.unsaved : justSaved ? a.saved : ""}
           </span>
+
+          {/* Secondary actions sit together; publish is the primary one. */}
+          <div className="flex items-center gap-0.5 rounded-full border border-border bg-surface p-0.5">
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
+            >
+              <Eye className="h-4 w-4" />
+              {a.preview}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving || !dirty || locked}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground/75 transition-colors hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {saving ? a.saving : a.save}
+            </button>
+          </div>
+
           <button
             type="button"
-            onClick={() => setPreviewOpen(true)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted"
-          >
-            <Eye className="h-4 w-4" />
-            {a.preview}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={saving || !dirty}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-surface-muted disabled:opacity-50"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            {saving ? a.saving : a.save}
-          </button>
-          <button
-            type="button"
+            disabled={locked}
             onClick={() => void handleTogglePublish()}
             className={cn(
-              "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white transition-all hover:brightness-105",
+              "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-[0.98]",
               initial.published ? "bg-amber-500" : "brand-gradient",
+              locked && "cursor-not-allowed opacity-50",
             )}
           >
             {initial.published ? a.unpublish : a.publish}
@@ -294,7 +324,7 @@ export function AssessmentEditor({
             <button
               type="button"
               onClick={() => setCloseOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-surface-muted"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground/65 transition-colors hover:bg-surface-muted hover:text-foreground"
             >
               <Lock className="h-4 w-4" />
               {a.closeEvaluation}
@@ -305,7 +335,7 @@ export function AssessmentEditor({
             onClick={() => setDeleteOpen(true)}
             aria-label={a.delete}
             title={a.delete}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-error/80 transition-colors hover:bg-error/10 hover:text-error"
+            className="ml-1 flex h-9 w-9 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-error/10 hover:text-error"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -315,6 +345,13 @@ export function AssessmentEditor({
       {error ? (
         <div className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm font-medium text-error">
           {error}
+        </div>
+      ) : null}
+
+      {locked ? (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+          <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{a.errors.lockedSubmitted}</span>
         </div>
       ) : null}
 
@@ -328,102 +365,107 @@ export function AssessmentEditor({
         />
       ) : null}
 
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="w-36">
-            <Dropdown
-              value={draft.kind}
-              onChange={(value) =>
-                update({ kind: value as AssessmentDraft["kind"] })
-              }
-              ariaLabel={a.kind}
-              options={[
-                { value: "homework", label: a.homework },
-                { value: "exam", label: a.exam },
-              ]}
+      <section className="overflow-hidden rounded-2xl border border-border bg-surface">
+        {subjectName ? (
+          <div className="border-b border-border bg-surface-muted/50 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-foreground/50">
+            {subjectName}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-5 p-5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            {/* Kind is chosen at creation (Tarea / Examen) and frozen after. */}
+            <span className="inline-flex h-7 items-center rounded-md bg-[#e6f7fb] px-2.5 text-xs font-bold uppercase tracking-wide text-[#0e6b7c] dark:bg-[#0f2f36] dark:text-[#7fdcea]">
+              {initial.kind === "exam" ? a.exam : a.homework}
+            </span>
+            <span
+              className={cn(
+                "inline-flex h-7 items-center rounded-md px-2.5 text-xs font-bold uppercase tracking-wide",
+                initial.closedAt
+                  ? "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                  : initial.published
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    : "bg-surface-muted text-foreground/55",
+              )}
+            >
+              {initial.closedAt ? a.closed : initial.published ? a.published : a.draft}
+            </span>
+
+            <span aria-hidden className="h-4 w-px bg-border" />
+
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground/60">
+              <ListChecks className="h-4 w-4 text-foreground/40" />
+              {a.questionCount(draft.content.questions.length)}
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground/60">
+              <Award className="h-4 w-4 text-foreground/40" />
+              {a.pointsTotal(total)}
+            </span>
+          </div>
+
+          <input
+            value={draft.title}
+            readOnly={locked}
+            onChange={(event) => update({ title: event.target.value })}
+            placeholder={a.untitled}
+            aria-label={a.title}
+            className="w-full rounded-xl bg-transparent text-3xl font-bold leading-tight text-foreground outline-none transition-colors placeholder:text-foreground/30 focus:bg-surface-muted/40"
+          />
+
+          <div className="flex flex-wrap items-center gap-3">
+            <DatePicker
+              value={draft.dueAt ? toDateOnly(draft.dueAt) : null}
+              onChange={(dateOnly) => {
+                if (locked) return;
+                update({
+                  dueAt: dateOnly
+                    ? new Date(`${dateOnly}T12:00:00`).toISOString()
+                    : null,
+                });
+              }}
+              placeholder={a.dueDate}
+              clearLabel={a.clearDueDate}
             />
           </div>
-          {subjectName ? (
-            <span
-              className="inline-flex h-9 items-center rounded-xl border border-border bg-surface-muted px-3 text-sm font-medium text-foreground/70"
-              title={subjectName}
-            >
-              <span className="max-w-44 truncate">{subjectName}</span>
-            </span>
-          ) : null}
-          {topics.length > 0 ? (
-            <div className="w-44">
-              <Dropdown
-                value={draft.topicId ?? ""}
-                onChange={(value) => update({ topicId: value || null })}
-                ariaLabel={t.topics.selectLabel}
-                placeholder={t.topics.none}
-                options={[
-                  { value: "", label: t.topics.none },
-                  ...topics.map((topic) => ({
-                    value: topic.id,
-                    label: topic.name,
-                  })),
-                ]}
-              />
-            </div>
-          ) : null}
-          <span
-            className={cn(
-              "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide",
-              initial.closedAt
-                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
-                : initial.published
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                  : "bg-surface-muted text-foreground/50",
-            )}
-          >
-            {initial.closedAt ? a.closed : initial.published ? a.published : a.draft}
-          </span>
-          <span className="text-xs font-semibold text-foreground/50">
-            {a.pointsTotal(total)} · {a.questionCount(draft.content.questions.length)}
-          </span>
         </div>
 
-        <input
-          value={draft.title}
-          onChange={(event) => update({ title: event.target.value })}
-          placeholder={a.untitled}
-          className="w-full border-b border-border bg-transparent pb-2 text-2xl font-bold text-foreground outline-none transition-colors focus:border-brand-400"
-        />
-
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-foreground/60">
-          {a.dueDate}
-          <DatePicker
-            value={draft.dueAt ? toDateOnly(draft.dueAt) : null}
-            onChange={(dateOnly) =>
-              update({
-                dueAt: dateOnly
-                  ? new Date(`${dateOnly}T12:00:00`).toISOString()
-                  : null,
-              })
-            }
-            placeholder={a.dueDate}
-            clearLabel={a.clearDueDate}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-foreground/60">
+        <div className="flex flex-col gap-1.5 border-t border-border px-5 pb-5 pt-4">
+          <span className="text-xs font-bold uppercase tracking-[0.14em] text-foreground/45">
             {a.instructions}
           </span>
           <RichTextEditor
             value={draft.instructions ?? emptyDoc()}
+            readOnly={locked}
             onChange={(instructions) => update({ instructions })}
             placeholder={a.instructionsPlaceholder}
+            editorClassName="min-h-[50px]"
           />
         </div>
-      </div>
+      </section>
 
-      <div className="flex flex-col gap-4">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
-          {a.questions}
-        </h2>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-foreground/45">
+            {a.questions}
+          </h2>
+          {draft.content.questions.length > 0 ? (
+            <span className="text-xs font-semibold text-foreground/45">
+              {a.questionCount(draft.content.questions.length)} · {a.pointsTotal(total)}
+            </span>
+          ) : null}
+        </div>
+
+        {allowEmptyPrompt ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-surface-muted/30 px-6 py-8 text-center">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface ring-1 ring-border">
+              <ListChecks className="h-5 w-5 text-foreground/40" />
+            </span>
+            <p className="text-sm font-semibold text-foreground/70">{a.noQuestionsTitle}</p>
+            <p className="max-w-sm text-xs font-medium text-foreground/45">
+              {a.noQuestionsHint}
+            </p>
+          </div>
+        ) : null}
 
         {draft.content.questions.map((question, index) => (
           <QuestionEditor
@@ -436,35 +478,61 @@ export function AssessmentEditor({
             onMoveDown={() => moveQuestion(index, 1)}
             onDuplicate={() => duplicateQuestion(index)}
             onRemove={() => setRemoveIndex(index)}
+            readOnly={locked}
           />
         ))}
 
-        <div className="relative">
+        {locked ? null : addOpen ? (
+          <div className="rounded-2xl border border-border bg-surface p-2 shadow-sm">
+            <div className="flex items-center justify-between px-2 pb-2 pt-1">
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-foreground/45">
+                {a.addQuestion}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAddOpen(false)}
+                aria-label={a.close}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-foreground/45 transition-colors hover:bg-surface-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {ADD_TYPES.map((type) => {
+                const Icon = QUESTION_TYPE_ICON[type];
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => addQuestion(type)}
+                    className="flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-colors hover:border-border hover:bg-surface-muted"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-foreground/55">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="flex flex-col">
+                      <span className="text-sm font-semibold text-foreground/85">
+                        {a.questionTypes[type]}
+                      </span>
+                      <span className="text-[11px] font-medium text-foreground/45">
+                        {a.questionTypeHints[type]}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
           <button
             type="button"
-            onClick={() => setAddOpen((value) => !value)}
-            className="btn-ink gap-1.5"
+            onClick={() => setAddOpen(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-4 py-3 text-sm font-semibold text-foreground/65 transition-colors hover:border-brand-400 hover:bg-surface-muted/50 hover:text-foreground"
           >
             <Plus className="h-4 w-4" strokeWidth={2.5} />
             {a.addQuestion}
-            <ChevronDown className="h-3.5 w-3.5" />
           </button>
-
-          {addOpen ? (
-            <div className="mt-2 grid w-full max-w-md grid-cols-2 gap-1 rounded-xl border border-border bg-surface p-2 shadow-lg">
-              {ADD_TYPES.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => addQuestion(type)}
-                  className="rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground/75 transition-colors hover:bg-surface-muted hover:text-foreground"
-                >
-                  {a.questionTypes[type]}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        )}
       </div>
 
       {typeof document !== "undefined"
