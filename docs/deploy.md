@@ -82,19 +82,26 @@ Two **spec** bugs were fixed (the app was fine):
 - the gradebook journey edited `data-cell="0:0"`, which is the computed
   **General** aggregate, not a grade column.
 
-Green against production (9): public smoke (3), login smoke, teacher signs in,
-attendance mark persists, messaging composer validates, teacher turn-in + photo
-(the journey that would have caught the 20 Oct regressions).
+Green against production (10): public smoke (3), login smoke, teacher signs in,
+gradebook autosave, attendance mark persists, messaging composer validates,
+teacher turn-in + photo (the journey that would have caught the 20 Oct
+regressions).
 
-**Known red — needs an owner decision**
+**Resolved 20 Oct — the gradebook autosave was never broken.** Row 0's student
+has an active Apoyos whose period registro is pending, so the app correctly
+refuses the grade and returns the flags (`needsPeriodRegistration: true`). The
+journey now edits a student who is not gated, in a column worth ≥5 points (the
+save clamps to the column max), and restores the original value.
 
-- `gradebook › editing a grade autosaves` is `test.fixme`. The cell accepts the
-  value and the server action answers 200, but no `grades` row appears for that
-  student/column. Either the E2E teacher lacks write scope on 1B or the action
-  silently no-ops — diagnose before trusting the gradebook journey.
-- `a11y` authenticated pages report **color-contrast** (serious) on the header
-  wordmark and the 10 px section labels on Inicio. Real findings; the fix is a
-  design/token change.
+**Known red — QA-12 (owner decision)**
 
-The `e2e` CI job stays red until those are resolved, on purpose — not skipped.
+`a11y` authenticated pages report **color-contrast** (serious) on ~30 elements
+across Inicio and the gradebook: `text-foreground/45`–`/55` at 9–10 px in the
+gradebook headers and footer, hub card subtitles, and `opacity-75/80` badges.
+Two were fixed (header wordmark, sidebar group labels); the rest is a
+**design-token pass**. Rule of thumb: `text-foreground/70` or darker below 12 px.
+
+The `e2e` CI job stays red on the a11y checks until QA-12 lands, on purpose. The
+behavioural journeys themselves all pass.
+
 

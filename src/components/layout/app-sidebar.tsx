@@ -144,7 +144,7 @@ function Section({ label, collapsed }: { label: string; collapsed: boolean }) {
   return (
     <div
       className={cn(
-        "mt-4 mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-foreground/40 first:mt-0",
+        "mt-4 mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-foreground/70 first:mt-0",
         collapsed && "md:hidden",
       )}
     >

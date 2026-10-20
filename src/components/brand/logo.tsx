@@ -51,7 +51,7 @@ export function LogoCompact({ className = "", ...props }: LogoProps) {
         <span className="font-bold leading-none tracking-tight logo-school">
           School
         </span>
-        <span className="mt-[0.18em] text-[0.5em] font-semibold uppercase leading-none tracking-[0.16em] text-foreground/55">
+        <span className="mt-[0.18em] text-[0.5em] font-semibold uppercase leading-none tracking-[0.16em] text-foreground/75">
           TEACHERS
         </span>
       </span>
