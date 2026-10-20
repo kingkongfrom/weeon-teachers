@@ -131,18 +131,25 @@ export function ConductWorkspace({
 
   const summaries = useMemo(() => summarizeConduct(records), [records]);
 
-  const visibleStudents = students.filter((student) =>
-    studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
+  // "Todos" plus each student. It narrows the summary table and the log — it is
+  // not a shortcut to the entry form (that is «Registrar anotación»).
+  const filterActive = studentFilter !== "all";
+  const visibleStudents = students.filter(
+    (student) =>
+      (!filterActive || student.id === studentFilter) &&
+      studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
   );
 
+  function clearFilters() {
+    setStudentFilter("all");
+    setQuery("");
+  }
+
   const filteredRecords = records.filter((row) => {
-    if (studentFilter !== "all" && row.studentId !== studentFilter) return false;
-    if (query.trim()) {
-      const student = students.find((s) => s.id === row.studentId);
-      if (!student) return false;
-      return studentName(student).toLowerCase().includes(query.trim().toLowerCase());
-    }
-    return true;
+    if (filterActive && row.studentId !== studentFilter) return false;
+    if (!query.trim()) return true;
+    const student = students.find((s) => s.id === row.studentId);
+    return student != null && studentName(student).toLowerCase().includes(query.trim().toLowerCase());
   });
 
   async function handleCreate(payload: {
@@ -316,13 +323,46 @@ export function ConductWorkspace({
           </section>
 
           <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-foreground/45">
-              {c.logTitle}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-foreground/45">
+                {c.logTitle}
+              </h2>
+              {filterActive || query.trim() ? (
+                <div className="flex items-center gap-3 text-xs font-semibold">
+                  <span className="text-foreground/50">
+                    {filterActive
+                      ? (() => {
+                          const chosen = students.find((s) => s.id === studentFilter);
+                          return chosen ? studentName(chosen) : c.allStudents;
+                        })()
+                      : `${c.selectedCount(visibleStudents.length)}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="inline-flex items-center gap-1 text-[#5e25cc] hover:underline dark:text-[#b9a3f7]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    {c.clearFilter}
+                  </button>
+                </div>
+              ) : null}
+            </div>
             {filteredRecords.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-12 text-center">
                 <Shield className="h-8 w-8 text-foreground/25" strokeWidth={1.75} />
-                <p className="text-sm font-medium text-foreground/55">{c.emptyLog}</p>
+                <p className="text-sm font-medium text-foreground/55">
+                  {records.length === 0 ? c.emptyLog : c.emptyFilteredLog}
+                </p>
+                {records.length === 0 ? null : (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="text-sm font-semibold text-[#5e25cc] hover:underline dark:text-[#b9a3f7]"
+                  >
+                    {c.clearFilter}
+                  </button>
+                )}
               </div>
             ) : (
               <ul className="flex flex-col gap-2">
