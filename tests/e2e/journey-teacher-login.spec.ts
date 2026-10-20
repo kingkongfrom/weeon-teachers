@@ -76,18 +76,33 @@ test.describe("Teacher login", () => {
         await cell.click();
         await cell.fill(next);
         await cell.press("Enter");
-        await page.waitForTimeout(2000);
 
-        await page.reload();
-        const reloaded = page.locator(`input[data-cell="${target}"]`);
-        await expect(reloaded).toBeVisible({ timeout: 20000 });
-        await expect(reloaded).toHaveValue(next);
+        // The write goes through a server action: on a slow runner the reload
+        // can beat it. Poll the persisted value rather than sleeping once.
+        await expect
+          .poll(
+            async () => {
+              await page.reload();
+              return page.locator(`input[data-cell="${target}"]`).inputValue();
+            },
+            { timeout: 30000, intervals: [2000] },
+          )
+          .toBe(next);
 
         // Restore so repeated runs and the demo school stay clean.
-        await reloaded.click();
-        await reloaded.fill(original);
-        await reloaded.press("Enter");
-        await page.waitForTimeout(1500);
+        const restored = page.locator(`input[data-cell="${target}"]`);
+        await restored.click();
+        await restored.fill(original);
+        await restored.press("Enter");
+        await expect
+          .poll(
+            async () => {
+              await page.reload();
+              return page.locator(`input[data-cell="${target}"]`).inputValue();
+            },
+            { timeout: 30000, intervals: [2000] },
+          )
+          .toBe(original);
       });
     });
   });
