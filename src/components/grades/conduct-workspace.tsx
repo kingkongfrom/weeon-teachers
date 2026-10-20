@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -506,6 +506,31 @@ function AddConductDialog({
   const [description, setDescription] = useState("");
   const [points, setPoints] = useState("1");
   const [pending, setPending] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * While the sheet is open everything on the page except this overlay is
+   * `inert`: it cannot be scrolled, focused or tab-reached, so a wheel inside
+   * the sheet never scrolls the bitácora behind it. Restored on close.
+   */
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    const body = document.body;
+    if (!overlay) return;
+
+    const siblings = Array.from(body.children).filter(
+      (child): child is HTMLElement =>
+        child instanceof HTMLElement && child !== overlay && !child.hasAttribute("inert"),
+    );
+    siblings.forEach((sibling) => sibling.setAttribute("inert", ""));
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = "hidden";
+
+    return () => {
+      siblings.forEach((sibling) => sibling.removeAttribute("inert"));
+      body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   const categoryOptions = categoriesForKind(kind);
   const selected = new Set(studentIds);
@@ -553,7 +578,10 @@ function AddConductDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-[100] flex items-end justify-center overscroll-contain sm:items-center"
+    >
       <motion.button
         type="button"
         aria-label={t.common.close}
