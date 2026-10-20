@@ -38,7 +38,7 @@ test.describe("Teacher messaging", () => {
       .first()
       .fill("Prueba E2E");
     // The send control is present but disabled until a recipient is chosen.
-    const send = page.getByRole("button", { name: /enviar mensaje|send message/i });
+    const send = page.getByRole("button", { name: /^enviar$|^send$/i });
     await expect(send).toBeVisible();
     await expect(send).toBeDisabled();
   });

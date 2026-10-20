@@ -1,7 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-// Journey 3 (docs/testing.md §7): teacher marks attendance in aula virtual; the
-// value persists. Requires a seeded teacher + class (E2E_CLASS_ID).
+// Journey 4 (docs/testing.md §7 — QA-6): marking a student present persists
+// after a reload.
+//
+// The register (components/attendance/attendance-register.tsx) shows each
+// student as a status chip that opens a `listbox` of codes; it is not a
+// radiogroup (that assumption made this journey fail since the UI changed).
 
 const TEACHER_USER = process.env.E2E_TEACHER_USERNAME;
 const TEACHER_PASSWORD = process.env.E2E_TEACHER_PASSWORD;
@@ -14,34 +18,32 @@ test.describe("Teacher attendance", () => {
   test("marking a student present persists after reload", async ({ page }) => {
     await page.goto("/");
     await page.getByLabel(/usuario|correo|email/i).fill(TEACHER_USER!);
-    await page
-      .getByRole("button", { name: /continuar|siguiente/i })
-      .click();
-    await page.locator('input[type="password"]').first().fill(TEACHER_PASSWORD!);
-    await page.getByRole("button", { name: /entrar|ingresar|iniciar/i }).click();
+    const password = page.locator('input[type="password"]');
+    if ((await password.count()) === 0) {
+      await page.getByRole("button", { name: /continuar|siguiente/i }).click();
+    }
+    await password.first().fill(TEACHER_PASSWORD!);
+    await page.getByRole("button", { name: /^entrar$|ingresar|iniciar/i }).click();
     await page.waitForURL(/\/(inicio|crear-contrasena)/, { timeout: 30000 });
 
     await page.goto(`/aula-virtual/${CLASS_ID}?tab=asistencia`);
-    const tab = page.getByRole("tab", { name: /asistencia/i });
-    await expect(tab).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole("tab", { name: /asistencia/i })).toBeVisible({ timeout: 20000 });
 
-    // Each student row is a radiogroup; the "Presente" radio is first.
-    const firstGroup = page.getByRole("radiogroup").first();
-    await expect(firstGroup).toBeVisible({ timeout: 20000 });
-    const present = firstGroup.getByRole("radio", { name: /presente|present/i }).first();
-    await present.click();
+    // First student's status chip opens a listbox; pick the present option.
+    const chip = page.locator('button[aria-haspopup="listbox"]').first();
+    await expect(chip).toBeVisible({ timeout: 20000 });
+    await chip.click();
+    const listbox = page.getByRole("listbox").first();
+    await expect(listbox).toBeVisible({ timeout: 10000 });
+    await listbox.getByRole("option").first().click();
 
-    // Autosave debounce is 600ms; give the round-trip time to settle.
-    await page.waitForTimeout(1500);
+    // Autosave debounce is ~600 ms; let the round-trip settle.
+    await page.waitForTimeout(2000);
 
     await page.reload();
-    const persisted = page
-      .getByRole("radiogroup")
-      .first()
-      .getByRole("radio", { name: /presente|present/i })
-      .first();
-    await expect(persisted).toHaveAttribute("aria-checked", "true", {
-      timeout: 20000,
-    });
+    const reloaded = page.locator('button[aria-haspopup="listbox"]').first();
+    await expect(reloaded).toBeVisible({ timeout: 20000 });
+    // A saved mark renders a short code (P/TJ/TI/AJ/A), not the empty label.
+    await expect(reloaded).toHaveText(/^(P|TJ|TI|AJ|A|Presente|Present)$/i, { timeout: 10000 });
   });
 });

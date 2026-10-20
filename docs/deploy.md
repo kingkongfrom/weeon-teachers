@@ -82,9 +82,9 @@ Two **spec** bugs were fixed (the app was fine):
 - the gradebook journey edited `data-cell="0:0"`, which is the computed
   **General** aggregate, not a grade column.
 
-Green against production: public smoke (3), login smoke, teacher signs in,
-teacher turn-in + photo (the journey that would have caught the 20 Oct
-regressions).
+Green against production (9): public smoke (3), login smoke, teacher signs in,
+attendance mark persists, messaging composer validates, teacher turn-in + photo
+(the journey that would have caught the 20 Oct regressions).
 
 **Known red — needs an owner decision**
 
