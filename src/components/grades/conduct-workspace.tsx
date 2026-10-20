@@ -568,7 +568,7 @@ function AddConductDialog({
         role="dialog"
         aria-modal="true"
         aria-label={c.addEntry}
-        className="relative z-10 max-h-[90vh] w-full max-w-md overflow-visible rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl"
+        className="relative z-10 flex max-h-[90vh] w-full max-w-md flex-col rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl"
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 24 }}
@@ -586,7 +586,9 @@ function AddConductDialog({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="mt-4 flex min-h-0 flex-1 flex-col">
+          {/* Fields scroll; the Cancel/Save row below stays visible. */}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-1">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-foreground/70">{c.studentsLabel}</span>
@@ -758,8 +760,9 @@ function AddConductDialog({
               <span className="text-xs font-medium text-foreground/50">{c.pointsHint}</span>
             </div>
           </div>
+          </div>
 
-          <div className="mt-1 flex justify-end gap-2">
+          <div className="mt-1 flex shrink-0 justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
