@@ -73,6 +73,11 @@ test.describe("Teacher login", () => {
         const original = (await cell.inputValue()) || "";
         const next = original === String(max) ? String(Math.max(0, max - 1)) : String(max);
 
+        // The Apoyos flags arrive asynchronously. Give them time to settle so we
+        // are not typing into a row whose gate has not rendered yet.
+        await page.waitForLoadState("networkidle").catch(() => {});
+        await page.waitForTimeout(1500);
+
         await cell.click();
         await cell.fill(next);
         await cell.press("Enter");
