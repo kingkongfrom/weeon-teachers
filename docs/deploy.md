@@ -58,7 +58,6 @@ add `VERCEL_TOKEN` (same value as `VERCEL_API_KEY`). `VERCEL_ORG_ID` /
 in `.vercel/project.json`.
 
 ## Mobile (EAS) — still blocked
-
 `weeon-mobile` is not linked to a Vercel project (it is an Expo app). Building it
 needs an Expo access token in `EXPO_TOKEN`; `npx eas-cli whoami` reports not
 logged in, so until the owner creates the token, mobile ships by hand:
@@ -67,3 +66,35 @@ logged in, so until the owner creates the token, mobile ships by hand:
 npx eas-cli login
 npx eas-cli build --profile preview -p android
 ```
+
+## E2E suite status (20 Oct)
+
+Secrets configured by the owner: `VERCEL_TOKEN`, `SUPABASE_URL`,
+`SUPABASE_ANON_KEY`, `E2E_TEACHER_USERNAME/PASSWORD` (`evarela02`),
+`E2E_CLASS_ID`, `E2E_ASSESSMENT_ID`; repo variable `E2E_BASE_URL` =
+`https://teachers.weeon.school`.
+
+Two **spec** bugs were fixed (the app was fine):
+
+- every journey used `getByLabel(/contraseña|password/i)`, which also matches the
+  **Mostrar contraseña** button, so Playwright strict mode aborted. Logins now
+  handle the one-form and two-step variants and target `input[type=password]`.
+- the gradebook journey edited `data-cell="0:0"`, which is the computed
+  **General** aggregate, not a grade column.
+
+Green against production: public smoke (3), login smoke, teacher signs in,
+teacher turn-in + photo (the journey that would have caught the 20 Oct
+regressions).
+
+**Known red — needs an owner decision**
+
+- `gradebook › editing a grade autosaves` is `test.fixme`. The cell accepts the
+  value and the server action answers 200, but no `grades` row appears for that
+  student/column. Either the E2E teacher lacks write scope on 1B or the action
+  silently no-ops — diagnose before trusting the gradebook journey.
+- `a11y` authenticated pages report **color-contrast** (serious) on the header
+  wordmark and the 10 px section labels on Inicio. Real findings; the fix is a
+  design/token change.
+
+The `e2e` CI job stays red until those are resolved, on purpose — not skipped.
+

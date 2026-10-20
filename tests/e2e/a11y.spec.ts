@@ -32,9 +32,9 @@ async function signIn(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByLabel(/usuario|correo|email/i).fill(TEACHER_USER!);
   await page
-    .getByRole("button", { name: /continuar|siguiente|entrar|ingresar/i })
+    .getByRole("button", { name: /continuar|siguiente/i })
     .click();
-  await page.getByLabel(/contraseña|password/i).fill(TEACHER_PASSWORD!);
+  await page.locator('input[type="password"]').first().fill(TEACHER_PASSWORD!);
   await page.getByRole("button", { name: /entrar|ingresar|iniciar/i }).click();
   await page.waitForURL(/\/(inicio|crear-contrasena)/, { timeout: 30000 });
 }
