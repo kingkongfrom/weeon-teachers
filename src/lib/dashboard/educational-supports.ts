@@ -23,6 +23,8 @@ type SupportRow = {
   subject_scope: string;
   subject_ids: string[] | null;
   subject_labels: string[] | null;
+  observations: string | null;
+  updated_at: string | null;
   created_at: string;
 };
 
@@ -46,6 +48,8 @@ function mapSupport(row: SupportRow): EducationalSupport {
     subjectScope: row.subject_scope as EducationalSupportSubjectScope,
     subjectIds: row.subject_ids ?? [],
     subjectLabels: row.subject_labels ?? [],
+    observations: row.observations ?? null,
+    updatedAt: row.updated_at ?? null,
     createdAt: row.created_at,
   };
 }

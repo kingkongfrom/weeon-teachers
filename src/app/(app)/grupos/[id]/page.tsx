@@ -90,6 +90,7 @@ export default async function GrupoDetailPage({
           students={detail.students}
           initialRecords={tardias}
           locale={locale}
+          supportFlags={supportFlags}
         />
       ) : (
         <GradebookWorkspace

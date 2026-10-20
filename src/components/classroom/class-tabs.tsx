@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ChevronRight, GraduationCap } from "lucide-react";
+import { ArrowUpRight, ChevronRight, GraduationCap, HandHeart } from "lucide-react";
+import { fetchClassEducationalSupportFlags } from "@/lib/teachers/educational-support-actions";
+import type { ClassEducationalSupportFlags } from "@/lib/educational-supports/model";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
-import { hubToneSegment, hubToneSurface, SEGMENT_TRACK, TONE_AVATAR, type Tone } from "@/lib/dashboard/tones";
+import { hubToneSurface, TONE_AVATAR } from "@/lib/dashboard/tones";
 import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
 import { ClassworkPanel } from "@/components/classroom/classwork-panel";
 import { ExamDatesPanel } from "@/components/assessments/exam-dates-panel";
@@ -14,18 +16,9 @@ import type { AttendanceEntry } from "@/lib/attendance/model";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
 import type { ClassLessonDay, ExamDate } from "@/lib/dashboard/exam-dates";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
-import type { ClassTopic } from "@/lib/dashboard/topics";
 import type { AssessmentSummary } from "@/lib/assessments/model";
 
 type TabId = "trabajo" | "examenes" | "personas" | "asistencia" | "calificaciones";
-
-const TAB_TONE: Record<TabId, Tone> = {
-  trabajo: "purple",
-  examenes: "rose",
-  personas: "green",
-  asistencia: "yellow",
-  calificaciones: "rose",
-};
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -44,7 +37,6 @@ export function ClassTabs({
   assessments,
   examDates = [],
   lessonDays = [],
-  topics,
   selectedSubjectId,
   subjects,
   initialTab,
@@ -61,7 +53,6 @@ export function ClassTabs({
   assessments: AssessmentSummary[];
   examDates?: ExamDate[];
   lessonDays?: ClassLessonDay[];
-  topics: ClassTopic[];
   selectedSubjectId: string | null;
   subjects: { id: string; name: string }[];
   initialTab?: string;
@@ -76,6 +67,22 @@ export function ClassTabs({
     VALID_TABS.includes(initialTab as TabId) ? (initialTab as TabId) : "trabajo",
   );
   const [justificationBadge, setJustificationBadge] = useState(pendingJustifications);
+  const [supportFlags, setSupportFlags] = useState<ClassEducationalSupportFlags>({});
+
+  // Supports are per subject; the roster badge uses the class subject so a
+  // student with an accommodation is visible before opening any gradebook.
+  useEffect(() => {
+    let active = true;
+    void fetchClassEducationalSupportFlags({
+      classId,
+      subjectId: selectedSubjectId,
+    }).then((res) => {
+      if (active && res.ok) setSupportFlags(res.flags);
+    });
+    return () => {
+      active = false;
+    };
+  }, [classId, selectedSubjectId]);
 
   useEffect(() => {
     setJustificationBadge(pendingJustifications);
@@ -91,10 +98,11 @@ export function ClassTabs({
 
   return (
     <div className="flex flex-col">
+      {/* Section tabs read as one control; the active one keeps its tint. */}
       <div
         role="tablist"
         aria-label={t.classroom.tabs.aria}
-        className={SEGMENT_TRACK}
+        className="flex flex-wrap items-center gap-1 border-b border-border pb-2"
       >
         {tabs.map(({ id, label }) => {
           const active = tab === id;
@@ -106,8 +114,10 @@ export function ClassTabs({
               aria-selected={active}
               onClick={() => setTab(id)}
               className={cn(
-                "inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
-                hubToneSegment(TAB_TONE[id], active),
+                "relative inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                active
+                  ? "bg-[#ece5fb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]"
+                  : "text-foreground/55 hover:bg-surface-muted hover:text-foreground",
               )}
             >
               {label}
@@ -132,8 +142,7 @@ export function ClassTabs({
             classId={classId}
             assessments={assessments}
             materials={materials}
-            topics={topics}
-            selectedSubjectId={selectedSubjectId}
+              selectedSubjectId={selectedSubjectId}
             subjects={subjects}
             studentCount={students.length}
           />
@@ -186,6 +195,7 @@ export function ClassTabs({
                       <PersonCard
                         name={`${student.lastName} ${student.firstName}`.trim()}
                         imageUrl={student.avatarUrl}
+                        supportCount={supportFlags[student.id]?.activeCount ?? 0}
                         href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/aula-virtual/${classId}?tab=personas`)}`}
                       />
                     </li>
@@ -263,12 +273,16 @@ function PersonCard({
   subtitle,
   imageUrl,
   href,
+  supportCount = 0,
 }: {
   name: string;
   subtitle?: string | null;
   imageUrl?: string | null;
   href?: string;
+  /** Active Apoyos Eduativos, shown as a discreet badge next to the name. */
+  supportCount?: number;
 }) {
+  const t = useT();
   const content = (
     <div
       className={cn(
@@ -284,8 +298,19 @@ function PersonCard({
           {initialsOf(name)}
         </span>
       )}
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className="truncate text-sm font-semibold text-foreground">{name}</span>
+          {supportCount > 0 ? (
+            <span
+              title={t.educationalSupports.sectionTitle}
+              className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full bg-brand-50 px-1.5 text-[10px] font-bold text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+            >
+              <HandHeart className="h-3 w-3" strokeWidth={2.5} />
+              {supportCount}
+            </span>
+          ) : null}
+        </span>
         {subtitle ? (
           <span className="block truncate text-xs font-medium text-foreground/50">{subtitle}</span>
         ) : null}

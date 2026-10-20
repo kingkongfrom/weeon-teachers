@@ -282,6 +282,23 @@ const es = {
   },
   educationalSupports: {
     sectionTitle: "Apoyos Eduativos",
+    editSupport: "Completar / extender",
+    editSupportTitle: "Editar apoyo",
+    supportTitleLabel: "Título",
+    adaptationLabel: "Adecuación",
+    extendUntilLabel: "Extender adecuación",
+    currentVigencia: "Vigente hasta",
+    vigenciaUntil: "Hasta",
+    loadingPeriods: "Cargando periodos…",
+    samePeriodHint:
+      "No quedan periodos posteriores en este año lectivo para extender la vigencia.",
+    extendUntilHint: "Elija el periodo hasta el cual se mantiene la adecuación.",
+    observations: "Observaciones",
+    observationsPlaceholder: "Cómo avanza el estudiante con esta adecuación…",
+    addObservation: "Agregar observación",
+    saveSupport: "Guardar cambio",
+    editClearsAck:
+      "Al guardar, el apoyo se marca como modificado y los docentes deberán leerlo de nuevo antes de calificar.",
     badgeLabel: "Apoyos Eduativos",
     badgePendingRead: "Pendiente: leer apoyos institucionales",
     badgePendingRegistration: "Pendiente: registro de apoyos del periodo",
@@ -584,7 +601,7 @@ const es = {
     kind: "Tipo",
     questionCount: (n: number) => `${n} ${n === 1 ? "pregunta" : "preguntas"}`,
     instructions: "Instrucciones",
-    instructionsPlaceholder: "Escriba las instrucciones para los estudiantes…",
+    instructionsPlaceholder: "Proporciona instrucciones para los estudiantes…",
     questions: "Preguntas",
     addQuestion: "Añadir pregunta",
     questionTypes: {
@@ -595,6 +612,17 @@ const es = {
       paragraph: "Párrafo",
       number: "Número",
     },
+    questionTypeHints: {
+      multiple_choice: "Una sola respuesta correcta",
+      multiple_answer: "Varias respuestas correctas",
+      true_false: "Dos opciones",
+      short_answer: "Respuesta escrita breve",
+      paragraph: "Respuesta abierta larga",
+      number: "Resultado numérico",
+    },
+    noQuestionsTitle: "Aún no hay preguntas",
+    noQuestionsHint:
+      "Añada la primera pregunta para que los estudiantes puedan responder.",
     questionPromptPlaceholder: "Escriba la pregunta…",
     optionPlaceholder: "Opción",
     addOption: "Añadir opción",
@@ -661,6 +689,10 @@ const es = {
       save: "No se pudo guardar. Intente de nuevo.",
       delete: "No se pudo eliminar.",
       tooManyQuestions: "Demasiadas preguntas.",
+      lockedSubmitted:
+        "Ya hay estudiantes que entregaron: la tarea no se puede modificar. Se desbloquea solo si borra todas las entregas.",
+      lockedPoints:
+        "Los puntos de esta columna ya no se pueden cambiar porque hay calificaciones. Use una columna nueva.",
     },
   },
   reportes: {
@@ -900,6 +932,7 @@ const es = {
     },
   },
   classroom: {
+    title: "Aula virtual",
     back: "Aula virtual",
     teacherFallback: "Docente",
     tabs: {
@@ -920,6 +953,7 @@ const es = {
     openGrades: "Abrir calificaciones",
     publish: "Publicar",
     materials: "Materiales de estudio",
+    subjectsLabel: "Materias",
     moreOptions: "Más opciones",
     materialsPanel: {
       heading: "Materiales de estudio",
@@ -1462,6 +1496,23 @@ const en: Messages = {
   },
   educationalSupports: {
     sectionTitle: "Educational supports",
+    editSupport: "Complete / extend",
+    editSupportTitle: "Edit support",
+    supportTitleLabel: "Title",
+    adaptationLabel: "Accommodation",
+    extendUntilLabel: "Extend accommodation",
+    currentVigencia: "Effective until",
+    vigenciaUntil: "Until",
+    loadingPeriods: "Loading periods…",
+    samePeriodHint:
+      "No later periods remain in this academic year to extend the vigencia.",
+    extendUntilHint: "Choose the period through which the accommodation stays in effect.",
+    observations: "Observations",
+    observationsPlaceholder: "How the student is progressing with this accommodation…",
+    addObservation: "Add observation",
+    saveSupport: "Save change",
+    editClearsAck:
+      "On save the support is marked as changed and teachers must read it again before grading.",
     badgeLabel: "Educational supports",
     badgePendingRead: "Pending: read institutional supports",
     badgePendingRegistration: "Pending: period support registration",
@@ -1761,7 +1812,7 @@ const en: Messages = {
     kind: "Type",
     questionCount: (n: number) => `${n} ${n === 1 ? "question" : "questions"}`,
     instructions: "Instructions",
-    instructionsPlaceholder: "Write instructions for students…",
+    instructionsPlaceholder: "Provide instructions for the students…",
     questions: "Questions",
     addQuestion: "Add question",
     questionTypes: {
@@ -1772,6 +1823,16 @@ const en: Messages = {
       paragraph: "Paragraph",
       number: "Number",
     },
+    questionTypeHints: {
+      multiple_choice: "One correct answer",
+      multiple_answer: "Several correct answers",
+      true_false: "Two options",
+      short_answer: "Brief written answer",
+      paragraph: "Long open answer",
+      number: "Numeric result",
+    },
+    noQuestionsTitle: "No questions yet",
+    noQuestionsHint: "Add the first question so students can answer.",
     questionPromptPlaceholder: "Write the question…",
     optionPlaceholder: "Option",
     addOption: "Add option",
@@ -1838,6 +1899,10 @@ const en: Messages = {
       save: "Couldn't save. Try again.",
       delete: "Couldn't delete.",
       tooManyQuestions: "Too many questions.",
+      lockedSubmitted:
+        "Students already turned it in: this assignment can no longer be edited. It unlocks only when all turn-ins are deleted.",
+      lockedPoints:
+        "This column's points can no longer change because it has grades. Create a new column instead.",
     },
   },
   reportes: {
@@ -2076,6 +2141,7 @@ const en: Messages = {
     },
   },
   classroom: {
+    title: "Virtual classroom",
     back: "Virtual classroom",
     teacherFallback: "Teacher",
     tabs: {
@@ -2096,6 +2162,7 @@ const en: Messages = {
     openGrades: "Open grades",
     publish: "Publish",
     materials: "Study materials",
+    subjectsLabel: "Subjects",
     moreOptions: "More options",
     materialsPanel: {
       heading: "Study materials",

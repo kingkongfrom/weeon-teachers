@@ -14,6 +14,9 @@ type DropdownProps = {
   placeholder?: string;
   /** Taller trigger for form dialogs (h-10). Default h-9. */
   size?: "default" | "form";
+  /** Let the trigger shrink to its content instead of filling the width. */
+  fitContent?: boolean;
+  disabled?: boolean;
 };
 
 /** Styled dropdown (button + custom menu) so the menu corners can be rounded
@@ -25,6 +28,8 @@ export function Dropdown({
   ariaLabel,
   placeholder,
   size = "default",
+  fitContent = false,
+  disabled = false,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -54,15 +59,15 @@ export function Dropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
+        disabled={disabled}
         onClick={() => setOpen((was) => !was)}
         className={cn(
-          "inline-flex w-full min-w-36 cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors hover:bg-surface-muted focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25",
+          "inline-flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors hover:bg-surface-muted focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25 disabled:cursor-not-allowed disabled:opacity-50",
+          fitContent ? "w-auto max-w-full" : "w-full min-w-36",
           size === "form" ? "h-10" : "h-9",
         )}
       >
-        <span className="truncate">
-          {current?.label ?? placeholder ?? "Seleccionar"}
-        </span>
+        <span className="truncate">{current?.label ?? placeholder ?? "Seleccionar"}</span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-foreground/40 transition-transform ${open ? "rotate-180" : ""}`}
         />

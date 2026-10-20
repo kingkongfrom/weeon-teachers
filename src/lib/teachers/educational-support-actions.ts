@@ -9,6 +9,7 @@ import type {
   EducationalSupportRegistration,
   EducationalSupportRegistrationInput,
   EducationalSupportSubjectScope,
+  SchoolPeriodOption,
 } from "@/lib/educational-supports/model";
 import { createSessionClient } from "@/lib/supabase/session";
 
@@ -26,6 +27,8 @@ type SupportRow = {
   subject_scope: string;
   subject_ids: string[] | null;
   subject_labels: string[] | null;
+  observations: string | null;
+  updated_at: string | null;
   created_at: string;
 };
 
@@ -42,6 +45,8 @@ function mapSupport(row: SupportRow): EducationalSupport {
     subjectScope: row.subject_scope as EducationalSupportSubjectScope,
     subjectIds: row.subject_ids ?? [],
     subjectLabels: row.subject_labels ?? [],
+    observations: row.observations ?? null,
+    updatedAt: row.updated_at ?? null,
     createdAt: row.created_at,
   };
 }
@@ -270,6 +275,142 @@ export async function acknowledgeStudentEducationalSupports(input: {
   if (parsed.data.classId) {
     revalidatePath(`/grupos/${parsed.data.classId}`);
   }
+  revalidatePath(`/estudiantes/${parsed.data.studentId}`);
+  return { ok: true };
+}
+const updateSupportSchema = z.object({
+  id: z.string().uuid(),
+  studentId: z.string().uuid(),
+  classId: z.string().uuid().optional(),
+  title: z.string().trim().min(3).max(120),
+  description: z.string().trim().min(3).max(2000),
+  effectiveUntil: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  observations: z.string().trim().max(2000).nullable().optional(),
+});
+
+/**
+ * Teacher completion/extension of an existing support plus an observation note.
+ * The RPC stamps who edited it and clears the read acknowledgements, so the
+ * group badges correctly ask every teacher to read the new version.
+ */
+export async function updateStudentEducationalSupport(input: {
+  id: string;
+  studentId: string;
+  classId?: string;
+  title: string;
+  description: string;
+  effectiveUntil?: string | null;
+  observations?: string | null;
+}): Promise<EducationalSupportActionResult> {
+  const parsed = updateSupportSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Revise el título, la descripción y las observaciones." };
+  }
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("update_student_educational_support", {
+    p_id: parsed.data.id,
+    p_title: parsed.data.title,
+    p_description: parsed.data.description,
+    p_effective_until: parsed.data.effectiveUntil ?? null,
+    p_observations: parsed.data.observations ?? null,
+  });
+
+  if (error) {
+    if (error.message.includes("invalid_range")) {
+      return { ok: false, error: "La fecha de fin no puede ser anterior al inicio del apoyo." };
+    }
+    if (error.message.includes("support_not_found")) {
+      return { ok: false, error: "El apoyo ya no existe. Recargue la página." };
+    }
+    if (error.message.includes("forbidden")) {
+      return { ok: false, error: "No tiene permiso para editar los apoyos de este estudiante." };
+    }
+    return { ok: false, error: "No se pudo actualizar el apoyo educativo." };
+  }
+
+  if (parsed.data.classId) {
+    revalidatePath(`/grupos/${parsed.data.classId}`);
+  }
+  revalidatePath(`/estudiantes/${parsed.data.studentId}`);
+  return { ok: true };
+}
+/** Periodos lectivos del colegio (semestre/trimestre según su calendario). */
+export async function fetchSchoolPeriods(): Promise<
+  { ok: true; periods: SchoolPeriodOption[] } | { ok: false; error: string }
+> {
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("list_tenant_academic_periods");
+
+  if (error) {
+    return { ok: false, error: "No se pudieron cargar los periodos lectivos." };
+  }
+
+  const rows = (data ?? []) as {
+    period_index: number;
+    label: string;
+    start_date: string;
+    end_date: string;
+  }[];
+
+  return {
+    ok: true,
+    periods: rows.map((row) => ({
+      index: row.period_index,
+      label: row.label,
+      startDate: row.start_date,
+      endDate: row.end_date,
+    })),
+  };
+}
+
+/**
+ * Extends the vigencia of a support to a LATER school period (the stored value
+ * is that period's end date) and/or adds an observation.
+ */
+export async function extendStudentEducationalSupport(input: {
+  id: string;
+  studentId: string;
+  classId?: string;
+  effectiveUntil: string;
+  observations?: string | null;
+}): Promise<EducationalSupportActionResult> {
+  const parsed = z
+    .object({
+      id: z.string().uuid(),
+      studentId: z.string().uuid(),
+      classId: z.string().uuid().optional(),
+      effectiveUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      observations: z.string().trim().max(2000).nullable().optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Solicitud no válida." };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("extend_student_educational_support", {
+    p_id: parsed.data.id,
+    p_effective_until: parsed.data.effectiveUntil,
+    p_observations: parsed.data.observations ?? null,
+  });
+
+  if (error) {
+    if (error.message.includes("range_shortened")) {
+      return { ok: false, error: "Elija un periodo posterior al actual." };
+    }
+    if (error.message.includes("invalid_range")) {
+      return { ok: false, error: "La fecha del periodo no es válida." };
+    }
+    if (error.message.includes("forbidden")) {
+      return { ok: false, error: "No tiene permiso para editar los apoyos de este estudiante." };
+    }
+    return { ok: false, error: "No se pudo extender el apoyo educativo." };
+  }
+
+  if (parsed.data.classId) revalidatePath(`/grupos/${parsed.data.classId}`);
   revalidatePath(`/estudiantes/${parsed.data.studentId}`);
   return { ok: true };
 }

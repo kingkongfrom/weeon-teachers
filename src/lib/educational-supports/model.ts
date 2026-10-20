@@ -25,7 +25,10 @@ export type EducationalSupport = {
   subjectScope: EducationalSupportSubjectScope;
   subjectIds: string[];
   subjectLabels: string[];
+  /** Free-text note added when the support is completed or extended. */
+  observations: string | null;
   createdAt: string;
+  updatedAt: string | null;
 };
 
 export type ClassEducationalSupportFlag = {
@@ -78,4 +81,27 @@ export function supportActionPending(
   flag: Pick<ClassEducationalSupportFlag, "needsReview" | "needsPeriodRegistration">,
 ): boolean {
   return flag.needsReview || flag.needsPeriodRegistration;
+}
+/** School period a support vigencia can be extended to (semestre/trimestre). */
+export type SchoolPeriodOption = {
+  index: number;
+  label: string;
+  startDate: string;
+  endDate: string;
+};
+
+/** Formats `YYYY-MM-DD` as a short dd/mm for compact labels. */
+export function shortDate(iso: string): string {
+  const [, month, day] = iso.split("-");
+  return month && day ? `${day}/${month}` : iso;
+}
+
+/** "II Periodo" — the menu shows the period name; the dates move to the hint. */
+export function periodOptionLabel(period: SchoolPeriodOption): string {
+  return period.label;
+}
+
+/** "I Periodo · 23/02 – 03/07" for the line under the picker. */
+export function periodOptionRange(period: SchoolPeriodOption): string {
+  return `${period.label} · ${shortDate(period.startDate)} – ${shortDate(period.endDate)}`;
 }
