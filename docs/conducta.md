@@ -66,6 +66,16 @@ Migration: **`20260915100000_conduct_records.sql`**
 | `src/lib/teachers/conduct-actions.ts` | `addConductRecord`, `deleteConductRecord` |
 | `src/components/ui/dropdown.tsx`, `date-picker.tsx` | Form controls |
 
+## Apoyos gate — «Esta vez no aplica»
+
+A student with active apoyos opens the supports dialog before the first entry.
+Reading the apoyos (`needs_review`) is required once per support version, but the
+**Registro de apoyos** of the period is a separate obligation: the dialog offers
+**Esta vez no aplica**, which defers it for that teacher + group + student for 7
+days (`student_educational_support_registration_deferrals`,
+`defer_student_educational_support_registration`). The reminder returns on its
+own, or immediately when the support is extended (the version changes).
+
 ## Cross-app
 
 | App | Role |

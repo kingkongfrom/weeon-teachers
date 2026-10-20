@@ -278,6 +278,74 @@ export async function acknowledgeStudentEducationalSupports(input: {
   revalidatePath(`/estudiantes/${parsed.data.studentId}`);
   return { ok: true };
 }
+
+const deferSchema = z.object({
+  studentId: z.string().uuid(),
+  classId: z.string().uuid(),
+  days: z.number().int().min(1).max(30).optional(),
+});
+
+/**
+ * «Esta vez no aplica»: the teacher records the grade/conduct entry now and
+ * fills the period registro later. Silences the group gate for that student for
+ * a few days (default 7); it comes back on its own.
+ */
+export async function deferEducationalSupportRegistration(input: {
+  studentId: string;
+  classId: string;
+  days?: number;
+}): Promise<EducationalSupportActionResult & { until?: string }> {
+  const parsed = deferSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Solicitud no válida." };
+  }
+
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc(
+    "defer_student_educational_support_registration",
+    {
+      p_student_id: parsed.data.studentId,
+      p_class_id: parsed.data.classId,
+      p_days: parsed.data.days ?? 7,
+    },
+  );
+  if (error) {
+    return { ok: false, error: "No se pudo posponer el registro de apoyos." };
+  }
+
+  revalidatePath(`/grupos/${parsed.data.classId}`);
+  revalidatePath(`/estudiantes/${parsed.data.studentId}`);
+  return { ok: true, until: typeof data === "string" ? data : undefined };
+}
+
+/** Undo a deferral (the gate comes back until the registro exists). */
+export async function resumeEducationalSupportRegistration(input: {
+  studentId: string;
+  classId: string;
+}): Promise<EducationalSupportActionResult> {
+  const parsed = z
+    .object({ studentId: z.string().uuid(), classId: z.string().uuid() })
+    .safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Solicitud no válida." };
+  }
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc(
+    "resume_student_educational_support_registration",
+    {
+      p_student_id: parsed.data.studentId,
+      p_class_id: parsed.data.classId,
+    },
+  );
+  if (error) {
+    return { ok: false, error: "No se pudo reactivar el registro de apoyos." };
+  }
+
+  revalidatePath(`/grupos/${parsed.data.classId}`);
+  return { ok: true };
+}
+
 const updateSupportSchema = z.object({
   id: z.string().uuid(),
   studentId: z.string().uuid(),

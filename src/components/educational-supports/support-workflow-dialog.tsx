@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { ClipboardCheck, HandHeart, Loader2, X } from "lucide-react";
+import { ClipboardCheck, Clock, HandHeart, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { schoolPeriodLabel } from "@/lib/dashboard/school-period";
@@ -14,6 +14,7 @@ import type {
 } from "@/lib/educational-supports/model";
 import {
   acknowledgeStudentEducationalSupports,
+  deferEducationalSupportRegistration,
   fetchEducationalSupportRegistration,
   saveEducationalSupportRegistration,
 } from "@/lib/teachers/educational-support-actions";
@@ -143,6 +144,19 @@ export function EducationalSupportWorkflowDialog({
     } else {
       onClose();
     }
+  }
+
+  async function handleDefer() {
+    setRegSaving(true);
+    setError(null);
+    const res = await deferEducationalSupportRegistration({ studentId, classId });
+    setRegSaving(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    onComplete?.({ needsPeriodRegistration: false });
+    onClose();
   }
 
   async function handleSaveRegistration() {
@@ -387,19 +401,36 @@ export function EducationalSupportWorkflowDialog({
                   {copy.acknowledge}
                 </button>
               ) : showRegistrationForm && !readOnlyRegistration ? (
-                <button
-                  type="button"
-                  disabled={regSaving || loadingReg}
-                  onClick={() => void handleSaveRegistration()}
-                  className={primaryButtonClass}
-                >
-                  {regSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ClipboardCheck className="h-4 w-4" />
-                  )}
-                  {copy.registrationSubmit}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    disabled={regSaving || loadingReg}
+                    onClick={() => void handleSaveRegistration()}
+                    className={primaryButtonClass}
+                  >
+                    {regSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ClipboardCheck className="h-4 w-4" />
+                    )}
+                    {copy.registrationSubmit}
+                  </button>
+                  {/* The registro is a separate obligation: the group's work can
+                      be graded now and the registro filled later. */}
+                  <button
+                    type="button"
+                    disabled={regSaving || loadingReg}
+                    onClick={() => void handleDefer()}
+                    title={copy.registrationLaterHint}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground/65 transition-colors hover:bg-surface-muted disabled:opacity-50"
+                  >
+                    <Clock className="h-4 w-4" />
+                    {copy.registrationLater}
+                  </button>
+                  <p className="text-center text-[11px] font-medium text-foreground/45">
+                    {copy.registrationLaterHint}
+                  </p>
+                </div>
               ) : null}
             </div>
           </motion.div>

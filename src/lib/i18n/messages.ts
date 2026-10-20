@@ -315,6 +315,10 @@ const es = {
       "Complete el Registro de apoyos del periodo lectivo (Circular MEP DVM-AC-003-2013).",
     institutionalTitle: "Apoyos institucionales",
     acknowledge: "Confirmo que he leído los apoyos educativos",
+    registrationLater: "Esta vez no aplica (recordármelo en 7 días)",
+    registrationLaterHint:
+      "Guardá la nota ahora y completá el Registro de apoyos después. El recordatorio vuelve en 7 días o al extender el apoyo.",
+    registrationLaterSaved: "Listo. El Registro de apoyos de este estudiante quedó pospuesto.",
     empty: "No hay apoyos educativos vigentes.",
     mustReviewTitle: "Revise los apoyos educativos",
     mustReviewBody:
@@ -1551,6 +1555,10 @@ const en: Messages = {
       "Complete the period support registration (MEP Circular DVM-AC-003-2013).",
     institutionalTitle: "Institutional supports",
     acknowledge: "I confirm I have read the educational supports",
+    registrationLater: "Not this time (remind me in 7 days)",
+    registrationLaterHint:
+      "Save the mark now and fill the support registration later. The reminder returns in 7 days or when the support is extended.",
+    registrationLaterSaved: "Done. This student's support registration is deferred.",
     empty: "No current educational supports.",
     mustReviewTitle: "Review educational supports",
     mustReviewBody:
