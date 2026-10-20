@@ -1,26 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { hubToneSegment, SEGMENT_TRACK } from "@/lib/dashboard/tones";
 import { useT } from "@/lib/i18n/client";
 import { AssessmentsPanel } from "@/components/assessments/assessments-panel";
 import { MaterialsPanel } from "@/components/classroom/materials-panel";
-import { createTopic } from "@/lib/teachers/topics-actions";
 import type { AssessmentSummary } from "@/lib/assessments/model";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
-import type { ClassTopic } from "@/lib/dashboard/topics";
 
-const NONE = "__none";
-
-/** "Trabajo de clase": topic chips (Temas) filter assessments and materials. */
+/** "Trabajo de clase": assessments and materials for the active subject. */
 export function ClassworkPanel({
   classId,
   assessments,
   materials,
-  topics,
   selectedSubjectId,
   subjects,
   studentCount,
@@ -28,25 +20,11 @@ export function ClassworkPanel({
   classId: string;
   assessments: AssessmentSummary[];
   materials: ClassMaterial[];
-  topics: ClassTopic[];
   selectedSubjectId: string | null;
   subjects: { id: string; name: string }[];
   studentCount: number;
 }) {
   const t = useT();
-  const [selected, setSelected] = useState<string>("all");
-  const [creating, setCreating] = useState(false);
-  const [name, setName] = useState("");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const defaultTopicId = selected !== "all" && selected !== NONE ? selected : null;
-
-  function matches(topicId: string | null): boolean {
-    if (selected === "all") return true;
-    if (selected === NONE) return topicId == null;
-    return topicId === selected;
-  }
 
   /** Classwork is per subject: show only the active subject's items. Unassigned
    * items are not leaked into every subject. */
@@ -55,131 +33,48 @@ export function ClassworkPanel({
     return itemSubjectId === selectedSubjectId;
   }
 
-  const shownAssessments = assessments.filter(
-    (item) => matches(item.topicId) && subjectMatches(item.subjectId),
-  );
-  const shownMaterials = materials.filter(
-    (item) => matches(item.topicId) && subjectMatches(item.subjectId),
-  );
-
-  async function submitTopic() {
-    const value = name.trim();
-    if (!value) return;
-    setPending(true);
-    setError(null);
-    const res = await createTopic({ classId, name: value });
-    setPending(false);
-    if (!res.ok) {
-      setError(res.error);
-      return;
-    }
-    setName("");
-    setCreating(false);
-    if (res.id) setSelected(res.id);
-  }
-
-  const chips = [
-    { id: "all", label: t.topics.all },
-    ...topics.map((topic) => ({ id: topic.id, label: topic.name })),
-    { id: NONE, label: t.topics.none },
-  ];
+  const shownAssessments = assessments.filter((item) => subjectMatches(item.subjectId));
+  const shownMaterials = materials.filter((item) => subjectMatches(item.subjectId));
 
   return (
     <div className="flex flex-col gap-6">
       {subjects.length > 1 ? (
-        <div className={SEGMENT_TRACK}>
-          {subjects.map((option) => {
-            const active = option.id === selectedSubjectId;
-            return (
-              <Link
-                key={option.id}
-                href={`/aula-virtual/${classId}?subject=${option.id}&tab=trabajo`}
-                className={cn(
-                  "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
-                  hubToneSegment("blue", active),
-                )}
-              >
-                {option.name}
-              </Link>
-            );
-          })}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/40">
+            {t.classroom.subjectsLabel}
+          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {subjects.map((option) => {
+              const active = option.id === selectedSubjectId;
+              return (
+                <Link
+                  key={option.id}
+                  href={`/aula-virtual/${classId}?subject=${option.id}&tab=trabajo`}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                    active
+                      ? "border-[#7dd3e8] bg-[#e6f7fb] text-[#0e6b7c] dark:border-[#155e75] dark:bg-[#0f2f36] dark:text-[#7fdcea]"
+                      : "border-border text-foreground/55 hover:border-foreground/20 hover:text-foreground",
+                  )}
+                >
+                  {option.name}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       ) : null}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-wide text-foreground/45">
-          {t.topics.title}
-        </span>
-        <div className={SEGMENT_TRACK}>
-        {chips.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            onClick={() => setSelected(chip.id)}
-            className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-              hubToneSegment("purple", selected === chip.id),
-            )}
-          >
-            {chip.label}
-          </button>
-        ))}
-
-        {creating ? (
-          <span className="flex items-center gap-1">
-            <input
-              autoFocus
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void submitTopic();
-                if (event.key === "Escape") {
-                  setCreating(false);
-                  setName("");
-                }
-              }}
-              maxLength={120}
-              placeholder={t.topics.namePlaceholder}
-              className="h-8 w-44 rounded-full border border-border bg-background px-3 text-xs text-foreground outline-none focus:border-brand-400"
-            />
-            <button
-              type="button"
-              onClick={() => void submitTopic()}
-              disabled={pending || name.trim().length === 0}
-              className="btn-ink btn-ink-compact gap-1"
-            >
-              {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              {t.topics.create}
-            </button>
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground/55 transition-colors hover:text-foreground"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t.topics.new}
-          </button>
-        )}
-        </div>
-      </div>
-
-      {error ? <p className="text-sm font-medium text-error">{error}</p> : null}
 
       <div className="grid items-start gap-8 xl:grid-cols-2 xl:gap-6">
         <MaterialsPanel
           classId={classId}
           materials={shownMaterials}
-          topics={topics}
-          defaultTopicId={defaultTopicId}
           defaultSubjectId={selectedSubjectId}
         />
         <AssessmentsPanel
           classId={classId}
           assessments={shownAssessments}
           studentCount={studentCount}
-          defaultTopicId={defaultTopicId}
           defaultSubjectId={selectedSubjectId}
         />
       </div>

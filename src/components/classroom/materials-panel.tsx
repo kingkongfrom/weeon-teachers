@@ -26,10 +26,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Dropdown } from "@/components/ui/dropdown";
 import { isPdfFile, PdfReaderDialog } from "@/components/ui/pdf-reader";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
-import type { ClassTopic } from "@/lib/dashboard/topics";
 import {
   MATERIAL_ACCEPT,
   MATERIAL_MAX_BYTES,
@@ -77,14 +75,12 @@ function hasFiles(event: DragEvent): boolean {
 export function MaterialsPanel({
   classId,
   materials,
-  topics = [],
-  defaultTopicId = null,
+
   defaultSubjectId = null,
 }: {
   classId: string;
   materials: ClassMaterial[];
-  topics?: ClassTopic[];
-  defaultTopicId?: string | null;
+
   defaultSubjectId?: string | null;
 }) {
   const t = useT();
@@ -310,8 +306,6 @@ export function MaterialsPanel({
                   key="upload-material"
                   classId={classId}
                   initialFile={pendingFile}
-                  topics={topics}
-                  defaultTopicId={defaultTopicId}
                   defaultSubjectId={defaultSubjectId}
                   onClose={() => {
                     setOpen(false);
@@ -350,15 +344,11 @@ export function MaterialsPanel({
 function UploadDialog({
   classId,
   initialFile,
-  topics,
-  defaultTopicId,
   defaultSubjectId,
   onClose,
 }: {
   classId: string;
   initialFile: File | null;
-  topics: ClassTopic[];
-  defaultTopicId: string | null;
   defaultSubjectId: string | null;
   onClose: () => void;
 }) {
@@ -367,7 +357,6 @@ function UploadDialog({
   const [file, setFile] = useState<File | null>(initialFile);
   const [title, setTitle] = useState(initialFile ? initialFile.name.replace(/\.[^.]+$/, "") : "");
   const [description, setDescription] = useState("");
-  const [topic, setTopic] = useState(defaultTopicId ?? "none");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -428,7 +417,6 @@ function UploadDialog({
     formData.set("classId", classId);
     formData.set("title", title.trim());
     formData.set("description", description.trim());
-    if (topic !== "none") formData.set("topicId", topic);
     if (defaultSubjectId) formData.set("subjectId", defaultSubjectId);
     formData.set("file", file);
 
@@ -563,27 +551,6 @@ function UploadDialog({
               className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-950"
             />
           </div>
-
-          {topics.length > 0 ? (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-foreground/70">
-                {t.topics.selectLabel}
-              </span>
-              <Dropdown
-                value={topic}
-                onChange={setTopic}
-                ariaLabel={t.topics.selectLabel}
-                placeholder={t.topics.none}
-                options={[
-                  { value: "none", label: t.topics.none },
-                  ...topics.map((option) => ({
-                    value: option.id,
-                    label: option.name,
-                  })),
-                ]}
-              />
-            </div>
-          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <label
