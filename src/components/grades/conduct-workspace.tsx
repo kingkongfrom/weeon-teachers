@@ -38,7 +38,7 @@ import type {
   EducationalSupport,
 } from "@/lib/educational-supports/model";
 import { supportActionPending } from "@/lib/educational-supports/model";
-import { addConductRecord, deleteConductRecord } from "@/lib/teachers/conduct-actions";
+import { addConductRecords, deleteConductRecord } from "@/lib/teachers/conduct-actions";
 import { fetchStudentEducationalSupports } from "@/lib/teachers/educational-support-actions";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
 
@@ -146,7 +146,7 @@ export function ConductWorkspace({
   });
 
   async function handleCreate(payload: {
-    studentId: string;
+    studentIds: string[];
     occurredOn: string;
     kind: ConductKind;
     category: ConductCategory;
@@ -154,21 +154,24 @@ export function ConductWorkspace({
     points: number;
   }) {
     setError(null);
-    const flag = localFlags[payload.studentId];
-    if (
-      flag &&
-      supportActionPending({
-        needsReview: flag.needsReview,
-        needsPeriodRegistration: flag.needsPeriodRegistration,
-      })
-    ) {
-      const student = students.find((row) => row.id === payload.studentId);
-      if (student) {
-        await openSupportReview(student);
+    // Support acknowledgement gates the first entry per student, as before.
+    for (const studentId of payload.studentIds) {
+      const flag = localFlags[studentId];
+      if (
+        flag &&
+        supportActionPending({
+          needsReview: flag.needsReview,
+          needsPeriodRegistration: flag.needsPeriodRegistration,
+        })
+      ) {
+        const student = students.find((row) => row.id === studentId);
+        if (student) {
+          await openSupportReview(student);
+        }
+        return false;
       }
-      return false;
     }
-    const res = await addConductRecord({ classId, ...payload });
+    const res = await addConductRecords({ classId, ...payload });
     if (!res.ok) {
       setError(res.error);
       return false;
@@ -441,7 +444,7 @@ function AddConductDialog({
 }: {
   students: TeacherStudent[];
   onCreate: (payload: {
-    studentId: string;
+    studentIds: string[];
     occurredOn: string;
     kind: ConductKind;
     category: ConductCategory;
@@ -453,7 +456,8 @@ function AddConductDialog({
   const t = useT();
   const c = t.conduct;
   const today = new Date().toISOString().slice(0, 10);
-  const [studentId, setStudentId] = useState(students[0]?.id ?? "");
+  const [studentIds, setStudentIds] = useState<string[]>(students[0] ? [students[0].id] : []);
+  const [studentQuery, setStudentQuery] = useState("");
   const [occurredOn, setOccurredOn] = useState(today);
   const [kind, setKind] = useState<ConductKind>("merit");
   const [category, setCategory] = useState<ConductCategory>(
@@ -464,6 +468,20 @@ function AddConductDialog({
   const [pending, setPending] = useState(false);
 
   const categoryOptions = categoriesForKind(kind);
+  const selected = new Set(studentIds);
+  const visibleStudents = students.filter((student) =>
+    studentName(student).toLowerCase().includes(studentQuery.trim().toLowerCase()),
+  );
+
+  function toggleStudent(id: string) {
+    setStudentIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  }
+
+  function selectAllVisible() {
+    setStudentIds((current) => [...new Set([...current, ...visibleStudents.map((s) => s.id)])]);
+  }
 
   function selectKind(next: ConductKind) {
     setKind(next);
@@ -474,23 +492,23 @@ function AddConductDialog({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!studentId) return;
+    if (studentIds.length === 0) return;
     setPending(true);
     const parsedPoints = Number(points);
     const ok = await onCreate({
-      studentId,
+      studentIds,
       occurredOn,
       kind,
       category,
       description: description.trim(),
-      points: Number.isFinite(parsedPoints) ? parsedPoints : 1,
+      points: Number.isFinite(parsedPoints) ? Math.round(parsedPoints) : 1,
     });
     setPending(false);
     if (ok) onClose();
   }
 
   function adjustPoints(delta: number) {
-    const next = Math.min(5, Math.max(1, Number(points) + delta));
+    const next = Math.min(100, Math.max(1, Number(points) + delta));
     setPoints(String(next));
   }
 
@@ -530,17 +548,72 @@ function AddConductDialog({
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-foreground/70">{c.student}</span>
-            <Dropdown
-              value={studentId}
-              onChange={setStudentId}
-              ariaLabel={c.student}
-              size="form"
-              options={students.map((student) => ({
-                value: student.id,
-                label: studentName(student),
-              }))}
-            />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-foreground/70">{c.studentsLabel}</span>
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <span className="text-foreground/45">{c.selectedCount(studentIds.length)}</span>
+                <button
+                  type="button"
+                  onClick={selectAllVisible}
+                  className="text-[#5e25cc] hover:underline dark:text-[#b9a3f7]"
+                >
+                  {c.selectAll}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStudentIds([])}
+                  className="text-foreground/55 hover:underline"
+                >
+                  {c.selectNone}
+                </button>
+              </div>
+            </div>
+            {students.length > 8 ? (
+              <label className="relative inline-flex items-center">
+                <Search className="pointer-events-none absolute left-3 h-4 w-4 text-foreground/40" />
+                <input
+                  value={studentQuery}
+                  onChange={(event) => setStudentQuery(event.target.value)}
+                  placeholder={c.search}
+                  className="h-9 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:border-brand-400"
+                />
+              </label>
+            ) : null}
+            <div className="max-h-44 overflow-auto rounded-xl border border-border bg-background p-1">
+              {visibleStudents.map((student) => {
+                const checked = selected.has(student.id);
+                return (
+                  <button
+                    key={student.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={checked}
+                    onClick={() => toggleStudent(student.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors",
+                      checked
+                        ? "bg-[#5e25cc]/10 text-foreground"
+                        : "text-foreground/75 hover:bg-surface-muted",
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-[5px] border",
+                        checked
+                          ? "border-[#5e25cc] bg-[#5e25cc] text-white"
+                          : "border-border bg-background",
+                      )}
+                      style={{ width: 18, height: 18 }}
+                    >
+                      {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+                    </span>
+                    <span className="min-w-0 truncate">{studentName(student)}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <span className="text-[11px] font-medium text-foreground/45">{c.groupEntryHint}</span>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -602,7 +675,7 @@ function AddConductDialog({
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold text-foreground/70">{c.pointsLabel}</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => adjustPoints(-1)}
@@ -613,8 +686,9 @@ function AddConductDialog({
               </button>
               <input
                 value={points}
-                onChange={(event) => setPoints(event.target.value)}
+                onChange={(event) => setPoints(event.target.value.replace(/[^0-9]/g, ""))}
                 inputMode="numeric"
+                aria-label={c.pointsLabel}
                 className="h-10 w-16 rounded-xl border border-border bg-background text-center text-sm font-bold text-foreground outline-none focus:border-brand-400"
               />
               <button
@@ -625,6 +699,22 @@ function AddConductDialog({
               >
                 <Plus className="h-4 w-4" />
               </button>
+              {/* One tap for the amounts teachers actually use. */}
+              {[1, 2, 3, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setPoints(String(value))}
+                  className={cn(
+                    "h-8 min-w-8 rounded-full border px-2 text-xs font-bold tabular-nums transition-colors",
+                    Number(points) === value
+                      ? "border-transparent bg-brand-600 text-white"
+                      : "border-border text-foreground/70 ui-hover",
+                  )}
+                >
+                  {value}
+                </button>
+              ))}
               <span className="text-xs font-medium text-foreground/50">{c.pointsHint}</span>
             </div>
           </div>
@@ -639,7 +729,7 @@ function AddConductDialog({
             </button>
             <button
               type="submit"
-              disabled={pending || description.trim().length < 3}
+              disabled={pending || description.trim().length < 3 || studentIds.length === 0}
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50"
             >
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}

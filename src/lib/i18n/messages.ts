@@ -1,4 +1,4 @@
-﻿import type { Locale } from "@/lib/i18n/config";
+import type { Locale } from "@/lib/i18n/config";
 
 const es = {
   meta: {
@@ -248,6 +248,11 @@ const es = {
     emptyLog: "Aún no hay anotaciones. Use «Registrar anotación» para documentar un mérito o una falta.",
     student: "Estudiante",
     merits: "Méritos",
+    studentsLabel: "Estudiantes",
+    selectAll: "Todos",
+    selectNone: "Ninguno",
+    selectedCount: (n: number) => `${n} seleccionado${n === 1 ? "" : "s"}`,
+    groupEntryHint: "La misma anotación se registra para cada estudiante seleccionado.",
     demerits: "Faltas",
     netPoints: "Puntos netos",
     kindMerit: "Mérito",
@@ -258,7 +263,7 @@ const es = {
     descriptionPlaceholder: "Describa lo ocurrido…",
     date: "Fecha",
     pointsLabel: "Puntos",
-    pointsHint: "Entre 1 y 5",
+    pointsHint: "Puntos que suma o resta esta anotación",
     pointsUnit: "pts",
     increasePoints: "Más puntos",
     decreasePoints: "Menos puntos",
@@ -1476,6 +1481,11 @@ const en: Messages = {
     emptyLog: "No entries yet. Use \"Add entry\" to record a merit or demerit.",
     student: "Student",
     merits: "Merits",
+    studentsLabel: "Students",
+    selectAll: "All",
+    selectNone: "None",
+    selectedCount: (n: number) => `${n} selected`,
+    groupEntryHint: "The same entry is recorded for every selected student.",
     demerits: "Demerits",
     netPoints: "Net points",
     kindMerit: "Merit",
@@ -1486,7 +1496,7 @@ const en: Messages = {
     descriptionPlaceholder: "Describe what happened…",
     date: "Date",
     pointsLabel: "Points",
-    pointsHint: "Between 1 and 5",
+    pointsHint: "Points this entry adds or deducts",
     pointsUnit: "pts",
     increasePoints: "More points",
     decreasePoints: "Fewer points",

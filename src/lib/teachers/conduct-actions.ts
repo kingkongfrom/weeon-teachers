@@ -10,19 +10,25 @@ import {
   type ConductKind,
 } from "@/lib/conduct/model";
 
-export type ConductActionResult = { ok: true; id?: string } | { ok: false; error: string };
+export type ConductActionResult =
+  | { ok: true; id?: string; ids?: string[] }
+  | { ok: false; error: string };
 
 const kindSchema = z.enum(["merit", "demerit"]);
 const categorySchema = z.enum(CONDUCT_CATEGORIES as [ConductCategory, ...ConductCategory[]]);
 
-const addRecordSchema = z.object({
+/** Points are chosen by the teacher (a serious falta can be 10 or 20). */
+const pointsSchema = z.number().int().min(1).max(100);
+
+const addRecordsSchema = z.object({
   classId: z.string().uuid(),
-  studentId: z.string().uuid(),
+  /** One or many: a group-wide falta is logged for every selected student. */
+  studentIds: z.array(z.string().uuid()).min(1).max(200),
   occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   kind: kindSchema,
   category: categorySchema,
   description: z.string().trim().min(3).max(1000),
-  points: z.number().int().min(1).max(5),
+  points: pointsSchema,
 });
 
 const deleteRecordSchema = z.object({
@@ -34,7 +40,75 @@ function revalidateGrupo(classId: string) {
   revalidatePath(`/grupos/${classId}`);
 }
 
-/** Registers a mérito or falta for a student in a group. */
+/**
+ * Registers one mérito/falta for one or several students of a group. The same
+ * category, description, date and points apply to every selected student, so a
+ * group-wide falta (the whole class talking during an exam) is one action.
+ */
+export async function addConductRecords(input: {
+  classId: string;
+  studentIds: string[];
+  occurredOn: string;
+  kind: ConductKind;
+  category: ConductCategory;
+  description: string;
+  points: number;
+}): Promise<ConductActionResult> {
+  const parsed = addRecordsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Revise los datos de la anotación." };
+  }
+
+  const { classId, occurredOn, kind, category, description, points } = parsed.data;
+  const studentIds = [...new Set(parsed.data.studentIds)];
+
+  if (!isCategoryValidForKind(kind, category)) {
+    return { ok: false, error: "La categoría no corresponde al tipo de anotación." };
+  }
+
+  const supabase = await createSessionClient();
+
+  // Never attribute a falta to a student who left the group: the roster shown
+  // by the page is the allowed set.
+  const { data: enrolled, error: rosterError } = await supabase
+    .from("enrollments")
+    .select("student_id")
+    .eq("class_id", classId)
+    .in("student_id", studentIds);
+  if (rosterError) {
+    return { ok: false, error: "No se pudo verificar la lista del grupo." };
+  }
+  const allowed = new Set((enrolled ?? []).map((row) => row.student_id as string));
+  const targets = studentIds.filter((id) => allowed.has(id));
+  if (targets.length === 0) {
+    return { ok: false, error: "Los estudiantes seleccionados no pertenecen a este grupo." };
+  }
+
+  const { data, error } = await supabase
+    .from("conduct_records")
+    .insert(
+      targets.map((studentId) => ({
+        class_id: classId,
+        student_id: studentId,
+        occurred_on: occurredOn,
+        kind,
+        category,
+        description,
+        points,
+      })),
+    )
+    .select("id");
+
+  if (error) {
+    return { ok: false, error: "No se pudo registrar la anotación." };
+  }
+
+  revalidateGrupo(classId);
+  const ids = (data ?? []).map((row) => row.id as string);
+  return { ok: true, ids };
+}
+
+/** Back-compat single-student helper (same rules as {@link addConductRecords}). */
 export async function addConductRecord(input: {
   classId: string;
   studentId: string;
@@ -44,36 +118,7 @@ export async function addConductRecord(input: {
   description: string;
   points: number;
 }): Promise<ConductActionResult> {
-  const parsed = addRecordSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: "Revise los datos de la anotación." };
-  }
-
-  if (!isCategoryValidForKind(parsed.data.kind, parsed.data.category)) {
-    return { ok: false, error: "La categoría no corresponde al tipo de anotación." };
-  }
-
-  const supabase = await createSessionClient();
-  const { data, error } = await supabase
-    .from("conduct_records")
-    .insert({
-      class_id: parsed.data.classId,
-      student_id: parsed.data.studentId,
-      occurred_on: parsed.data.occurredOn,
-      kind: parsed.data.kind,
-      category: parsed.data.category,
-      description: parsed.data.description,
-      points: parsed.data.points,
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    return { ok: false, error: "No se pudo registrar la anotación." };
-  }
-
-  revalidateGrupo(parsed.data.classId);
-  return { ok: true, id: data.id };
+  return addConductRecords({ ...input, studentIds: [input.studentId] });
 }
 
 /** Removes a conduct entry. Teachers may delete any row in groups they teach. */
