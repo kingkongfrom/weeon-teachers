@@ -24,6 +24,8 @@ import {
 } from "@/lib/dashboard/tones";
 import { ATTENDANCE_CODE, type AttendanceCounts } from "@/lib/attendance/model";
 import { StudentEducationalSupportsPanel } from "@/components/educational-supports/student-supports-panel";
+import { StudentMedicalPanel } from "@/components/students/student-medical-panel";
+import type { StudentMedicalInfo } from "@/lib/dashboard/student-medical";
 import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
 import type { EducationalSupport } from "@/lib/educational-supports/model";
 import type {
@@ -94,9 +96,11 @@ function levelWord(
 export function StudentGradesView({
   report,
   educationalSupports = [],
+  medicalInfo = null,
 }: {
   report: StudentReport;
   educationalSupports?: EducationalSupport[];
+  medicalInfo?: StudentMedicalInfo | null;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -130,6 +134,8 @@ export function StudentGradesView({
   return (
     <div className="flex flex-col gap-5">
       <StudentEducationalSupportsPanel supports={educationalSupports} />
+
+      {medicalInfo ? <StudentMedicalPanel info={medicalInfo} /> : null}
 
       <section className="relative overflow-hidden rounded-3xl border border-border bg-surface p-5 sm:p-6">
         <div
