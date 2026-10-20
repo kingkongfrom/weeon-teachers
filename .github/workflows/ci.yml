@@ -40,6 +40,10 @@ jobs:
 
   # Playwright journeys (docs/testing.md §7). Public smoke always runs;
   # credential-gated journeys skip unless E2E_* are set.
+  #
+  # On pull requests we smoke the *deployed preview* when its URL is provided
+  # (PREVIEW_URL, wired from the Deploy workflow or set by hand). Otherwise the
+  # suite starts a local dev server, which proves the code but not the deploy.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -49,6 +53,8 @@ jobs:
       E2E_TEACHER_USERNAME: ${{ secrets.E2E_TEACHER_USERNAME }}
       E2E_TEACHER_PASSWORD: ${{ secrets.E2E_TEACHER_PASSWORD }}
       E2E_CLASS_ID: ${{ secrets.E2E_CLASS_ID }}
+      E2E_ASSESSMENT_ID: ${{ secrets.E2E_ASSESSMENT_ID }}
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL || secrets.E2E_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -60,3 +66,10 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: E2E journeys
         run: npm run test:e2e
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
