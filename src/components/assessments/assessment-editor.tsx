@@ -21,6 +21,7 @@ import {
   Trash2,
   Type,
   X,
+  Camera,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
@@ -107,6 +108,7 @@ export function AssessmentEditor({
     subjectId: initial.subjectId,
     topicId: initial.topicId,
     dueAt: initial.dueAt,
+    allowPhotoSubmission: initial.allowPhotoSubmission,
     instructions: initial.instructions ?? emptyDoc(),
     content: initial.content,
   });
@@ -199,6 +201,7 @@ export function AssessmentEditor({
       subjectId: draft.subjectId,
       topicId: null,
       dueAt: draft.dueAt,
+      allowPhotoSubmission: draft.allowPhotoSubmission,
       instructions: plain(draft.instructions),
       content: plain(draft.content),
     });
@@ -426,6 +429,38 @@ export function AssessmentEditor({
               placeholder={a.dueDate}
               clearLabel={a.clearDueDate}
             />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={draft.allowPhotoSubmission}
+              aria-label={a.photosToggle}
+              title={a.photosToggleHint}
+              disabled={locked}
+              onClick={() => update({ allowPhotoSubmission: !draft.allowPhotoSubmission })}
+              className={cn(
+                "inline-flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm font-semibold transition-colors disabled:opacity-50",
+                draft.allowPhotoSubmission
+                  ? "border-emerald-300/70 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+                  : "border-border bg-surface text-foreground/55 hover:text-foreground",
+              )}
+            >
+              <Camera className="h-4 w-4" />
+              {a.photosToggle}
+              <span
+                aria-hidden
+                className={cn(
+                  "relative h-4 w-7 rounded-full transition-colors",
+                  draft.allowPhotoSubmission ? "bg-emerald-500" : "bg-foreground/20",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all",
+                    draft.allowPhotoSubmission ? "left-3.5" : "left-0.5",
+                  )}
+                />
+              </span>
+            </button>
           </div>
         </div>
 

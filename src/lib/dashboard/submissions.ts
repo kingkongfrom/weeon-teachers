@@ -102,6 +102,12 @@ export type SubmissionAnswer = {
   feedback: string | null;
 };
 
+export type SubmissionPhoto = {
+  id: string;
+  /** Short-lived signed URL for the private `submission-attachments` object. */
+  url: string;
+};
+
 export type AssessmentSubmissionDetail = {
   id: string;
   assessmentId: string;
@@ -112,6 +118,13 @@ export type AssessmentSubmissionDetail = {
   submittedAt: string | null;
   updatedAt: string;
   answers: SubmissionAnswer[];
+  /** Photos of the work the student attached (empty when none). */
+  photos: SubmissionPhoto[];
+};
+
+type PhotoRow = {
+  id: string;
+  storage_path: string;
 };
 
 type AnswerRow = {
@@ -140,7 +153,7 @@ export const loadAssessmentSubmission = cache(
     const { data, error } = await supabase
       .from("submissions")
       .select(
-        "id, assessment_id, student_id, state, grade, feedback, submitted_at, updated_at, submission_answers(question_id, option_ids, text_value, score, feedback)",
+        "id, assessment_id, student_id, state, grade, feedback, submitted_at, updated_at, submission_answers(question_id, option_ids, text_value, score, feedback), submission_files(id, storage_path)",
       )
       .eq("id", submissionId)
       .eq("assessment_id", assessmentId)
@@ -157,7 +170,13 @@ export const loadAssessmentSubmission = cache(
       submitted_at: string | null;
       updated_at: string;
       submission_answers: AnswerRow[] | null;
+      submission_files: PhotoRow[] | null;
     };
+
+    const photoRows = (row.submission_files ?? []).filter(
+      (photo) => typeof photo.storage_path === "string" && photo.storage_path.length > 0,
+    );
+    const photos = await signSubmissionPhotos(supabase, photoRows);
 
     return {
       id: row.id,
@@ -175,6 +194,35 @@ export const loadAssessmentSubmission = cache(
         score: answer.score == null ? null : Number(answer.score),
         feedback: answer.feedback,
       })),
+      photos,
     };
   },
 );
+
+type SessionClient = Awaited<ReturnType<typeof createSessionClient>>;
+
+/**
+ * Signs the student's turn-in photos. Storage RLS (`can_read_submission_attachment`)
+ * is the gate: a teacher only gets URLs for groups they teach.
+ */
+async function signSubmissionPhotos(
+  supabase: SessionClient,
+  rows: PhotoRow[],
+): Promise<SubmissionPhoto[]> {
+  if (rows.length === 0) return [];
+  const { data, error } = await supabase.storage
+    .from("submission-attachments")
+    .createSignedUrls(
+      rows.map((row) => row.storage_path),
+      60 * 60,
+    );
+  if (error || !data) return [];
+  const urlByPath = new Map<string, string>();
+  for (const item of data) {
+    if (item.path && item.signedUrl && !item.error) urlByPath.set(item.path, item.signedUrl);
+  }
+  return rows.flatMap((row) => {
+    const url = urlByPath.get(row.storage_path);
+    return url ? [{ id: row.id, url }] : [];
+  });
+}

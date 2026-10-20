@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { Home, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
 import { LogoCompact } from "@/components/brand/logo";
 import { useLocale, useT } from "@/lib/i18n/client";
 
@@ -17,6 +18,16 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 export function NotFoundScreen() {
   const t = useT();
   const locale = useLocale();
+  const router = useRouter();
+
+  /** Browser history only; a deep link with no history falls back to `/inicio`. */
+  function goBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/inicio");
+  }
   return (
     <main className="not-found-bg fixed inset-0 z-[100] flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto">
       <div className="not-found-bg-blobs" aria-hidden>
@@ -77,13 +88,14 @@ export function NotFoundScreen() {
             <Home className="h-4 w-4" />
             {t.notFound.goHome}
           </Link>
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={goBack}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-foreground/25 px-4 text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/5"
           >
-            <ShieldAlert className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" />
             {t.notFound.viewHome}
-          </Link>
+          </button>
         </motion.div>
 
         <motion.p

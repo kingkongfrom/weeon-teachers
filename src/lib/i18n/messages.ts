@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+﻿import type { Locale } from "@/lib/i18n/config";
 
 const es = {
   meta: {
@@ -594,6 +594,8 @@ const es = {
     deleteConfirm: "¿Eliminar esta tarea?",
     dueDate: "Fecha de entrega",
     clearDueDate: "Quitar fecha",
+    photosToggle: "Permitir fotos",
+    photosToggleHint: "Los estudiantes podrán adjuntar fotos de su trabajo en lugar de escribir cada respuesta.",
     points: "puntos",
     homework: "Tarea",
     exam: "Examen",
@@ -667,6 +669,14 @@ const es = {
       autoGrade: "Calificar automáticamente",
       autoGradeHint: "Completa los puntos de las preguntas objetivas.",
       questionComment: "Comentario",
+      photosTitle: "Fotos del trabajo",
+      photosHint: "El estudiante adjuntó estas fotos en lugar de (o además de) las respuestas.",
+      photosOpen: "Abrir",
+      photosEmpty: "Sin fotos adjuntas.",
+      maxMarks: "Puntaje máximo",
+      noMaxMarks: "Define el puntaje máximo de la tarea (o agrega preguntas) para poder calificar.",
+      noQuestions: "Esta tarea no tiene preguntas: el puntaje lo pone el docente al revisar la evidencia entregada.",
+      invalidMark: "Escribe una nota válida y un puntaje máximo mayor que 0.",
       questionCommentPlaceholder: "Comentario para esta pregunta (opcional)",
       overallFeedback: "Retroalimentación general",
       overallFeedbackPlaceholder: "Escriba un comentario para el estudiante…",
@@ -693,6 +703,10 @@ const es = {
         "Ya hay estudiantes que entregaron: la tarea no se puede modificar. Se desbloquea solo si borra todas las entregas.",
       lockedPoints:
         "Los puntos de esta columna ya no se pueden cambiar porque hay calificaciones. Use una columna nueva.",
+      noClassAccess:
+        "No tiene acceso de escritura a este grupo, así que no se puede publicar. Pida a administración que le asigne el grupo.",
+      gradeColumn:
+        "Se publicó, pero no se pudo crear su columna en Calificaciones. Pida a administración que le asigne el grupo y vuelva a publicar.",
     },
   },
   reportes: {
@@ -1041,7 +1055,7 @@ const es = {
     title: "Página no encontrada",
     body: "No encontramos la página que buscaba. Puede que el enlace haya cambiado o ya no esté disponible.",
     goHome: "Ir al inicio",
-    viewHome: "Ver inicio",
+    viewHome: "Volver",
   },
   error: {
     eyebrow: "Error inesperado",
@@ -1805,6 +1819,8 @@ const en: Messages = {
     deleteConfirm: "Delete this assignment?",
     dueDate: "Due date",
     clearDueDate: "Clear date",
+    photosToggle: "Allow photos",
+    photosToggleHint: "Students can attach photos of their work instead of typing every answer.",
     points: "points",
     homework: "Homework",
     exam: "Exam",
@@ -1877,6 +1893,14 @@ const en: Messages = {
       autoGrade: "Auto-grade",
       autoGradeHint: "Fills the points for objective questions.",
       questionComment: "Comment",
+      photosTitle: "Submitted photos",
+      photosHint: "The student attached these photos instead of (or in addition to) written answers.",
+      photosOpen: "Open",
+      photosEmpty: "No photos attached.",
+      maxMarks: "Maximum score",
+      noMaxMarks: "Set the assignment maximum score (or add questions) to grade it.",
+      noQuestions: "This assignment has no questions: the teacher sets the score while reviewing the evidence.",
+      invalidMark: "Enter a valid mark and a maximum score greater than 0.",
       questionCommentPlaceholder: "Comment for this question (optional)",
       overallFeedback: "Overall feedback",
       overallFeedbackPlaceholder: "Write a comment for the student…",
@@ -1902,7 +1926,11 @@ const en: Messages = {
       lockedSubmitted:
         "Students already turned it in: this assignment can no longer be edited. It unlocks only when all turn-ins are deleted.",
       lockedPoints:
-        "This column's points can no longer change because it has grades. Create a new column instead.",
+        "This column's points can no longer change because it has grades. Use a new column.",
+      noClassAccess:
+        "You do not have write access to this group, so it cannot be published. Ask administration to assign the group to you.",
+      gradeColumn:
+        "It was published, but its gradebook column could not be created. Ask administration to assign the group to you, then publish again.",
     },
   },
   reportes: {
@@ -2249,7 +2277,7 @@ const en: Messages = {
     title: "Page not found",
     body: "We couldn't find the page you were looking for. The link may have changed or is no longer available.",
     goHome: "Go home",
-    viewHome: "View home",
+    viewHome: "Go back",
   },
   error: {
     eyebrow: "Unexpected error",

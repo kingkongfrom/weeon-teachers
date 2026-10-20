@@ -23,6 +23,9 @@ const gradeSchema = z.object({
   scores: z.array(scoreSchema).max(500),
   feedback: z.string().max(4000).nullable(),
   returnWork: z.boolean(),
+  /** Evidence-based work: mark typed by the teacher instead of per-question. */
+  directGrade: z.number().min(0).max(1000).optional(),
+  directMax: z.number().positive().max(1000).optional(),
 });
 
 /**
@@ -39,6 +42,8 @@ export async function gradeAssessmentSubmission(input: {
   scores: Array<{ questionId: string; score: number | null; feedback?: string | null }>;
   feedback: string | null;
   returnWork: boolean;
+  directGrade?: number;
+  directMax?: number;
 }): Promise<GradeActionResult> {
   const t = await getT();
   const g = t.assessments.grading;
@@ -46,10 +51,11 @@ export async function gradeAssessmentSubmission(input: {
   if (!parsed.success) {
     return { ok: false, error: g.errors.generic };
   }
-  const { classId, assessmentId, submissionId, studentId, scores, feedback, returnWork } =
+  const { classId, assessmentId, submissionId, studentId, scores, feedback, returnWork, directGrade, directMax } =
     parsed.data;
 
   const supabase = await createSessionClient();
+
   const { data, error } = await supabase.rpc("grade_assessment_submission", {
     p_submission_id: submissionId,
     p_scores: scores.map((score) => ({
@@ -59,6 +65,7 @@ export async function gradeAssessmentSubmission(input: {
     })),
     p_feedback: feedback,
     p_return: returnWork,
+    ...(directGrade != null && directMax != null ? { p_total: directGrade, p_max: directMax } : {}),
   });
 
   if (error) {

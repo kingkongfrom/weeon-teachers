@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Check,
   CircleAlert,
+  ImageIcon,
   Loader2,
   Sparkles,
   X,
@@ -91,9 +92,21 @@ export function SubmissionGrader({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const maxMarks = assessment.pointsTotal || 100;
+  // No points_total and no questions (e.g. "photograph an invertebrate"): there
+  // is nothing to apportion. The teacher then gives the mark directly instead of
+  // the grader showing a fake 0 / 100 and auto-grading to zero.
+  const hasMax = assessment.pointsTotal > 0 || assessment.content.questions.length > 0;
+  const hasQuestions = assessment.content.questions.length > 0;
+  const maxMarks = hasMax ? assessment.pointsTotal || 100 : 0;
   const total = Math.round(totalFromScores(scores));
-  const percent = scorePercent(total, maxMarks);
+  const percent = hasMax ? scorePercent(total, maxMarks) : 0;
+  const hasPhotos = submission.photos.length > 0;
+  const [directMax, setDirectMax] = useState(
+    assessment.pointsTotal > 0 ? String(assessment.pointsTotal) : "100",
+  );
+  const [directScore, setDirectScore] = useState(
+    submission.grade == null ? "" : String(submission.grade),
+  );
   const submittedLabel = submission.submittedAt
     ? new Date(submission.submittedAt).toLocaleString(locale === "en" ? "en-US" : "es-CR", {
         day: "numeric",
@@ -121,6 +134,21 @@ export function SubmissionGrader({
   async function save(returnWork: boolean) {
     setSaving(true);
     setError(null);
+
+    // Evidence-based work (no questions): save the typed mark directly instead
+    // of summing per-question scores that do not exist.
+    let directGrade: number | null = null;
+    if (!hasQuestions) {
+      const score = Number(directScore.replace(",", "."));
+      const max = Number(directMax.replace(",", "."));
+      if (!Number.isFinite(score) || !Number.isFinite(max) || max <= 0) {
+        setSaving(false);
+        setError(g.invalidMark);
+        return;
+      }
+      directGrade = Math.max(0, Math.min(score, max));
+    }
+
     const res = await gradeAssessmentSubmission({
       classId,
       assessmentId: assessment.id,
@@ -133,6 +161,7 @@ export function SubmissionGrader({
       })),
       feedback: feedback.trim() || null,
       returnWork,
+      ...(directGrade == null ? {} : { directGrade, directMax: Number(directMax.replace(",", ".")) }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -197,6 +226,52 @@ export function SubmissionGrader({
             </div>
           ) : null}
 
+          {hasPhotos ? (
+            <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
+              <header>
+                <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
+                  <ImageIcon className="h-4 w-4 text-foreground/50" />
+                  {g.photosTitle}
+                  <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-semibold text-foreground/50">
+                    {submission.photos.length}
+                  </span>
+                </h2>
+                <p className="mt-1 text-xs font-medium text-foreground/50">{g.photosHint}</p>
+              </header>
+              <div className="flex flex-wrap gap-3">
+                {submission.photos.map((photo) => (
+                  <a
+                    key={photo.id}
+                    href={photo.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={g.photosOpen}
+                    className="group relative h-40 w-40 overflow-hidden rounded-xl border border-border bg-surface-muted"
+                  >
+                    {/* Signed, private Storage URL: a plain <img> keeps the page server-rendered. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url}
+                      alt={g.photosTitle}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
+                    />
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : assessment.allowPhotoSubmission ? (
+            <p className="rounded-2xl border border-dashed border-border px-5 py-4 text-sm font-medium text-foreground/45">
+              {g.photosEmpty}
+            </p>
+          ) : null}
+
+          {!hasQuestions ? (
+            <p className="rounded-2xl border border-border bg-surface px-5 py-4 text-sm font-medium text-foreground/60">
+              {g.noQuestions}
+            </p>
+          ) : null}
+
           {assessment.content.questions.map((question, index) => (
             <QuestionCard
               key={question.id}
@@ -215,30 +290,63 @@ export function SubmissionGrader({
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4 lg:self-start">
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface p-5">
-            <ScoreRing value={percent} />
-            <div className="text-center">
-              <p className="text-xs font-bold uppercase tracking-wide text-foreground/45">
-                {g.total}
-              </p>
-              <p className="mt-0.5 text-2xl font-bold tabular-nums text-foreground">
-                {total}
-                <span className="text-base font-semibold text-foreground/40">
-                  {" "}
-                  / {Math.round(maxMarks)}
-                </span>
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={autoGrade}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-border px-3.5 py-2 text-sm font-semibold text-foreground/75 transition-colors hover:bg-surface-muted"
-            >
-              <Sparkles className="h-4 w-4" />
-              {g.autoGrade}
-            </button>
-            <p className="text-center text-[11px] font-medium text-foreground/45">
-              {g.autoGradeHint}
-            </p>
+            {hasQuestions ? (
+              <>
+                <ScoreRing value={percent} />
+                <div className="text-center">
+                  <p className="text-xs font-bold uppercase tracking-wide text-foreground/45">
+                    {g.total}
+                  </p>
+                  <p className="mt-0.5 text-2xl font-bold tabular-nums text-foreground">
+                    {total}
+                    <span className="text-base font-semibold text-foreground/40">
+                      {" "}
+                      / {Math.round(maxMarks)}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={autoGrade}
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-border px-3.5 py-2 text-sm font-semibold text-foreground/75 transition-colors hover:bg-surface-muted"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {g.autoGrade}
+                </button>
+                <p className="text-center text-[11px] font-medium text-foreground/45">
+                  {g.autoGradeHint}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="w-full text-center">
+                  <p className="text-xs font-bold uppercase tracking-wide text-foreground/45">
+                    {g.total}
+                  </p>
+                  <div className="mt-2 flex items-end justify-center gap-2">
+                    <input
+                      inputMode="decimal"
+                      value={directScore}
+                      onChange={(event) => setDirectScore(event.target.value)}
+                      placeholder="0"
+                      aria-label={g.total}
+                      className="h-12 w-20 rounded-xl border border-border bg-background px-3 text-center text-2xl font-bold tabular-nums text-foreground outline-none focus:border-brand-400"
+                    />
+                    <span className="pb-2 text-base font-semibold text-foreground/40">/</span>
+                    <input
+                      inputMode="decimal"
+                      value={directMax}
+                      onChange={(event) => setDirectMax(event.target.value)}
+                      aria-label={g.maxMarks}
+                      className="h-11 w-16 rounded-xl border border-border bg-background px-2 text-center text-base font-semibold tabular-nums text-foreground/70 outline-none focus:border-brand-400"
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] font-medium text-foreground/45">
+                    {g.maxMarks}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-5">

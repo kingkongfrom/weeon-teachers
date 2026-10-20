@@ -60,6 +60,8 @@ export type AssessmentSummary = {
   pointsTotal: number;
   published: boolean;
   closedAt: string | null;
+  /** Students may attach photos to this turn-in (teacher switch). */
+  allowPhotoSubmission: boolean;
   questionCount: number;
   updatedAt: string;
   submittedCount: number;
@@ -80,6 +82,7 @@ export type AssessmentDraft = {
   subjectId: string | null;
   topicId: string | null;
   dueAt: string | null;
+  allowPhotoSubmission: boolean;
   instructions: RichTextDoc | null;
   content: AssessmentContent;
 };
