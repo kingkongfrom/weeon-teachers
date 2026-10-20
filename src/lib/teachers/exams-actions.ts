@@ -273,6 +273,24 @@ export async function updateExamColumn(input: {
   if (Object.keys(patch).length === 0) return { ok: true };
 
   const supabase = await createSessionClient();
+
+  // Points define each grade's denominator, so once a column has grades the
+  // maximum cannot move (a student would earn a different % for the same
+  // answer). Title and rubro stay editable; a new column is the way to redo the
+  // weighting.
+  if (points !== undefined) {
+    const { count } = await supabase
+      .from("grades")
+      .select("id", { count: "exact", head: true })
+      .eq("assignment_id", assignmentId);
+    if ((count ?? 0) > 0) {
+      return {
+        ok: false,
+        error: "Los puntos de esta columna ya no se pueden cambiar porque hay calificaciones. Use una columna nueva.",
+      };
+    }
+  }
+
   const { error } = await supabase
     .from("assignments")
     .update(patch)

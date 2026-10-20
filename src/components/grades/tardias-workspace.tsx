@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Clock, Search } from "lucide-react";
+import { ArrowUpRight, Clock, HandHeart, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
+import type { ClassEducationalSupportFlags } from "@/lib/educational-supports/model";
 import { Dropdown } from "@/components/ui/dropdown";
 import { TONE_PILL } from "@/lib/dashboard/tones";
 import {
@@ -34,12 +35,14 @@ export function AttendanceGroupWorkspace({
   students,
   initialRecords,
   locale,
+  supportFlags = {},
 }: {
   classId: string;
   groupName: string;
   students: TeacherStudent[];
   initialRecords: TardiaRecord[];
   locale: string;
+  supportFlags?: ClassEducationalSupportFlags;
 }) {
   const t = useT();
   const a = t.attendance;
@@ -145,12 +148,23 @@ export function AttendanceGroupWorkspace({
                     return (
                       <tr key={student.id} className="border-b border-border last:border-0">
                         <td className="px-4 py-2.5">
-                          <Link
-                            href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}?tab=asistencia`)}`}
-                            className="font-medium text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
-                          >
-                            {studentName(student)}
-                          </Link>
+                          <div className="flex items-center gap-1.5">
+                            <Link
+                              href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}?tab=asistencia`)}`}
+                              className="font-medium text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
+                            >
+                              {studentName(student)}
+                            </Link>
+                            {supportFlags[student.id]?.activeCount ? (
+                              <span
+                                title={t.educationalSupports.sectionTitle}
+                                className="inline-flex h-5 items-center gap-1 rounded-full bg-brand-50 px-1.5 text-[10px] font-bold text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+                              >
+                                <HandHeart className="h-3 w-3" strokeWidth={2.5} />
+                                {supportFlags[student.id]!.activeCount}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-4 py-2.5 text-center tabular-nums">
                           <span className={cn("rounded-md px-2 py-0.5 font-semibold", TONE_PILL.yellow)}>

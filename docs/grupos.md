@@ -53,6 +53,10 @@ Page loader: `src/app/(app)/grupos/[id]/page.tsx`
   and lengthens the labels: Compacto `TRAB 1` → Normal `Trabajo 1` → Ampliada
   `Trabajo en clase 1`.
 - **CSV export** covers students × grade columns + FINAL (no attendance).
+- **Points are frozen once graded.** After the first grade in a column, its
+  maximum (ssignments.points) cannot change — server action and DB trigger
+  ssignments_freeze_points_after_grades (20261019223000_freeze_submitted_assessments.sql).
+  Title and rubro stay editable; to change the weighting, create a new column.
 
 Full gradebook behaviour: [`docs/aula-virtual.md`](aula-virtual.md) § Gradebook.
 
