@@ -19,11 +19,21 @@ test.describe("Teacher reviews a turn-in", () => {
   test.skip(!hasCreds, "E2E_* teacher credentials / group / assessment not configured");
 
   test("opens the assessment, lists submissions and opens the grader", async ({ page }) => {
+    // Login is either one form (user + password) or two steps (user → Continuar
+    // → password), depending on account state. Drive whichever is shown, and
+    // pick the password input by role because its label also matches the
+    // "Mostrar contraseña" toggle.
     await page.goto("/");
-    await page.getByLabel(/usuario|correo|email/i).fill(TEACHER_USER!);
-    await page.getByRole("button", { name: /continuar|siguiente|entrar|ingresar/i }).click();
-    await page.getByLabel(/contraseña|password/i).fill(TEACHER_PASSWORD!);
-    await page.getByRole("button", { name: /entrar|ingresar|iniciar/i }).click();
+    const userField = page.getByLabel(/usuario|correo|email/i);
+    await userField.fill(TEACHER_USER!);
+
+    const passwordField = page.locator('input[type="password"]');
+    if ((await passwordField.count()) === 0) {
+      await page.getByRole("button", { name: /continuar|siguiente/i }).click();
+    }
+    await passwordField.first().waitFor({ state: "visible", timeout: 20000 });
+    await passwordField.first().fill(TEACHER_PASSWORD!);
+    await page.getByRole("button", { name: /^entrar$|ingresar|iniciar/i }).click();
     await page.waitForURL(/\/(inicio|crear-contrasena)/, { timeout: 30000 });
 
     await page.goto(`/aula-virtual/${CLASS_ID}/evaluaciones/${ASSESSMENT_ID}`);
