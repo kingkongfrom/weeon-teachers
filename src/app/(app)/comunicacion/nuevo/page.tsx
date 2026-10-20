@@ -5,7 +5,7 @@ import { loadMessageDraft } from "@/lib/dashboard/message-drafts";
 import { loadThreadComposeSeed } from "@/lib/dashboard/thread-compose-load";
 import { loadMessageContacts } from "@/lib/dashboard/messages";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
-import { resolveTenantEmailIdentity } from "@/lib/email/resolve-tenant-email-identity";
+import { resolveAuthorEmailIdentity } from "@/lib/email/resolve-tenant-email-identity";
 import { formatComposeFromDisplay } from "@/lib/email/tenant-from";
 import { getLocale } from "@/lib/i18n/server";
 import { tComms } from "@/lib/i18n/translate-comms";
@@ -31,7 +31,12 @@ export default async function NewMessagePage({
     loadCommsGroups(),
     draft ? loadMessageDraft(draft) : Promise.resolve(null),
     threadId && !draft ? loadThreadComposeSeed(threadId) : Promise.resolve(null),
-    session ? resolveTenantEmailIdentity(session.tenantId) : Promise.resolve(null),
+    session
+      ? resolveAuthorEmailIdentity({
+          tenantId: session.tenantId,
+          authorProfileId: session.userId,
+        })
+      : Promise.resolve(null),
   ]);
   const fromLabel = senderIdentity ? formatComposeFromDisplay(senderIdentity) : "";
 

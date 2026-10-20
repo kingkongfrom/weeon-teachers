@@ -3,7 +3,7 @@ import "server-only";
 import { threadDetailToComposeSeed } from "@/lib/comms/thread-compose-initial";
 import type { MessageDraftRecord } from "@/lib/comms/message-draft";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
-import { resolveTenantEmailIdentity } from "@/lib/email/resolve-tenant-email-identity";
+import { resolveAuthorEmailIdentity } from "@/lib/email/resolve-tenant-email-identity";
 import { tenantEmailIdentity } from "@/lib/email/tenant-from";
 import { loadCommsGroups } from "@/lib/dashboard/comms-groups";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
@@ -29,7 +29,10 @@ export async function loadThreadComposeSeed(threadId: string): Promise<MessageDr
   }));
 
   const senderIdentity = teacherSession?.tenantId
-    ? await resolveTenantEmailIdentity(teacherSession.tenantId)
+    ? await resolveAuthorEmailIdentity({
+        tenantId: teacherSession.tenantId,
+        authorProfileId: teacherSession.userId,
+      })
     : tenantEmailIdentity({ fallbackName: teacherSession?.name ?? "" });
 
   const seed = threadDetailToComposeSeed(detail, contacts, groups, senderIdentity);

@@ -58,3 +58,30 @@ export function tenantEmailIdentity(input: {
     replyTo: isReplyEmail(reply) ? reply : null,
   };
 }
+/** Mirrors `weeon-tenants/lib/email/tenant-from.ts` (classroom notice sender). */
+export function isTeacherSenderEmail(value: string | null | undefined): boolean {
+  const email = value?.trim().toLowerCase() ?? "";
+  if (!isReplyEmail(email)) return false;
+  if (email.endsWith(".accounts.weeon.school") || email.endsWith(".accounts.weeon.cr")) {
+    return false;
+  }
+  return !email.endsWith("@example.com");
+}
+
+/** Identity shown in compose: the teacher who writes, with the school fallback. */
+export function senderIdentityForAuthor(
+  school: TenantEmailIdentity,
+  author: { name?: string | null; email?: string | null },
+): TenantEmailIdentity {
+  const email = author.email?.trim().toLowerCase() ?? "";
+  if (!isTeacherSenderEmail(email)) return school;
+
+  const authorName = sanitizeEmailDisplayName(author.name ?? "").slice(0, 40);
+  const displayName = authorName
+    ? school.displayName
+      ? `${authorName} · ${school.displayName}`
+      : authorName
+    : school.displayName;
+
+  return { displayName, from: tenantFromHeader(displayName), replyTo: email };
+}

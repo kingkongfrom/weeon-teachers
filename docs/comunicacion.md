@@ -70,9 +70,17 @@ Ported from `weeon-tenants/components/comms/*` (2026-09-19). Teacher scope:
   **Dropbox** (`NEXT_PUBLIC_GOOGLE_DRIVE_*`, `NEXT_PUBLIC_DROPBOX_APP_KEY`;
   APIs `POST /api/comms/google-drive-import`, `POST /api/comms/dropbox-import`).
   No duplicate “Content / Attach file” row on the body (`inlineEmbeds={false}`).
-- **De (compose):** read-only `Nombre <correo>` from tenant `emailDisplayName` /
-  `emailReplyTo` (`resolveTenantEmailIdentity`); thread history uses the same identity
-  when opening `?thread=`.
+- **De (compose):** `Nombre <correo>` from the school identity
+  (`resolveTenantEmailIdentity`); thread history uses the same identity when
+  opening `?thread=`.
+- **Correo de notificación (remitente):** el chat se ve como correo, así que el
+  destinatario debe ver **quién escribió**. El ERP envía la notificación con el
+  remitente del profesor (`teachers.email`, o `profiles.email`) y
+  `Reply-To` a ese mismo correo — no al correo genérico del colegio. La
+  dirección del dominio verificado de Weeon no cambia (Resend, sin SMTP por
+  colegio). Compose sigue mostrando la identidad del colegio: es la cabecera
+  del chat, no el sobre del correo real. Contrato y fallback:
+  `weeon-tenants/docs/email-delivery-strategy.md` § From / Reply.
 - **Mailbox:** search, unread filter, favorites, custom folders (labels), drag to
   folder, signature + auto-reply settings dialogs.
 
