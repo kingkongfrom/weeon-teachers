@@ -2,12 +2,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   PageTitleBlockSkeleton,
   ScheduleUpcomingPanelSkeleton,
+  TodayWeatherBlockSkeleton,
 } from "@/components/ui/page-loading-skeletons";
 
 export default function InicioLoading() {
   return (
     <div className="flex flex-col gap-6">
-      <PageTitleBlockSkeleton />
+      <div className="flex flex-col gap-4">
+        <PageTitleBlockSkeleton />
+        <TodayWeatherBlockSkeleton />
+      </div>
 
       <Skeleton className="h-11 w-full rounded-2xl" />
 

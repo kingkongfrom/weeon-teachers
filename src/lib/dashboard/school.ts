@@ -19,6 +19,21 @@ export const loadSchoolName = cache(async (tenantId: string): Promise<string | n
   return String(data.name);
 });
 
+/** School coordinates written by the ERP (Configuración → Institución). */
+export const loadSchoolLocation = cache(
+  async (tenantId: string): Promise<{ latitude: number; longitude: number } | null> => {
+    const data = await loadSchoolRow(tenantId);
+    const settings = data?.settings;
+    if (!settings || typeof settings !== "object" || Array.isArray(settings)) return null;
+    const bag = settings as Record<string, unknown>;
+    const latitude = bag.weatherLatitude;
+    const longitude = bag.weatherLongitude;
+    if (typeof latitude !== "number" || !Number.isFinite(latitude)) return null;
+    if (typeof longitude !== "number" || !Number.isFinite(longitude)) return null;
+    return { latitude, longitude };
+  },
+);
+
 /** Public URL for `tenants.settings.logoStoragePath` in the school-branding bucket. */
 export const loadSchoolLogoUrl = cache(async (tenantId: string): Promise<string | null> => {
   const data = await loadSchoolRow(tenantId);

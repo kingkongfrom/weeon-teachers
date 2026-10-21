@@ -10,6 +10,7 @@ import {
   type HubQuincunxItem,
 } from "@/components/dashboard/hub-quincunx-grid";
 import { PanelAttentionStrip } from "@/components/dashboard/panel-attention";
+import { TodayWeatherBlock } from "@/components/dashboard/today-weather-block";
 import { FadeIn } from "@/components/motion/fade-in";
 import { ScheduleUpcoming } from "@/components/schedule/schedule-upcoming";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
@@ -18,7 +19,8 @@ import { loadGroupEventsBetween } from "@/lib/dashboard/calendar";
 import { loadPanelAttention } from "@/lib/dashboard/panel-attention";
 import { loadSchoolName } from "@/lib/dashboard/school";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
-import { getT } from "@/lib/i18n/server";
+import { loadSchoolWeather } from "@/lib/weather/load-school-weather";
+import { getLocale, getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +28,15 @@ export const dynamic = "force-dynamic";
 export default async function InicioPage() {
   const session = await getTeacherSession();
   const t = await getT();
+  const locale = await getLocale();
 
   const todayISO = schoolToday();
-  const [schedule, schoolName, attention, todayEvents] = await Promise.all([
+  const [schedule, schoolName, attention, todayEvents, weather] = await Promise.all([
     loadTeacherSchedule(),
     session ? loadSchoolName(session.tenantId) : Promise.resolve(null),
     loadPanelAttention(),
     loadGroupEventsBetween(todayISO, todayISO),
+    loadSchoolWeather(session?.tenantId ?? null),
   ]);
 
   const corners = [
@@ -83,14 +87,17 @@ export default async function InicioPage() {
 
   return (
     <FadeIn className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="brand-page-title text-3xl text-foreground sm:text-4xl">
-          {t.panel.title}
-        </h1>
-        <p className="text-sm font-medium text-foreground/55">
-          {schoolName ?? t.common.fallbackSchool}
-        </p>
-      </header>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <header className="flex flex-col gap-1">
+          <h1 className="brand-page-title text-3xl text-foreground sm:text-4xl">
+            {t.panel.title}
+          </h1>
+          <p className="text-sm font-medium text-foreground/55">
+            {schoolName ?? t.common.fallbackSchool}
+          </p>
+          <TodayWeatherBlock locale={locale} todayISO={todayISO} weather={weather} />
+        </header>
+      </div>
 
       <PanelAttentionStrip attention={attention} />
 

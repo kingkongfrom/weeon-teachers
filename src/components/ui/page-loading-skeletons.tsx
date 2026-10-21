@@ -21,6 +21,23 @@ export function PageTitleBlockSkeleton({
   );
 }
 
+/** Date band on `/inicio` — weekday, brand day number, weather, month. */
+export function TodayWeatherBlockSkeleton() {
+  return (
+    <div className="flex flex-col">
+      <Skeleton className="h-4 w-20" />
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-[4.5rem] w-24 rounded-2xl sm:h-[5.5rem] sm:w-28" />
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-3 w-28" />
+        </div>
+      </div>
+      <Skeleton className="mt-2 h-5 w-32" />
+    </div>
+  );
+}
+
 /** Matches {@link HubModuleCard} tone tile anatomy. */
 export function HubModuleCardSkeleton() {
   return (

@@ -62,11 +62,30 @@ eventos, and calendario — not duplicated on this page).
 Do **not** embed the full five-column week grid on `/inicio` — it duplicated
 Agenda and pushed the hub below the fold.
 
+## Date + weather block
+
+`components/dashboard/today-weather-block.tsx`, rendered under the page title
+and school name (shares the Resumen design used in `weeon-tenants`):
+
+- Weekday, the brand-gradient day number, and the month + year, in the school
+  timezone (`schoolToday()`).
+- Live conditions from **MET Norway** (`api.met.no`, free for commercial use, no
+  API key) — icon, `°C`, and `Máx · Mín`. A clear-sky icon renders yellow
+  (`#eab308`); every other condition stays brand blue.
+- Coordinates come from the school's `tenants.settings.weatherLatitude` /
+  `weatherLongitude` (set in the ERP: Configuración → Institución). Fallback is
+  San José. Read-only here — teachers cannot write the tenant row (RLS).
+- `lib/weather/load-school-weather.ts` is server-only and `cache()`d; the MET
+  Norway request itself is cached 30 minutes and any failure renders no widget.
+
 ## Key files
 
 | File | Role |
 | ---- | ---- |
 | `src/app/(app)/inicio/page.tsx` | Five-tile hub + Hoy column |
+| `components/dashboard/today-weather-block.tsx` | Date + live weather band |
+| `lib/weather/met-norway.ts` | MET Norway fetch/parse + symbol map |
+| `lib/weather/load-school-weather.ts` | Server loader (school coordinates → weather) |
 | `components/dashboard/hub-quincunx-grid.tsx` | Five-tile home grid |
 | `components/dashboard/hub-module-card.tsx` | Tone cards on other hubs |
 | `components/schedule/schedule-upcoming.tsx` | Today / upcoming compact list |
