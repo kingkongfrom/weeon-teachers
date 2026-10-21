@@ -2,6 +2,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Resumen morning-sheet composition (mirrors weeon-tenants): the absolute
+   placement needs both width for three access cards in one row and vertical
+   room. Narrower or shorter viewports fall back to a stacked grid. */
+@custom-variant morning-desktop (@media (min-width: 1536px) and (min-height: 780px));
+@custom-variant morning-compact (@media (min-width: 1024px) and (max-width: 1535.98px));
+@custom-variant morning-tablet (@media (min-width: 768px) and (max-width: 1023.98px));
+
 :root {
   color-scheme: light;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than

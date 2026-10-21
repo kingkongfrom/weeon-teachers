@@ -56,7 +56,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface transition-[width,transform] duration-200 md:z-40 md:translate-x-0",
           navOpen ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "w-[15.3rem] md:w-[4.5rem]" : "w-[15.3rem]",
+          collapsed ? "w-72 md:w-[4.5rem]" : "w-72",
         )}
       >
         <div
@@ -85,7 +85,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
         />
       </aside>
 
-      <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-[15.3rem]"}>
+      <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}>
         <AppHeader
           user={user}
           supabasePublic={supabasePublic}
@@ -125,3 +125,4 @@ function SidebarToggle({ collapsed }: { collapsed: boolean }) {
       </button>
   );
 }
+
