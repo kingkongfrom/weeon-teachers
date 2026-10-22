@@ -33,10 +33,10 @@ export default function InicioLoading() {
             {Array.from({ length: 3 }, (_, index) => (
               <div
                 key={index}
-                className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-2 py-4 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B]"
+                className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-2 py-4 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 morning-desktop:flex-none morning-desktop:min-w-[12rem] morning-desktop:gap-2 morning-desktop:px-6 morning-desktop:py-8 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B]"
               >
-                <Skeleton className="h-8 w-8 rounded-xl morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11" />
-                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-8 w-8 rounded-xl morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11 morning-desktop:h-9 morning-desktop:w-9" />
+                <Skeleton className="h-3 w-14 morning-desktop:h-4 morning-desktop:w-20" />
               </div>
             ))}
           </div>

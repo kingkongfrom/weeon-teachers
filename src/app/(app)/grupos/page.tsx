@@ -7,7 +7,12 @@ import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function GruposPage() {
+export default async function GruposPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const session = await getTeacherSession();
   const t = await getT();
 
@@ -32,7 +37,7 @@ export default async function GruposPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {grupos.map((grupo) => (
-            <GrupoCard key={grupo.id} grupo={grupo} schoolName={schoolName} year={year} />
+            <GrupoCard key={grupo.id} grupo={grupo} schoolName={schoolName} year={year} tab={tab} />
           ))}
         </div>
       )}

@@ -104,8 +104,8 @@ export function TeacherMorning({
   const today = parseISO(todayISO);
   const week = schoolWeek(todayISO);
   const todayKey = schoolWeekday();
-  const attendanceHref = attendanceClassHref(lessons, todayKey);
-  const conductHref = conductClassHref(lessons, todayKey);
+  const attendanceHref = attendanceClassHref(lessons);
+  const conductHref = conductClassHref(lessons);
   const academicYear = schoolAcademicYear(todayISO);
   const periodLabel = academicYear
     ? locale === "en"
@@ -178,13 +178,13 @@ export function TeacherMorning({
             <Link
               key={label}
               href={href}
-              className="flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-2 py-4 transition-colors hover:bg-surface-muted/60 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B] dark:hover:bg-[#252E4A]"
+              className="flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-2 py-4 transition-colors hover:bg-surface-muted/60 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 morning-desktop:flex-none morning-desktop:min-w-[12rem] morning-desktop:gap-2 morning-desktop:px-6 morning-desktop:py-8 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B] dark:hover:bg-[#252E4A]"
             >
               <Icon
-                className="h-8 w-8 text-[#2b59ff] morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11 dark:text-[#7aa2ff]"
+                className="h-8 w-8 text-[#2b59ff] morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11 morning-desktop:h-9 morning-desktop:w-9 dark:text-[#7aa2ff]"
                 aria-hidden
               />
-              <span className="text-xs text-foreground/65 morning-tablet:text-base morning-compact:text-base dark:text-white/75">
+              <span className="text-xs text-foreground/65 morning-tablet:text-base morning-compact:text-base morning-desktop:text-sm dark:text-white/75">
                 {label}
               </span>
             </Link>
@@ -387,28 +387,31 @@ function ResumenWeather({ weather }: { weather: WeatherSnapshot }) {
 }
 
 /**
- * Class that the attendance/conduct shortcuts open: the teacher's earliest
- * class today, otherwise the earliest class this week. Falls back to the
- * schedule page when the teacher has no assigned slots at all.
+ * Distinct groups the teacher teaches, derived from their assigned lesson
+ * slots.
  */
-function shortcutClassId(lessons: TeacherLesson[], todayKey: string): string | null {
-  const sorted = [...lessons].sort((a, b) => {
-    const dayDiff = WEEKDAY_INDEX[a.weekday] - WEEKDAY_INDEX[b.weekday];
-    return dayDiff !== 0 ? dayDiff : a.startTime.localeCompare(b.startTime);
-  });
-  const todayLesson = sorted.find((lesson) => lesson.weekday === todayKey);
-  return (todayLesson ?? sorted[0])?.classId ?? null;
+function distinctClassIds(lessons: TeacherLesson[]): string[] {
+  return [...new Set(lessons.map((lesson) => lesson.classId))];
 }
 
-function attendanceClassHref(lessons: TeacherLesson[], todayKey: string): string {
-  const classId = shortcutClassId(lessons, todayKey);
-  return classId ? `/aula-virtual/${classId}?tab=asistencia` : "/horarios";
+/**
+ * Attendance shortcut: one group opens that group's attendance tab directly;
+ * multiple groups open the group list (intent preserved via `?tab=`); no
+ * groups falls back to the schedule page.
+ */
+function attendanceClassHref(lessons: TeacherLesson[]): string {
+  const classIds = distinctClassIds(lessons);
+  if (classIds.length === 0) return "/horarios";
+  if (classIds.length > 1) return "/grupos?tab=asistencia";
+  return `/aula-virtual/${classIds[0]}?tab=asistencia`;
 }
 
 /** Conducta has no aula-virtual tab yet, so it opens the group's conduct tab. */
-function conductClassHref(lessons: TeacherLesson[], todayKey: string): string {
-  const classId = shortcutClassId(lessons, todayKey);
-  return classId ? `/grupos/${classId}?tab=conducta` : "/horarios";
+function conductClassHref(lessons: TeacherLesson[]): string {
+  const classIds = distinctClassIds(lessons);
+  if (classIds.length === 0) return "/horarios";
+  if (classIds.length > 1) return "/grupos?tab=conducta";
+  return `/grupos/${classIds[0]}?tab=conducta`;
 }
 
 function timeLabel(hhmm: string): string {

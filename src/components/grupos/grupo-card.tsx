@@ -11,13 +11,16 @@ export async function GrupoCard({
   grupo,
   schoolName,
   year,
+  tab,
 }: {
   grupo: TeacherGrupo;
   schoolName: string | null;
   year: number;
+  tab?: string;
 }) {
   const t = await getT();
   const base = `/grupos/${grupo.id}`;
+  const mainHref = tab === "asistencia" || tab === "conducta" ? `${base}?tab=${tab}` : base;
   const actions = [
     {
       label: t.grupos.tabs.grades,
@@ -38,7 +41,7 @@ export async function GrupoCard({
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-brand-200 dark:hover:border-border-strong">
-      <Link href={base} className="block">
+      <Link href={mainHref} className="block">
         <div className={cn("relative bg-gradient-to-br px-4 py-3", CLASS_BANNER)}>
           <p className="line-clamp-2 text-lg font-bold leading-snug">{grupo.name}</p>
           <p className="mt-0.5 text-xs font-semibold opacity-70">{year}</p>
