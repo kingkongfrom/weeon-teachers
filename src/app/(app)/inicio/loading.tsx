@@ -19,7 +19,7 @@ export default function InicioLoading() {
           </div>
         </header>
 
-        <div className="hidden w-full flex-col items-center gap-2 morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-2 morning-compact:-mt-[50px] morning-compact:flex morning-compact:w-full morning-compact:justify-self-center morning-compact:self-start morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem-4rem)] morning-desktop:flex morning-desktop:-translate-x-1/2">
+        <div className="hidden w-full flex-col items-center gap-2 morning-tablet:col-span-2 morning-tablet:row-start-2 morning-tablet:flex morning-tablet:justify-self-center morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-2 morning-compact:-mt-[50px] morning-compact:flex morning-compact:w-full morning-compact:justify-self-center morning-compact:self-start morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem-4rem)] morning-desktop:flex morning-desktop:-translate-x-1/2">
           <div className="flex flex-wrap items-center justify-center gap-2">
             {Array.from({ length: 3 }, (_, index) => (
               <Skeleton key={`quick-${index}`} className="h-9 w-36 rounded-full" />
@@ -27,7 +27,7 @@ export default function InicioLoading() {
           </div>
         </div>
 
-        <div className="morning-tablet:col-span-2 morning-tablet:row-start-2 morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-3 morning-compact:-mt-5 morning-compact:min-w-0 morning-compact:self-center morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:w-[115%] morning-desktop:max-w-none morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem)] morning-desktop:-translate-x-1/2">
+        <div className="morning-tablet:col-span-2 morning-tablet:row-start-3 morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-3 morning-compact:-mt-5 morning-compact:min-w-0 morning-compact:self-center morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:w-[115%] morning-desktop:max-w-none morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem)] morning-desktop:-translate-x-1/2">
           <Skeleton className="mx-auto mb-3 h-4 w-16" />
           <div className="flex flex-wrap justify-center gap-3 morning-tablet:flex-nowrap morning-compact:flex-nowrap morning-desktop:flex-nowrap">
             {Array.from({ length: 3 }, (_, index) => (
@@ -42,7 +42,7 @@ export default function InicioLoading() {
           </div>
         </div>
 
-        <div className="border-t border-border-strong pt-5 morning-compact:pt-4 morning-tablet:col-span-2 morning-tablet:row-start-3 morning-compact:col-span-2 morning-compact:row-start-4 morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px)] morning-desktop:w-2/3 morning-desktop:-translate-x-1/2 morning-desktop:-translate-y-1/2">
+        <div className="border-t border-border-strong pt-5 morning-compact:pt-4 morning-tablet:col-span-2 morning-tablet:row-start-4 morning-compact:col-span-2 morning-compact:row-start-4 morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px)] morning-desktop:w-2/3 morning-desktop:-translate-x-1/2 morning-desktop:-translate-y-1/2">
           <div className="grid grid-cols-5 gap-2 morning-compact:gap-3">
             {Array.from({ length: 5 }, (_, index) => (
               <div key={index} className="flex flex-col gap-2 py-2">
@@ -60,7 +60,7 @@ export default function InicioLoading() {
           </div>
         </div>
 
-        <div className="morning-tablet:col-span-2 morning-tablet:row-start-4 morning-compact:col-span-2 morning-compact:row-start-5 morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px+5rem+20px+30px+1rem)] morning-desktop:w-full morning-desktop:max-w-3xl morning-desktop:-translate-x-1/2">
+        <div className="morning-tablet:col-span-2 morning-tablet:row-start-5 morning-compact:col-span-2 morning-compact:row-start-5 morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px+5rem+20px+30px+1rem)] morning-desktop:w-full morning-desktop:max-w-3xl morning-desktop:-translate-x-1/2">
           <Skeleton className="mb-3 h-6 w-16" />
           <div className="flex flex-col gap-2">
             {Array.from({ length: 3 }, (_, index) => (

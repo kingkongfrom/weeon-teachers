@@ -14,7 +14,7 @@ middle, three access cards, the current school week, comms shortcuts, and a
 | Zone | Desktop (`≥1536px` + `≥780px` tall) | Compact (1024–1535px) | Tablet (768–1023px) | Mobile |
 | ---- | ----------------------------------- | --------------------- | ------------------- | ------ |
 | Date + weather | top-left, absolute | grid row 1 col 1 | grid row 1 col 1 | first |
-| Quick actions | centred, absolute | row 1 col 2 | hidden | hidden |
+| Quick actions | centred, absolute | row 1 col 2 | row 2, full width | hidden |
 | Access cards | centred, absolute | row 2, full width | row 2, full width | wrapped row |
 | Week + comms | centred under cards | row 3 | row 3 | next |
 | Hoy panel | under the week | row 4 | row 4 | last |
