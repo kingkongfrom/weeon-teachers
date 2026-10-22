@@ -12,14 +12,14 @@ export default function InicioLoading() {
           <div className="flex flex-col">
             <Skeleton className="h-4 w-24" />
             <div className="flex items-center gap-3">
-              <Skeleton className="mt-2 h-[5.5rem] w-28 rounded-2xl morning-compact:h-[4.43rem] morning-compact:w-24 morning-desktop:h-[7.5rem] morning-desktop:w-36" />
+              <Skeleton className="mt-2 h-[4rem] w-20 rounded-2xl morning-tablet:h-[5.5rem] morning-tablet:w-28 morning-compact:h-[4.43rem] morning-compact:w-24 morning-desktop:h-[7.5rem] morning-desktop:w-36" />
               <Skeleton className="mt-2 h-10 w-24" />
             </div>
             <Skeleton className="mt-2 h-6 w-36" />
           </div>
         </header>
 
-        <div className="hidden w-full flex-col items-center gap-2 morning-tablet:col-span-2 morning-tablet:row-start-2 morning-tablet:flex morning-tablet:justify-self-center morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-2 morning-compact:-mt-[50px] morning-compact:flex morning-compact:w-full morning-compact:justify-self-center morning-compact:self-start morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem-4rem)] morning-desktop:flex morning-desktop:-translate-x-1/2">
+        <div className="flex w-full flex-col items-center gap-2 morning-tablet:col-span-2 morning-tablet:row-start-2 morning-tablet:justify-self-center morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-2 morning-compact:-mt-[50px] morning-compact:w-full morning-compact:justify-self-center morning-compact:self-start morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem-4rem)] morning-desktop:-translate-x-1/2">
           <div className="flex flex-wrap items-center justify-center gap-2">
             {Array.from({ length: 3 }, (_, index) => (
               <Skeleton key={`quick-${index}`} className="h-9 w-36 rounded-full" />
@@ -33,10 +33,10 @@ export default function InicioLoading() {
             {Array.from({ length: 3 }, (_, index) => (
               <div
                 key={index}
-                className="flex min-w-[12rem] flex-col items-center justify-center gap-2 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-6 py-8 morning-tablet:min-w-0 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:min-w-0 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B]"
+                className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-2 py-4 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B]"
               >
-                <Skeleton className="h-9 w-9 rounded-xl morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11" />
-                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-8 w-8 rounded-xl morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11" />
+                <Skeleton className="h-3 w-14" />
               </div>
             ))}
           </div>

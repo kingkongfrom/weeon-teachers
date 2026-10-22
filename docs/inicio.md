@@ -24,7 +24,8 @@ Responsive logic uses the `morning-desktop` / `morning-compact` /
 `morning-tablet` Tailwind variants declared in `src/app/globals.css` — the same
 media queries as the ERP. Below `768px` everything stacks in one column.
 
-Shell width: `app-shell.tsx` uses `max-w-[77rem]`.
+Shell width: `app-shell.tsx` content is full-width with the same horizontal
+gutters as the ERP (`px-4` → `sm:px-5` → `md:px-8`).
 
 ## Sheet contents
 

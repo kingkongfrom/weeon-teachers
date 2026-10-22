@@ -5,6 +5,7 @@ import {
   BookOpen,
   CalendarDays,
   CalendarPlus,
+  Clock,
   Cloud,
   CloudDrizzle,
   CloudFog,
@@ -29,6 +30,7 @@ import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
 import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule";
 import { schoolWeekday } from "@/lib/attendance/model";
+import { schoolAcademicYear } from "@/lib/dashboard/school-period";
 import type { WeatherIconKind, WeatherSnapshot } from "@/lib/weather/met-norway";
 import { cn } from "@/lib/utils";
 
@@ -51,7 +53,7 @@ export type TeacherMorningCopy = {
   accessTitle: string;
   quickAttendance: string;
   quickConduct: string;
-  quickNewExam: string;
+  quickSchedule: string;
   messages: string;
   circulares: string;
   communicationLabel: string;
@@ -104,14 +106,21 @@ export function TeacherMorning({
   const todayKey = schoolWeekday();
   const attendanceHref = attendanceClassHref(lessons, todayKey);
   const conductHref = conductClassHref(lessons, todayKey);
+  const academicYear = schoolAcademicYear(todayISO);
+  const periodLabel = academicYear
+    ? locale === "en"
+      ? `Academic year ${academicYear} - ${Number(academicYear) + 1}`
+      : `Año lectivo ${academicYear} - ${Number(academicYear) + 1}`
+    : "";
 
   return (
     <section className="relative flex w-full flex-col gap-10 py-2 morning-tablet:grid morning-tablet:grid-cols-[auto_1fr] morning-tablet:items-start morning-tablet:gap-x-6 morning-compact:-mt-5 morning-compact:grid morning-compact:grid-cols-[auto_minmax(0,1fr)] morning-compact:items-start morning-compact:gap-x-6 morning-compact:gap-y-6 morning-desktop:block morning-desktop:min-h-[70vh] morning-desktop:py-4">
-      {attention ? (
-        <div className="morning-tablet:col-start-2 morning-tablet:row-start-1 morning-tablet:self-start morning-tablet:justify-self-end morning-compact:col-start-2 morning-compact:row-start-1 morning-compact:self-start morning-compact:justify-self-end morning-desktop:absolute morning-desktop:right-0 morning-desktop:top-0 morning-desktop:w-[26rem]">
-          {attention}
-        </div>
-      ) : null}
+      <div className="flex flex-col gap-2 morning-tablet:col-start-2 morning-tablet:row-start-1 morning-tablet:self-start morning-tablet:justify-self-end morning-compact:col-start-2 morning-compact:row-start-1 morning-compact:self-start morning-compact:justify-self-end morning-desktop:absolute morning-desktop:right-0 morning-desktop:top-0 morning-desktop:w-[26rem]">
+        <p className="self-end inline-flex items-center rounded-full bg-[#5e25cc]/10 px-3 py-1 text-xs font-semibold text-[#5e25cc] dark:bg-[#2b59ff]/20 dark:text-[#c4b5fd]">
+          {periodLabel}
+        </p>
+        {attention}
+      </div>
 
       <header className="morning-tablet:col-start-1 morning-tablet:row-start-1 morning-tablet:self-start morning-compact:col-start-1 morning-compact:row-start-1 morning-desktop:-mt-[10px]">
         <div className="flex flex-col">
@@ -120,7 +129,7 @@ export function TeacherMorning({
           </p>
           <div className="flex items-center gap-3">
             <p
-              className="brand-page-title text-[5.5rem] leading-none tracking-tight morning-compact:text-[4.43rem] morning-desktop:text-[7.5rem]"
+              className="brand-page-title text-[4rem] leading-none tracking-tight morning-tablet:text-[5.5rem] morning-compact:text-[4.43rem] morning-desktop:text-[7.5rem]"
               style={BRAND_NUMBER}
             >
               {today.getDate()}
@@ -133,13 +142,13 @@ export function TeacherMorning({
         </div>
       </header>
 
-      <div className="hidden w-full flex-col items-center gap-2 morning-tablet:col-span-2 morning-tablet:row-start-2 morning-tablet:flex morning-tablet:justify-self-center morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-2 morning-compact:-mt-[50px] morning-compact:flex morning-compact:w-full morning-compact:justify-self-center morning-compact:self-start morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem-4rem)] morning-desktop:flex morning-desktop:-translate-x-1/2">
+      <div className="flex w-full flex-col items-center gap-2 morning-tablet:col-span-2 morning-tablet:row-start-2 morning-tablet:justify-self-center morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-2 morning-compact:-mt-[50px] morning-compact:w-full morning-compact:justify-self-center morning-compact:self-start morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem-4rem)] morning-desktop:-translate-x-1/2">
         <div className="flex flex-wrap items-center justify-center gap-2">
           {(
             [
               [copy.quickAttendance, UserCheck, attendanceHref],
               [copy.quickConduct, ShieldCheck, conductHref],
-              [copy.quickNewExam, CalendarPlus, "/agenda/calendario"],
+              [copy.quickSchedule, Clock, "/horarios"],
             ] as const
           ).map(([label, Icon, href]) => (
             <Link
@@ -169,13 +178,13 @@ export function TeacherMorning({
             <Link
               key={label}
               href={href}
-              className="flex min-w-[12rem] cursor-pointer flex-col items-center gap-2 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-6 py-8 transition-colors hover:bg-surface-muted/60 morning-tablet:min-w-0 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:min-w-0 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B] dark:hover:bg-[#252E4A]"
+              className="flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-2 py-4 transition-colors hover:bg-surface-muted/60 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B] dark:hover:bg-[#252E4A]"
             >
               <Icon
-                className="h-9 w-9 text-[#2b59ff] morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11 dark:text-[#7aa2ff]"
+                className="h-8 w-8 text-[#2b59ff] morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11 dark:text-[#7aa2ff]"
                 aria-hidden
               />
-              <span className="text-sm text-foreground/65 morning-tablet:text-base morning-compact:text-base dark:text-white/75">
+              <span className="text-xs text-foreground/65 morning-tablet:text-base morning-compact:text-base dark:text-white/75">
                 {label}
               </span>
             </Link>

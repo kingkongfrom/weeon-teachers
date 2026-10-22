@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import { ChevronRight, type LucideIcon } from "lucide-react";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
 import { cn } from "@/lib/utils";
 import { hubTonePill, TONE_AVATAR, type HubTone } from "@/lib/dashboard/tones";
@@ -15,8 +15,8 @@ type HubModuleCardProps = {
   upcomingLabel?: string;
   /** Unread badge on the icon (Comunicación hub tiles). */
   badgeCount?: number;
-  /** Square tile for two-column hubs (e.g. Comunicación). */
-  layout?: "default" | "square";
+  /** Square tile for two-column hubs. Lead is the wide primary row. */
+  layout?: "default" | "square" | "lead";
   href?: string;
   className?: string;
 };
@@ -36,12 +36,16 @@ export function HubModuleCard({
 }: HubModuleCardProps) {
   const pill = hubTonePill(tone);
   const square = layout === "square";
+  const lead = layout === "lead";
 
   const card = (
     <div
       className={cn(
-        "flex flex-col gap-2.5 rounded-3xl border border-border p-5 transition-all sm:gap-3",
-        square ? "aspect-square min-h-0 justify-between" : "h-full min-h-[8.5rem] sm:min-h-[9rem]",
+        "rounded-3xl border border-border p-5 transition-all",
+        lead
+          ? "flex min-h-[7.5rem] items-center gap-4 sm:gap-5 sm:p-6"
+          : "flex h-full flex-col gap-2.5 sm:gap-3",
+        !lead && (square ? "aspect-square min-h-0 justify-between" : "min-h-[8.5rem] sm:min-h-[9rem]"),
         pill.active,
         href ? "hover:opacity-95 active:scale-[0.99]" : "",
         className,
@@ -49,17 +53,18 @@ export function HubModuleCard({
     >
       <span
         className={cn(
-          "relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white",
+          "relative flex shrink-0 items-center justify-center rounded-full text-white",
+          lead ? "h-14 w-14" : "h-11 w-11",
           TONE_AVATAR[tone],
         )}
         aria-hidden
       >
-        <Icon className="h-5 w-5" strokeWidth={2.2} />
+        <Icon className={lead ? "h-7 w-7" : "h-5 w-5"} strokeWidth={2.2} />
         {badgeCount > 0 ? <UnreadCountBadge count={badgeCount} absolute /> : null}
       </span>
 
-      <div className={cn("min-w-0", square ? "flex flex-1 flex-col justify-end" : "mt-auto")}>
-        <h2 className={cn("text-base font-bold leading-snug sm:text-lg", pill.label)}>{title}</h2>
+      <div className={cn("min-w-0", lead ? "flex-1" : square ? "flex flex-1 flex-col justify-end" : "mt-auto")}>
+        <h2 className={cn("font-bold leading-snug", lead ? "text-xl sm:text-2xl" : "text-base sm:text-lg", pill.label)}>{title}</h2>
         <p
           className={cn(
             "mt-0.5 text-sm font-medium leading-snug text-foreground/55",
@@ -76,6 +81,9 @@ export function HubModuleCard({
           </span>
         ) : null}
       </div>
+      {lead && href ? (
+        <ChevronRight className={cn("h-5 w-5 shrink-0", pill.label)} aria-hidden />
+      ) : null}
     </div>
   );
 
