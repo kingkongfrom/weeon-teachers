@@ -27,7 +27,7 @@ export default async function InicioPage() {
   ]);
 
   return (
-    <FadeIn className="flex flex-col gap-6">
+    <FadeIn className="flex w-full max-w-none flex-col gap-6">
       <TeacherMorning
         locale={locale}
         todayISO={todayISO}

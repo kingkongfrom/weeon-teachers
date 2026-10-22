@@ -91,7 +91,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
           supabasePublic={supabasePublic}
           onMenu={() => setNavOpen(true)}
         />
-        <main className="mx-auto w-full max-w-[77rem] px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+        <main className="mx-auto w-full max-w-[86rem] px-3 pb-16 pt-6 sm:px-4 lg:px-5">
           {children}
         </main>
       </div>

@@ -133,7 +133,7 @@ export function TeacherMorning({
         </div>
       </header>
 
-      <div className="hidden w-full flex-col items-center gap-2 morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-2 morning-compact:mt-[-50px] morning-compact:flex morning-compact:w-full morning-compact:justify-self-center morning-compact:self-start morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[144px] morning-desktop:flex morning-desktop:-translate-x-1/2">
+      <div className="hidden w-full flex-col items-center gap-2 morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-2 morning-compact:-mt-[50px] morning-compact:flex morning-compact:w-full morning-compact:justify-self-center morning-compact:self-start morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem-4rem)] morning-desktop:flex morning-desktop:-translate-x-1/2">
         <div className="flex flex-wrap items-center justify-center gap-2">
           {(
             [
@@ -154,7 +154,7 @@ export function TeacherMorning({
         </div>
       </div>
 
-      <div className="morning-tablet:col-span-2 morning-tablet:row-start-2 morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-3 morning-compact:min-w-0 morning-compact:self-center morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem)] morning-desktop:-translate-x-1/2">
+      <div className="morning-tablet:col-span-2 morning-tablet:row-start-2 morning-compact:col-start-1 morning-compact:col-span-2 morning-compact:row-start-3 morning-compact:-mt-5 morning-compact:min-w-0 morning-compact:self-center morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px-50px-6rem-70px-20px-3rem)] morning-desktop:-translate-x-1/2">
         <p className="mb-3 text-center text-sm font-medium text-foreground/55 dark:text-foreground/40">
           {copy.accessTitle}
         </p>
@@ -223,7 +223,7 @@ export function TeacherMorning({
         <p className="mt-4 text-center text-sm font-medium text-foreground/55 morning-compact:mt-3 dark:text-foreground/40">
           {copy.communicationLabel}
         </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-2">
+        <div className="mt-[13px] flex flex-wrap justify-center gap-2">
           {(
             [
               [copy.messages, Mail, "/comunicacion/mensajes", "bg-[#2b59ff]/[0.08] border-[#2b59ff]/25", "text-[#2b59ff] dark:text-[#7aa2ff]", unreadInboxCount],
@@ -440,3 +440,8 @@ function titlesOn(events: TeacherCalendarEvent[], iso: string): string[] {
     })
     .map((event) => event.title);
 }
+
+
+
+
+
