@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { hubToneSegment, SEGMENT_TRACK } from "@/lib/dashboard/tones";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { Dropdown } from "@/components/ui/dropdown";
 import { EducationalSupportBadgeButton } from "@/components/educational-supports/support-badge-button";
 import { EducationalSupportWorkflowDialog } from "@/components/educational-supports/support-workflow-dialog";
 import { SubmitReport } from "@/components/grades/submit-report";
@@ -1040,7 +1042,7 @@ export function GradebookWorkspace({
                   onCreate={handleCreate}
                   onClose={() => setAddOpen(false)}
                   titleFor={nextTitleFor}
-                  rubros={activeRubros}
+                  rubros={rubros}
                   defaultRubroId={
                     activeRubros.find((rubro) =>
                       exams.some((exam) => exam.rubroId === rubro.id),
@@ -1338,111 +1340,89 @@ function AddColumnDialog({
     if (ok) onClose();
   }
 
+  // Categories come from the rubric the teacher saved. Archived rubros are not
+  // selectable (they would create a hidden column).
+  const options = rubros
+    .filter((rubro) => !rubro.archived)
+    .map((rubro) => ({
+      value: rubro.id,
+      label: `${rubro.name} · ${rubro.peso}%`,
+    }));
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
-      <motion.button
-        type="button"
-        aria-label={t.gradebook.cancel}
-        onClick={onClose}
-        className="absolute inset-0 bg-black/40"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-      />
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-label={w.addColumn}
-        className="relative z-10 w-full max-w-sm rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl"
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 24 }}
-        transition={{ type: "spring", stiffness: 380, damping: 34 }}
-      >
-        <div className="flex items-center justify-between">
-          <h4 className="text-lg font-bold text-foreground">{w.addColumn}</h4>
+    <Dialog
+      open
+      title={w.addColumn}
+      onClose={onClose}
+      panelClassName="max-w-md"
+      footer={
+        <>
           <button
             type="button"
             onClick={onClose}
-            aria-label={t.common.close}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold text-foreground/70 ui-hover"
           >
-            <X className="h-5 w-5" />
+            {t.gradebook.cancel}
           </button>
+          <button
+            type="submit"
+            form="add-column-form"
+            disabled={pending || !rubroId}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50"
+          >
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {w.create}
+          </button>
+        </>
+      }
+    >
+      <form id="add-column-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-foreground/70">{copy.columnRubro}</span>
+          <Dropdown
+            value={rubroId}
+            onChange={setRubroId}
+            options={options}
+            ariaLabel={copy.columnRubro}
+            size="form"
+            placeholder={copy.noRubros}
+          />
+          <span className="text-xs font-medium text-foreground/50">{copy.columnRubroHint}</span>
         </div>
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-foreground/70">
-              {copy.columnRubro}
-            </span>
-            <select
-              value={rubroId}
-              onChange={(event) => setRubroId(event.target.value)}
-              className="h-10 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground outline-none focus:border-brand-400"
-            >
-              {rubros.map((rubro) => (
-                <option key={rubro.id} value={rubro.id}>
-                  {rubro.name} · {rubro.peso}%
-                </option>
-              ))}
-            </select>
-            <span className="text-xs font-medium text-foreground/50">
-              {copy.columnRubroHint}
-            </span>
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-foreground/70">{w.columnPoints}</span>
-            <input
-              autoFocus
-              value={points}
-              onChange={(event) => setPoints(event.target.value)}
-              inputMode="numeric"
-              className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-950"
-            />
-            <span className="text-xs font-medium text-foreground/50">{w.columnPointsHint}</span>
-          </label>
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-foreground/70">{w.columnKind}</span>
-            <div className="flex flex-wrap gap-1.5">
-              {kinds.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setKind(option)}
-                  aria-pressed={kind === option}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                    kind === option
-                      ? "border-transparent bg-brand-600 text-white"
-                      : "border-border text-foreground/65 hover:text-foreground",
-                  )}
-                >
-                  {w.kinds[option]}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-foreground/50">{titleFor(kind)}</p>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-foreground/70">{w.columnPoints}</span>
+          <input
+            autoFocus
+            value={points}
+            onChange={(event) => setPoints(event.target.value)}
+            inputMode="numeric"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-950"
+          />
+          <span className="text-xs font-medium text-foreground/50">{w.columnPointsHint}</span>
+        </label>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold text-foreground/70">{w.columnKind}</span>
+          <div className="flex flex-wrap gap-1.5">
+            {kinds.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setKind(option)}
+                aria-pressed={kind === option}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                  kind === option
+                    ? "border-transparent bg-brand-600 text-white"
+                    : "border-border text-foreground/65 hover:text-foreground",
+                )}
+              >
+                {w.kinds[option]}
+              </button>
+            ))}
           </div>
-          <div className="mt-1 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold text-foreground/70 ui-hover"
-            >
-              {t.gradebook.cancel}
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50"
-            >
-              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {w.create}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+          <p className="text-xs text-foreground/50">{titleFor(kind)}</p>
+        </div>
+      </form>
+    </Dialog>
   );
 }
