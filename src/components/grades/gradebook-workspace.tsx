@@ -1,9 +1,16 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  Fragment,
+  startTransition,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
 import {
   Check,
   Download,
@@ -15,8 +22,6 @@ import {
   Search,
   SlidersHorizontal,
   Trash2,
-  Undo2,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
@@ -41,7 +46,6 @@ import {
   closeExamColumn,
   fetchSubjectExams,
   removeExamColumn,
-  restoreExamColumn,
   saveGrade,
 } from "@/lib/teachers/exams-actions";
 import type { AssignmentKind, ExamColumn, GradeRubro } from "@/lib/dashboard/exams";
@@ -71,6 +75,18 @@ const DENSITY_ORDER: Density[] = ["compact", "cozy", "expanded"];
 
 /** Calificaciones module accent (purple tone) for text-level highlights. */
 const ACCENT_TEXT = "text-[#7c3aed] dark:text-[#b9a3f7]";
+
+/**
+ * Column lock/delete visibility.
+ *
+ * The icons are visible by default, so any engine that ignores the media query
+ * (or cannot parse it) still shows them — Safari included. Only a device that
+ * reports `hover: hover` AND `pointer: fine` (a real mouse) hides them until
+ * hover/focus. iPadOS Safari reports `hover: hover` for trackpad and Pencil
+ * but never `pointer: fine`, so on iPad the icons stay visible.
+ */
+const COLUMN_ACTIONS_VISIBILITY =
+  "opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover/col:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within/col:opacity-100 focus-within:opacity-100";
 
 function pctOf(mark: number | null | undefined, max: number): number | null {
   if (mark == null || !max || max <= 0) return null;
@@ -196,11 +212,10 @@ export function GradebookWorkspace({
   const dense = density === "compact";
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<ExamColumn | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [closeTarget, setCloseTarget] = useState<ExamColumn | null>(null);
   const [closing, setClosing] = useState(false);
-  const [undoColumn, setUndoColumn] = useState<ExamColumn | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ExamColumn | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [localFlags, setLocalFlags] = useState(supportFlags);
   const [reviewStudent, setReviewStudent] = useState<{
     id: string;
@@ -343,7 +358,7 @@ export function GradebookWorkspace({
   // One narrow subtotal column closes every rubro group.
   const subtotalWidth = dense ? "w-[2.5rem]" : "w-[3.25rem]";
   const colTop = dense ? "top-8" : "top-9";
-  const colHeadH = dense ? "h-8" : "h-10";
+  const colHeadH = dense ? "min-h-8" : "min-h-10";
 
   const visibleStudents = students.filter((student) =>
     studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
@@ -494,10 +509,19 @@ export function GradebookWorkspace({
     return true;
   }
 
-  async function handleDelete() {
+  /**
+   * Delete asks first. A column carries every student's mark, so an accidental
+   * tap on the trash icon (easy on an iPad) must not destroy it silently.
+   */
+  function deleteColumn(column: ExamColumn) {
+    setError(null);
+    setDeleteTarget(column);
+  }
+
+  async function handleDeleteColumn() {
     if (!deleteTarget) return;
-    setDeleting(true);
     const column = deleteTarget;
+    setDeleting(true);
     const res = await removeExamColumn({ classId, assignmentId: column.id });
     setDeleting(false);
     setDeleteTarget(null);
@@ -505,8 +529,10 @@ export function GradebookWorkspace({
       setError(res.error);
       return;
     }
-    setUndoColumn(column);
-    setExams((current) => current.filter((item) => item.id !== column.id));
+    startTransition(() => {
+      setExams((current) => current.filter((item) => item.id !== column.id));
+    });
+    await refresh();
   }
 
   async function handleCloseColumn() {
@@ -520,40 +546,6 @@ export function GradebookWorkspace({
       setError(res.error);
       return;
     }
-    await refresh();
-  }
-
-  // The undo toast disappears on its own after 30 seconds.
-  useEffect(() => {
-    if (!undoColumn) return;
-    const timer = window.setTimeout(() => setUndoColumn(null), 30_000);
-    return () => window.clearTimeout(timer);
-  }, [undoColumn]);
-
-  async function handleUndo() {
-    if (!undoColumn) return;
-    const column = undoColumn;
-    const grades = students
-      .map((student) => {
-        const grade = column.grades[student.id];
-        return grade
-          ? { studentId: student.id, mark: grade.mark, maxMarks: grade.maxMarks }
-          : null;
-      })
-      .filter((value): value is { studentId: string; mark: number; maxMarks: number } => value !== null);
-    const res = await restoreExamColumn({
-      classId,
-      assignmentId: column.id,
-      title: column.title,
-      points: column.points,
-      rubroId: column.rubroId,
-      grades,
-    });
-    if (!res.ok) {
-      setError(res.error);
-      return;
-    }
-    setUndoColumn(null);
     await refresh();
   }
 
@@ -727,25 +719,19 @@ export function GradebookWorkspace({
         </div>
       ) : null}
 
-      {undoColumn ? (
-        <div className="fixed bottom-5 right-5 z-[90] flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm shadow-lg">
-          <button
-            type="button"
-            onClick={() => void handleUndo()}
-            className="inline-flex items-center gap-1.5 font-semibold text-[#7c3aed] transition-colors hover:opacity-80 dark:text-[#b9a3f7]"
-          >
-            <Undo2 className="h-4 w-4" />
-            {t.gradebook.undo}
-          </button>
-          <button
-            type="button"
-            onClick={() => setUndoColumn(null)}
-            aria-label={t.common.close}
-            className="flex h-6 w-6 items-center justify-center rounded text-foreground/45 hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+      {deleteTarget ? (
+        <ConfirmDialog
+          open
+          title={w.deleteColumnConfirm}
+          description={labels.get(deleteTarget.id)?.medium ?? deleteTarget.title}
+          confirmLabel={w.deleteColumn}
+          cancelLabel={t.gradebook.cancel}
+          pending={deleting}
+          onConfirm={() => void handleDeleteColumn()}
+          onCancel={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+        />
       ) : null}
 
       {subjectId && activeRubros.length === 0 ? (
@@ -863,7 +849,7 @@ export function GradebookWorkspace({
                               column={column}
                               label={label}
                               density={density}
-                              onDelete={() => setDeleteTarget(column)}
+                              onDelete={() => deleteColumn(column)}
                               onClose={
                                 column.assessmentId || column.closedAt
                                   ? undefined
@@ -1072,23 +1058,6 @@ export function GradebookWorkspace({
         : null}
 
       <ConfirmDialog
-        open={deleteTarget !== null}
-        title={w.deleteColumnConfirm}
-        description={
-          deleteTarget
-            ? labels.get(deleteTarget.id)?.medium ?? deleteTarget.title
-            : undefined
-        }
-        confirmLabel={t.gradebook.delete}
-        cancelLabel={t.gradebook.cancel}
-        pending={deleting}
-        onConfirm={() => void handleDelete()}
-        onCancel={() => {
-          if (!deleting) setDeleteTarget(null);
-        }}
-      />
-
-      <ConfirmDialog
         open={closeTarget !== null}
         title={w.closeColumnConfirm}
         description={
@@ -1099,6 +1068,7 @@ export function GradebookWorkspace({
         confirmLabel={w.closeColumn}
         cancelLabel={t.gradebook.cancel}
         pending={closing}
+        destructive={false}
         onConfirm={() => void handleCloseColumn()}
         onCancel={() => {
           if (!closing) setCloseTarget(null);
@@ -1257,7 +1227,7 @@ function ColumnHeader({
   const maxPts = columnMaxPoints(column);
 
   return (
-    <div className="group/col relative flex w-full flex-col items-center gap-0.5">
+    <div className="group/col flex w-full flex-col items-center gap-0.5 py-0.5">
       <span
         title={`${label.medium} · ${w.columnPointsShort(maxPts)}`}
         className={cn(
@@ -1275,26 +1245,34 @@ function ColumnHeader({
           {w.closedColumn}
         </span>
       ) : null}
-      {onClose ? (
+      <div
+        className={cn(
+          "flex items-center justify-center gap-0.5 transition-opacity",
+          COLUMN_ACTIONS_VISIBILITY,
+        )}
+      >
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={w.closeColumn}
+            title={w.closeColumn}
+            // 32px hit area (Apple HIG minimum for touch) with no double-tap zoom.
+            className="flex h-8 w-8 touch-manipulation select-none items-center justify-center rounded-md text-foreground/60 [-webkit-touch-callout:none] hover:bg-surface-muted hover:text-foreground active:bg-surface-muted"
+          >
+            <Lock className="h-4 w-4" />
+          </button>
+        ) : null}
         <button
           type="button"
-          onClick={onClose}
-          aria-label={w.closeColumn}
-          title={w.closeColumn}
-          className="absolute left-0 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-foreground/50 opacity-0 transition-all hover:bg-surface-muted hover:text-foreground focus:opacity-100 group-hover/col:opacity-100"
+          onClick={onDelete}
+          aria-label={w.deleteColumn}
+          title={w.deleteColumn}
+          className="flex h-8 w-8 touch-manipulation select-none items-center justify-center rounded-md text-error/80 [-webkit-touch-callout:none] hover:bg-error/10 hover:text-error active:bg-error/10"
         >
-          <Lock className="h-3 w-3" />
+          <Trash2 className="h-4 w-4" />
         </button>
-      ) : null}
-      <button
-        type="button"
-        onClick={onDelete}
-        aria-label={w.deleteColumn}
-        title={w.deleteColumn}
-        className="absolute right-0 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-error/60 opacity-0 transition-all hover:bg-error/10 hover:text-error focus:opacity-100 group-hover/col:opacity-100"
-      >
-        <Trash2 className="h-3 w-3" />
-      </button>
+      </div>
     </div>
   );
 }

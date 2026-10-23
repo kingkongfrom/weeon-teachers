@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Info, Loader2 } from "lucide-react";
 
 /**
  * App-styled confirmation modal — replaces `window.confirm`. Portaled to
@@ -79,11 +79,15 @@ export function ConfirmDialog({
             transition={{ type: "spring", stiffness: 380, damping: 34 }}
           >
             <div className="flex items-start gap-3">
-              {destructive ? (
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-error/10 text-error">
-                  <AlertTriangle className="h-5 w-5" />
-                </span>
-              ) : null}
+              <span
+                className={
+                  destructive
+                    ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-error/10 text-error"
+                    : "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-300"
+                }
+              >
+                {destructive ? <AlertTriangle className="h-5 w-5" /> : <Info className="h-5 w-5" />}
+              </span>
               <div className="min-w-0 pt-0.5">
                 <h3 className="text-base font-bold text-foreground">{title}</h3>
                 {description ? (
@@ -107,7 +111,11 @@ export function ConfirmDialog({
                 type="button"
                 onClick={onConfirm}
                 disabled={pending}
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-error px-4 text-sm font-semibold text-white transition-all hover:brightness-95 disabled:opacity-60"
+                className={
+                  destructive
+                    ? "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-error px-4 text-sm font-semibold text-white transition-all hover:brightness-95 disabled:opacity-60"
+                    : "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white transition-all hover:bg-brand-700 disabled:opacity-60"
+                }
               >
                 {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {confirmLabel}
