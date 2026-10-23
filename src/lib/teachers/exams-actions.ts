@@ -483,6 +483,32 @@ export async function resetRubros(input: {
   return { ok: true };
 }
 
+/**
+ * First-run helper: brings a subject from "no rubric" to a usable one without
+ * the wizard. The database seeds Tareas 30 / Exámenes 40 / Proyectos 30 and
+ * moves existing columns to the matching category. Idempotent — it never
+ * touches a subject that already has rubros.
+ */
+export async function seedDefaultRubros(input: {
+  classId: string;
+  subjectId: string;
+}): Promise<ExamActionResult> {
+  const parsed = z
+    .object({ classId: z.string().uuid(), subjectId: z.string().uuid() })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Solicitud no válida." };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("seed_default_rubros", {
+    p_class: parsed.data.classId,
+    p_subject: parsed.data.subjectId,
+  });
+
+  if (error) return { ok: false, error: rubroErrorMessage(error.message) };
+
+  revalidatePath(`/grupos/${parsed.data.classId}`);
+  return { ok: true };
+}
 function rubroErrorMessage(raw: string): string {
   if (
     raw.includes("Could not find the function") ||

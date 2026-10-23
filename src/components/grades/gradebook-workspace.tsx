@@ -188,6 +188,8 @@ export function GradebookWorkspace({
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [rubros, setRubros] = useState<GradeRubro[]>(initialRubros);
   const [rubricMode, setRubricMode] = useState<"wizard" | "edit" | null>(null);
+  // Archived rubros stay out of every default: they cannot receive columns.
+  const activeRubros = rubros.filter((rubro) => !rubro.archived);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [density, setDensity] = useState<Density>("cozy");
@@ -380,7 +382,6 @@ export function GradebookWorkspace({
   }
 
   const groups = buildRubroGroups(orderedExams, rubros);
-  const activeRubros = rubros.filter((rubro) => !rubro.archived);
   const orderedIndex = new Map(orderedExams.map((column, index) => [column.id, index]));
   const pesoTotal = totalPeso(rubros);
   // Weights must add up to 100 %; reopening the editor is the fix.

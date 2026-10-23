@@ -36,7 +36,7 @@ function toRows(rubros: GradeRubro[]): RubroRow[] {
 /**
  * Rubric editor. In `wizard` mode it is the first-run two-step flow (weights,
  * then the column-points explanation); in `edit` mode it is the normal dialog,
- * including the column → category mover for legacy "General" rubros.
+ * including the column → category mover for columns without a category.
  */
 export function RubricDialog({
   mode,
