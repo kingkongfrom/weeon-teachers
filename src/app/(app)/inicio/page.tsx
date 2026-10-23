@@ -6,7 +6,6 @@ import { schoolToday } from "@/lib/attendance/model";
 import { loadEventsBetween, loadGroupEventsBetween } from "@/lib/dashboard/calendar";
 import { loadPanelAttention } from "@/lib/dashboard/panel-attention";
 import { loadTeacherSchedule } from "@/lib/dashboard/schedule";
-import { getLocale, getT } from "@/lib/i18n/server";
 import { loadSchoolWeather } from "@/lib/weather/load-school-weather";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +13,6 @@ export const dynamic = "force-dynamic";
 /** Landing — Resumen-style morning sheet: date, shortcuts, access cards, week. */
 export default async function InicioPage() {
   const session = await getTeacherSession();
-  const t = await getT();
-  const locale = await getLocale();
 
   const todayISO = schoolToday();
   const [schedule, attention, todayEvents, weekEvents, weather] = await Promise.all([
@@ -29,22 +26,13 @@ export default async function InicioPage() {
   return (
     <FadeIn className="flex w-full max-w-none flex-col gap-6">
       <TeacherMorning
-        locale={locale}
         todayISO={todayISO}
-        weekLabels={t.schedule.weekdays}
         lessons={schedule}
         weekEvents={weekEvents}
         todayEvents={todayEvents}
         weather={weather}
         unreadInboxCount={attention.unreadInboxCount}
         unreadChatCount={attention.unreadChatCount}
-        copy={{
-          ...t.panel.sheet,
-          todayTitle: t.panel.todayTitle,
-          todayEmpty: t.panel.todayEmpty,
-          weekendEmpty: t.panel.weekendEmpty,
-          viewFullSchedule: t.panel.viewFullSchedule,
-        }}
         attention={<PanelAttentionStrip attention={attention} />}
       />
     </FadeIn>

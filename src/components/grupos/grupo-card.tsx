@@ -1,13 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { CalendarCheck, GraduationCap, Shield, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SubjectChips } from "@/components/grupos/subject-chips";
 import { CLASS_BANNER } from "@/lib/dashboard/class-banner";
-import { getT } from "@/lib/i18n/server";
+import { useLiveT } from "@/lib/i18n/client";
 import type { TeacherGrupo } from "@/lib/dashboard/grupos";
 
 /** Group card for Mis grupos — same layout as Aula virtual `ClassCard`. */
-export async function GrupoCard({
+export function GrupoCard({
   grupo,
   schoolName,
   year,
@@ -18,7 +20,7 @@ export async function GrupoCard({
   year: number;
   tab?: string;
 }) {
-  const t = await getT();
+  const t = useLiveT();
   const base = `/grupos/${grupo.id}`;
   const mainHref = tab === "asistencia" || tab === "conducta" ? `${base}?tab=${tab}` : base;
   const actions = [

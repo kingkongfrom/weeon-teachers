@@ -4,33 +4,10 @@ import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
+import { WEEKDAYS, type TeacherLesson, type Weekday } from "@/lib/dashboard/schedule-types";
 
-export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri";
-
-export const WEEKDAYS: { value: Weekday; label: string; short: string }[] = [
-  { value: "mon", label: "Lunes", short: "Lun" },
-  { value: "tue", label: "Martes", short: "Mar" },
-  { value: "wed", label: "Miércoles", short: "Mié" },
-  { value: "thu", label: "Jueves", short: "Jue" },
-  { value: "fri", label: "Viernes", short: "Vie" },
-];
-
-export type TeacherLesson = {
-  id: string;
-  classId: string;
-  /** Gradebook materia key — `subjects.id` or `lesson:<class_lessons.id>`. */
-  gradebookSubjectId: string;
-  groupName: string;
-  title: string;
-  grade: string | null;
-  section: string | null;
-  studentCount: number;
-  weekday: Weekday;
-  startTime: string;
-  endTime: string;
-  room: string | null;
-  color: string;
-};
+export type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule-types";
+export { WEEKDAYS } from "@/lib/dashboard/schedule-types";
 
 function normalizeWeekday(value: string): Weekday | null {
   return WEEKDAYS.some((day) => day.value === value) ? (value as Weekday) : null;

@@ -13,7 +13,7 @@ import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display
 import { Switch } from "@/components/ui/switch";
 import { useTheme, setTheme } from "@/lib/theme/theme-store";
 import type { Locale } from "@/lib/i18n/config";
-import { useLocale, useSetLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT, useSetLocale } from "@/lib/i18n/client";
 import { signOutTeacher } from "@/lib/auth/actions";
 import type { AppUser } from "@/components/layout/app-shell";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
@@ -43,9 +43,9 @@ export function SettingsDrawer({
   const [photoNotice, setPhotoNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const locale = useLocale();
+  const locale = useLiveLocale();
   const setLocale = useSetLocale();
-  const t = useT();
+  const t = useLiveT();
   const theme = useTheme();
   const isDark = theme === "dark";
   const logoSrc = useCenteredLogo(user?.logoUrl);

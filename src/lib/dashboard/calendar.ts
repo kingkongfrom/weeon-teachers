@@ -6,32 +6,17 @@ import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
 import { addDays, isoDate as isoDateLocal } from "@/lib/dashboard/week";
 import { zonedDateParts } from "@/lib/dashboard/timezone";
+import type {
+  CalendarEventType,
+  TeacherCalendarEvent,
+  TeacherUpcomingEvaluation,
+} from "@/lib/dashboard/calendar-types";
 
-export type CalendarEventType =
-  | "institutional"
-  | "academic"
-  | "meeting"
-  | "holiday"
-  | "activity"
-  | "exam";
-
-export type TeacherCalendarEvent = {
-  id: string;
-  title: string;
-  eventType: CalendarEventType;
-  /** `YYYY-MM-DD` (no timezone). */
-  date: string;
-  endDate: string | null;
-  allDay: boolean;
-  startTime: string | null;
-  endTime: string | null;
-  location: string | null;
-  description: string | null;
-  groupId: string | null;
-  groupName: string | null;
-  subjectId: string | null;
-  lessonId: string | null;
-};
+export type {
+  CalendarEventType,
+  TeacherCalendarEvent,
+  TeacherUpcomingEvaluation,
+} from "@/lib/dashboard/calendar-types";
 
 type EventRow = {
   id: string;
@@ -241,18 +226,6 @@ export const loadExamDueBetween = cache(
     return due;
   },
 );
-
-export type TeacherUpcomingEvaluation = {
-  key: string;
-  title: string;
-  date: string;
-  time: string | null;
-  allDay: boolean;
-  groupName: string | null;
-  source: "calendar" | "aula";
-  /** Badge on Horarios list — calendar event type or aula `exam`. */
-  kind: "exam" | "activity";
-};
 
 /** Merged upcoming evaluations: calendar (exam/activity) + aula virtual exams. */
 export const loadUpcomingTeacherEvaluations = cache(

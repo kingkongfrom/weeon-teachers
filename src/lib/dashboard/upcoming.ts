@@ -1,5 +1,6 @@
 import { ATTENDANCE_TIME_ZONE, schoolWeekday } from "@/lib/attendance/model";
 import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule";
+import type { Tone } from "@/lib/dashboard/tones";
 
 /** JS `getDay()` index for each timetable weekday (Mon–Fri). */
 const WEEKDAY_INDEX: Record<Weekday, number> = {
@@ -51,6 +52,36 @@ export function isLessonLiveNow(lesson: TeacherLesson, now = new Date()): boolea
   const end = minutesFromMidnight(lesson.endTime);
   if (end <= start) return current >= start;
   return current >= start && current < end;
+}
+
+/** Lesson colors → hub tone, matching the schedule board and `hubTonePill`. */
+const LESSON_TONE: Record<string, Tone> = {
+  red: "rose",
+  rose: "rose",
+  orange: "yellow",
+  amber: "yellow",
+  lime: "green",
+  green: "green",
+  cyan: "green",
+  teal: "green",
+  blue: "blue",
+  indigo: "purple",
+  violet: "purple",
+  purple: "purple",
+  fuchsia: "purple",
+  pink: "rose",
+};
+
+/**
+ * Tone the Hoy card takes while the class is in progress; `null` otherwise.
+ * Only the live card changes — upcoming rows keep the neutral surface card.
+ */
+export function liveLessonTone(
+  lesson: TeacherLesson,
+  now = new Date(),
+): Tone | null {
+  if (!isLessonLiveNow(lesson, now)) return null;
+  return LESSON_TONE[lesson.color] ?? "blue";
 }
 
 /** Next datetime this weekly slot occurs on or after `now`. */

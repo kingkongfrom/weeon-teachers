@@ -1,8 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getT } from "@/lib/i18n/server";
 import type { ReactNode } from "react";
+import { useLiveT } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 
 /**
  * In-page back link. The way home lives with the page content, not in the top
@@ -44,18 +46,19 @@ type PageHeaderProps = {
  * Standard page heading. The back path (when given) sits with the heading,
  * keeping the top bar limited to the brand and account controls.
  */
-export async function PageHeader({
+export function PageHeader({
   title,
   description,
   backHref,
   backLabel,
   className,
 }: PageHeaderProps) {
-  const t = await getT();
-  const label = backLabel ?? t.common.home;
+  const t = useLiveT();
   return (
     <header className={cn("flex flex-col gap-1", className)}>
-      {backHref ? <BackLink href={backHref} label={label} className="mb-1" /> : null}
+      {backHref ? (
+        <BackLink href={backHref} label={backLabel ?? t.common.home} className="mb-1" />
+      ) : null}
       <h1 className="brand-page-title text-3xl text-foreground sm:text-4xl">{title}</h1>
       {description ? (
         <p className="text-sm font-medium text-foreground/55">{description}</p>

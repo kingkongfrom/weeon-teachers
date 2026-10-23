@@ -3,28 +3,13 @@ import { ArrowUpRight, CalendarCheck, CalendarDays, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { schoolWeekday } from "@/lib/attendance/model";
 import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
-import { isLessonLiveNow } from "@/lib/dashboard/upcoming";
-import { hubTonePill, eventHubChip, type Tone } from "@/lib/dashboard/tones";
+import { isLessonLiveNow, liveLessonTone } from "@/lib/dashboard/upcoming";
+import { hubTonePill, eventHubChip } from "@/lib/dashboard/tones";
 import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule";
 import { WEEKDAYS } from "@/lib/dashboard/schedule";
 import { getLocale, getT } from "@/lib/i18n/server";
 
-const LESSON_TONE: Record<string, Tone> = {
-  red: "rose",
-  rose: "rose",
-  orange: "yellow",
-  amber: "yellow",
-  lime: "green",
-  green: "green",
-  cyan: "green",
-  teal: "green",
-  blue: "blue",
-  indigo: "purple",
-  violet: "purple",
-  purple: "purple",
-  fuchsia: "purple",
-  pink: "rose",
-};
+const TONE_PILL = hubTonePill("blue");
 
 const WEEKDAY_ORDER: Record<Weekday, number> = {
   mon: 0,
@@ -99,10 +84,15 @@ export async function ScheduleUpcoming({
     showDay?: boolean;
     showAttendance?: boolean;
   }) {
-    const pill = hubTonePill(LESSON_TONE[lesson.color] ?? "blue");
+    const pill = hubTonePill(liveLessonTone(lesson) ?? "blue");
 
     return (
-      <div className={cn("flex flex-col gap-2 rounded-xl p-3", pill.wash)}>
+      <div
+        className={cn(
+          "flex flex-col gap-2 rounded-xl p-3",
+          isLessonLiveNow(lesson) ? pill.wash : TONE_PILL.fill,
+        )}
+      >
         <Link
           href={`/aula-virtual/${lesson.classId}?subject=${encodeURIComponent(lesson.gradebookSubjectId)}&tab=trabajo`}
           className="flex items-center gap-3 transition-opacity hover:opacity-95 active:scale-[0.99]"

@@ -1,9 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight, ClipboardCheck, FileCheck, Inbox, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PanelAttention } from "@/lib/dashboard/panel-attention";
 import { hubToneSurface, TONE_WELL, type Tone } from "@/lib/dashboard/tones";
-import { getT } from "@/lib/i18n/server";
+import { useLiveT } from "@/lib/i18n/client";
 
 type PanelAttentionProps = {
   attention: PanelAttention;
@@ -11,8 +13,8 @@ type PanelAttentionProps = {
 };
 
 /** Compact actionable row — only rendered when at least one count is non-zero. */
-export async function PanelAttentionStrip({ attention, className }: PanelAttentionProps) {
-  const t = await getT();
+export function PanelAttentionStrip({ attention, className }: PanelAttentionProps) {
+  const t = useLiveT();
   const banner = (tone: Tone) => ({
     tone: hubToneSurface(tone),
     iconTone: TONE_WELL[tone],

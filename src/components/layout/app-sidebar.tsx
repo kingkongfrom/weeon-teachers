@@ -18,7 +18,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
 import type { PanelAttention } from "@/lib/dashboard/panel-attention-model";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 type NavIcon = LucideIcon | ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -59,7 +59,7 @@ export function AppSidebar({
   onNavigate: () => void;
 }) {
   const pathname = usePathname();
-  const t = useT();
+  const t = useLiveT();
   const primary: NavLink[] = [
     { href: "/inicio", label: t.panel.title, icon: Home },
     { href: "/aula-virtual", label: t.panel.classroom.label, icon: Presentation },

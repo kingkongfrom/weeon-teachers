@@ -19,8 +19,8 @@ import { useLocale, useT } from "@/lib/i18n/client";
 import { schoolCycleName } from "@/lib/dashboard/school-cycles";
 import { schoolWeekday } from "@/lib/attendance/model";
 import { hubTonePill, eventHubChip, type Tone } from "@/lib/dashboard/tones";
-import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
-import type { TeacherLesson } from "@/lib/dashboard/schedule";
+import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar-types";
+import type { TeacherLesson } from "@/lib/dashboard/schedule-types";
 
 function timeLabel(hhmm: string): string {
   const [hours, minutes] = hhmm.split(":");

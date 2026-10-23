@@ -1,13 +1,19 @@
-import { loadUpcomingTeacherEvaluations } from "@/lib/dashboard/calendar";
+"use client";
+
+import type { TeacherUpcomingEvaluation } from "@/lib/dashboard/calendar-types";
 import { hubToneSurface } from "@/lib/dashboard/tones";
-import { getT } from "@/lib/i18n/server";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
-export async function HorariosUpcomingEvaluations() {
-  const t = await getT();
+
+
+/** Upcoming exams/activities — client-rendered so labels follow the locale. */
+export function HorariosUpcomingEvaluationsView({ items }: { items: TeacherUpcomingEvaluation[] }) {
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const copy = t.horarios.upcomingEvaluations;
   const a = t.agenda.events;
-  const items = await loadUpcomingTeacherEvaluations(12);
+  const intlLocale = locale === "en" ? "en-US" : "es-CR";
 
   return (
     <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5">
@@ -25,7 +31,7 @@ export async function HorariosUpcomingEvaluations() {
               key={item.key}
               className="flex items-start gap-3 rounded-xl border border-border/80 bg-background/60 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3"
             >
-              <EvalDateChip date={item.date} />
+              <EvalDateChip date={item.date} locale={intlLocale} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-foreground">{item.title}</p>
                 <p className="mt-0.5 text-xs font-medium text-foreground/55">
@@ -50,23 +56,20 @@ export async function HorariosUpcomingEvaluations() {
   );
 }
 
-function EvalDateChip({ date }: { date: string }) {
+function EvalDateChip({ date, locale }: { date: string; locale: string }) {
   const [year, month, day] = date.split("-").map(Number);
   const value = new Date(year, (month ?? 1) - 1, day ?? 1);
   return (
     <div className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-brand-50/90 py-1 text-brand-800 dark:bg-brand-950/35 dark:text-brand-200 sm:w-14 sm:rounded-xl sm:py-1.5">
       <span className="text-[9px] font-bold uppercase tracking-wide sm:text-[10px]">
-        {value.toLocaleDateString("es-CR", { month: "short" })}
+        {value.toLocaleDateString(locale, { month: "short" })}
       </span>
       <span className="text-base font-bold leading-none tabular-nums sm:text-lg">{value.getDate()}</span>
     </div>
   );
 }
 
-function whenLabel(
-  item: { allDay: boolean; time: string | null },
-  allDayLabel: string,
-): string {
+function whenLabel(item: { allDay: boolean; time: string | null }, allDayLabel: string): string {
   if (item.allDay || !item.time) return allDayLabel;
   return item.time;
 }

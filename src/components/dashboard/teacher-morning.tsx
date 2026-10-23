@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
@@ -27,8 +29,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
-import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
-import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
+import { LiveClock } from "@/components/dashboard/live-clock";
+import { schoolClock } from "@/lib/dashboard/clock";
+import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar-types";
+import type { TeacherLesson, Weekday } from "@/lib/dashboard/schedule-types";
+import type { Tone } from "@/lib/dashboard/tones";
+import { liveLessonTone } from "@/lib/dashboard/upcoming";
 import { schoolWeekday } from "@/lib/attendance/model";
 import { schoolAcademicYear } from "@/lib/dashboard/school-period";
 import type { WeatherIconKind, WeatherSnapshot } from "@/lib/weather/met-norway";
@@ -48,6 +55,40 @@ const WEEKDAY_INDEX: Record<Weekday, number> = {
   thu: 3,
   fri: 4,
 };
+
+/** Live class card — memorized pastel wash, border, and title ink per tone. */
+const LIVE_LESSON_CARD: Record<Tone, { card: string; icon: string }> = {
+  blue: {
+    card: "border-[#9ec5eb] bg-[#e8f1fc] hover:bg-[#dfeafa] dark:border-[#3b6ea8] dark:bg-[#16273f] dark:hover:bg-[#1a2f4a]",
+    icon: "text-[#124785] dark:text-[#bfdbfe]",
+  },
+  purple: {
+    card: "border-[#c4b0ef] bg-[#f0ebfd] hover:bg-[#e9e2fc] dark:border-[#6d5bb5] dark:bg-[#241b45] dark:hover:bg-[#2b2150]",
+    icon: "text-[#4c1d95] dark:text-[#ddd6fe]",
+  },
+  yellow: {
+    card: "border-[#f5d88a] bg-[#fef6e6] hover:bg-[#fdf0d8] dark:border-[#a67c2e] dark:bg-[#3a2a12] dark:hover:bg-[#433116]",
+    icon: "text-[#92400e] dark:text-[#fde68a]",
+  },
+  green: {
+    card: "border-[#7dd3c7] bg-[#e6f7f4] hover:bg-[#dcf3ef] dark:border-[#2a6b62] dark:bg-[#0f2f2c] dark:hover:bg-[#133833]",
+    icon: "text-[#0f4c47] dark:text-[#99f6e4]",
+  },
+  rose: {
+    card: "border-[#f0b8c8] bg-[#fdedf1] hover:bg-[#fbe4ea] dark:border-[#9a4560] dark:bg-[#3a1622] dark:hover:bg-[#441a28]",
+    icon: "text-[#9f1239] dark:text-[#fecdd3]",
+  },
+};
+
+/**
+ * Access cards — one shared pastel blue tint (fill + border + ink), matching
+ * the memorized palette without competing with the live-class colors.
+ */
+const ACCESS_CARD = {
+  card: "border-[#9ec5eb]/70 bg-[#e8f1fc]/60 hover:border-[#9ec5eb] hover:bg-[#e8f1fc]",
+  icon: "text-[#124785]",
+  dark: "dark:border-[#3b6ea8]/55 dark:bg-[#16273f] dark:hover:border-[#3b6ea8] dark:hover:bg-[#1a2f4a] dark:text-[#bfdbfe]",
+} as const;
 
 export type TeacherMorningCopy = {
   accessTitle: string;
@@ -69,16 +110,13 @@ export type TeacherMorningCopy = {
 };
 
 type TeacherMorningProps = {
-  locale: "es" | "en";
   todayISO: string;
-  weekLabels: string[];
   lessons: TeacherLesson[];
   weekEvents: TeacherCalendarEvent[];
   todayEvents: TeacherCalendarEvent[];
   weather: WeatherSnapshot | null;
   unreadInboxCount: number;
   unreadChatCount: number;
-  copy: TeacherMorningCopy;
   /** Rendered in the sheet's upper-right corner. */
   attention?: ReactNode;
 };
@@ -89,7 +127,6 @@ type TeacherMorningProps = {
  * below, access cards across the middle.
  */
 export function TeacherMorning({
-  locale,
   todayISO,
   lessons,
   weekEvents,
@@ -97,9 +134,18 @@ export function TeacherMorning({
   weather,
   unreadInboxCount,
   unreadChatCount,
-  copy,
   attention,
 }: TeacherMorningProps) {
+  const locale = useLiveLocale();
+  const t = useLiveT();
+  const copy: TeacherMorningCopy = {
+    ...t.panel.sheet,
+    todayTitle: t.panel.todayTitle,
+    todayEmpty: t.panel.todayEmpty,
+    weekendEmpty: t.panel.weekendEmpty,
+    viewFullSchedule: t.panel.viewFullSchedule,
+  };
+
   const lang = locale === "en" ? "en-US" : "es-CR";
   const today = parseISO(todayISO);
   const week = schoolWeek(todayISO);
@@ -139,6 +185,11 @@ export function TeacherMorning({
           <p className="mt-1 text-xl capitalize text-foreground/70 dark:text-foreground/55">
             {`${today.toLocaleDateString(lang, { month: "long" })} ${today.getFullYear()}`}
           </p>
+          <LiveClock
+            initialTime={schoolClock(new Date(), locale)}
+            locale={locale}
+            className="mt-1 -translate-y-[5px] text-sm font-semibold tabular-nums tracking-wide text-foreground/55 dark:text-foreground/45"
+          />
         </div>
       </header>
 
@@ -154,9 +205,9 @@ export function TeacherMorning({
             <Link
               key={label}
               href={href}
-              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[#2b59ff]/30 bg-surface px-3.5 py-2 text-sm font-semibold text-foreground/80 transition-colors hover:border-[#2b59ff]/50 hover:bg-[#2b59ff]/[0.06] hover:text-foreground dark:border-[#7aa2ff]/40 dark:text-foreground/70"
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[#9ec5eb] bg-surface px-3.5 py-2 text-sm font-semibold text-foreground/80 transition-colors hover:border-[#7fb3e3] hover:bg-[#e8f1fc] hover:text-foreground dark:border-[#3b6ea8] dark:bg-surface dark:text-foreground/70 dark:hover:border-[#5b96d4] dark:hover:bg-[#1a2f4a]"
             >
-              <Icon className="h-4 w-4 text-[#2b59ff]" aria-hidden />
+              <Icon className="h-4 w-4 text-[#124785] dark:text-[#bfdbfe]" aria-hidden />
               {label}
             </Link>
           ))}
@@ -178,10 +229,17 @@ export function TeacherMorning({
             <Link
               key={label}
               href={href}
-              className="flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-2xl border border-[#2b59ff]/25 bg-[#2b59ff]/[0.07] px-2 py-4 transition-colors hover:bg-surface-muted/60 morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 morning-desktop:flex-none morning-desktop:min-w-[12rem] morning-desktop:gap-2 morning-desktop:px-6 morning-desktop:py-8 dark:border-[rgba(56,100,152,0.45)] dark:bg-[#1D243B] dark:hover:bg-[#252E4A]"
+              className={cn(
+                "flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-2xl border px-2 py-4 transition-colors morning-tablet:flex-1 morning-tablet:gap-3 morning-tablet:px-3 morning-tablet:py-7 morning-compact:flex-1 morning-compact:gap-3 morning-compact:px-3 morning-compact:py-7 morning-desktop:flex-none morning-desktop:min-w-[12rem] morning-desktop:gap-2 morning-desktop:px-6 morning-desktop:py-8",
+                ACCESS_CARD.card,
+                ACCESS_CARD.dark,
+              )}
             >
               <Icon
-                className="h-8 w-8 text-[#2b59ff] morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11 morning-desktop:h-9 morning-desktop:w-9 dark:text-[#7aa2ff]"
+                className={cn(
+                  "h-8 w-8 morning-tablet:h-11 morning-tablet:w-11 morning-compact:h-11 morning-compact:w-11 morning-desktop:h-9 morning-desktop:w-9",
+                  ACCESS_CARD.icon,
+                )}
                 aria-hidden
               />
               <span className="text-xs text-foreground/65 morning-tablet:text-base morning-compact:text-base morning-desktop:text-sm dark:text-white/75">
@@ -202,7 +260,7 @@ export function TeacherMorning({
               <li key={iso} className="flex">
                 <Link
                   href={`/agenda/calendario?view=day&date=${iso}`}
-                  className="block h-full w-full rounded-xl px-1 py-2 transition-colors hover:bg-surface-muted/60 morning-compact:px-2 morning-compact:py-2"
+                  className="block h-full w-full rounded-xl border border-border bg-surface px-1 py-2 transition-colors hover:border-[#9ec5eb]/80 hover:bg-[#e8f1fc]/[0.4] morning-compact:px-2 morning-compact:py-2 dark:border-border dark:bg-surface dark:hover:border-[#3b6ea8]/70 dark:hover:bg-[#1a2f4a]"
                 >
                   <p className="text-sm font-medium capitalize text-foreground/65 morning-compact:text-base dark:text-foreground/50">
                     {day.toLocaleDateString(lang, { weekday: "long" })}
@@ -307,28 +365,44 @@ function TodayPanel({
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {todayLessons.map((lesson) => (
-            <li key={lesson.id}>
-              <Link
-                href={`/aula-virtual/${lesson.classId}?subject=${encodeURIComponent(lesson.gradebookSubjectId)}&tab=trabajo`}
-                className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-muted/60"
-              >
-                <BookOpen className="h-4 w-4 shrink-0 text-[#2b59ff]" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-foreground">
-                    {lesson.title}
-                  </p>
-                  <p className="truncate text-xs text-foreground/55">
-                    {lesson.groupName}
-                    {lesson.room ? ` · ${lesson.room}` : ""}
-                  </p>
-                </div>
-                <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground/55">
-                  {timeLabel(lesson.startTime)}–{timeLabel(lesson.endTime)}
-                </span>
-              </Link>
-            </li>
-          ))}
+          {todayLessons.map((lesson) => {
+            const liveTone = liveLessonTone(lesson);
+            const live = liveTone ? LIVE_LESSON_CARD[liveTone] : null;
+
+            return (
+              <li key={lesson.id}>
+                <Link
+                  href={`/aula-virtual/${lesson.classId}?subject=${encodeURIComponent(lesson.gradebookSubjectId)}&tab=trabajo`}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors",
+                    live
+                      ? live.card
+                      : "border-[#9ec5eb]/60 bg-surface hover:border-[#9ec5eb] hover:bg-[#e8f1fc]/[0.5] dark:border-[#3b6ea8]/50 dark:bg-surface dark:hover:border-[#3b6ea8] dark:hover:bg-[#1a2f4a]",
+                  )}
+                >
+                  <BookOpen
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      live ? live.icon : "text-[#2b59ff]",
+                    )}
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {lesson.title}
+                    </p>
+                    <p className="truncate text-xs text-foreground/55">
+                      {lesson.groupName}
+                      {lesson.room ? ` · ${lesson.room}` : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground/55">
+                    {timeLabel(lesson.startTime)}–{timeLabel(lesson.endTime)}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
 

@@ -1,21 +1,23 @@
+"use client";
+
 import {
   WEEKDAYS,
   type TeacherLesson,
   type Weekday,
-} from "@/lib/dashboard/schedule";
+} from "@/lib/dashboard/schedule-types";
 import { isoDate, weekDates } from "@/lib/dashboard/week";
-import { getT } from "@/lib/i18n/server";
+import { useLiveT } from "@/lib/i18n/client";
 import { LessonCard } from "@/components/schedule/lesson-card";
 import { hubTonePill, eventHubChip, type Tone } from "@/lib/dashboard/tones";
 import { cn } from "@/lib/utils";
-import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar";
+import type { TeacherCalendarEvent } from "@/lib/dashboard/calendar-types";
 
 /**
  * Weekly timetable: one column per weekday. With `weekStart` the columns carry
  * the real dates and any events/exams for that week; clicking a lesson previews
  * it.
  */
-export async function ScheduleGrid({
+export function ScheduleGrid({
   lessons,
   weekStart,
   events = [],
@@ -24,7 +26,7 @@ export async function ScheduleGrid({
   weekStart?: Date;
   events?: TeacherCalendarEvent[];
 }) {
-  const t = await getT();
+  const t = useLiveT();
   const dates = weekStart ? weekDates(weekStart) : null;
   const todayISO = isoDate(new Date());
   const dayTones: Tone[] = ["blue", "purple", "yellow", "green", "rose"];

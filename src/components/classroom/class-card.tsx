@@ -1,12 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import { FolderOpen, Presentation, Users } from "lucide-react";
 import { SubjectChips } from "@/components/grupos/subject-chips";
-import { getT } from "@/lib/i18n/server";
+import { useLiveT } from "@/lib/i18n/client";
 import type { TeacherGrupo } from "@/lib/dashboard/grupos";
 import { cn } from "@/lib/utils";
 import { AULA_TEAL } from "@/lib/dashboard/tones";
 
-export async function ClassCard({
+export function ClassCard({
   grupo,
   schoolName,
   year,
@@ -15,7 +17,7 @@ export async function ClassCard({
   schoolName: string | null;
   year: number;
 }) {
-  const t = await getT();
+  const t = useLiveT();
   const base = `/aula-virtual/${grupo.id}`;
   const actions = [
     {
