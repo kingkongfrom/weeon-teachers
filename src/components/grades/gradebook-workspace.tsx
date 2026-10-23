@@ -267,7 +267,11 @@ export function GradebookWorkspace({
     return flag ? supportActionPending(flag) : false;
   });
 
-  /** Rubric edits are a grade policy write: same Apoyos gate as a cell. */
+  /**
+   * Grade writes (cells, rubric weights) need the Apoyos log reviewed first.
+   * Structural work — adding, closing, reordering columns — does not: a column
+   * is not a student's grade, so it must never be blocked by a support review.
+   */
   function guardSupports(): boolean {
     if (!pendingSupportStudent) return true;
     setError(copy.supportsPending);
@@ -291,7 +295,7 @@ export function GradebookWorkspace({
   }
 
   async function openAddColumn() {
-    if (!guardSupports()) return;
+    // Deliberately ungated: creating a column is structure, not a grade write.
     if (!subjectId) {
       setAddOpen(true);
       return;
