@@ -573,12 +573,13 @@ class-material/calendar policies (`teaches_class` / enrolled / guardian).
 **Schedule:** Horarios no longer offers *Agregar examen o actividad*. A teacher
 sets the date from **Aula virtual → Fechas de examen**.
 
-### Reusable assessments — the banco
+### Reusable assessments — Mis evaluaciones
 
 An assessment is bound to one `class_id`, so today the same exam must be
-re-authored per group. The design for a **Banco de evaluaciones** (collections of
-reusable templates, "Usar en esta clase", and rubro-aware gradeboard columns)
-lives in [`banco-evaluaciones.md`](banco-evaluaciones.md). **Not built yet.**
+re-authored per group. The design for **Mis evaluaciones** — a personal library of
+reusable assessments with collections, explicit sharing to other teachers,
+"Usar en esta clase", and rubro-aware gradeboard columns — lives in
+[`mis-evaluaciones.md`](mis-evaluaciones.md). **Not built yet.**
 Its phase **B1** (rubro routing by kind instead of "first rubro") fixes a live
 bug and should ship before the rest.
 

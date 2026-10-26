@@ -203,7 +203,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | --- | ----- |
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
-| **Banco de evaluaciones (reusable exams — design)** | `docs/banco-evaluaciones.md` |
+| **Mis evaluaciones (reusable exams — design)** | `docs/mis-evaluaciones.md` |
 | **Agenda (schedule, upcoming events, institution ICS)** | `docs/agenda.md` |
 | **Comunicación (messaging)** | `docs/comunicacion.md` |
 | **Mis grupos (Calificaciones / Asistencia / Conducta)** | `docs/grupos.md` |
