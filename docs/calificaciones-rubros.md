@@ -354,10 +354,13 @@ outlier is pulling the average all read at a glance) and **sin nota**
 the weight that is left gets a red **En riesgo** flag; a student who is below
 but can still pass shows the grade they must average on what remains.
 
-**Phones (< 1024 px)** — the matrix is replaced by **cards**, one per student:
+**Phones (< 768 px)** — the matrix is replaced by **cards**, one per student:
 name, final grade, risk chip and a thin bar per rubro. A squeezed matrix on a
 phone needs side-scrolling and hides the answer, so the card is the default;
-**Tarjetas / Tabla** switches to the real matrix when a teacher wants it. The
+**Tarjetas / Tabla** switches to the real matrix when a teacher wants it.
+From **768 px up (iPad portrait, iPad landscape, desktop) the full matrix is
+always shown** — a tablet is never stuck in the read-only cards, and the switch
+is hidden there. The
 toolbar collapses to icon-only buttons, the search/filter row scrolls
 horizontally, and the summary grid becomes 2 × 2 with the range spanning a row.
 The viewport is exported from src/app/layout.tsx with iewport-fit=cover
