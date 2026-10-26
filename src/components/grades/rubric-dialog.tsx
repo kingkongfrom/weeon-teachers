@@ -258,7 +258,7 @@ export function RubricDialog({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl"
+        className="relative z-10 flex max-h-sheet w-full max-w-2xl flex-col rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl"
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 24 }}

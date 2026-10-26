@@ -244,6 +244,8 @@ const es = {
     body: "Ábrala desde su pantalla de inicio, como cualquier app, sin pasar por el navegador.",
     iosBefore: "Toque Compartir",
     iosAfter: "y luego «Añadir a pantalla de inicio».",
+    huaweiBefore: "Toque el menú del navegador",
+    huaweiAfter: "y luego «Instalar app» o «Añadir a pantalla de inicio».",
     action: "Instalar",
   },  library: {
     title: "Mis evaluaciones",
@@ -1725,6 +1727,8 @@ const en: Messages = {
     body: "Open it from your home screen like any app, without going through the browser.",
     iosBefore: "Tap Share",
     iosAfter: "and then “Add to Home Screen”.",
+    huaweiBefore: "Tap the browser menu",
+    huaweiAfter: "and then “Install app” or “Add to Home Screen”.",
     action: "Install",
   },
   library: {

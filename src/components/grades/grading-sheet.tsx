@@ -194,7 +194,7 @@ export function GradingSheet({
             role="dialog"
             aria-modal="true"
             aria-label={gs.gradeStudent(studentName)}
-            className="relative z-10 mt-auto flex max-h-[92dvh] flex-col overflow-hidden rounded-t-[1.75rem] bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_48px_-16px_rgb(16_32_29/0.4)]"
+            className="relative z-10 mt-auto flex max-h-sheet flex-col overflow-hidden rounded-t-[1.75rem] bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_48px_-16px_rgb(16_32_29/0.4)]"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}

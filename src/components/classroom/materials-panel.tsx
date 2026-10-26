@@ -447,7 +447,7 @@ function UploadDialog({
         role="dialog"
         aria-modal="true"
         aria-label={tPanel.dialogTitle}
-        className="relative z-10 max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl"
+        className="relative z-10 max-h-sheet w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl"
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 24 }}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Share, X } from "lucide-react";
+import { Download, MoreVertical, Share, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 
@@ -22,6 +22,9 @@ const DISMISS_DAYS = 30;
  *   replay on tap — a real one-tap install, no instructions needed.
  * - **iOS Safari** fires nothing and offers no API. Installing is Share →
  *   "Añadir a pantalla de inicio", so the only honest option is to say that.
+ * - **Huawei (Petal) Browser** is Chromium-based but, like iOS, usually never
+ *   fires `beforeinstallprompt` (Huawei pushes AppGallery installs instead), so
+ *   it gets the same kind of written instructions — browser menu → install.
  *
  * The banner stays out of the way: it never covers content, it is dismissible,
  * a dismissal is remembered for 30 days, and it hides itself when the app is
@@ -31,6 +34,7 @@ export function InstallPrompt() {
   const t = useT();
   const [deferred, setDeferred] = useState<InstallPromptEvent | null>(null);
   const [showIos, setShowIos] = useState(false);
+  const [showHuawei, setShowHuawei] = useState(false);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -56,12 +60,21 @@ export function InstallPrompt() {
     }
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
 
-    // iOS: no event exists, so detect the platform and offer instructions.
+    // iOS and Huawei (Petal) fire no install event, so detect the platform
+    // and offer written instructions instead of a one-tap button.
     const ua = window.navigator.userAgent;
     const isIos = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && "ontouchend" in document);
     const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
     if (isIos && isSafari) {
       setShowIos(true);
+      setVisible(true);
+    }
+    // HuaweiBrowser/x.x — Petal. Chromium under the hood, but the install
+    // prompt is suppressed in favour of AppGallery, so `beforeinstallprompt`
+    // rarely (if ever) arrives. The menu path is the reliable route.
+    const isHuawei = /HuaweiBrowser\//.test(ua);
+    if (isHuawei) {
+      setShowHuawei(true);
       setVisible(true);
     }
 
@@ -118,6 +131,11 @@ export function InstallPrompt() {
               <Share className="inline h-3.5 w-3.5 -translate-y-px align-middle" />
               {" "}
               {t.install.iosAfter}
+            </p>
+          ) : showHuawei && !deferred ? (
+            <p className="mt-1 text-[12px] leading-snug text-foreground/55">
+              {t.install.huaweiBefore} <MoreVertical className="inline h-3.5 w-3.5 -translate-y-px align-middle" />{" "}
+              {t.install.huaweiAfter}
             </p>
           ) : (
             <p className="mt-1 text-[12px] leading-snug text-foreground/55">

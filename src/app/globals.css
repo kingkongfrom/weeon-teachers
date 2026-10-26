@@ -201,6 +201,31 @@ body {
   display: none;
 }
 
+/*
+ * Viewport-height utilities with a `vh` → `dvh` fallback. Dynamic viewport
+ * units (dvh) only exist in Chromium 108+ / Safari 15.4+; older Huawei
+ * Browser (Petal) builds — Chromium ≤ 102 — drop the declaration entirely,
+ * which would leave a bottom sheet with no max-height and push it off-screen.
+ * Declaring the plain `vh` value first gives those browsers a usable height;
+ * browsers that understand `dvh` override it with the URL-bar-aware value, so
+ * iOS Safari keeps the footer on-screen. Always pair the two — never `dvh`
+ * alone — on any full-height or max-height sheet.
+ */
+.h-viewport {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.max-h-sheet {
+  max-height: 92vh;
+  max-height: 92dvh;
+}
+
+.max-h-dialog {
+  max-height: 90vh;
+  max-height: 90dvh;
+}
+
 a {
   text-decoration: none;
 }

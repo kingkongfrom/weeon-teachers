@@ -179,7 +179,7 @@ export function SettingsDrawer({
                     role="dialog"
                     aria-modal="true"
                     aria-label={t.drawer.ariaSettings}
-                    className="absolute right-0 top-0 flex h-dvh w-full max-w-sm flex-col bg-surface shadow-2xl"
+                    className="absolute right-0 top-0 flex h-viewport w-full max-w-sm flex-col bg-surface shadow-2xl"
                     initial={{ x: "100%" }}
                     animate={{ x: 0 }}
                     exit={{ x: "100%" }}

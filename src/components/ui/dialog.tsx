@@ -73,10 +73,13 @@ export function Dialog({
             aria-modal="true"
             aria-label={title}
             className={cn(
-              // `dvh` not `vh`: on iOS Safari the URL bar makes 100vh taller
-              // than the visible area, which cut the footer off. The bottom pad
-              // clears the home indicator on a sheet that reaches the edge.
-              "relative z-10 flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[1.75rem] bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_32px_80px_-24px_rgb(16_32_29/0.38),0_4px_12px_-4px_rgb(16_32_29/0.12)] sm:rounded-[1.75rem] sm:pb-0",
+              // `.max-h-dialog` is `vh` → `dvh`: on iOS Safari the URL bar
+              // makes 100vh taller than the visible area, which cut the footer
+              // off, so modern browsers take the dvh value; older Huawei (Petal)
+              // browsers that lack dvh keep the vh fallback instead of losing the
+              // cap entirely. The bottom pad clears the home indicator on a sheet
+              // that reaches the edge.
+              "relative z-10 flex max-h-dialog w-full max-w-lg flex-col overflow-hidden rounded-t-[1.75rem] bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_32px_80px_-24px_rgb(16_32_29/0.38),0_4px_12px_-4px_rgb(16_32_29/0.12)] sm:rounded-[1.75rem] sm:pb-0",
               panelClassName,
             )}
             initial={{ opacity: 0, y: 24, scale: 0.985 }}
