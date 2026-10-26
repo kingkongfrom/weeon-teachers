@@ -259,13 +259,11 @@ export function GradebookWorkspace({
    */
   const [markView, setMarkView] = useState<"points" | "percent">("points");
   /**
-   * Phone view: cards per student, or the full matrix (side-scrolled). Cards
-   * are the default because a squeezed matrix on a phone is unreadable, but a
-   * teacher may still want the grid, so the choice is theirs.
-   *
-   * Only phones get this choice. An iPad in landscape has the width for the
-   * real matrix (and grade entry), so the switch is hidden at `md` and the
-   * matrix is forced on there — a tablet must never be stuck in cards.
+   * Card view for narrow screens. It follows **orientation**, not width alone:
+   * an iPad in portrait (768 px wide) gets the cards, and the same iPad turned
+   * to landscape gets the full matrix with grade entry. Phones in landscape are
+   * also wide (844 px) so they get the matrix too. The switch lets a teacher
+   * override on those screens; it is hidden in landscape where the matrix wins.
    */
   const [phoneView, setPhoneView] = useState<"cards" | "grid">("cards");
   const showCards = phoneView === "cards";
@@ -1215,14 +1213,14 @@ export function GradebookWorkspace({
       />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-        <div className="flex items-center gap-2 max-md:-mx-1 max-md:overflow-x-auto max-md:px-1 max-md:pb-1 md:flex-wrap">
-          <label className="relative inline-flex min-w-0 items-center max-md:flex-1">
+        <div className="flex items-center gap-2 max-[1024px]:-mx-1 max-[1024px]:overflow-x-auto max-[1024px]:px-1 max-[1024px]:pb-1 [@media(min-width:1024px)]:flex-wrap [@media(orientation:landscape)]:flex-wrap">
+          <label className="relative inline-flex min-w-0 items-center max-[1024px]:flex-1 [@media(orientation:landscape)]:flex-none">
             <Search className="pointer-events-none absolute left-3 h-4 w-4 text-foreground/40" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={w.search}
-              className="h-9 w-full min-w-0 rounded-full border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:border-brand-400 md:w-60"
+              className="h-9 w-full min-w-0 rounded-full border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:border-brand-400 [@media(orientation:landscape)]:w-60"
             />
           </label>
           {/* Sorting and row filters are the dirección view: order by grade,
@@ -1245,7 +1243,7 @@ export function GradebookWorkspace({
             {sb.onlyAtRisk}
           </FilterChip>
         </div>
-        <div className="flex items-center justify-between gap-3 max-md:mt-1 md:flex-wrap">
+        <div className="flex items-center justify-between gap-3 max-[1024px]:mt-1 [@media(min-width:1024px)]:flex-wrap [@media(orientation:landscape)]:flex-wrap">
           {/* Marks read as points or as the grade they represent. The % view is
               read-only; it exists for reading, not for entry. */}
           <div
@@ -1281,7 +1279,7 @@ export function GradebookWorkspace({
           <div
             role="radiogroup"
             aria-label={sb.phoneView}
-            className="inline-flex h-9 items-center rounded-full border border-border p-0.5 md:hidden"
+            className="inline-flex h-9 items-center rounded-full border border-border p-0.5 [@media(orientation:landscape)]:hidden"
           >
             {(["cards", "grid"] as const).map((mode) => (
               <button
@@ -1310,12 +1308,12 @@ export function GradebookWorkspace({
             </span>
             <span className="flex items-center gap-1.5 text-foreground/50">
               <span className="h-2.5 w-2.5 rounded-full bg-[#fdeecd] ring-1 ring-[#f5d88a]" />
-              <span className="md:hidden">50–69%</span>
-              <span className="md:hidden">·</span>
+              <span className="[@media(orientation:landscape)]:hidden">50–69%</span>
+              <span className="[@media(orientation:landscape)]:hidden">·</span>
             </span>
             <span className="flex items-center gap-1.5 text-foreground/50">
               <span className="h-2.5 w-2.5 rounded-full bg-[#fbdee7] ring-1 ring-[#f0b8c8]" />
-              <span className="md:hidden">&lt; 50%</span>
+              <span className="[@media(orientation:landscape)]:hidden">&lt; 50%</span>
             </span>
           </div>
         </div>
@@ -1383,7 +1381,8 @@ export function GradebookWorkspace({
       ) : (
         <>
           {/* Phone: one card per student, unless the teacher asked for the grid. */}
-          <div className={cn("md:hidden", !showCards && "hidden")}>            <ScoreboardStudentList
+          <div className={cn("[@media(orientation:landscape)]:hidden", !showCards && "hidden")}>
+            <ScoreboardStudentList
               stats={finalStats}
               hrefFor={(studentId) =>
                 `/estudiantes/${studentId}?from=${encodeURIComponent(`/grupos/${classId}`)}`
@@ -1421,7 +1420,9 @@ export function GradebookWorkspace({
             "relative min-w-0 overflow-auto overscroll-x-contain rounded-2xl border border-border bg-surface",
             // Cards are the phone default; `grid` here means the teacher opted
             // in. From `md` up the matrix is always shown, cards or not.
-            phoneView === "cards" && "max-md:hidden",
+            // The matrix shows in landscape whatever the switch says; in portrait
+            // it is the teacher's explicit choice.
+            showCards && "[@media(orientation:portrait)]:hidden",
             draggingBlock && "select-none",
           )}
         >
