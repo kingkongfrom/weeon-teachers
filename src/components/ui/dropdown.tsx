@@ -76,7 +76,7 @@ export function Dropdown({
       {open ? (
         <ul
           role="listbox"
-          className="absolute z-[110] mt-2 min-w-full rounded-xl border border-border bg-surface-elevated p-1 shadow-xl"
+          className="absolute z-[110] mt-2 min-w-full whitespace-nowrap rounded-xl border border-border bg-surface-elevated p-1 shadow-xl"
         >
           {options.map((option) => {
             const selected = option.value === value;

@@ -514,6 +514,247 @@ export async function saveRubros(input: {
 }
 
 /**
+ * Inline rubro edits from the gradebook header. Each action touches **one**
+ * row, so a rename, a weight change or a delete never rewrites the rest of the
+ * rubric (unlike `saveRubros`, which the dialog still uses for the wizard and
+ * the column mover).
+ */
+
+const createRubroSchema = z.object({
+  classId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  name: z.string().trim().min(1).max(60),
+  peso: z.number().int().min(0).max(100),
+  /** Insert right after this rubro; omitted means last. */
+  afterRubroId: z.string().uuid().nullable().optional(),
+});
+
+/** Creates one rubro from an inline name + peso in the gradebook header. */
+export async function createRubro(input: {
+  classId: string;
+  subjectId: string;
+  name: string;
+  peso: number;
+  afterRubroId?: string | null;
+}): Promise<ExamActionResult> {
+  const parsed = createRubroSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "El nombre del rubro es obligatorio (máximo 60 caracteres).",
+    };
+  }
+  const { classId, subjectId, name, peso, afterRubroId } = parsed.data;
+
+  const supabase = await createSessionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const tenant_id = user?.app_metadata?.tenant_id ?? user?.user_metadata?.tenant_id;
+  if (typeof tenant_id !== "string") {
+    return { ok: false, error: "Sesión inválida. Inicie sesión de nuevo." };
+  }
+
+  const { data: rubros, error: readError } = await supabase
+    .from("grade_rubros")
+    .select("id, position")
+    .eq("class_id", classId)
+    .eq("subject_id", subjectId)
+    .order("position");
+  if (readError) return { ok: false, error: rubroErrorMessage(readError.message) };
+
+  const list = rubros ?? [];
+  const anchorIndex = afterRubroId
+    ? list.findIndex((rubro) => rubro.id === afterRubroId)
+    : -1;
+  const insertAt = anchorIndex >= 0 ? anchorIndex + 1 : list.length;
+
+  // Shift the tail so the new rubro lands exactly where the teacher placed it.
+  for (const [offset, rubro] of list.slice(insertAt).entries()) {
+    const { error } = await supabase
+      .from("grade_rubros")
+      .update({ position: insertAt + offset + 1 })
+      .eq("id", rubro.id)
+      .eq("class_id", classId);
+    if (error) return { ok: false, error: rubroErrorMessage(error.message) };
+  }
+
+  const { data, error } = await supabase
+    .from("grade_rubros")
+    .insert({
+      tenant_id,
+      class_id: classId,
+      subject_id: subjectId,
+      name,
+      peso,
+      position: insertAt,
+      archived: false,
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: rubroErrorMessage(error.message) };
+
+  after(() => {
+    revalidatePath(`/grupos/${classId}`);
+  });
+  return { ok: true, id: data?.id };
+}
+
+const updateRubroSchema = z.object({
+  classId: z.string().uuid(),
+  rubroId: z.string().uuid(),
+  name: z.string().trim().min(1).max(60).optional(),
+  peso: z.number().int().min(0).max(100).optional(),
+  archived: z.boolean().optional(),
+});
+
+/** Renames, reweights or (un)archives a single rubro. */
+export async function updateRubro(input: {
+  classId: string;
+  rubroId: string;
+  name?: string;
+  peso?: number;
+  archived?: boolean;
+}): Promise<ExamActionResult> {
+  const parsed = updateRubroSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "El nombre o el peso del rubro no son válidos." };
+  }
+  const { classId, rubroId, name, peso, archived } = parsed.data;
+
+  const patch: Record<string, unknown> = {};
+  if (name !== undefined) patch.name = name;
+  if (peso !== undefined) patch.peso = peso;
+  if (archived !== undefined) patch.archived = archived;
+  if (Object.keys(patch).length === 0) return { ok: true };
+
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase
+    .from("grade_rubros")
+    .update(patch)
+    .eq("id", rubroId)
+    .eq("class_id", classId)
+    .select("id");
+  if (error) return { ok: false, error: rubroErrorMessage(error.message) };
+  if (!data || data.length === 0) {
+    return { ok: false, error: "No tiene permiso para editar este rubro." };
+  }
+
+  // Inline edits commit on blur/Enter; the header already shows the new value,
+  // so the response must not wait for the page re-render.
+  after(() => {
+    revalidatePath(`/grupos/${classId}`);
+  });
+  return { ok: true };
+}
+
+const deleteRubroSchema = z.object({
+  classId: z.string().uuid(),
+  rubroId: z.string().uuid(),
+});
+
+/** Deletes an empty rubro. A rubro with columns must be archived instead. */
+export async function deleteRubro(input: {
+  classId: string;
+  rubroId: string;
+}): Promise<ExamActionResult> {
+  const parsed = deleteRubroSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Solicitud no válida." };
+  const { classId, rubroId } = parsed.data;
+
+  const supabase = await createSessionClient();
+
+  const { count } = await supabase
+    .from("assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("rubro_id", rubroId);
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false,
+      error:
+        "No se puede eliminar un rubro que tiene columnas. Mueva sus columnas o archívelo.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("grade_rubros")
+    .delete()
+    .eq("id", rubroId)
+    .eq("class_id", classId)
+    .select("id");
+  if (error) return { ok: false, error: rubroErrorMessage(error.message) };
+  if (!data || data.length === 0) {
+    return { ok: false, error: "No tiene permiso para eliminar este rubro." };
+  }
+
+  after(() => {
+    revalidatePath(`/grupos/${classId}`);
+  });
+  return { ok: true };
+}
+
+const reorderGradebookSchema = z.object({
+  classId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  /** Assignment ids, in display order. */
+  assignmentIds: z.array(z.string().uuid()).max(300),
+  /** Rubro ids, in display order (archived ones included). */
+  rubroIds: z.array(z.string().uuid()).max(40),
+});
+
+/**
+ * Persists the teacher's block order after a drag in the gradebook: the order
+ * of the rubros and the order of the columns. Column order is stored on
+ * `assignments.created_at` (one millisecond apart, so it sorts exactly as
+ * dropped) — `assignments` has no `position` column, and adding one would be a
+ * schema change that mobile/ERP readers do not need.
+ */
+export async function reorderGradebook(input: {
+  classId: string;
+  subjectId: string;
+  assignmentIds: string[];
+  rubroIds: string[];
+}): Promise<ExamActionResult> {
+  const parsed = reorderGradebookSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "El nuevo orden no es válido." };
+  const { classId, subjectId, assignmentIds, rubroIds } = parsed.data;
+
+  const supabase = await createSessionClient();
+
+  for (const [index, rubroId] of rubroIds.entries()) {
+    const { error } = await supabase
+      .from("grade_rubros")
+      .update({ position: index })
+      .eq("id", rubroId)
+      .eq("class_id", classId)
+      .eq("subject_id", subjectId);
+    if (error) return { ok: false, error: rubroErrorMessage(error.message) };
+  }
+
+  if (assignmentIds.length > 0) {
+    const base = Date.now() - 60_000;
+    for (const [index, assignmentId] of assignmentIds.entries()) {
+      const { error } = await supabase
+        .from("assignments")
+        .update({ created_at: new Date(base + index).toISOString() })
+        .eq("id", assignmentId)
+        .eq("class_id", classId);
+      if (error) {
+        return {
+          ok: false,
+          error: "No se pudo guardar el nuevo orden de las columnas.",
+        };
+      }
+    }
+  }
+
+  after(() => {
+    revalidatePath(`/grupos/${classId}`);
+  });
+  return { ok: true };
+}
+
+/**
  * First-run helper: assigns the subject's columns without a rubro to the
  * rubro that matches their kind (Tareas / Exámenes / Proyectos by name).
  * Called by the wizard after the rubros are saved. Manual assignments are

@@ -15,6 +15,8 @@ Written 19 October 2026; decisions §11 locked 19 October 2026.*
 | Rubros loader, `ExamColumn.rubroId` | `weeon-teachers/src/lib/dashboard/exams.ts` |
 | Server actions (`saveRubros`, `moveColumnToRubro`, rubro on add/restore) | `weeon-teachers/src/lib/teachers/exams-actions.ts` |
 | Matrix headers/footers, CSV grouping, wizard/card | `weeon-teachers/src/components/grades/gradebook-workspace.tsx` |
+| Inline rubro header editor (name, peso, delete, add, drag) | `weeon-teachers/src/components/grades/rubro-header-cell.tsx` |
+| Block order helpers (`moveItem`, `orderColumnsByBlocks`) + tests | `weeon-teachers/src/lib/dashboard/grade-order.ts` |
 | Wizard + rubric editor + column mover | `weeon-teachers/src/components/grades/rubric-dialog.tsx` |
 | Transcript weighted subject final | `weeon-teachers/src/lib/dashboard/student-report.ts` |
 | Assessment publish assigns a rubro | `weeon-teachers/src/lib/teachers/assessments-actions.ts` |
@@ -310,11 +312,54 @@ The footer names each rubro again (`Tareas 88%`) and closes with
 **Promedio**; every displayed percentage is a whole number (`Math.round`),
 including the student FIN.
 
-Each rubro group ends with a narrow **Total** column showing *that student's
-**contribution** to the final*: `rubro % × peso`, capped at the rubro's peso
-(Tareas 30 % → the total can never exceed 30). It is shown with one decimal so
-the three subtotals add up to the FIN. The footer keeps the class rubric
-average (`Promedio del rubro`) and closes with **Promedio**.
+Each rubro group ends with a **Total** column showing that student's **points
+earned with the resulting grade**: `28 / 30` and `93%` side by side. Points
+without the grade are unreadable for dirección; the grade without points loses
+the evidence, so they always travel together. Per column: **puntos del rubro
+(nota)**. Footer per rubro: **points average + class grade**, with the peso.
+
+All of these come from one model — `src/lib/dashboard/scoreboard.ts`
+— so the cells, the footer, the CSV and the print view cannot disagree.
+
+**Pts / % (toolbar)** — marks are *entered* in points; this switch decides how
+they *read*: `Pts` shows the mark (`8`) and the rubro Total as
+`28 / 30 · 93%`; `%` shows the grade each mark produces (`80%`) and the
+rubro Total as `93%`. **The `%` view is read-only** — it is a lens on the
+stored points, not a second input mode. Switch to `Pts` to edit; arrow keys
+still walk the grid in either view.
+
+**Reading the numbers (the scoreboard contract)**
+
+| Value | Meaning |
+| ----- | ------- |
+| Column cell | Mark / column points |
+| Rubro **Total** | Sum of points of that rubro's columns + points-weighted grade 0–100 |
+| Rubro **footer** | Class points average + class rubro grade |
+| **FINAL** | `Σ (nota × peso) ÷ Σ peso` over the rubros that have data (renormalised) |
+| **Promedio** (footer right) | Class average of FINAL |
+
+A rubro only counts in FINAL once it has grades, so an in-progress term reads
+as the average of what has been graded instead of a fraction of it. A cell can
+never exceed 100 %: the model clamps each grade.
+
+**Scoreboard summary (top of the page)** — four facts for dirección:
+**promedio del grupo**, **aprobación** (share of students at ≥ 70 %),
+**rango** (min → max on a 0–100 track with the pass mark ticked and the
+**median** marked, so the spread, its position relative to 70 % and whether an
+outlier is pulling the average all read at a glance) and **sin nota**
+(students with no final yet, amber when non-zero).
+
+**Row tools** — sort by name / final ↓ / final ↑, and filters for
+**Pendientes** and **En riesgo**. A student who can no longer reach 70 % with
+the weight that is left gets a red **En riesgo** flag; a student who is below
+but can still pass shows the grade they must average on what remains.
+
+**Print (Imprimir)** — the app chrome, toolbars and sticky offsets are dropped
+and the table prints landscape with a header (grupo · materia · rubros · leyenda)
+for the PDF that goes to dirección (`globals.css` § print-scoreboard).
+
+**CSV** — one row per student plus a second row with each rubro's
+`puntos/posibles` and grade, closed by a class-average footer.
 
 - Group header: **nombre · peso**, purple badge; sticky, no wrap.
 - Column line keeps the **kind** label (`TAR 1`, `EXAM 1`) so a rubro mixing
@@ -369,6 +414,36 @@ through documentation.
   data) so the wizard does not nag on every visit — the card is the way back.
 
 ### 5.3 Rubric editor (dialog / right sheet)
+
+**Inline in the matrix (built 25 Oct 2026) — the primary path.** The rubro
+header in the gradebook is itself the editor, using the same edit-in-place
+pattern as the column titles below it (`components/grades/rubro-header-cell.tsx`):
+
+- **Name** — click the rubro name, type, `Enter`/blur saves, `Esc` cancels.
+- **Peso** — click the weight pill (`30%`), type digits, `Enter`/blur saves.
+  The pill turns amber while the pesos do not add up to 100 %.
+- **Delete** — the trash icon on the header (hover/focus); it asks for
+  confirmation and is disabled for a rubro with columns (archive instead).
+- **New rubro** — the `+` next to **Editar rubros** in the toolbar. It creates
+  an empty rubro (weight 0, so the FIN does not move) and opens its header for
+  renaming. Growing the rubric is a rubric decision, so it is **not** a cell
+  inside the grade grid.
+- **Change the order** — drag the grip on a header to move the whole block of
+  columns. The order is persisted on release (`reorderGradebook`: rubro
+  `position` + `assignments.created_at`), and a failed save restores the saved
+  order.
+- Every inline write goes through **one-row** actions (`createRubro`,
+  `updateRubro`, `deleteRubro`) so a rename never rewrites the rest of the
+  rubric. Saves are optimistic and revert on refusal.
+- A rubro may appear in **more than one block** (e.g. `Tareas 5 %` twice, or a
+  100 % `Quiz`). The blocks are distinguished internally by an ordinal; the
+  peso stays one number, and each block shows the same rubro share (`rubro % ×
+  peso`), never a value above the peso.
+- Drag is disabled while a local reorder has not been saved yet (the block keys
+  are positional).
+
+**Dialog — for the wizard and the column mover** (`rubric-dialog.tsx`); it also
+stays the place to archive/restore rubros and to reassign columns:
 
 - Header: `Matemática · 8°B`.
 - Table: `Rubro` (inline name) · `Peso %` · `# columnas` · `Puntos` (sum, read
@@ -514,6 +589,10 @@ single rubro, which is the intended per-column rule (§3.3).
 - [ ] Raising a column's points never changes the rubro peso in the FIN.
 - [ ] Adding a column requires a rubro; no rubro-less columns after migration.
 - [ ] Only Tareas graded → FIN = Tareas average (§3.5 B), not 30 % of it.
+- [x] Rubro name and peso editable directly in the matrix header (Enter saves,
+      Esc cancels); new rubro from the dashed header cell.
+- [x] Headers can be dragged to reorder the blocks, and the order survives a
+      reload.
 - [ ] Full cast at 100 % matches `0.3·Tareas + 0.5·Exámenes + 0.2·Proyectos`.
 - [ ] Rubro with columns can't be deleted; can be archived/restored.
 - [ ] Empty rubro deletes in one step.

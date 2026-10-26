@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
@@ -20,6 +21,7 @@ import {
   Minimize2,
   Minus,
   Plus,
+  Printer,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -33,6 +35,9 @@ import { Dropdown } from "@/components/ui/dropdown";
 import { EducationalSupportBadgeButton } from "@/components/educational-supports/support-badge-button";
 import { EducationalSupportWorkflowDialog } from "@/components/educational-supports/support-workflow-dialog";
 import { SubmitReport } from "@/components/grades/submit-report";
+import { RubroHeaderCell } from "@/components/grades/rubro-header-cell";
+import { RubroTotalCell, formatPoints, tonePillClass } from "@/components/grades/score-cells";
+import { blockBucket, moveItem, orderColumnsByBlocks } from "@/lib/dashboard/grade-order";
 import type {
   ClassEducationalSupportFlags,
   EducationalSupport,
@@ -45,19 +50,27 @@ import {
 import {
   addExamColumns,
   closeExamColumn,
+  createRubro,
+  deleteRubro,
   fetchSubjectExams,
   removeExamColumn,
+  reorderGradebook,
   saveGrade,
   updateExamColumn,
+  updateRubro,
 } from "@/lib/teachers/exams-actions";
 import type { AssignmentKind, ExamColumn, GradeRubro } from "@/lib/dashboard/exams";
 import type { ClassOption } from "@/lib/dashboard/gradebook";
 import type { TeacherStudent } from "@/lib/dashboard/grupos";
 import {
-  rubroPercentForStudent,
-  studentFinal,
-  totalPeso,
-} from "@/lib/dashboard/grade-weights";
+  canStillPass,
+  classStats,
+  displayPercent,
+  finalScore,
+  type FinalScore,
+} from "@/lib/dashboard/scoreboard";
+import { totalPeso } from "@/lib/dashboard/grade-weights";
+import { ScoreboardSummary } from "@/components/grades/scoreboard-summary";
 import { RubricDialog } from "@/components/grades/rubric-dialog";
 const PASS = 70;
 
@@ -135,25 +148,12 @@ function columnPct(column: ExamColumn, studentId: string): number | null {
   return pctOf(grade.mark, cellMax(column, studentId));
 }
 
-function average(values: (number | null)[]): number | null {
-  const nums = values.filter((value): value is number => value != null);
-  if (nums.length === 0) return null;
-  return Math.round(nums.reduce((sum, value) => sum + value, 0) / nums.length);
-}
-
-function studentAverage(exams: ExamColumn[], studentId: string): number | null {
-  return average(exams.map((column) => columnPct(column, studentId)));
-}
-
-
 
 /* Grade tints — the same palette the marketing site shows for the gradebook
    (see weeon-marketing/docs/design-tokens.md). Solid enough to read as pills. */
 const TINT_PASS = "bg-[#abe3dc] text-[#0f4c47] dark:bg-[#0f2f2c] dark:text-[#6ee7d7]";
 const TINT_WARN = "bg-[#fdeecd] text-[#92400e] dark:bg-[#3a2a12] dark:text-[#fde68a]";
 const TINT_FAIL = "bg-[#fbdee7] text-[#9f1239] dark:bg-[#3a1622] dark:text-[#fda4af]";
-/** FINAL column is always the purple tone, regardless of the value. */
-const TINT_FINAL = "bg-[#e6defb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]";
 
 function tintFor(pct: number | null): string {
   if (pct == null) return "";
@@ -162,9 +162,15 @@ function tintFor(pct: number | null): string {
   return TINT_FAIL;
 }
 
-/** Consecutive columns sharing one rubro. */
+/**
+ * A block of consecutive columns. `rubroId === null` is the "Sin rubro"
+ * bucket. The same rubro may appear in more than one block (a 100 % rubric
+ * legitimately repeats a category), which is why the block key carries an
+ * `ordinal` — React keys and drag keys are unique per block, not per rubro.
+ */
 type RubroGroup = {
   key: string;
+  ordinal: number;
   rubroId: string | null;
   name: string | null;
   peso: number | null;
@@ -180,13 +186,15 @@ function buildRubroGroups(
   const groups: RubroGroup[] = [];
   for (const column of columns) {
     const rubro = column.rubroId ? byId.get(column.rubroId) : undefined;
-    const key = column.rubroId ?? "__none";
+    const bucket = blockBucket(column.rubroId);
     const last = groups[groups.length - 1];
-    if (last && last.key === key) {
+    if (last && last.rubroId === column.rubroId) {
       last.columns.push(column);
     } else {
+      const ordinal = groups.filter((group) => blockBucket(group.rubroId) === bucket).length;
       groups.push({
-        key,
+        key: `${bucket}#${ordinal}`,
+        ordinal,
         rubroId: column.rubroId,
         name: rubro?.name ?? null,
         peso: rubro?.peso ?? null,
@@ -226,6 +234,7 @@ export function GradebookWorkspace({
   const t = useT();
   const w = t.gradebook.workspace;
   const copy = w.rubros;
+  const sb = w.scoreboard;
   const [subjectId, setSubjectId] = useState(initialSubjectId);
   const [exams, setExams] = useState<ExamColumn[]>(initialExams);
   const [rubros, setRubros] = useState<GradeRubro[]>(initialRubros);
@@ -236,6 +245,18 @@ export function GradebookWorkspace({
   const [query, setQuery] = useState("");
   const [density, setDensity] = useState<Density>("cozy");
   const dense = density === "compact";
+  // Scoreboard view controls. They only re-order/filter rows; the numbers never
+  // depend on them.
+  type SortBy = "name" | "finalDesc" | "finalAsc";
+  const [sortBy, setSortBy] = useState<SortBy>("name");
+  const [onlyPending, setOnlyPending] = useState(false);
+  const [onlyAtRisk, setOnlyAtRisk] = useState(false);
+  /**
+   * Marks are entered as points; this decides how they *read*. `points` keeps
+   * the raw mark (`8`), `percent` shows the grade it produces (`80%`) without
+   * changing the column's max. A display mode only — never a data change.
+   */
+  const [markView, setMarkView] = useState<"points" | "percent">("points");
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [closeTarget, setCloseTarget] = useState<ExamColumn | null>(null);
@@ -243,6 +264,29 @@ export function GradebookWorkspace({
   const [deleteTarget, setDeleteTarget] = useState<ExamColumn | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [localFlags, setLocalFlags] = useState(supportFlags);
+  // Rubro blocks, in the teacher's order. `null` is the "Sin rubro" bucket.
+  // Rebuilt from the saved rubric on every reload; a drag edits it in place.
+  const [blockOrder, setBlockOrder] = useState<string[] | null>(null);
+  const [rubroBusy, setRubroBusy] = useState<string | null>(null);
+  /**
+   * Header field to open for editing without a click — used right after
+   * "Nuevo rubro" so the teacher types the name instead of hunting a hidden
+   * input. The header clears it once it has started editing.
+   */
+  const [editRubroId, setEditRubroId] = useState<{
+    id: string;
+    field: "name" | "peso";
+  } | null>(null);
+  const [rubroDeleteTarget, setRubroDeleteTarget] = useState<GradeRubro | null>(null);
+  /** Block bucket currently being dragged (`null` = no drag in progress). */
+  const [draggingBlock, setDraggingBlock] = useState<string | null>(null);
+  const draggingRef = useRef<{
+    id: string;
+    key: string;
+    startX: number;
+    startY: number;
+    active: boolean;
+  } | null>(null);
   const [reviewStudent, setReviewStudent] = useState<{
     id: string;
     name: string;
@@ -381,27 +425,40 @@ export function GradebookWorkspace({
     : density === "cozy"
       ? "w-[5.5rem]"
       : "w-[9rem]";
-  // One narrow subtotal column closes every rubro group.
-  const subtotalWidth = dense ? "w-[2.5rem]" : "w-[3.25rem]";
+  // One subtotal column closes every rubro group (points + the rubro grade).
+  const subtotalWidth = dense ? "w-[4.5rem]" : "w-[5.5rem]";
   const colTop = dense ? "top-8" : "top-9";
   const colHeadH = dense ? "min-h-8" : "min-h-10";
 
-  const visibleStudents = students.filter((student) =>
-    studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
-  );
 
-  // Columns are displayed grouped by rubro (weight order), then by kind inside
-  // the rubro, so each weighted header is one contiguous block.
+  // Columns are displayed grouped by rubro: rubros in the teacher's saved
+  // order, columns inside a rubro grouped by kind. The first block of a rubro
+  // is the saved one; the rest (same rubro again) follow it in creation order.
   const rubroById = new Map(rubros.map((rubro) => [rubro.id, rubro]));
+  const savedBlockOrder: string[] = [
+    ...activeRubros
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((rubro) => rubro.id),
+    "__none",
+  ];
+  const effectiveBlockOrder = blockOrder ?? savedBlockOrder;
+  const blockRank = new Map(effectiveBlockOrder.map((key, index) => [key, index]));
+  // The teacher's view is exactly what is saved: same positions means the
+  // drag keys (which are positional) are still valid.
+  const blockOrderDirty =
+    blockOrder != null && blockOrder.join("|") !== savedBlockOrder.join("|");
+  const dragEnabled = !blockOrderDirty;
+
   const orderedExams = [...exams]
     .filter((column) => {
       const rubro = column.rubroId ? rubroById.get(column.rubroId) : null;
       return !rubro?.archived;
     })
     .sort((a, b) => {
-      const pa = a.rubroId ? (rubroById.get(a.rubroId)?.position ?? 999) : 999;
-      const pb = b.rubroId ? (rubroById.get(b.rubroId)?.position ?? 999) : 999;
-      if (pa !== pb) return pa - pb;
+      const ra = blockRank.get(blockBucket(a.rubroId)) ?? effectiveBlockOrder.length;
+      const rb = blockRank.get(blockBucket(b.rubroId)) ?? effectiveBlockOrder.length;
+      if (ra !== rb) return ra - rb;
       return KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind);
     });
 
@@ -432,10 +489,9 @@ export function GradebookWorkspace({
   const groups = buildRubroGroups(orderedExams, rubros);
   const orderedIndex = new Map(orderedExams.map((column, index) => [column.id, index]));
   const pesoTotal = totalPeso(rubros);
-  // Weights must add up to 100 %; reopening the editor is the fix.
+  // Weights must add up to 100 %; the amber banner links back to the editor.
   const pesoIncomplete = activeRubros.length > 0 && pesoTotal !== 100;
   // Weighted only when the rubric exists and at least one column is assigned.
-  const weighted = activeRubros.length > 0 && orderedExams.some((c) => c.rubroId);
 
   /**
    * Sequenced titles for a bulk create inside one rubro. Numbers continue after
@@ -455,65 +511,112 @@ export function GradebookWorkspace({
     );
   }
 
-  function finalForStudent(studentId: string): number | null {
-    if (!weighted) return studentAverage(exams, studentId);
-    const percent = studentFinal(rubros, exams, studentId).percent;
-    // FINAL is always a whole percentage in the matrix and CSV.
-    return percent == null ? null : Math.round(percent);
-  }
-
-  function groupAverageForVisible(group: RubroGroup): number | null {
-    if (!group.rubroId || !weighted) return null;
-    return average(
-      visibleStudents.map((student) =>
-        rubroPercentForStudent(exams, group.rubroId!, student.id),
-      ),
-    );
-  }
-
   /**
-   * This student's contribution of one rubro to the final: rubro % × peso.
-   * Capped by construction at the rubro's peso (Tareas 30 → max 30). Kept to
-   * one decimal so the three subtotals add up to the FIN.
+   * Everything the scoreboard shows comes from `lib/dashboard/scoreboard.ts`
+   * (via `studentFinal`, `rubroScore`, `classStats`). Keeping a single model is
+   * what stops a cell, its footer and FINAL from disagreeing.
    */
-  function rubroTotalForStudent(group: RubroGroup, studentId: string): number | null {
-    if (!group.rubroId || !weighted) return null;
-    const percent = rubroPercentForStudent(exams, group.rubroId, studentId);
-    if (percent == null) return null;
-    const peso = group.peso ?? 0;
-    return Math.round((percent * peso) / 10) / 10;
+  const finalFor = new Map<string, FinalScore>();
+  for (const student of students) {
+    finalFor.set(student.id, finalScore(rubros, exams, student.id));
   }
 
+  function finalForStudent(studentId: string): number | null {
+    return displayPercent(finalFor.get(studentId)?.percent ?? null);
+  }
+
+  /** Rubro grade 0–100 for one student in one rubro. */
+  function rubroPercentForStudent(rubroId: string, studentId: string): number | null {
+    const final = finalFor.get(studentId);
+    return final?.rubricos.find((item) => item.rubroId === rubroId)?.percent ?? null;
+  }
+
+  /** Rubro grade for a block (a split block shows its rubro's grade). */
   function rubroPercentForGroupStudent(
     group: RubroGroup,
     studentId: string,
   ): number | null {
-    if (!group.rubroId || !weighted) return null;
-    return rubroPercentForStudent(exams, group.rubroId, studentId);
+    if (!group.rubroId) return null;
+    return rubroPercentForStudent(group.rubroId, studentId);
   }
 
-  const overall = (() => {
-    if (!weighted) {
-      return average(
-        visibleStudents.flatMap((student) =>
-          exams.map((column) => columnPct(column, student.id)),
-        ),
-      );
+  /** A student's points inside a block, out of the block's max points. */
+  function blockPointsForStudent(
+    group: RubroGroup,
+    studentId: string,
+  ): { earned: number | null; max: number } {
+    let earned = 0;
+    let max = 0;
+    let graded = false;
+    for (const column of group.columns) {
+      max += columnMaxPoints(column);
+      const grade = column.grades[studentId];
+      if (!grade) continue;
+      earned += grade.mark;
+      graded = true;
     }
-    let sum = 0;
-    let weight = 0;
-    for (const group of groups) {
-      const avg = groupAverageForVisible(group);
-      if (avg == null || group.peso == null) continue;
-      sum += avg * group.peso;
-      weight += group.peso;
-    }
-    return weight > 0 ? Math.round(sum / weight) : null;
+    return { earned: graded ? earned : null, max };
+  }
+
+
+  /**
+   * Students in the order the teacher asked for. Filters (`Pendientes`,
+   * `En riesgo`) and sorting are views only — they never touch the data.
+   */
+  const visibleStudents = (() => {
+    const base = students.filter((student) =>
+      studentName(student).toLowerCase().includes(query.trim().toLowerCase()),
+    );
+    const filtered = base.filter((student) => {
+      const final = finalFor.get(student.id);
+      if (onlyPending && final?.percent != null) return false;
+      if (onlyAtRisk) {
+        const risk = final ? canStillPass(final) : null;
+        if (risk?.pass !== false) return false;
+      }
+      return true;
+    });
+    if (sortBy === "name") return filtered;
+    return [...filtered].sort((a, b) => {
+      const fa = finalFor.get(a.id)?.percent ?? null;
+      const fb = finalFor.get(b.id)?.percent ?? null;
+      if (fa == null && fb == null) return studentName(a).localeCompare(studentName(b), "es");
+      if (fa == null) return 1;
+      if (fb == null) return -1;
+      return sortBy === "finalAsc" ? fa - fb : fb - fa;
+    });
   })();
 
+  const finalStats = classStats(
+    students.map((student) => finalFor.get(student.id)?.percent ?? null),
+  );
+
+  /** Class average of a rubro grade (footer `Promedio del rubro`). */
+  const rubroAverageForVisible = (group: RubroGroup): number | null => {
+    if (!group.rubroId) return null;
+    const values = visibleStudents.map((student) =>
+      rubroPercentForStudent(group.rubroId!, student.id),
+    );
+    const nums = values.filter((value): value is number => value != null);
+    if (nums.length === 0) return null;
+    return Math.round((nums.reduce((sum, value) => sum + value, 0) / nums.length) * 10) / 10;
+  };
+
+  /** Class average of a block's points (footer under each column). */
+  const blockPointsAverageForVisible = (group: RubroGroup): number | null => {
+    const values = visibleStudents.map((student) =>
+      blockPointsForStudent(group, student.id).earned,
+    );
+    const nums = values.filter((value): value is number => value != null);
+    if (nums.length === 0) return null;
+    return Math.round((nums.reduce((sum, value) => sum + value, 0) / nums.length) * 10) / 10;
+  };
+
+  const overall = finalStats.average;
   async function changeSubject(nextId: string | null) {
     setSubjectId(nextId);
     setError(null);
+    setBlockOrder(null);
     setLoading(true);
     const res = await fetchSubjectExams({ classId, subjectId: nextId });
     setLoading(false);
@@ -529,6 +632,224 @@ export function GradebookWorkspace({
       setExams(res.exams);
       setRubros(res.rubros);
     }
+  }
+
+  /* ── Inline rubro editing ────────────────────────────────────────────────
+     The header pill *is* the form: name and peso commit on Enter/blur. Each
+     write is optimistic and reverted when the server refuses, mirroring the
+     column rename. */
+
+  async function handleRenameRubro(rubro: GradeRubro, nextName: string): Promise<boolean> {
+    const previous = rubro.name;
+    startTransition(() => {
+      setRubros((current) =>
+        current.map((item) => (item.id === rubro.id ? { ...item, name: nextName } : item)),
+      );
+    });
+    setRubroBusy(rubro.id);
+    const res = await updateRubro({ classId, rubroId: rubro.id, name: nextName });
+    setRubroBusy(null);
+    if (!res.ok) {
+      startTransition(() => {
+        setRubros((current) =>
+          current.map((item) => (item.id === rubro.id ? { ...item, name: previous } : item)),
+        );
+      });
+      setError(res.error);
+      return false;
+    }
+    return true;
+  }
+
+  async function handleUpdatePeso(rubro: GradeRubro, nextPeso: number): Promise<boolean> {
+    const previous = rubro.peso;
+    startTransition(() => {
+      setRubros((current) =>
+        current.map((item) => (item.id === rubro.id ? { ...item, peso: nextPeso } : item)),
+      );
+    });
+    setRubroBusy(rubro.id);
+    const res = await updateRubro({ classId, rubroId: rubro.id, peso: nextPeso });
+    setRubroBusy(null);
+    if (!res.ok) {
+      startTransition(() => {
+        setRubros((current) =>
+          current.map((item) => (item.id === rubro.id ? { ...item, peso: previous } : item)),
+        );
+      });
+      setError(res.error);
+      return false;
+    }
+    return true;
+  }
+
+  async function handleAddRubro(
+    name: string,
+    peso: number,
+    afterRubroId: string | null,
+  ): Promise<string | null> {
+    if (!subjectId) return null;
+    setError(null);
+    setRubroBusy("new");
+    const res = await createRubro({
+      classId,
+      subjectId,
+      name,
+      peso,
+      afterRubroId,
+    });
+    setRubroBusy(null);
+    if (!res.ok) {
+      setError(res.error);
+      return null;
+    }
+    setBlockOrder(null);
+    await refresh();
+    return res.id ?? null;
+  }
+
+  /**
+   * "Nuevo rubro" from the toolbar: creates an empty rubro (name placeholder,
+   * weight 0) and opens its header for renaming/reweighting. An empty rubro
+   * never perturbs the FIN, and it can be deleted again without touching a
+   * grade. Growing the rubric is a rubric decision, so the control lives next
+   * to "Editar rubros" instead of inside the grade grid.
+   */
+  async function handleAddRubroQuick() {
+    if (!subjectId) return;
+    if (!guardSupports()) return;
+    const base = copy.addRubroPlaceholder;
+    const taken = new Set(activeRubros.map((rubro) => rubro.name.toLowerCase()));
+    let name = base;
+    let suffix = 2;
+    while (taken.has(name.toLowerCase())) {
+      name = `${base} ${suffix++}`;
+    }
+    const id = await handleAddRubro(name, 0, null);
+    if (id) setEditRubroId({ id, field: "name" });
+  }
+
+  async function handleDeleteRubro() {    if (!rubroDeleteTarget) return;
+    const rubro = rubroDeleteTarget;
+    setRubroBusy(rubro.id);
+    const res = await deleteRubro({ classId, rubroId: rubro.id });
+    setRubroBusy(null);
+    setRubroDeleteTarget(null);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setBlockOrder(null);
+    await refresh();
+  }
+
+  /* ── Block drag & drop ───────────────────────────────────────────────────
+     Dragging a header's grip moves the whole block of columns. The block order
+     is followed live (no placeholder column), and on release the new order is
+     persisted; a failed save restores the saved order. */
+
+  function orderedRubroIds(nextBlocks: string[]): string[] {
+    const ids = nextBlocks.filter((key) => key !== "__none");
+    for (const rubro of rubros) {
+      if (!ids.includes(rubro.id)) ids.push(rubro.id);
+    }
+    return ids;
+  }
+
+  async function persistBlockOrder(nextBlocks: string[]) {
+    if (!subjectId) return;
+    const nextGroups = buildRubroGroups(
+      orderColumnsByBlocks(
+        orderedExams,
+        (column) => column.rubroId,
+        nextBlocks,
+      ),
+      rubros,
+    );
+    const assignmentIds = nextGroups.flatMap((group) =>
+      group.columns.map((column) => column.id),
+    );
+    setLoading(true);
+    const res = await reorderGradebook({
+      classId,
+      subjectId,
+      assignmentIds,
+      rubroIds: orderedRubroIds(nextBlocks),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      setBlockOrder(null);
+      setError(res.error);
+      return;
+    }
+    await refresh();
+  }
+
+  function endDrag() {
+    const drag = draggingRef.current;
+    draggingRef.current = null;
+    setDraggingBlock(null);
+    if (!drag?.active) return;
+    void persistBlockOrder(blockOrder ?? savedBlockOrder);
+  }
+
+  function beginBlockDrag(group: RubroGroup, event: ReactPointerEvent<HTMLElement>) {
+    if (!dragEnabled) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    draggingRef.current = {
+      id: group.rubroId ?? "__none",
+      key: group.key,
+      startX,
+      startY,
+      active: false,
+    };
+
+    function onMove(moveEvent: PointerEvent) {
+      const drag = draggingRef.current;
+      if (!drag) {
+        cleanup();
+        return;
+      }
+      if (!drag.active) {
+        const moved =
+          Math.abs(moveEvent.clientX - startX) + Math.abs(moveEvent.clientY - startY);
+        if (moved < 8) return;
+        drag.active = true;
+        setDraggingBlock(drag.id);
+      }
+      // Drop the block on whichever header cell the pointer is over.
+      const target = document
+        .elementFromPoint(moveEvent.clientX, moveEvent.clientY)
+        ?.closest<HTMLElement>("[data-block-id]");
+      const overKey = target?.dataset.blockKey;
+      const overId = target?.dataset.blockId;
+      if (!overId || !overKey || overKey === drag.key) return;
+      setBlockOrder((current) => {
+        const base = current ?? savedBlockOrder;
+        const from = base.indexOf(drag.id);
+        const to = base.indexOf(overId);
+        if (from < 0 || to < 0 || from === to) return base;
+        return moveItem(base, from, to);
+      });
+      drag.key = overKey;
+    }
+
+    function cleanup() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    }
+
+    function onUp() {
+      cleanup();
+      endDrag();
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   }
 
   async function handleCreate(
@@ -605,6 +926,43 @@ export function GradebookWorkspace({
     return true;
   }
 
+  /** Points are frozen once a column has marks (server + DB trigger agree). */
+  function hasGrades(column: ExamColumn): boolean {
+    return Object.keys(column.grades).length > 0;
+  }
+
+  async function handleUpdatePoints(
+    column: ExamColumn,
+    nextPoints: number | null,
+  ): Promise<boolean> {
+    setError(null);
+    const previous = column.points;
+    startTransition(() => {
+      setExams((current) =>
+        current.map((item) =>
+          item.id === column.id ? { ...item, points: nextPoints } : item,
+        ),
+      );
+    });
+    const res = await updateExamColumn({
+      classId,
+      assignmentId: column.id,
+      points: nextPoints,
+    });
+    if (!res.ok) {
+      startTransition(() => {
+        setExams((current) =>
+          current.map((item) =>
+            item.id === column.id ? { ...item, points: previous } : item,
+          ),
+        );
+      });
+      setError(res.error);
+      return false;
+    }
+    return true;
+  }
+
   async function handleDeleteColumn() {
     if (!deleteTarget) return;
     const column = deleteTarget;
@@ -637,6 +995,8 @@ export function GradebookWorkspace({
   }
 
   function exportCsv() {
+    // Same model as the screen: each rubro block exports its points and its
+    // grade, then FINAL, so a spreadsheet read by dirección matches the table.
     const groupFor = (columnId: string): RubroGroup | undefined =>
       groups.find((group) => group.columns.some((column) => column.id === columnId));
     const rubroRow = orderedExams.map((column) => {
@@ -650,12 +1010,11 @@ export function GradebookWorkspace({
         const label = labels.get(column.id)?.medium ?? column.title;
         return `${label} (${w.columnPointsShort(columnMaxPoints(column))})`;
       }),
-      `${w.final} ${w.finalPercentSuffix}`.trim(),
+      sb.finalColumn,
     ];
     const rubroHeader = [t.gradebook.headers.student, ...rubroRow, ""];
-    const rows = visibleStudents.map((student) => {
-      const finalPct = finalForStudent(student.id);
-      return [
+    const rows = visibleStudents.flatMap((student) => {
+      const base = [
         studentName(student),
         ...orderedExams.map((column) => {
           const grade = column.grades[student.id];
@@ -663,10 +1022,37 @@ export function GradebookWorkspace({
           const max = cellMax(column, student.id);
           return `${grade.mark}/${max}`;
         }),
-        finalPct == null ? "" : `${Math.round(finalPct)}${w.finalPercentSuffix}`,
+      ];
+      const final = finalForStudent(student.id);
+      return [
+        [...base, final == null ? "" : `${final}${w.finalPercentSuffix}`],
+        [
+          " ",
+          ...groups.flatMap((group) => {
+            const points = blockPointsForStudent(group, student.id);
+            const grade = rubroPercentForGroupStudent(group, student.id);
+            return [
+              points.earned == null ? "" : `${formatPoints(points.earned)}/${formatPoints(points.max)}`,
+              grade == null ? "" : `${Math.round(grade)}${w.finalPercentSuffix}`,
+            ];
+          }),
+          "",
+        ],
       ];
     });
-    const csv = [rubroHeader, header, ...rows]
+    const footer = [
+      sb.classAverage,
+      ...orderedExams.map((column) => {
+        const values = visibleStudents.map((student) => columnPct(column, student.id));
+        const nums = values.filter((value): value is number => value != null);
+        if (nums.length === 0) return "";
+        return `${Math.round(nums.reduce((sum, value) => sum + value, 0) / nums.length)}${w.finalPercentSuffix}`;
+      }),
+      finalStats.average == null
+        ? ""
+        : `${finalStats.average}${w.finalPercentSuffix}`,
+    ];
+    const csv = [rubroHeader, header, ...rows, [], footer]
       .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
@@ -679,8 +1065,8 @@ export function GradebookWorkspace({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="print-scoreboard flex flex-col gap-5">
+      <header className="print-hide flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col">
           <h1 className="brand-page-title text-3xl font-bold text-foreground sm:text-4xl">
             {groupName}
@@ -691,14 +1077,27 @@ export function GradebookWorkspace({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {subjectId ? (
-            <button
-              type="button"
-              onClick={() => void openRubric(activeRubros.length === 0 ? "wizard" : "edit")}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              {copy.edit}
-            </button>
+            <div className="inline-flex items-stretch overflow-hidden rounded-full border border-border">
+              <button
+                type="button"
+                onClick={() => void openRubric(activeRubros.length === 0 ? "wizard" : "edit")}
+                className="inline-flex h-9 items-center gap-1.5 pl-3.5 pr-3 text-sm font-semibold text-foreground/70 ui-hover"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                {copy.edit}
+              </button>
+              {/* Growing the rubric is a rubric decision, not a grade cell: it
+                  belongs next to the other rubric actions, not in the grid. */}
+              <button
+                type="button"
+                onClick={() => void handleAddRubroQuick()}
+                title={copy.addRubro}
+                aria-label={copy.addRubro}
+                className="inline-flex h-9 w-9 items-center justify-center border-l border-border text-foreground/70 ui-hover hover:text-brand-600 dark:hover:text-brand-300"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+              </button>
+            </div>
           ) : null}
           <button
             type="button"
@@ -716,6 +1115,17 @@ export function GradebookWorkspace({
               <Maximize2 className="h-4 w-4" />
             )}
             {density === "compact" ? w.dense : density === "cozy" ? w.cozy : w.expanded}
+          </button>
+          {/* Totals are no longer a mode switch: each rubro Total always shows
+              points + grade, and FINAL/Promedio are always percentages. */}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            title={sb.print}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover"
+          >
+            <Printer className="h-4 w-4" />
+            {sb.print}
           </button>
           <button
             type="button"
@@ -764,28 +1174,103 @@ export function GradebookWorkspace({
         </div>
       ) : null}
 
+      {/* Print-to-PDF header: dirección needs the school, subject, rubric and
+          date on the page, which the app chrome does not provide on paper. */}
+      <div className="hidden print:block">
+        <p className="text-lg font-bold text-foreground">
+          {classContext.name} · {subjectName}
+        </p>
+        <p className="text-sm text-foreground/60">
+          {activeRubros
+            .map((rubro) => `${rubro.name} ${rubro.peso}%`)
+            .join(" · ")}{" "}
+          — {sb.legend}
+        </p>
+      </div>
+
+      <ScoreboardSummary
+        average={finalStats.average}
+        median={finalStats.median}
+        passRate={finalStats.passRate}
+        highest={finalStats.highest}
+        lowest={finalStats.lowest}
+        graded={finalStats.graded}
+        total={finalStats.total}
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="relative inline-flex items-center">
-          <Search className="pointer-events-none absolute left-3 h-4 w-4 text-foreground/40" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={w.search}
-            className="h-9 w-60 rounded-full border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:border-brand-400"
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="relative inline-flex items-center">
+            <Search className="pointer-events-none absolute left-3 h-4 w-4 text-foreground/40" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={w.search}
+              className="h-9 w-60 rounded-full border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:border-brand-400"
+            />
+          </label>
+          {/* Sorting and row filters are the dirección view: order by grade,
+              keep only the students still ungraded or already out of reach. */}
+          <Dropdown
+            value={sortBy}
+            onChange={(value) => setSortBy(value as SortBy)}
+            ariaLabel={sb.sort}
+            fitContent
+            options={[
+              { value: "name", label: sb.sortName },
+              { value: "finalDesc", label: sb.sortFinalDesc },
+              { value: "finalAsc", label: sb.sortFinalAsc },
+            ]}
           />
-        </label>
-        <div className="flex items-center gap-3 text-xs font-semibold">
-          <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#abe3dc] ring-1 ring-[#7dd3c7]" />
-            ≥ {PASS}%
-          </span>
-          <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#fdeecd] ring-1 ring-[#f5d88a]" />
-            50–69%
-          </span>
-          <span className="flex items-center gap-1.5 text-foreground/50">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#fbdee7] ring-1 ring-[#f0b8c8]" /> &lt; 50%
-          </span>
+          <FilterChip active={onlyPending} onClick={() => setOnlyPending((on) => !on)}>
+            {sb.onlyPending}
+          </FilterChip>
+          <FilterChip active={onlyAtRisk} onClick={() => setOnlyAtRisk((on) => !on)}>
+            {sb.onlyAtRisk}
+          </FilterChip>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Marks read as points or as the grade they represent. Display only. */}
+          <div
+            role="radiogroup"
+            aria-label={sb.totalsHint}
+            title={sb.totalsHint}
+            className="inline-flex h-9 items-center rounded-full border border-border p-0.5 print-hide"
+          >
+            {(["points", "percent"] as const).map((mode) => {
+              const active = markView === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setMarkView(mode)}
+                  className={cn(
+                    "h-8 rounded-full px-3 text-xs font-bold uppercase tracking-wide tabular-nums transition-colors",
+                    active
+                      ? "bg-[#e6defb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]"
+                      : "text-foreground/55 hover:text-foreground",
+                  )}
+                >
+                  {mode === "percent" ? sb.totalsPercent : sb.totalsPoints}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-3 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 text-foreground/50">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#abe3dc] ring-1 ring-[#7dd3c7]" />
+              ≥ {PASS}%
+            </span>
+            <span className="flex items-center gap-1.5 text-foreground/50">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#fdeecd] ring-1 ring-[#f5d88a]" />
+              50–69%
+            </span>
+            <span className="flex items-center gap-1.5 text-foreground/50">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#fbdee7] ring-1 ring-[#f0b8c8]" /> &lt; 50%
+            </span>
+          </div>
         </div>
       </div>
 
@@ -793,7 +1278,7 @@ export function GradebookWorkspace({
         <button
           type="button"
           onClick={() => void openRubric("edit")}
-          className="flex items-center justify-between gap-3 rounded-xl border border-[#f5d88a] bg-[#fdeecd] px-4 py-2.5 text-left text-sm font-semibold text-[#92400e] dark:border-[#5b4318] dark:bg-[#3a2a12] dark:text-[#fde68a]"
+          className="print-hide flex items-center justify-between gap-3 rounded-xl border border-[#f5d88a] bg-[#fdeecd] px-4 py-2.5 text-left text-sm font-semibold text-[#92400e] dark:border-[#5b4318] dark:bg-[#3a2a12] dark:text-[#fde68a]"
         >
           <span>{copy.pesoWarning(pesoTotal)}</span>
           <span className="shrink-0 underline">{copy.edit}</span>
@@ -844,8 +1329,17 @@ export function GradebookWorkspace({
         <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm font-medium text-foreground/50">
           {w.noStudents}
         </p>
+      ) : visibleStudents.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm font-medium text-foreground/50">
+          {sb.noActiveStudents}
+        </p>
       ) : (
-        <div className="relative min-w-0 overflow-auto rounded-2xl border border-border bg-surface">
+        <div
+          className={cn(
+            "relative min-w-0 overflow-auto rounded-2xl border border-border bg-surface",
+            draggingBlock && "select-none",
+          )}
+        >
             {loading ? (
               <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface/60 backdrop-blur-[1px]">
                 <Loader2 className={cn("h-6 w-6 animate-spin", ACCENT_TEXT)} />
@@ -868,43 +1362,72 @@ export function GradebookWorkspace({
                   >
                     {t.gradebook.headers.student}
                   </th>
-                  {groups.map((group) => (
-                    <th
-                      key={group.key}
-                      colSpan={group.columns.length + 1}
-                      className={cn(
-                        "sticky top-0 z-40 border-b border-l-2 border-foreground/25 bg-surface-muted px-2 text-center leading-none",
-                        dense ? "h-8" : "h-9",
-                      )}
-                    >
-                      {group.name ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="max-w-[10rem] truncate text-[10px] font-bold uppercase tracking-[0.12em] text-foreground/65">
-                            {group.name}
-                          </span>
-                          <span className="rounded bg-[#e6defb] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]">
-                            {group.peso ?? 0}%
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-foreground/45">
-                          {copy.noRubro}
-                        </span>
-                      )}
-                    </th>
-                  ))}
+                  {groups.map((group) => {
+                    const rubro = group.rubroId
+                      ? (rubroById.get(group.rubroId) ?? null)
+                      : null;
+                    const usedColumns = group.rubroId
+                      ? exams.filter((column) => column.rubroId === group.rubroId).length
+                      : 0;
+                    return (
+                      <th
+                        key={group.key}
+                        colSpan={group.columns.length + 1}
+                        data-block-id={group.rubroId ?? "__none"}
+                        data-block-key={group.key}
+                        className={cn(
+                          "sticky top-0 z-40 border-b border-l-2 border-foreground/25 bg-surface-muted px-2 text-center leading-none transition-opacity",
+                          dense ? "h-8" : "h-9",
+                          draggingBlock === (group.rubroId ?? "__none") &&
+                            "opacity-60 ring-2 ring-brand-400/60",
+                        )}
+                      >
+                        <RubroHeaderCell
+                          name={group.name}
+                          peso={group.peso}
+                          canManage={Boolean(subjectId && rubro)}
+                          canDelete={usedColumns === 0}
+                          pesoIncomplete={pesoIncomplete}
+                          busy={rubro != null && rubroBusy === rubro.id}
+                          onCommitName={(next) =>
+                            rubro ? handleRenameRubro(rubro, next) : Promise.resolve(false)
+                          }
+                          onCommitPeso={(next) =>
+                            rubro ? handleUpdatePeso(rubro, next) : Promise.resolve(false)
+                          }
+                          onDelete={() => {
+                            if (!rubro) return;
+                            if (usedColumns > 0) {
+                              setError(copy.hasColumns);
+                              return;
+                            }
+                            setRubroDeleteTarget(rubro);
+                          }}
+                          onDragStart={
+                            dragEnabled ? (event) => beginBlockDrag(group, event) : undefined
+                          }
+                          autoEdit={
+                            rubro && editRubroId?.id === rubro.id
+                              ? editRubroId.field
+                              : null
+                          }
+                          onAutoEditHandled={() => setEditRubroId(null)}
+                        />
+                      </th>
+                    );
+                  })}
                   <th
                     rowSpan={2}
                     className={cn(
-                      "sticky right-0 top-0 z-50 w-[4.5rem] border-b border-l-2 border-l-foreground/25 bg-surface px-1 text-center align-middle",
+                      "sticky right-0 top-0 z-50 min-w-[6rem] whitespace-nowrap border-b border-l-2 border-l-foreground/25 bg-surface-muted px-2 text-center align-middle",
                       headY,
                     )}
                   >
-                    <div className="flex flex-col items-center gap-0.5 py-1">
+                    <div className="flex items-baseline justify-center gap-1 py-1">
                       <span className={cn("text-xs font-bold uppercase tracking-wide", ACCENT_TEXT)}>
                         {w.final}
                       </span>
-                      <span className="text-[9px] font-semibold tabular-nums text-foreground/45">
+                      <span className="text-[9px] font-semibold text-foreground/45">
                         {w.finalPercentSuffix}
                       </span>
                     </div>
@@ -936,7 +1459,9 @@ export function GradebookWorkspace({
                               column={column}
                               label={label}
                               density={density}
+                              pointsEditable={!hasGrades(column)}
                               onRename={(title) => handleRenameColumn(column, title)}
+                              onRenamePoints={(points) => handleUpdatePoints(column, points)}
                               onDelete={() => deleteColumn(column)}
                               onClose={
                                 column.assessmentId || column.closedAt
@@ -954,9 +1479,13 @@ export function GradebookWorkspace({
                           colHeadH,
                           subtotalWidth,
                         )}
+                        title={sb.rubroPoints}
                       >
-                        <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#7c3aed] dark:text-[#b9a3f7]">
+                        <span className="block text-[9px] font-bold uppercase leading-tight tracking-[0.08em] text-[#7c3aed] dark:text-[#b9a3f7]">
                           {copy.subtotal}
+                        </span>
+                        <span className="block text-[8px] font-semibold uppercase tracking-[0.06em] text-foreground/40">
+                          {copy.pointsShort} · {w.finalPercentSuffix}
                         </span>
                       </th>
                     </Fragment>
@@ -967,6 +1496,7 @@ export function GradebookWorkspace({
               <tbody>
                 {visibleStudents.map((student, rowIndex) => {
                   const final = finalForStudent(student.id);
+                  const risk = canStillPass(finalFor.get(student.id) ?? finalScore(rubros, exams, student.id));
                   return (
                     <tr key={student.id} className={cn("group", dense ? "h-8" : "h-9")}>
                       <td className={cn("sticky left-0 z-20 border-b border-r border-border bg-surface px-2 text-center text-xs font-semibold text-foreground/35", rowY)}>
@@ -989,6 +1519,25 @@ export function GradebookWorkspace({
                             }
                             onClick={() => void openSupportReview(student)}
                           />
+                          {/* Dirección's early-warning: a student who can no
+                              longer reach the pass mark with the weight left. */}
+                          {risk?.pass === false ? (
+                            <span
+                              title={sb.cannotPass}
+                              aria-label={sb.atRisk}
+                              className="inline-flex shrink-0 items-center rounded-full bg-error/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-error"
+                            >
+                              {sb.atRisk}
+                            </span>
+                          ) : null}
+                          {risk?.pass && risk.neededOnRemaining != null && risk.neededOnRemaining > 0 ? (
+                            <span
+                              title={sb.atRiskHint(risk.neededOnRemaining)}
+                              className="shrink-0 text-[9px] font-semibold tabular-nums text-[#92400e] dark:text-[#fde68a]"
+                            >
+                              {risk.neededOnRemaining}%
+                            </span>
+                          ) : null}
                         </div>
                       </td>
                       {groups.map((group) => (
@@ -1012,6 +1561,7 @@ export function GradebookWorkspace({
                                   row={rowIndex}
                                   col={colIndex}
                                   dense={dense}
+                                  markView={markView}
                                   supportPending={supportActionPending({
                                     needsReview: localFlags[student.id]?.needsReview ?? false,
                                     needsPeriodRegistration:
@@ -1031,29 +1581,35 @@ export function GradebookWorkspace({
                             )}
                           >
                             {(() => {
-                              const total = rubroTotalForStudent(group, student.id);
-                              const pct = rubroPercentForGroupStudent(group, student.id);
+                              const points = blockPointsForStudent(group, student.id);
+                              const grade = rubroPercentForGroupStudent(group, student.id);
                               const title =
-                                pct == null || group.peso == null || total == null
-                                  ? `${group.name ?? copy.noRubro} · ${copy.grade}`
-                                  : `${group.name ?? copy.noRubro}: ${Math.round(pct)}% × ${group.peso}% = ${total.toFixed(1)}%`;
+                                grade == null
+                                  ? `${group.name ?? copy.noRubro} · ${copy.noRubro.toLowerCase()}`
+                                  : `${group.name ?? copy.noRubro} · ${copy.grade}: ${Math.round(grade)}%${points.earned != null ? ` (${formatPoints(points.earned)} de ${formatPoints(points.max)} pts)` : ""}`;
                               return (
-                                <span
-                                  title={title}
-                                  className={cn(
-                                    "inline-block rounded-md px-1.5 py-0.5 text-xs font-bold tabular-nums",
-                                    total == null ? "text-foreground/35" : TINT_FINAL,
-                                  )}
-                                >
-                                  {total == null ? "—" : `${total.toFixed(1)}${w.finalPercentSuffix}`}
+                                <span title={title}>
+                                  <RubroTotalCell
+                                    points={points.earned}
+                                    max={points.max}
+                                    grade={grade}
+                                    view={markView}
+                                    compact={dense}
+                                  />
                                 </span>
                               );
                             })()}
                           </td>
                         </Fragment>
                       ))}
-                      <td className={cn("sticky right-0 z-20 w-[4.5rem] border-b border-l-2 border-l-foreground/25 bg-surface px-2 text-center", rowY)}>
-                        <span className={cn("inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none tabular-nums", final == null ? "text-foreground/40" : TINT_FINAL)}>
+                      <td className={cn("sticky right-0 z-20 min-w-[6rem] border-b border-l-2 border-l-foreground/25 bg-surface-muted px-2 text-center", rowY)}>
+                        <span
+                          title={sb.finalColumn}
+                          className={cn(
+                            "inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none tabular-nums",
+                            final == null ? "text-foreground/40" : tonePillClass(final),
+                          )}
+                        >
                           {final == null ? "—" : `${final}${w.finalPercentSuffix}`}
                         </span>
                       </td>
@@ -1066,10 +1622,11 @@ export function GradebookWorkspace({
                 <tr className={dense ? "h-8" : "h-10"}>
                   <td className={cn("sticky bottom-0 left-0 z-40 border-r border-t border-border bg-surface-muted px-2", headY)} />
                   <td className={cn("sticky bottom-0 left-10 z-40 border-r border-t border-border bg-surface-muted px-3 text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
-                    {weighted ? copy.grade : w.columnAverage}
+                    {sb.classAverage}
                   </td>
                   {groups.map((group) => {
-                    const avg = groupAverageForVisible(group);
+                    const gradeAvg = rubroAverageForVisible(group);
+                    const pointsAvg = blockPointsAverageForVisible(group);
                     return (
                       <td
                         key={group.key}
@@ -1081,24 +1638,42 @@ export function GradebookWorkspace({
                         }
                         className="sticky bottom-0 z-30 border-r border-t border-l-2 border-l-foreground/25 border-border bg-surface-muted px-1 py-1 text-center text-xs font-bold"
                       >
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="max-w-full truncate text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/45">
+                        <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5">
+                          <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/45">
                             {group.name ?? copy.noRubro}
                           </span>
-                          <span className={cn("inline-block rounded-md px-2 py-0.5 font-bold tabular-nums", avg == null ? "text-foreground/40" : TINT_FINAL)}>
-                            {avg == null ? "—" : `${avg}${w.finalPercentSuffix}`}
+                          <span
+                            className={cn(
+                              "inline-block rounded-md px-2 py-0.5 tabular-nums",
+                              gradeAvg == null ? "text-foreground/40" : tonePillClass(gradeAvg),
+                            )}
+                          >
+                            {gradeAvg == null ? "—" : `${gradeAvg}%`}
                           </span>
+                          <span className="text-[9px] font-semibold text-foreground/40">
+                            {copy.pesoTotalValue(group.peso ?? 0)}
+                          </span>
+                          {pointsAvg != null ? (
+                            <span className="text-[9px] font-semibold tabular-nums text-foreground/40">
+                              {sb.pointsAverage(formatPoints(pointsAvg))}
+                            </span>
+                          ) : null}
                         </div>
                       </td>
                     );
                   })}
-                  <td className={cn("sticky bottom-0 right-0 z-40 w-[4.5rem] border-l-2 border-t border-l-foreground/25 border-border bg-surface-muted px-2 text-center text-xs font-bold", headY)}>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/45">
+                  <td className={cn("sticky bottom-0 right-0 z-40 min-w-[6rem] border-l-2 border-t border-l-foreground/25 border-border bg-surface-muted px-2 text-center text-xs font-bold", headY)}>
+                    <div className="flex items-baseline justify-center gap-1.5">
+                      <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/45">
                         {copy.average}
                       </span>
-                      <span className={cn("inline-block rounded-md px-2 py-0.5 tabular-nums", overall == null ? "text-foreground/40" : TINT_FINAL)}>
-                        {overall == null ? "—" : `${overall}${w.finalPercentSuffix}`}
+                      <span
+                        className={cn(
+                          "inline-block rounded-md px-2 py-0.5 tabular-nums",
+                          overall == null ? "text-foreground/40" : tonePillClass(overall),
+                        )}
+                      >
+                        {overall == null ? "—" : `${overall}%`}
                       </span>
                     </div>
                   </td>
@@ -1163,6 +1738,19 @@ export function GradebookWorkspace({
         }}
       />
 
+      <ConfirmDialog
+        open={rubroDeleteTarget !== null}
+        title={copy.deleteRubroConfirm}
+        description={rubroDeleteTarget?.name}
+        confirmLabel={copy.delete}
+        cancelLabel={t.gradebook.cancel}
+        pending={rubroDeleteTarget != null && rubroBusy === rubroDeleteTarget.id}
+        onConfirm={() => void handleDeleteRubro()}
+        onCancel={() => {
+          if (rubroBusy == null) setRubroDeleteTarget(null);
+        }}
+      />
+
       <EducationalSupportWorkflowDialog
         open={reviewStudent !== null}
         studentId={reviewStudent?.id ?? ""}
@@ -1192,6 +1780,7 @@ function GradeCell({
   row,
   col,
   dense,
+  markView,
   supportPending,
   onRequireReview,
   onSaved,
@@ -1203,6 +1792,8 @@ function GradeCell({
   row: number;
   col: number;
   dense: boolean;
+  /** `points` shows the mark, `percent` the grade it represents. */
+  markView: "points" | "percent";
   supportPending: boolean;
   onRequireReview: () => void;
   onSaved: () => void;
@@ -1218,6 +1809,16 @@ function GradeCell({
   const max = cellMax(column, studentId);
   const numeric = text.trim() === "" ? null : Number(text.replace(",", "."));
   const pct = pctOf(numeric, max);
+  /*
+    * Percent view: the cell reads `80%`. The draft stays in points, so the
+    * blur commit writes exactly the number the teacher means, and the column
+    * header keeps `10 pts` as its max.
+    */
+  const asPercent = markView === "percent";
+  const displayText =
+    asPercent && numeric != null && !Number.isNaN(numeric) && pct != null
+      ? `${pct}%`
+      : text;
   const cellTitle =
     stored?.status === "missing"
       ? w.gradeTooltipMissing(max)
@@ -1255,33 +1856,45 @@ function GradeCell({
 
   return (
     <div className="relative">
+      {/*
+       * Percent view is read-only: marks are entered in points, so typing here
+       * would have to be converted back and would blur the difference between
+       * "the grade I see" and "the points I stored". Switching to Pts is the
+       * way to edit; keyboard arrows still walk the grid.
+       */}
       <input
         data-cell={`${row}:${col}`}
-        value={text}
+        value={displayText}
+        readOnly={asPercent}
         inputMode="decimal"
         aria-label={`${label}. ${cellTitle}`}
-        title={cellTitle}
+        aria-readonly={asPercent}
+        title={asPercent ? `${cellTitle} · ${t.gradebook.workspace.scoreboard.markViewReadOnly}` : cellTitle}
         onChange={(event) => {
+          if (asPercent) return;
           setText(event.target.value);
           dirty.current = true;
           setStatus("idle");
         }}
         onFocus={(event) => event.currentTarget.select()}
-        onBlur={() => void commit()}
+        onBlur={() => {
+          if (!asPercent) void commit();
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === "ArrowDown") {
             event.preventDefault();
-            void commit();
+            if (!asPercent) void commit();
             focusCell(row + 1, col);
           } else if (event.key === "ArrowUp") {
             event.preventDefault();
-            void commit();
+            if (!asPercent) void commit();
             focusCell(row - 1, col);
           }
         }}
         className={cn(
           "w-full rounded-md border border-transparent px-1 text-center font-semibold tabular-nums outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-400/40",
           dense ? "h-7 min-w-[1.75rem] text-[13px]" : "h-8 min-w-[2.5rem] text-sm",
+          asPercent && "cursor-default",
           status === "error"
             ? "border-error/60 text-error"
             : pct == null
@@ -1289,10 +1902,36 @@ function GradeCell({
               : tintFor(pct),
         )}
       />
-      {status === "saving" ? (
+      {status === "saving" && !asPercent ? (
         <Loader2 className="absolute right-1 top-1.5 h-3 w-3 animate-spin text-foreground/40" />
       ) : null}
     </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "h-9 rounded-full border px-3 text-xs font-bold uppercase tracking-wide transition-colors",
+        active
+          ? "border-[#7c3aed] bg-[#e6defb] text-[#4c1d95] dark:border-[#b9a3f7] dark:bg-[#241b45] dark:text-[#c4b5fd]"
+          : "border-border text-foreground/55 hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -1300,71 +1939,106 @@ function ColumnHeader({
   column,
   label,
   density,
+  pointsEditable,
   onDelete,
   onClose,
   onRename,
+  onRenamePoints,
 }: {
   column: ExamColumn;
   label: { short: string; medium: string; full: string };
   density: Density;
+  /** Points can only change before the first grade (see `updateExamColumn`). */
+  pointsEditable: boolean;
   onDelete: () => void;
   onClose?: () => void;
   onRename: (title: string) => Promise<boolean>;
+  onRenamePoints: (points: number | null) => Promise<boolean>;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
   const compact = density === "compact";
-  const maxPts = columnMaxPoints(column);
 
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<"title" | "points" | null>(null);
   const [draft, setDraft] = useState(column.title);
+  const [pointsDraft, setPointsDraft] = useState(String(columnMaxPoints(column)));
   const [saving, setSaving] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const pointsRef = useRef<HTMLInputElement>(null);
 
+  const maxPts = columnMaxPoints(column);
   const display = compact ? label.short : density === "cozy" ? label.medium : label.full;
 
   useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+    if (editing === "title") {
+      titleRef.current?.focus();
+      titleRef.current?.select();
+    } else if (editing === "points") {
+      pointsRef.current?.focus();
+      pointsRef.current?.select();
     }
   }, [editing]);
 
-  function startEditing() {
-    setDraft(column.title);
-    setEditing(true);
+  function startEditing(field: "title" | "points") {
+    setError(false);
+    if (field === "title") {
+      setDraft(column.title || label.medium);
+    } else {
+      if (!pointsEditable) return;
+      setPointsDraft(String(maxPts));
+    }
+    setEditing(field);
   }
 
-  async function commit() {
+  async function commitTitle() {
     if (saving) return;
     const next = draft.trim();
-    if (!next || next === column.title) {
-      setEditing(false);
-      return;
-    }
-    // Leave edit mode now; the header updates optimistically and the request
-    // finishes in the background.
-    setEditing(false);
+    setEditing(null);
+    if (!next || next === column.title) return;
     setSaving(true);
-    await onRename(next);
+    const ok = await onRename(next);
     setSaving(false);
+    if (!ok) setError(true);
   }
 
-  if (editing) {
-    return (
-      <div className="group/col flex w-full flex-col items-center gap-0.5 py-0.5">
+  async function commitPoints() {
+    if (saving) return;
+    const raw = pointsDraft.trim();
+    const next = raw === "" ? null : Number(raw.replace(",", "."));
+    if (next != null && (!Number.isFinite(next) || next <= 0 || next > 1000)) {
+      setError(true);
+      return;
+    }
+    setEditing(null);
+    if (next === column.points || (next == null && column.points == null)) return;
+    setSaving(true);
+    const ok = await onRenamePoints(next);
+    setSaving(false);
+    if (!ok) setError(true);
+  }
+
+  const titleClass = cn(
+    "w-full min-w-0 rounded-md px-1 text-center font-bold leading-tight transition-colors",
+    compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
+  );
+
+  return (
+    <div className="group/col flex h-full w-full flex-col items-center justify-center gap-0.5 py-0.5">
+      {editing === "title" ? (
         <input
-          ref={inputRef}
+          ref={titleRef}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => void commit()}
+          onBlur={() => void commitTitle()}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              void commit();
+              void commitTitle();
             } else if (event.key === "Escape") {
               event.preventDefault();
-              setEditing(false);
+              setDraft(column.title);
+              setEditing(null);
             }
           }}
           maxLength={120}
@@ -1372,66 +2046,112 @@ function ColumnHeader({
           aria-label={w.renameColumn}
           placeholder={w.renameColumnPlaceholder}
           className={cn(
-            "w-full min-w-0 border-0 bg-transparent px-1 text-center font-bold leading-tight text-foreground caret-brand-600 outline-none placeholder:font-medium placeholder:text-foreground/35 disabled:opacity-60",
-            compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
+            titleClass,
+            "border-0 bg-background text-foreground caret-brand-600 outline-none ring-2 ring-brand-400/50 placeholder:font-medium placeholder:text-foreground/35 disabled:opacity-60",
           )}
         />
-        <span className="text-[9px] font-semibold tabular-nums text-foreground/45">
-          {w.columnPointsShort(maxPts)}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="group/col flex w-full flex-col items-center gap-0.5 py-0.5">
-      <button
-        type="button"
-        onClick={startEditing}
-        title={`${label.medium} · ${w.renameColumn}`}
-        aria-label={`${label.medium} · ${w.renameColumn}`}
-        className={cn(
-          "max-w-full whitespace-nowrap rounded-md px-1 text-center font-bold leading-tight text-foreground/55 transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:bg-surface-muted focus-visible:text-foreground focus-visible:outline-none",
-          compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
-        )}
-      >
-        {display}
-      </button>
-      <span className="text-[9px] font-semibold tabular-nums text-foreground/45">
-        {w.columnPointsShort(maxPts)}
-      </span>
-      {column.closedAt ? (
-        <span className="text-[9px] font-semibold uppercase tracking-wide text-foreground/45">
-          {w.closedColumn}
-        </span>
-      ) : null}
-      <div
-        className={cn(
-          "flex items-center justify-center gap-0.5 transition-opacity",
-          COLUMN_ACTIONS_VISIBILITY,
-        )}
-      >
-        {onClose ? (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={w.closeColumn}
-            title={w.closeColumn}
-            // 32px hit area (Apple HIG minimum for touch) with no double-tap zoom.
-            className="flex h-8 w-8 touch-manipulation select-none items-center justify-center rounded-md text-foreground/60 [-webkit-touch-callout:none] hover:bg-surface-muted hover:text-foreground active:bg-surface-muted"
-          >
-            <Lock className="h-4 w-4" />
-          </button>
-        ) : null}
+      ) : (
         <button
           type="button"
-          onClick={onDelete}
-          aria-label={w.deleteColumn}
-          title={w.deleteColumn}
-          className="flex h-8 w-8 touch-manipulation select-none items-center justify-center rounded-md text-error/80 [-webkit-touch-callout:none] hover:bg-error/10 hover:text-error active:bg-error/10"
+          onClick={() => startEditing("title")}
+          disabled={saving}
+          title={`${label.medium} · ${w.renameColumnHint}`}
+          aria-label={`${label.medium} · ${w.renameColumn}`}
+          className={cn(
+            titleClass,
+            "cursor-text truncate whitespace-nowrap text-foreground/70 hover:bg-surface-muted hover:text-foreground hover:ring-1 hover:ring-brand-400/40 focus-visible:bg-surface-muted focus-visible:text-foreground focus-visible:outline-none",
+            error && "text-error",
+          )}
         >
-          <Trash2 className="h-4 w-4" />
+          {display}
         </button>
+      )}
+
+      {editing === "points" ? (
+        <input
+          ref={pointsRef}
+          value={pointsDraft}
+          onChange={(event) => setPointsDraft(event.target.value.replace(/[^\d]/g, ""))}
+          onBlur={() => void commitPoints()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void commitPoints();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              setPointsDraft(String(maxPts));
+              setEditing(null);
+            }
+          }}
+          inputMode="numeric"
+          maxLength={4}
+          disabled={saving}
+          aria-label={w.columnPoints}
+          className="w-12 rounded-md border-0 bg-background px-1 text-center text-[9px] font-semibold tabular-nums text-foreground outline-none ring-2 ring-brand-400/50"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => startEditing("points")}
+          disabled={!pointsEditable || saving}
+          title={pointsEditable ? w.columnPointsEdit : w.columnPointsLocked}
+          aria-label={`${w.columnPointsShort(maxPts)} · ${w.columnPoints}`}
+          className={cn(
+            "rounded px-1 text-[9px] font-semibold tabular-nums text-foreground/45",
+            pointsEditable
+              ? "cursor-text hover:bg-surface-muted hover:text-foreground hover:ring-1 hover:ring-brand-400/40"
+              : "cursor-default",
+          )}
+        >
+          {w.columnPointsShort(maxPts)}
+        </button>
+      )}
+
+      {/* Fixed-height slots keep every column header on the same baseline: a
+          closed tag, a spinner or the hover actions never lift the title. */}
+      <span
+        className={cn(
+          "flex h-3 items-center justify-center text-[9px] font-semibold uppercase tracking-wide",
+          column.closedAt ? "text-foreground/45" : "invisible",
+        )}
+        aria-hidden={!column.closedAt}
+      >
+        {column.closedAt ? w.closedColumn : w.closedColumn}
+      </span>
+
+      <div className="flex h-8 items-center justify-center">
+        {saving ? (
+          <Loader2 className="h-3 w-3 animate-spin text-foreground/40" />
+        ) : (
+          <div
+            className={cn(
+              "flex items-center justify-center gap-0.5 transition-opacity",
+              COLUMN_ACTIONS_VISIBILITY,
+            )}
+          >
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label={w.closeColumn}
+                title={w.closeColumn}
+                // 32px hit area (Apple HIG minimum for touch) with no double-tap zoom.
+                className="flex h-8 w-8 touch-manipulation select-none items-center justify-center rounded-md text-foreground/60 [-webkit-touch-callout:none] hover:bg-surface-muted hover:text-foreground active:bg-surface-muted"
+              >
+                <Lock className="h-4 w-4" />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={w.deleteColumn}
+              title={w.deleteColumn}
+              className="flex h-8 w-8 touch-manipulation select-none items-center justify-center rounded-md text-error/80 [-webkit-touch-callout:none] hover:bg-error/10 hover:text-error active:bg-error/10"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

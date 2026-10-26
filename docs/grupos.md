@@ -54,9 +54,25 @@ Page loader: `src/app/(app)/grupos/[id]/page.tsx`
   `Trabajo en clase 1`.
 - **CSV export** covers students × grade columns + FINAL (no attendance).
 - **Points are frozen once graded.** After the first grade in a column, its
-  maximum (ssignments.points) cannot change — server action and DB trigger
-  ssignments_freeze_points_after_grades (20261019223000_freeze_submitted_assessments.sql).
+  maximum (assignments.points) cannot change — server action and DB trigger
+  assignments_freeze_points_after_grades (20261019223000_freeze_submitted_assessments.sql).
   Title and rubro stay editable; to change the weighting, create a new column.
+  Before the first grade both are edited **in the header**: click the title or
+  the `100 pts` line (Enter saves, Esc cancels); the points line is disabled
+  with an explanatory tooltip once the column has marks.
+- **Scoreboard, not a spreadsheet.** Every number on Calificaciones comes from
+  one model (`src/lib/dashboard/scoreboard.ts`): a rubro `Total` shows the
+  points earned **and** the grade (`28 / 30 · 93%`), the footer shows the class
+  points average and grade, FINAL is the weighted grade in %, and the
+  bottom-right `Promedio` is the class average of FINAL. No %/Pts switch — the
+  format belongs to the column.
+- **Dirección view.** A summary strip shows promedio del grupo, aprobación
+  (≥ 70 %), rango and students without a grade; rows can be sorted by name or
+  final grade and filtered to **Pendientes** / **En riesgo**. A student who can
+  no longer reach 70 % with the remaining weight is flagged.
+- **Imprimir** prints a landscape PDF for dirección (chrome and sticky offsets
+  removed, header with grupo · materia · rubros · leyenda). The CSV carries the
+  same numbers, including a per-rubro points/grade row and a footer.
 
 Full gradebook behaviour: [`docs/aula-virtual.md`](aula-virtual.md) § Gradebook.
 
@@ -64,9 +80,14 @@ Full gradebook behaviour: [`docs/aula-virtual.md`](aula-virtual.md) § Gradebook
 + teacher-created ones) carries a **peso** that splits the subject final. The
 matrix header shows `Tareas · 30%`, the footer shows the rubro grade, and FIN
 is a renormalised weighted mean computed by one shared pure module
-(`src/lib/dashboard/grade-weights.ts`). Column **puntos** keep their meaning
-*inside* a rubro. First open of a subject without rubros shows a two-step
-wizard (weights → column points) that is skippable. Reports still use the
+(`src/lib/dashboard/scoreboard.ts`, re-exporting
+`src/lib/dashboard/grade-weights.ts`). Column **puntos** keep their meaning
+*inside* a rubro. Rubros are edited **inline in the header** (click the name or
+the weight, Enter saves, Esc cancels; dashed `+ Nuevo rubro` cell; drag the grip
+to reorder blocks) — `components/grades/rubro-header-cell.tsx`. The dialog
+(`rubric-dialog.tsx`) remains for the first-run wizard, column reassignment,
+archive/restore and reset. First open of a subject without rubros shows a
+two-step wizard (weights → column points) that is skippable. Reports still use the
 column average until the reports sprint (banner in the gradebook).
 Requirements, rules, schema and phases:
 [`docs/calificaciones-rubros.md`](calificaciones-rubros.md).

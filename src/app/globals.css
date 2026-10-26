@@ -1056,3 +1056,66 @@ a.btn-ink:hover {
 .wa-bubble-animate {
   animation: wa-bubble-in 0.18s ease-out both;
 }
+
+/* ---------------------------------------------------------------------------
+ * Scoreboard print layout (Calificaciones -> Imprimir)
+ *
+ * Direccion receives this as a PDF: no chrome, no sticky offsets, every column
+ * visible, and the grade tints kept so the bands survive a black-and-white
+ * printer as light greys. Scoped to print-scoreboard so other pages' print
+ * behaviour does not change.
+ * ------------------------------------------------------------------------ */
+@media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+
+  body:has(.print-scoreboard) {
+    background: #fff;
+  }
+
+  /* App chrome (top bar, back link, tabs, toolbars) disappears. */
+  .print-hide {
+    display: none !important;
+  }
+
+  .print-scoreboard {
+    background: #fff !important;
+  }
+
+  .print-scoreboard .overflow-auto {
+    overflow: visible !important;
+  }
+
+  .print-scoreboard table {
+    width: 100% !important;
+    table-layout: auto !important;
+    border-collapse: collapse !important;
+    font-size: 9pt;
+  }
+
+  .print-scoreboard thead th,
+  .print-scoreboard tfoot td {
+    position: static !important;
+    background: #f4f4f6 !important;
+    color: #101014 !important;
+  }
+
+  .print-scoreboard td,
+  .print-scoreboard th {
+    position: static !important;
+    border: 0.5pt solid #c9c9d1 !important;
+    color: #101014 !important;
+  }
+
+  .print-scoreboard * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .print-scoreboard .print-break-avoid {
+    break-inside: avoid;
+  }
+}
