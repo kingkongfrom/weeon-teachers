@@ -59,7 +59,7 @@ export function ScoreboardSummary({
         <span
           className={cn(
             "text-2xl font-bold leading-none tabular-nums",
-            ungraded > 0 ? "text-[#92400e] dark:text-[#fde68a]" : "text-foreground/40",
+            ungraded > 0 ? "text-[#92400e] dark:text-[#fde68a]" : "text-foreground/65",
           )}
         >
           {ungraded}
@@ -89,7 +89,7 @@ function Cell({
         className,
       )}
     >
-      <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-foreground/45">
+      <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-foreground/65">
         {label}
       </dt>
       <dd className="flex flex-col gap-1.5">
@@ -97,7 +97,7 @@ function Cell({
         <span
           className={cn(
             "text-[11px] font-medium",
-            emphasis === "warn" ? "text-[#92400e]/80 dark:text-[#fde68a]/80" : "text-foreground/45",
+            emphasis === "warn" ? "text-[#92400e] dark:text-[#fde68a]" : "text-foreground/65",
           )}
         >
           {hint}
@@ -185,20 +185,22 @@ function RangeBar({
           style={{ left: `${PASS_MARK}%` }}
           title={s.passMark(PASS_MARK)}
         />
-        {/* Median: a ringed diamond, visually distinct from the pass tick. */}
+        {/* Median: a ringed diamond, visually distinct from the pass tick.
+            Decorative — the value is already spelled out in the caption below,
+            and `aria-label` is not permitted on a bare span. */}
         {mid != null ? (
           <span
-            aria-label={s.median(mid)}
+            aria-hidden
             title={s.median(mid)}
             className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[1px] border border-surface bg-foreground/80"
             style={{ left: `${mid}%` }}
           />
         ) : null}
       </div>
-      <div className="flex items-baseline justify-between gap-2 text-[10px] font-medium text-foreground/40">
+      <div className="flex items-baseline justify-between gap-2 text-[10px] font-medium text-foreground/65">
         <span>{s.passMark(PASS_MARK)}</span>
         {mid != null ? (
-          <span className="tabular-nums text-foreground/55">{s.median(mid)}</span>
+          <span className="tabular-nums text-foreground/65">{s.median(mid)}</span>
         ) : (
           <span />
         )}

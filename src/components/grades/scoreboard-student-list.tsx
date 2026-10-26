@@ -47,18 +47,18 @@ export function ScoreboardStudentList({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-border bg-surface px-3 py-2 text-xs">
-        <span className="font-bold uppercase tracking-[0.1em] text-foreground/45">
+        <span className="font-bold uppercase tracking-[0.1em] text-foreground/65">
           {s.finalAverage}
         </span>
         <span className={cn("text-lg font-bold tabular-nums", toneClass(stats.average))}>
           {stats.average == null ? "—" : `${stats.average}%`}
         </span>
-        <span className="text-foreground/40">·</span>
-        <span className="font-semibold text-foreground/55">
+        <span className="text-foreground/65">·</span>
+        <span className="font-semibold text-foreground/65">
           {s.medianLabel(stats.median)}
         </span>
-        <span className="text-foreground/40">·</span>
-        <span className="font-medium text-foreground/45">
+        <span className="text-foreground/65">·</span>
+        <span className="font-medium text-foreground/65">
           {s.gradedOf(stats.graded, stats.total)}
         </span>
       </div>
@@ -120,7 +120,7 @@ export function ScoreboardStudentList({
                 <div className="flex flex-col gap-1">
                   {student.rubros.map((rubro) => (
                     <div key={rubro.key} className="flex items-center gap-2">
-                      <span className="w-20 shrink-0 truncate text-[11px] font-semibold uppercase tracking-wide text-foreground/45">
+                      <span className="w-20 shrink-0 truncate text-[11px] font-semibold uppercase tracking-wide text-foreground/65">
                         {rubro.name}
                       </span>
                       <span className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
@@ -129,7 +129,7 @@ export function ScoreboardStudentList({
                           style={{ width: `${Math.max(0, Math.min(100, rubro.percent ?? 0))}%` }}
                         />
                       </span>
-                      <span className="w-9 shrink-0 text-right text-[11px] font-bold tabular-nums text-foreground/60">
+                      <span className="w-9 shrink-0 text-right text-[11px] font-bold tabular-nums text-foreground/65">
                         {rubro.percent == null ? "—" : `${Math.round(rubro.percent)}%`}
                       </span>
                     </div>
@@ -141,7 +141,7 @@ export function ScoreboardStudentList({
         ))}
       </ul>
 
-      <p className="px-1 text-[11px] font-medium text-foreground/40">
+      <p className="px-1 text-[11px] font-medium text-foreground/65">
         {s.legend} · {s.passMark(PASS_MARK)}
       </p>
     </div>
