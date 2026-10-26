@@ -1116,6 +1116,8 @@ const es = {
       columnPoints: "Puntos",
       columnCategory: "Categoría",
       columnKind: "Tipo",
+      columnKindFromRubro: (kind: string) =>
+        `El tipo se toma del rubro: ${kind}. Puede cambiar el nombre después.`,
       columnCount: "Cantidad",
       columnCountHint: "columnas nuevas",
       columnCountless: "Una columna menos",
@@ -2371,6 +2373,8 @@ const en: Messages = {
       columnPoints: "Points",
       columnCategory: "Category",
       columnKind: "Type",
+      columnKindFromRubro: (kind: string) =>
+        `The type comes from the category: ${kind}. You can rename it afterwards.`,
       columnCount: "Count",
       columnCountHint: "new columns",
       columnCountless: "One column fewer",

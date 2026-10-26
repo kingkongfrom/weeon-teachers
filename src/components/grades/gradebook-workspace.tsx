@@ -82,6 +82,27 @@ const ACCENT_TEXT = "text-[#7c3aed] dark:text-[#b9a3f7]";
 const MAX_NEW_COLUMNS = 20;
 
 /**
+ * Column type and auto-title noun are derived from the rubro name, not chosen by
+ * the teacher. The rubro is the real grouping ("Tareas 30%"); asking for a type
+ * again was redundant, so a column created under "Tareas" is a Tarea.
+ *
+ * Matching is accent- and case-insensitive and falls back to `classwork`, which
+ * is also what an unknown/custom rubro should produce.
+ */
+function kindForRubro(rubroName: string): AssignmentKind {
+  const name = rubroName
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (/\bexamen/.test(name)) return "exam";
+  if (/\bprueba|\bquiz/.test(name)) return "quiz";
+  if (/\bproyecto/.test(name)) return "project";
+  if (/\btarea/.test(name)) return "homework";
+  return "classwork";
+}
+
+/**
  * Column lock/delete visibility.
  *
  * The icons are visible by default, so any engine that ignores the media query
@@ -417,12 +438,16 @@ export function GradebookWorkspace({
   const weighted = activeRubros.length > 0 && orderedExams.some((c) => c.rubroId);
 
   /**
-   * Sequenced titles for the first `count` columns of this kind. Numbers continue
-   * after the columns that already exist, so asking for two more Tareas when one
-   * exists yields "Tarea 2" and "Tarea 3" — matching the auto labels.
+   * Sequenced titles for a bulk create inside one rubro. Numbers continue after
+   * the columns already in that rubro, so two more Tareas when one exists yields
+   * "Tarea 2" and "Tarea 3".
    */
-  function titlesFor(kind: AssignmentKind, count: number): string[] {
-    const existing = exams.filter((column) => column.kind === kind).length;
+  function titlesFor(rubroId: string, count: number): string[] {
+    const rubro = rubros.find((item) => item.id === rubroId);
+    const kind = kindForRubro(rubro?.name ?? "");
+    // Count per rubro (not per kind) so the sequence matches the group the
+    // teacher is looking at, even if two rubros share a kind.
+    const existing = exams.filter((column) => column.rubroId === rubroId).length;
     const total = Math.max(1, Math.min(MAX_NEW_COLUMNS, count));
     return Array.from(
       { length: total },
@@ -1426,20 +1451,23 @@ function AddColumnDialog({
     rubroId: string,
   ) => Promise<boolean>;
   onClose: () => void;
-  /** Sequenced titles for the first `count` columns of this kind. */
-  titlesFor: (kind: AssignmentKind, count: number) => string[];
+  /** Sequenced titles for the first `count` columns of a rubro. */
+  titlesFor: (rubroId: string, count: number) => string[];
   rubros: GradeRubro[];
   defaultRubroId: string;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
   const copy = w.rubros;
-  const kinds: AssignmentKind[] = ["homework", "exam", "quiz", "classwork", "project"];
   const [points, setPoints] = useState("100");
-  const [kind, setKind] = useState<AssignmentKind>("homework");
   const [count, setCount] = useState(1);
   const [rubroId, setRubroId] = useState(defaultRubroId);
   const [pending, setPending] = useState(false);
+
+  // The type is not a choice: it follows the rubro ("Tareas" → Tarea).
+  const kind = kindForRubro(
+    rubros.find((rubro) => rubro.id === rubroId)?.name ?? "",
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1447,7 +1475,7 @@ function AddColumnDialog({
     setPending(true);
     const parsed = points.trim() === "" ? null : Number(points.replace(",", "."));
     const ok = await onCreate(
-      titlesFor(kind, count),
+      titlesFor(rubroId, count),
       parsed == null || Number.isNaN(parsed) ? null : parsed,
       kind,
       rubroId,
@@ -1557,28 +1585,13 @@ function AddColumnDialog({
             </span>
           </div>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold text-foreground/70">{w.columnKind}</span>
-          <div className="flex flex-wrap gap-1.5">
-            {kinds.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setKind(option)}
-                aria-pressed={kind === option}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                  kind === option
-                    ? "border-transparent bg-brand-600 text-white"
-                    : "border-border text-foreground/65 hover:text-foreground",
-                )}
-              >
-                {w.kinds[option]}
-              </button>
-            ))}
-          </div>
+          <p className="text-xs font-medium text-foreground/50">
+            {w.columnKindFromRubro(w.kinds[kind])}
+          </p>
           <p className="text-xs text-foreground/50">
-            {titlesFor(kind, count).join(" · ")}
+            {titlesFor(rubroId, count).join(" · ")}
           </p>
         </div>
       </form>
