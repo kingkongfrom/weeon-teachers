@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ClipboardCheck, FileText, Library, Loader2, Plus } from "lucide-react";
@@ -13,6 +13,8 @@ import {
 } from "@/lib/assessments/model";
 import { SubmissionStatus } from "@/components/assessments/submission-status";
 import { LibraryPickerDialog } from "@/components/library/library-picker-dialog";
+import { useShowMore } from "@/lib/dashboard/use-show-more";
+import { ActionSheet } from "@/components/ui/action-sheet";
 import { TONE_WELL } from "@/lib/dashboard/tones";
 
 /** "Trabajo de clase" list of homeworks/exams the teacher has created. */
@@ -21,18 +23,26 @@ export function AssessmentsPanel({
   assessments,
   studentCount,
   defaultSubjectId = null,
+  subjectLabel = null,
 }: {
   classId: string;
   assessments: AssessmentSummary[];
   studentCount: number;
   defaultSubjectId?: string | null;
+  /** Shown beside the heading when the class has only one subject. */
+  subjectLabel?: string | null;
 }) {
   const t = useT();
   const a = t.assessments;
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  /** Anchors the desktop dropdown to the Crear button. */
+  const createButtonRef = useRef<HTMLButtonElement>(null);
   const [creating, setCreating] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  // Long terms accumulate dozens of assessments; show a first page so the two
+  // columns stay the same height and the tab row stays near the top.
+  const more = useShowMore(assessments, 4, 4);
   const [error, setError] = useState<string | null>(null);
 
   async function create(kind: AssessmentKind) {
@@ -59,58 +69,65 @@ export function AssessmentsPanel({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
+        <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold uppercase tracking-wide text-foreground/50">
           {a.title}
-        </h3>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((value) => !value)}
-            disabled={creating}
-            className="btn-ink gap-1.5 disabled:opacity-60"
-          >
-            {creating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" strokeWidth={2.5} />
-            )}
-            {a.add}
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
-          {menuOpen ? (
-            <div className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-border bg-surface p-1.5 shadow-lg">
-              <button
-                type="button"
-                onClick={() => void create("homework")}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground/80 transition-colors hover:bg-surface-muted hover:text-foreground"
-              >
-                <FileText className="h-4 w-4" />
-                {a.addHomework}
-              </button>
-              <button
-                type="button"
-                onClick={() => void create("exam")}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground/80 transition-colors hover:bg-surface-muted hover:text-foreground"
-              >
-                <ClipboardCheck className="h-4 w-4" />
-                {a.addExam}
-              </button>
-              <div className="my-1 border-t border-border" />
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setLibraryOpen(true);
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground/80 transition-colors hover:bg-surface-muted hover:text-foreground"
-              >
-                <Library className="h-4 w-4" />
-                {t.library.openPicker}
-              </button>
-            </div>
+          {/* One subject means no picker above, so the subject rides here. */}
+          {subjectLabel ? (
+            <span className="rounded-full bg-[#e6f7fb] px-2 py-0.5 text-[10px] font-bold normal-case tracking-[0.04em] text-[#0e6b7c] dark:bg-[#0f2f36] dark:text-[#7fdcea]">
+              {subjectLabel}
+            </span>
           ) : null}
-        </div>
+        </h3>
+        <button
+          type="button"
+          ref={createButtonRef}
+          onClick={() => setMenuOpen((value) => !value)}
+          disabled={creating}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          className="btn-ink gap-1.5 disabled:opacity-60"
+        >
+          {creating ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+          )}
+          {a.add}
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
       </div>
+
+      <ActionSheet
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={a.add}
+        triggerRef={createButtonRef}
+        items={[
+          {
+            id: "homework",
+            label: a.addHomework,
+            hint: a.createHomeworkHint,
+            icon: <FileText className="h-[18px] w-[18px] sm:h-4 sm:w-4" />,
+            onSelect: () => void create("homework"),
+          },
+          {
+            id: "exam",
+            label: a.addExam,
+            hint: a.createExamHint,
+            icon: <ClipboardCheck className="h-[18px] w-[18px] sm:h-4 sm:w-4" />,
+            onSelect: () => void create("exam"),
+          },
+          {
+            id: "library",
+            label: t.library.openPicker,
+            hint: t.library.openPickerHint,
+            icon: <Library className="h-[18px] w-[18px] sm:h-4 sm:w-4" />,
+            separated: true,
+            onSelect: () => setLibraryOpen(true),
+          },
+        ]}
+      />
+
 
       <LibraryPickerDialog
         open={libraryOpen}
@@ -127,7 +144,7 @@ export function AssessmentsPanel({
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {assessments.map((assessment) => {
+          {more.visible.map((assessment) => {
             const Icon = assessment.kind === "exam" ? ClipboardCheck : FileText;
             return (
               <li key={assessment.id}>
@@ -181,6 +198,17 @@ export function AssessmentsPanel({
           })}
         </ul>
       )}
+
+      {more.remaining > 0 ? (
+        <button
+          type="button"
+          onClick={more.showMore}
+          className="mt-2 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-border text-[13px] font-semibold text-foreground/60 transition-colors hover:border-brand-200 hover:bg-surface-muted hover:text-foreground"
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+          {a.showMore(more.remaining)}
+        </button>
+      ) : null}
     </section>
   );
 }

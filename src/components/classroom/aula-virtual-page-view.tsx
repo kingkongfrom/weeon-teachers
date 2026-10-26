@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ClipboardCheck, FileCheck, Library, Plus } from "lucide-react";
+import { ChevronRight, ClipboardCheck, FileCheck, Library } from "lucide-react";
 import { FadeIn } from "@/components/motion/fade-in";
 import { PageHeader } from "@/components/layout/page-header";
 import { ClassCard } from "@/components/classroom/class-card";
@@ -73,37 +73,18 @@ export function AulaVirtualPageView({
       ) : null}
 
       <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="brand-page-title text-xl font-bold text-foreground">
             {t.aulaVirtual.classes}
           </h2>
-          <button
-            type="button"
-            title={t.panel.upcoming}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-brand-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-[0.98] dark:text-brand-300 dark:hover:bg-brand-950/40"
+          <Link
+            href="/aula-virtual/mis-evaluaciones"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 text-[13px] font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
           >
-            <Plus className="h-4 w-4" />
-            {t.aulaVirtual.addClass}
-          </button>
+            <Library className="h-4 w-4 text-foreground/45" />
+            {t.library.title}
+          </Link>
         </div>
-
-        {/* The reusable library sits beside the classes: it belongs to the
-            teacher, not to one group, so it is not inside the grid. */}
-        <Link
-          href="/aula-virtual/mis-evaluaciones"
-          className={cn(
-            "flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-muted",
-          )}
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
-            <Library className="h-5 w-5" strokeWidth={2.2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-foreground">{t.library.title}</p>
-            <p className="text-xs font-medium text-foreground/55">{t.library.description}</p>
-          </div>
-          <ChevronRight className="h-4 w-4 shrink-0 text-foreground/40" />
-        </Link>
 
         {grupos.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border px-4 py-12 text-center">

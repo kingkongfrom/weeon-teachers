@@ -1,9 +1,5 @@
 import { notFound } from "next/navigation";
-import { Presentation, Users } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { AULA_TEAL } from "@/lib/dashboard/tones";
 import { ClassTabs } from "@/components/classroom/class-tabs";
-import { BackLink } from "@/components/layout/page-header";
 import { loadTeacherGrupo } from "@/lib/dashboard/grupos";
 import { loadClassMaterials } from "@/lib/dashboard/materials";
 import { loadClassAssessments } from "@/lib/dashboard/assessments";
@@ -81,53 +77,22 @@ export default async function AulaVirtualClassPage({
       : (subjects[0]?.id ?? null);
 
   return (
+
     <div className="flex min-w-0 flex-col gap-5">
-      <BackLink href="/aula-virtual" label={t.classroom.back} />
-
-      {/* Tinted card that matches the subject pills; no gradient bar. */}
-      <section className="relative overflow-hidden rounded-3xl border border-[#7dd3e8]/50 bg-[radial-gradient(120%_140%_at_0%_0%,#e6f7fb_0%,#f7fdff_45%,#ffffff_100%)] shadow-sm dark:border-[#155e75]/50 dark:bg-[radial-gradient(120%_140%_at_0%_0%,#0f2f36_0%,#0b1f25_55%,#0a1a1f_100%)]">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-4 p-6">
-          <span
-            className={cn(
-              "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm",
-              AULA_TEAL.avatar,
-            )}
-            aria-hidden
-          >
-            <Presentation className="h-7 w-7" strokeWidth={2.2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/45">
-              {t.classroom.title}
-            </p>
-            <h1
-              className={cn(
-                "brand-page-title mt-0.5 truncate text-3xl font-bold leading-tight sm:text-4xl",
-                AULA_TEAL.label,
-              )}
-            >
-              {grupo.name}
-            </h1>
-            <p className="mt-1 text-sm font-medium text-foreground/55">
-              {schoolName ?? t.common.fallbackSchool} · {year}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 text-sm font-semibold text-foreground/70">
-              <Users className="h-4 w-4 text-foreground/45" />
-              {t.grupos.studentsCount(grupo.studentCount)}
-            </span>
-            {subjects.length === 1 ? (
-              <span className="inline-flex h-9 items-center rounded-full bg-surface-muted px-3.5 text-sm font-semibold text-foreground/70">
-                {subjects[0].name}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </section>
-
+      {/*
+       * The class identity, its tabs and the subject switch all live in one
+       * command header inside ClassTabs. What used to be here — a back link, a
+       * 220 px hero card repeating "Aula virtual", and a separate tab row — put
+       * three bands of chrome above the work and named the section three times.
+       * The class name is the title once, and everything is reachable in the
+       * first 56 px of the page.
+       */}
       <ClassTabs
         classId={classId}
+        className={grupo.name}
+        schoolName={schoolName}
+        year={year}
+
         teacherName={teacherName}
         students={students}
         materials={materials}

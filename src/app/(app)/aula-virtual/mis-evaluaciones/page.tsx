@@ -28,12 +28,7 @@ export default async function MisEvaluacionesPage() {
         backHref="/aula-virtual"
         backLabel={t.aulaVirtual.back}
       />
-      <LibraryBrowser
-        collections={collections}
-        items={items}
-        subjects={subjects}
-        onChanged={() => undefined}
-      />
+      <LibraryBrowser collections={collections} items={items} subjects={subjects} />
     </div>
   );
 }

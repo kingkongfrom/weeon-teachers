@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
 import { AssessmentsPanel } from "@/components/assessments/assessments-panel";
 import { MaterialsPanel } from "@/components/classroom/materials-panel";
+import { SubjectBar, SubjectSwitcher } from "@/components/classroom/subject-switcher";
 import type { AssessmentSummary } from "@/lib/assessments/model";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
 
@@ -24,8 +22,6 @@ export function ClassworkPanel({
   subjects: { id: string; name: string }[];
   studentCount: number;
 }) {
-  const t = useT();
-
   /** Classwork is per subject: show only the active subject's items. Unassigned
    * items are not leaked into every subject. */
   function subjectMatches(itemSubjectId: string | null): boolean {
@@ -37,32 +33,20 @@ export function ClassworkPanel({
   const shownMaterials = materials.filter((item) => subjectMatches(item.subjectId));
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
+      {/* The subject is this tab's context: it filters both lists below.
+          With a single subject there is nothing to choose, so the bar is not
+          rendered at all and the subject appears as a label beside each list
+          heading instead — saving a whole row. */}
       {subjects.length > 1 ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/40">
-            {t.classroom.subjectsLabel}
-          </span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {subjects.map((option) => {
-              const active = option.id === selectedSubjectId;
-              return (
-                <Link
-                  key={option.id}
-                  href={`/aula-virtual/${classId}?subject=${option.id}&tab=trabajo`}
-                  className={cn(
-                    "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors",
-                    active
-                      ? "border-[#7dd3e8] bg-[#e6f7fb] text-[#0e6b7c] dark:border-[#155e75] dark:bg-[#0f2f36] dark:text-[#7fdcea]"
-                      : "border-border text-foreground/55 hover:border-foreground/20 hover:text-foreground",
-                  )}
-                >
-                  {option.name}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+        <SubjectBar>
+          <SubjectSwitcher
+            classId={classId}
+            tab="trabajo"
+            subjects={subjects}
+            selectedSubjectId={selectedSubjectId}
+          />
+        </SubjectBar>
       ) : null}
 
       <div className="grid items-start gap-8 xl:grid-cols-2 xl:gap-6">
@@ -70,12 +54,14 @@ export function ClassworkPanel({
           classId={classId}
           materials={shownMaterials}
           defaultSubjectId={selectedSubjectId}
+          subjectLabel={subjects.length === 1 ? subjects[0].name : null}
         />
         <AssessmentsPanel
           classId={classId}
           assessments={shownAssessments}
           studentCount={studentCount}
           defaultSubjectId={selectedSubjectId}
+          subjectLabel={subjects.length === 1 ? subjects[0].name : null}
         />
       </div>
     </div>

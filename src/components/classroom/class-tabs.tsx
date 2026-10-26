@@ -7,6 +7,7 @@ import { fetchClassEducationalSupportFlags } from "@/lib/teachers/educational-su
 import type { ClassEducationalSupportFlags } from "@/lib/educational-supports/model";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
+import { ClassHeader } from "@/components/classroom/class-header";
 import { hubToneSurface, TONE_AVATAR } from "@/lib/dashboard/tones";
 import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
 import { ClassworkPanel } from "@/components/classroom/classwork-panel";
@@ -44,6 +45,9 @@ export function ClassTabs({
   attendanceLessonId,
   attendanceMarks,
   pendingJustifications = 0,
+  className,
+  schoolName,
+  year,
 }: {
   classId: string;
   teacherName: string;
@@ -60,6 +64,10 @@ export function ClassTabs({
   attendanceLessonId: string | null;
   attendanceMarks: Record<string, AttendanceEntry>;
   pendingJustifications?: number;
+  /** Class name shown in the command header. */
+  className: string;
+  schoolName: string | null;
+  year: number;
 }) {
   const t = useT();
   const VALID_TABS: TabId[] = ["trabajo", "personas", "asistencia", "calificaciones", "examenes"];
@@ -96,47 +104,24 @@ export function ClassTabs({
     { id: "calificaciones", label: t.classroom.tabs.calificaciones },
   ];
 
-  return (
-    <div className="flex flex-col">
-      {/* Section tabs read as one control; the active one keeps its tint. */}
-      <div
-        role="tablist"
-        aria-label={t.classroom.tabs.aria}
-        className="flex flex-wrap items-center gap-1 border-b border-border pb-2"
-      >
-        {tabs.map(({ id, label }) => {
-          const active = tab === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(id)}
-              className={cn(
-                "relative inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
-                active
-                  ? "bg-[#ece5fb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]"
-                  : "text-foreground/55 hover:bg-surface-muted hover:text-foreground",
-              )}
-            >
-              {label}
-              {id === "asistencia" && justificationBadge > 0 ? (
-                <span
-                  className={cn(
-                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white",
-                    TONE_AVATAR.rose,
-                  )}
-                >
-                  {justificationBadge > 9 ? "9+" : justificationBadge}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+  const header = (
+    <ClassHeader
+      classId={classId}
+      className={className}
+      schoolName={schoolName}
+      year={year}
+      studentCount={students.length}
+      tabs={tabs}
+      activeTab={tab}
+      onTabChange={setTab}
+      justificationBadge={justificationBadge}
+    />
+  );
 
-      <div className="pt-5">
+  return (
+    <div className="flex flex-col gap-5">
+      {header}
+      <div>
         {tab === "trabajo" ? (
           <ClassworkPanel
             classId={classId}

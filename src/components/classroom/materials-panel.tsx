@@ -22,10 +22,12 @@ import {
   Upload,
   X,
   type LucideIcon,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useShowMore } from "@/lib/dashboard/use-show-more";
 import { isPdfFile, PdfReaderDialog } from "@/components/ui/pdf-reader";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
 import {
@@ -77,11 +79,14 @@ export function MaterialsPanel({
   materials,
 
   defaultSubjectId = null,
+  subjectLabel = null,
 }: {
   classId: string;
   materials: ClassMaterial[];
 
   defaultSubjectId?: string | null;
+  /** Shown beside the heading when the class has only one subject. */
+  subjectLabel?: string | null;
 }) {
   const t = useT();
   const tPanel = t.classroom.materialsPanel;
@@ -94,6 +99,9 @@ export function MaterialsPanel({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  // Keep both columns the same height: a term of uploads would otherwise push
+  // the assessments column far below the fold.
+  const moreMaterials = useShowMore(materials, 4, 4);
   const dragDepth = useRef(0);
 
   function handleDragEnter(event: DragEvent) {
@@ -184,8 +192,15 @@ export function MaterialsPanel({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-foreground/50">
+        <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold uppercase tracking-wide text-foreground/50">
           {tPanel.heading}
+          {/* With a single subject there is no picker, so the subject rides on
+              the heading instead of occupying its own row. */}
+          {subjectLabel ? (
+            <span className="rounded-full bg-[#e6f7fb] px-2 py-0.5 text-[10px] font-bold normal-case tracking-[0.04em] text-[#0e6b7c] dark:bg-[#0f2f36] dark:text-[#7fdcea]">
+              {subjectLabel}
+            </span>
+          ) : null}
         </h3>
         <button
           type="button"
@@ -216,7 +231,7 @@ export function MaterialsPanel({
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {materials.map((material) => {
+          {moreMaterials.visible.map((material) => {
             const Icon = fileIcon(material.mimeType);
             const size = formatBytes(material.sizeBytes);
             const busy = busyId === material.id;
@@ -297,6 +312,17 @@ export function MaterialsPanel({
           })}
         </ul>
       )}
+
+      {moreMaterials.remaining > 0 ? (
+        <button
+          type={"button"}
+          onClick={moreMaterials.showMore}
+          className={"mt-2 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-border text-[13px] font-semibold text-foreground/60 transition-colors hover:border-brand-200 hover:bg-surface-muted hover:text-foreground"}
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+          {tPanel.showMore(moreMaterials.remaining)}
+        </button>
+      ) : null}
 
       {typeof document !== "undefined"
         ? createPortal(

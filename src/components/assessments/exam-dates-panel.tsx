@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Clock, DoorOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SubjectBar, SubjectSwitcher } from "@/components/classroom/subject-switcher";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { hubToneSegment, SEGMENT_TRACK, TONE_ICON, TONE_WELL, eventHubChip } from "@/lib/dashboard/tones";
 import { addMonths, capitalize, firstOfMonth, monthCells, weekdayIndex } from "@/lib/dashboard/month";
@@ -144,22 +145,18 @@ export function ExamDatesPanel({
   }
 
   return (
-    <section className="flex flex-col gap-5">
+    <section className="flex flex-col gap-4">
+      {/* Same switcher as Trabajo de clase: the subject filters this calendar
+          too. With a single subject there is nothing to choose, so no bar. */}
       {subjects.length > 1 ? (
-        <div className={SEGMENT_TRACK}>
-          {subjects.map((option) => (
-            <Link
-              key={option.id}
-              href={`/aula-virtual/${classId}?subject=${option.id}&tab=examenes`}
-              className={cn(
-                "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
-                hubToneSegment("blue", option.id === selectedSubjectId),
-              )}
-            >
-              {option.name}
-            </Link>
-          ))}
-        </div>
+        <SubjectBar>
+          <SubjectSwitcher
+            classId={classId}
+            tab="examenes"
+            subjects={subjects}
+            selectedSubjectId={selectedSubjectId}
+          />
+        </SubjectBar>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">

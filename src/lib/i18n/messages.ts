@@ -342,6 +342,7 @@ const es = {
       "No se puede actualizar: la evaluación ya fue publicada o tiene entregas.",
     updateDone: "Evaluación actualizada desde Mis evaluaciones",
     openPicker: "Desde mis evaluaciones…",
+    openPickerHint: "Reutilice una evaluación guardada",
   },
   grupos: {
     title: "Mis grupos",
@@ -696,9 +697,12 @@ const es = {
   assessments: {
     title: "Tareas y exámenes",
     untitled: "Tarea sin título",
+    showMore: (n: number) => `Ver ${n} más`,
     add: "Crear",
     addHomework: "Tarea",
     addExam: "Examen",
+    createHomeworkHint: "Preguntas, instrucciones y fecha de entrega",
+    createExamHint: "Evaluación con preguntas y puntaje",
     empty:
       "Aún no hay tareas ni exámenes. Cree una tarea o examen para sus estudiantes.",
     draft: "Borrador",
@@ -1115,8 +1119,17 @@ const es = {
     publish: "Publicar",
     materials: "Materiales de estudio",
     subjectsLabel: "Materias",
+    /** One-word tab labels so all five fit a 390 px header row. */
+    tabsShort: {
+      work: "Trabajo",
+      dates: "Fechas",
+      people: "Personas",
+      attendance: "Asistencia",
+      grades: "Notas",
+    },
     moreOptions: "Más opciones",
     materialsPanel: {
+      showMore: (n: number) => `Ver ${n} más`,
       heading: "Materiales de estudio",
       add: "Añadir material",
       emptyTitle: "Aún no hay materiales",
@@ -1826,6 +1839,7 @@ const en: Messages = {
       "Cannot update: the assessment is published or already has submissions.",
     updateDone: "Assessment updated from My assessments",
     openPicker: "From my assessments…",
+    openPickerHint: "Reuse a saved assessment",
   },
   grupos: {
     title: "My groups",
@@ -2178,9 +2192,12 @@ const en: Messages = {
   assessments: {
     title: "Assignments & exams",
     untitled: "Untitled assignment",
+    showMore: (n: number) => `Show ${n} more`,
     add: "Create",
     addHomework: "Homework",
     addExam: "Exam",
+    createHomeworkHint: "Questions, instructions and due date",
+    createExamHint: "Assessment with questions and points",
     empty: "No assignments or exams yet. Create one for your students.",
     draft: "Draft",
     published: "Published",
@@ -2594,8 +2611,17 @@ const en: Messages = {
     publish: "Publish",
     materials: "Study materials",
     subjectsLabel: "Subjects",
+    /** One-word tab labels so all five fit a 390 px header row. */
+    tabsShort: {
+      work: "Work",
+      dates: "Dates",
+      people: "People",
+      attendance: "Attendance",
+      grades: "Grades",
+    },
     moreOptions: "More options",
     materialsPanel: {
+      showMore: (n: number) => `Show ${n} more`,
       heading: "Study materials",
       add: "Add material",
       emptyTitle: "No materials yet",
