@@ -49,6 +49,7 @@ const saveGradeSchema = z.object({
   assignmentId: z.string().uuid(),
   studentId: z.string().uuid(),
   mark: z.number().min(0).max(1000).nullable(),
+  maxMarks: z.number().positive().max(1000).nullable().optional(),
 });
 
 const removeColumnSchema = z.object({
@@ -152,19 +153,34 @@ export async function addExamColumn(input: {
     defaultKind: "homework" | "exam" | null;
   }[] = [];
   if (parsed.data.rubroId == null) {
-    const { data: rubros } = await supabase
+    // Same schema guard as everywhere else: an unmigrated database must not
+    // break column creation just because the routing tag is unavailable.
+    const base = await supabase
       .from("grade_rubros")
       .select("id, name, position, archived, default_kind")
       .eq("class_id", parsed.data.classId)
       .eq("subject_id", subjectId)
       .eq("archived", false)
       .order("position");
-    rubric = (rubros ?? []).map((rubro) => ({
+    const rows =
+      base.error != null
+        ? (
+            await supabase
+              .from("grade_rubros")
+              .select("id, name, position, archived")
+              .eq("class_id", parsed.data.classId)
+              .eq("subject_id", subjectId)
+              .eq("archived", false)
+              .order("position")
+          ).data
+        : base.data;
+    rubric = (rows ?? []).map((rubro) => ({
       id: rubro.id as string,
       name: (rubro.name as string) ?? "",
       position: (rubro.position as number) ?? 0,
       archived: Boolean(rubro.archived),
-      defaultKind: (rubro.default_kind as "homework" | "exam" | null) ?? null,
+      defaultKind:
+        (rubro as { default_kind?: "homework" | "exam" | null }).default_kind ?? null,
     }));
   }
 
@@ -288,6 +304,8 @@ export async function saveGrade(input: {
   assignmentId: string;
   studentId: string;
   mark: number | null;
+  /** Column max, so the action does not need a second query to clamp. */
+  maxMarks?: number | null;
 }): Promise<ExamActionResult> {
   const parsed = saveGradeSchema.safeParse(input);
   if (!parsed.success) {
@@ -305,17 +323,19 @@ export async function saveGrade(input: {
       .eq("student_id", studentId)
       .eq("assignment_id", assignmentId);
     if (error) return { ok: false, error: "No se pudo guardar la nota." };
+    invalidateGradePaths(classId, studentId);
     return { ok: true };
   }
 
-  const { data: assignment } = await supabase
-    .from("assignments")
-    .select("points")
-    .eq("id", assignmentId)
-    .maybeSingle();
-  const maxMarks = assignment?.points ?? 100;
-  const clamped = Math.max(0, Math.min(mark, maxMarks));
-
+  /*
+   * One round trip, not three. The column max used to be read first (to clamp)
+   * and the session third, so a single mark typed in the grid cost three
+   * requests and the cell could not settle until all of them finished. The
+   * session is already in the JWT claims, and `max_marks` is taken from the
+   * client's own column because the gradeboard already knows it — the database
+   * still owns the row, and a stale max only affects this one grade's ratio,
+   * which the next save corrects.
+   */
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -324,6 +344,9 @@ export async function saveGrade(input: {
     return { ok: false, error: "Sesión inválida. Inicie sesión de nuevo." };
   }
 
+  const maxMarks = parsed.data.maxMarks ?? null;
+  const clamped = maxMarks != null ? Math.max(0, Math.min(mark, maxMarks)) : mark;
+
   const { error } = await supabase.from("grades").upsert(
     {
       tenant_id,
@@ -331,7 +354,7 @@ export async function saveGrade(input: {
       student_id: studentId,
       assignment_id: assignmentId,
       mark: clamped,
-      max_marks: maxMarks,
+      ...(maxMarks != null ? { max_marks: maxMarks } : {}),
       status: "graded",
     },
     { onConflict: "class_id,student_id,assignment_id" },
@@ -339,9 +362,20 @@ export async function saveGrade(input: {
   if (error) {
     return { ok: false, error: "No se pudo guardar la nota. Intente de nuevo." };
   }
-  revalidatePath(`/grupos/${classId}`);
-  revalidatePath(`/estudiantes/${studentId}`);
+  invalidateGradePaths(classId, studentId);
   return { ok: true };
+}
+
+/**
+ * Revalidation is deferred: the teacher already sees the mark in the cell, and
+ * making the action wait for a page re-render is exactly the visual delay this
+ * is meant to remove.
+ */
+function invalidateGradePaths(classId: string, studentId: string) {
+  after(() => {
+    revalidatePath(`/grupos/${classId}`);
+    revalidatePath(`/estudiantes/${studentId}`);
+  });
 }
 
 /** Closes a grade column: enrolled students without a mark receive 0. */
@@ -536,16 +570,86 @@ export async function saveRubros(input: {
   }
 
   const supabase = await createSessionClient();
+
+  /*
+   * Saving a rubric must not depend on `default_kind`.
+   *
+   * That column is a *routing hint* added in a later migration, and it is not
+   * part of a rubric. Yesterday's wiring sent it inside the RPC payload, so a
+   * database that had the new function but not the new column failed **every
+   * rubric save** with `column "default_kind" ... does not exist` (42703) — an
+   * outage of a core feature caused by an optional nicety.
+   *
+   * So the payload carries only what the rubric needs. The tag is written
+   * afterwards, separately, and a failure there is ignored: the rubric is
+   * already saved and routing falls back to matching the rubro name.
+   */
   const { error } = await supabase.rpc("replace_rubros", {
     p_class: parsed.data.classId,
     p_subject: parsed.data.subjectId,
-    p_rubros: parsed.data.rubros,
+    p_rubros: parsed.data.rubros.map(({ defaultKind: _ignored, ...rubro }) => rubro),
   });
 
   if (error) return { ok: false, error: rubroErrorMessage(error.message) };
 
+  await saveRubroKinds(supabase, parsed.data.classId, parsed.data.rubros);
+
   revalidatePath(`/grupos/${parsed.data.classId}`);
   return { ok: true };
+}
+
+/**
+ * Best-effort write of the routing tags after a successful rubric save.
+ *
+ * Unknown tags (`undefined`) are skipped so an ordinary save never touches the
+ * column; `null` clears a tag. Any error — missing column, old function, RLS —
+ * is swallowed on purpose: at this point the rubric is already stored and this
+ * is a convenience, not a requirement.
+ */
+async function saveRubroKinds(
+  supabase: Awaited<ReturnType<typeof createSessionClient>>,
+  classId: string,
+  rubros: Array<{ id?: string; defaultKind?: "homework" | "exam" | null }>,
+): Promise<void> {
+  const changes = rubros.filter(
+    (rubro) => rubro.id && rubro.defaultKind !== undefined,
+  );
+  if (changes.length === 0) return;
+
+  // Probe once per process: a database without the column should not pay for
+  // (or log) a failing update on every save.
+  if (!(await supportsRubroKind(supabase))) return;
+
+  for (const rubro of changes) {
+    const { error } = await supabase
+      .from("grade_rubros")
+      .update({ default_kind: rubro.defaultKind ?? null })
+      .eq("id", rubro.id!)
+      .eq("class_id", classId);
+    if (error) return;
+  }
+}
+
+/**
+ * Whether `grade_rubros.default_kind` exists. Selects it with a limit of one,
+ * which is the cheapest way to find out without a migration table read; the
+ * answer is cached for the process because it only changes on deploy.
+ */
+let rubroKindSupport: boolean | null = null;
+
+async function supportsRubroKind(
+  supabase: Awaited<ReturnType<typeof createSessionClient>>,
+): Promise<boolean> {
+  if (rubroKindSupport !== null) return rubroKindSupport;
+  const { error } = await supabase
+    .from("grade_rubros")
+    .select("default_kind")
+    .limit(1);
+  const missing =
+    error != null &&
+    /column .* does not exist|default_kind/i.test(error.message);
+  rubroKindSupport = !missing;
+  return rubroKindSupport;
 }
 
 /**

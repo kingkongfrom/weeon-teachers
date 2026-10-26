@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme/theme";
 import { LocaleProvider } from "@/lib/i18n/client";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { getLocale, getT } from "@/lib/i18n/server";
 import "./globals.css";
 
@@ -44,6 +45,19 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${t.meta.appName}`,
     },
     description: t.meta.description,
+    manifest: "/manifest.webmanifest",
+    applicationName: "Weeon Docentes",
+    // iOS ignores the manifest for the home-screen icon and the status bar, so
+    // these two are what make an installed app look native on an iPhone/iPad.
+    icons: {
+      apple: "/icons/apple-touch-icon.png",
+    },
+    appleWebApp: {
+      capable: true,
+      title: "Weeon",
+      statusBarStyle: "default",
+    },
+    formatDetection: { telephone: false },
   };
 }
 
@@ -63,7 +77,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
         />
-        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+        <LocaleProvider locale={locale}>
+          {children}
+          {/* Installable-app affordance. Renders only when the browser offers
+              an install and the app is not already running installed. */}
+          <InstallPrompt />
+        </LocaleProvider>
       </body>
     </html>
   );

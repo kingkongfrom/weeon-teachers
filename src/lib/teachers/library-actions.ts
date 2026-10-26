@@ -532,15 +532,35 @@ export async function suggestedRubroForClass(input: {
   if (!parsed.success) return null;
 
   const supabase = await createSessionClient();
-  let query = supabase
-    .from("grade_rubros")
-    .select("id, name, peso, position, archived, default_kind")
-    .eq("class_id", parsed.data.classId)
-    .eq("archived", false)
-    .order("position");
-  if (parsed.data.subjectId) query = query.eq("subject_id", parsed.data.subjectId);
+  const build = (withKind: boolean) => {
+    let query = supabase
+      .from("grade_rubros")
+      .select(
+        withKind
+          ? "id, name, peso, position, archived, default_kind"
+          : "id, name, peso, position, archived",
+      )
+      .eq("class_id", parsed.data.classId)
+      .eq("archived", false)
+      .order("position");
+    if (parsed.data.subjectId) query = query.eq("subject_id", parsed.data.subjectId);
+    return query;
+  };
 
-  const { data } = await query;
+  // The routing tag is optional schema; never let it break the suggestion.
+  let response = await build(true);
+  if (response.error) response = (await build(false)) as typeof response;
+
+  const data = response.data as
+    | Array<{
+        id: string;
+        name: string | null;
+        peso: number;
+        position: number;
+        archived: boolean;
+        default_kind?: "homework" | "exam" | null;
+      }>
+    | null;
   const rubric = (data ?? []).map((rubro) => ({
     id: rubro.id as string,
     name: (rubro.name as string) ?? "",

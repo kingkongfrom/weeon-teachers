@@ -93,14 +93,39 @@ export async function loadClassRubros(
   if (!subjectId) return [];
   const supabase = await createSessionClient();
 
-  const { data, error } = await supabase
+  /*
+   * default_kind arrives with migration 20261026150000. Selecting a missing
+   * column fails the whole query, which returned [] and made the wizard
+   * believe the subject had no rubric at all. Fall back to the base columns so
+   * an unmigrated database still shows (and edits) its rubros; the tag is
+   * simply absent until the migration lands.
+   */
+  let query = await supabase
     .from("grade_rubros")
     .select("id, name, peso, position, archived, color, default_kind")
     .eq("class_id", classId)
     .eq("subject_id", subjectId)
     .order("position");
 
-  if (error) return [];
+  if (query.error) {
+    query = (await supabase
+      .from("grade_rubros")
+      .select("id, name, peso, position, archived, color")
+      .eq("class_id", classId)
+      .eq("subject_id", subjectId)
+      .order("position")) as unknown as typeof query;
+  }
+
+  if (query.error) return [];
+  const data = query.data as Array<{
+    id: string;
+    name: string;
+    peso: number;
+    position: number;
+    archived: boolean;
+    color: string | null;
+    default_kind?: string | null;
+  }> | null;
 
   return (data ?? []).map((row) => ({
     id: row.id,

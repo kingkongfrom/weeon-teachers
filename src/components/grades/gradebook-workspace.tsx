@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence } from "motion/react";
 import {
   Check,
+  ChevronDown,
   Download,
   Loader2,
   Lock,
@@ -72,6 +73,8 @@ import {
 import { totalPeso } from "@/lib/dashboard/grade-weights";
 import { ScoreboardSummary } from "@/components/grades/scoreboard-summary";
 import { ScoreboardStudentList } from "@/components/grades/scoreboard-student-list";
+import { GradebookToolbar } from "@/components/grades/gradebook-toolbar";
+import { GradingSheet } from "@/components/grades/grading-sheet";
 import { RubricDialog } from "@/components/grades/rubric-dialog";
 const PASS = 70;
 
@@ -267,6 +270,12 @@ export function GradebookWorkspace({
    */
   const [phoneView, setPhoneView] = useState<"cards" | "grid">("cards");
   const showCards = phoneView === "cards";
+  /**
+   * Phone grading: tapping a card opens that student's columns in a sheet. The
+   * matrix is unworkable at 390 px, and navigating to the transcript to grade
+   * was a detour — teachers asked for entry on the phone.
+   */
+  const [gradingStudentId, setGradingStudentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [closeTarget, setCloseTarget] = useState<ExamColumn | null>(null);
@@ -642,6 +651,38 @@ export function GradebookWorkspace({
       setExams(res.exams);
       setRubros(res.rubros);
     }
+  }
+
+  /**
+   * Patch one grade in place after a save.
+   *
+   * The gradeboard used to refetch every column and every mark on each edit,
+   * which is what made typing feel slow: the value was already on screen, but
+   * the class average, the rubro totals and FINAL waited for a full round trip
+   * over the whole subject. Patching the one row is instant and produces the
+   * same state the refetch would.
+   */
+  function applyGradeLocally(
+    assignmentId: string,
+    studentId: string,
+    mark: number | null,
+  ) {
+    setExams((current) =>
+      current.map((column) => {
+        if (column.id !== assignmentId) return column;
+        const grades = { ...column.grades };
+        if (mark == null) {
+          delete grades[studentId];
+        } else {
+          grades[studentId] = {
+            mark,
+            maxMarks: columnMaxPoints(column),
+            status: "graded",
+          };
+        }
+        return { ...column, grades };
+      }),
+    );
   }
 
   /* ── Inline rubro editing ────────────────────────────────────────────────
@@ -1212,112 +1253,21 @@ export function GradebookWorkspace({
         total={finalStats.total}
       />
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-        <div className="flex items-center gap-2 max-[1024px]:-mx-1 max-[1024px]:overflow-x-auto max-[1024px]:px-1 max-[1024px]:pb-1 [@media(min-width:1024px)]:flex-wrap [@media(orientation:landscape)]:flex-wrap">
-          <label className="relative inline-flex min-w-0 items-center max-[1024px]:flex-1 [@media(orientation:landscape)]:flex-none">
-            <Search className="pointer-events-none absolute left-3 h-4 w-4 text-foreground/40" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={w.search}
-              className="h-9 w-full min-w-0 rounded-full border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:border-brand-400 [@media(orientation:landscape)]:w-60"
-            />
-          </label>
-          {/* Sorting and row filters are the dirección view: order by grade,
-              keep only the students still ungraded or already out of reach. */}
-          <Dropdown
-            value={sortBy}
-            onChange={(value) => setSortBy(value as SortBy)}
-            ariaLabel={sb.sort}
-            fitContent
-            options={[
-              { value: "name", label: sb.sortName },
-              { value: "finalDesc", label: sb.sortFinalDesc },
-              { value: "finalAsc", label: sb.sortFinalAsc },
-            ]}
-          />
-          <FilterChip active={onlyPending} onClick={() => setOnlyPending((on) => !on)}>
-            {sb.onlyPending}
-          </FilterChip>
-          <FilterChip active={onlyAtRisk} onClick={() => setOnlyAtRisk((on) => !on)}>
-            {sb.onlyAtRisk}
-          </FilterChip>
-        </div>
-        <div className="flex items-center justify-between gap-3 max-[1024px]:mt-1 [@media(min-width:1024px)]:flex-wrap [@media(orientation:landscape)]:flex-wrap">
-          {/* Marks read as points or as the grade they represent. The % view is
-              read-only; it exists for reading, not for entry. */}
-          <div
-            role="radiogroup"
-            aria-label={sb.totalsHint}
-            title={sb.totalsHint}
-            className="inline-flex h-9 shrink-0 items-center rounded-full border border-border p-0.5 print-hide"
-          >
-            {(["points", "percent"] as const).map((mode) => {
-              const active = markView === mode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setMarkView(mode)}
-                  className={cn(
-                    "h-8 min-w-11 rounded-full px-3 text-xs font-bold uppercase tracking-wide tabular-nums transition-colors",
-                    active
-                      ? "bg-[#e6defb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]"
-                      : "text-foreground/55 hover:text-foreground",
-                  )}
-                >
-                  {mode === "percent" ? sb.totalsPercent : sb.totalsPoints}
-                </button>
-              );
-            })}
-          </div>
-          {/* Phone only: cards or the full matrix. From `md` up (iPad portrait
-              and landscape, desktop) the matrix is always the view, so the
-              switch is hidden and `showCards` is ignored there. */}
-          <div
-            role="radiogroup"
-            aria-label={sb.phoneView}
-            className="inline-flex h-9 items-center rounded-full border border-border p-0.5 [@media(orientation:landscape)]:hidden"
-          >
-            {(["cards", "grid"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                role="radio"
-                aria-checked={phoneView === mode}
-                onClick={() => setPhoneView(mode)}
-                className={cn(
-                  "h-8 min-w-11 rounded-full px-3 text-xs font-bold uppercase tracking-wide transition-colors",
-                  phoneView === mode
-                    ? "bg-[#e6defb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]"
-                    : "text-foreground/55 hover:text-foreground",
-                )}
-              >
-                {mode === "cards" ? sb.cards : sb.grid}
-              </button>
-            ))}
-          </div>
-          {/* Legend: full band names on desktop, bands only on a phone where
-              the numbers are already on each card. */}
-          <div className="flex items-center gap-3 text-xs font-semibold">
-            <span className="flex items-center gap-1.5 text-foreground/50">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#abe3dc] ring-1 ring-[#7dd3c7]" />
-              ≥ {PASS}%
-            </span>
-            <span className="flex items-center gap-1.5 text-foreground/50">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#fdeecd] ring-1 ring-[#f5d88a]" />
-              <span className="[@media(orientation:landscape)]:hidden">50–69%</span>
-              <span className="[@media(orientation:landscape)]:hidden">·</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-foreground/50">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#fbdee7] ring-1 ring-[#f0b8c8]" />
-              <span className="[@media(orientation:landscape)]:hidden">&lt; 50%</span>
-            </span>
-          </div>
-        </div>
-      </div>
+      <GradebookToolbar
+        query={query}
+        onQueryChange={setQuery}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        onlyPending={onlyPending}
+        onTogglePending={() => setOnlyPending((on) => !on)}
+        onlyAtRisk={onlyAtRisk}
+        onToggleAtRisk={() => setOnlyAtRisk((on) => !on)}
+        markView={markView}
+        onMarkViewChange={setMarkView}
+        phoneView={phoneView}
+        onPhoneViewChange={setPhoneView}
+        passMark={PASS}
+      />
 
       {pesoIncomplete && !rubricMode ? (
         <button
@@ -1387,6 +1337,7 @@ export function GradebookWorkspace({
               hrefFor={(studentId) =>
                 `/estudiantes/${studentId}?from=${encodeURIComponent(`/grupos/${classId}`)}`
               }
+              onGrade={(studentId) => setGradingStudentId(studentId)}
               students={visibleStudents.map((student) => {
                 const risk = canStillPass(finalFor.get(student.id) ?? finalScore(rubros, exams, student.id));
                 return {
@@ -1654,7 +1605,9 @@ export function GradebookWorkspace({
                                       localFlags[student.id]?.needsPeriodRegistration ?? false,
                                   })}
                                   onRequireReview={() => void openSupportReview(student)}
-                                  onSaved={refresh}
+                                  onSaved={(mark) =>
+                                    applyGradeLocally(column.id, student.id, mark)
+                                  }
                                 />
                               </td>
                             );
@@ -1837,6 +1790,61 @@ export function GradebookWorkspace({
         }}
       />
 
+      {/* Phone grade entry: one student at a time, same saveGrade action. */}
+      <GradingSheet
+        open={gradingStudentId != null}
+        studentId={gradingStudentId ?? ""}
+        studentName={
+          students.find((student) => student.id === gradingStudentId)
+            ? studentName(
+                students.find((student) => student.id === gradingStudentId)!,
+              )
+            : ""
+        }
+        final={gradingStudentId ? finalForStudent(gradingStudentId) : null}
+        columns={
+          gradingStudentId
+            ? orderedExams.map((column) => ({
+                id: column.id,
+                label: labels.get(column.id)?.medium ?? column.title,
+                rubro: rubros.find((rubro) => rubro.id === column.rubroId)?.name ?? null,
+                points: columnMaxPoints(column),
+                mark: column.grades[gradingStudentId]?.mark ?? null,
+                closed: Boolean(column.closedAt),
+              }))
+            : []
+        }
+        classId={classId}
+        position={{
+          index: Math.max(
+            0,
+            visibleStudents.findIndex((student) => student.id === gradingStudentId),
+          ),
+          total: visibleStudents.length,
+        }}
+        markView={markView}
+        onClose={() => setGradingStudentId(null)}
+        onPrev={() => {
+          const index = visibleStudents.findIndex(
+            (student) => student.id === gradingStudentId,
+          );
+          const previous = visibleStudents[index - 1];
+          if (previous) setGradingStudentId(previous.id);
+        }}
+        onNext={() => {
+          const index = visibleStudents.findIndex(
+            (student) => student.id === gradingStudentId,
+          );
+          const next = visibleStudents[index + 1];
+          if (next) setGradingStudentId(next.id);
+        }}
+        onSaved={() => void refresh()}
+        onDeleteColumn={(columnId) => {
+          const column = exams.find((item) => item.id === columnId);
+          if (column) setDeleteTarget(column);
+        }}
+      />
+
       <EducationalSupportWorkflowDialog
         open={reviewStudent !== null}
         studentId={reviewStudent?.id ?? ""}
@@ -1882,7 +1890,8 @@ function GradeCell({
   markView: "points" | "percent";
   supportPending: boolean;
   onRequireReview: () => void;
-  onSaved: () => void;
+  /** The saved mark (null = cleared), so the parent can patch one cell. */
+  onSaved: (mark: number | null) => void;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
@@ -1923,12 +1932,28 @@ function GradeCell({
       setStatus("error");
       return;
     }
+
+    /*
+     * Optimistic: the cell already shows what the teacher typed, so the write
+     * is an acknowledgement, not a gate. Only a refusal changes anything on
+     * screen (an error border). This is why the parent refetch no longer runs
+     * on every keystroke commit — waiting for it was the visible lag.
+     */
+    dirty.current = false;
     setStatus("saving");
-    const res = await saveGrade({ classId, assignmentId: column.id, studentId, mark });
-    setStatus(res.ok ? "idle" : "error");
+    const res = await saveGrade({
+      classId,
+      assignmentId: column.id,
+      studentId,
+      mark,
+      maxMarks: columnMaxPoints(column),
+    });
     if (res.ok) {
-      dirty.current = false;
-      onSaved();
+      setStatus("idle");
+      onSaved(mark);
+    } else {
+      dirty.current = true;
+      setStatus("error");
     }
   }
 
@@ -2010,7 +2035,10 @@ function FilterChip({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "h-9 rounded-full border px-3 text-xs font-bold uppercase tracking-wide transition-colors",
+        // Compact on a phone (h-8, tighter padding and tracking) so the search
+        // field and two chips share one row; roomier from landscape up.
+        "h-8 shrink-0 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-bold uppercase tracking-[0.04em] transition-colors",
+        "[@media(orientation:landscape)]:h-9 [@media(orientation:landscape)]:px-3 [@media(orientation:landscape)]:text-xs [@media(orientation:landscape)]:tracking-wide",
         active
           ? "border-[#7c3aed] bg-[#e6defb] text-[#4c1d95] dark:border-[#b9a3f7] dark:bg-[#241b45] dark:text-[#c4b5fd]"
           : "border-border text-foreground/55 hover:text-foreground",
@@ -2018,6 +2046,81 @@ function FilterChip({
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * The sort control, sized to sit beside a search field and two chips on a
+ * 390 px screen. Same listbox semantics as the shared menu, but the trigger
+ * shows only the current value — the decorative chevron is dropped on phones
+ * because the label is the affordance.
+ */
+function CompactSelect({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  ariaLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        onClick={() => setOpen((state) => !state)}
+        className="inline-flex h-8 max-w-[7.5rem] items-center gap-1 rounded-full border border-border px-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-foreground/60 transition-colors [@media(orientation:landscape)]:h-9 [@media(orientation:landscape)]:max-w-none [@media(orientation:landscape)]:gap-1.5 [@media(orientation:landscape)]:px-3 [@media(orientation:landscape)]:text-xs [@media(orientation:landscape)]:tracking-wide"
+      >
+        <span className="truncate">{current?.label}</span>
+        <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+      </button>
+      {open ? (
+        <>
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-30 cursor-default"
+          />
+          <ul
+            role="listbox"
+            aria-label={ariaLabel}
+            className="absolute left-0 top-full z-40 mt-1.5 w-56 rounded-xl border border-border bg-surface-elevated p-1 shadow-[0_12px_32px_-8px_rgb(16_32_29/0.24)]"
+          >
+            {options.map((option) => (
+              <li key={option.value}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={option.value === value}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex w-full items-center rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors",
+                    option.value === value
+                      ? "bg-[#0891B2]/10 font-semibold text-[#0e7490] dark:text-[#22d3ee]"
+                      : "font-medium text-foreground/75 hover:bg-surface-muted",
+                  )}
+                >
+                  {option.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </div>
   );
 }
 

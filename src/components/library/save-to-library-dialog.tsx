@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Check, FolderPlus, Loader2 } from "lucide-react";
-import { Dialog } from "@/components/ui/dialog";
+import { useEffect, useRef, useState } from "react";
+import { Check, Folder, FolderPlus, Loader2 } from "lucide-react";
+import {
+  DIALOG_CONTROL,
+  Dialog,
+  DialogField,
+  DialogPrimary,
+  DialogSecondary,
+} from "@/components/ui/dialog";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { useT } from "@/lib/i18n/client";
 import type { AssessmentDraft } from "@/lib/assessments/model";
 import type { LibraryCollection } from "@/lib/assessments/library";
@@ -11,6 +18,7 @@ import {
   saveAssessmentToLibrary,
 } from "@/lib/teachers/library-actions";
 import { loadLibraryForPicker } from "@/lib/teachers/library-picker-actions";
+import { cn } from "@/lib/utils";
 
 /**
  * "Guardar en mis evaluaciones" — the one action that turns a class assessment
@@ -42,18 +50,23 @@ export function SaveToLibraryDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [newCollection, setNewCollection] = useState<string | null>(null);
+  const [addingCollection, setAddingCollection] = useState(false);
+  const [newCollection, setNewCollection] = useState("");
+  const newCollectionRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setTitle(draft.title);
     setError(null);
     setSaved(false);
-    setNewCollection(null);
-    void loadLibraryForPicker().then((res) => {
-      setCollections(res.collections);
-    });
+    setAddingCollection(false);
+    setNewCollection("");
+    void loadLibraryForPicker().then((res) => setCollections(res.collections));
   }, [open, draft.title]);
+
+  useEffect(() => {
+    if (addingCollection) newCollectionRef.current?.focus();
+  }, [addingCollection]);
 
   async function submit() {
     setPending(true);
@@ -77,7 +90,7 @@ export function SaveToLibraryDialog({
   }
 
   async function addCollection() {
-    const name = newCollection?.trim();
+    const name = newCollection.trim();
     if (!name) return;
     const res = await createLibraryCollection({ name });
     if (res.ok && res.id) {
@@ -86,115 +99,134 @@ export function SaveToLibraryDialog({
         { id: res.id!, name, color: null, position: current.length, itemCount: 0 },
       ]);
       setCollectionId(res.id);
+      setAddingCollection(false);
+      setNewCollection("");
     }
-    setNewCollection(null);
   }
+
+  const selectedName =
+    collections.find((collection) => collection.id === collectionId)?.name ??
+    l.noCollection;
 
   return (
     <Dialog
       open={open}
       title={l.saveTitle}
+      description={l.saveHint}
+      icon={<FolderPlus className="h-[18px] w-[18px]" strokeWidth={2.1} />}
       onClose={onClose}
       footer={
         <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 items-center rounded-full px-3.5 text-sm font-semibold text-foreground/65 hover:bg-surface-muted"
-          >
+          <DialogSecondary onClick={onClose} className="sm:mr-auto">
             {saved ? t.common.close : t.common.cancel}
-          </button>
-          <button
-            type="button"
+          </DialogSecondary>
+          <DialogPrimary
             onClick={() => void submit()}
             disabled={pending || saved || draft.content.questions.length === 0}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#0891B2] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#0e7490] disabled:opacity-50"
+            className="w-full sm:w-auto"
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {saved ? <Check className="h-4 w-4" /> : null}
             {saved ? l.saved : l.saveAction}
-          </button>
+          </DialogPrimary>
         </>
       }
     >
-      <div className="flex flex-col gap-4">
-        <p className="text-sm text-foreground/60">{l.saveHint}</p>
-
-        <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground/70">
-          {l.titleLabel}
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            maxLength={120}
-            className="h-10 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground outline-none focus:border-brand-400"
-          />
-        </label>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground/70">
-            {l.gradeLevel}
+      <div className="flex flex-col gap-5">
+        <DialogField label={l.titleLabel}>
+          <div className={DIALOG_CONTROL}>
             <input
-              value={gradeLevel}
-              onChange={(event) => setGradeLevel(event.target.value)}
-              placeholder={l.gradeLevelPlaceholder}
-              maxLength={20}
-              className="h-10 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground outline-none focus:border-brand-400"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              maxLength={120}
+              className="h-11 w-full min-w-0 border-0 bg-transparent px-3.5 text-[15px] font-semibold text-foreground outline-none"
             />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground/70">
-            {l.moveToCollection}
-            <select
+          </div>
+        </DialogField>
+
+        <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 sm:grid-cols-[7.5rem_minmax(0,1fr)]">
+          <DialogField label={l.gradeLevel}>
+            <div className={DIALOG_CONTROL}>
+              <input
+                value={gradeLevel}
+                onChange={(event) => setGradeLevel(event.target.value)}
+                placeholder={l.gradeLevelPlaceholder}
+                maxLength={20}
+                className="h-11 w-full min-w-0 border-0 bg-transparent px-3 text-center text-[15px] font-semibold tabular-nums text-foreground outline-none"
+              />
+            </div>
+          </DialogField>
+
+          <DialogField label={l.collectionLabel}>
+            <SelectMenu
+              label={l.moveToCollection}
               value={collectionId}
-              onChange={(event) => setCollectionId(event.target.value)}
-              className="h-10 rounded-lg border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-brand-400"
-            >
-              <option value="">{l.noCollection}</option>
-              {collections.map((collection) => (
-                <option key={collection.id} value={collection.id}>
-                  {collection.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={setCollectionId}
+              options={[
+                { value: "", label: l.noCollection },
+                ...collections.map((collection) => ({
+                  value: collection.id,
+                  label: collection.name,
+                  icon: <Folder className="h-3.5 w-3.5" />,
+                })),
+              ]}
+            />
+          </DialogField>
         </div>
 
-        {newCollection === null ? (
-          <button
-            type="button"
-            onClick={() => setNewCollection("")}
-            className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-[#0891B2] hover:underline"
-          >
-            <FolderPlus className="h-4 w-4" />
-            {l.newCollection}
-          </button>
-        ) : (
+        {addingCollection ? (
           <div className="flex items-center gap-2">
-            <input
-              value={newCollection}
-              onChange={(event) => setNewCollection(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void addCollection();
-                }
-              }}
-              autoFocus
-              placeholder={l.collectionPlaceholder}
-              maxLength={80}
-              className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground outline-none focus:border-brand-400"
-            />
+            <div className={cn(DIALOG_CONTROL, "min-w-0 flex-1")}>
+              <input
+                ref={newCollectionRef}
+                value={newCollection}
+                onChange={(event) => setNewCollection(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void addCollection();
+                  } else if (event.key === "Escape") {
+                    event.preventDefault();
+                    setAddingCollection(false);
+                  }
+                }}
+                placeholder={l.collectionPlaceholder}
+                maxLength={80}
+                aria-label={l.collectionName}
+                className="h-11 w-full min-w-0 border-0 bg-transparent px-3.5 text-[15px] font-medium text-foreground outline-none"
+              />
+            </div>
             <button
               type="button"
               onClick={() => void addCollection()}
-              className="h-9 rounded-full border border-border px-3 text-sm font-semibold text-foreground/70 hover:bg-surface-muted"
+              disabled={!newCollection.trim()}
+              className="h-11 shrink-0 rounded-xl bg-surface-muted px-3.5 text-sm font-semibold text-foreground/75 transition-colors hover:bg-border disabled:opacity-45"
             >
               {l.createCollection}
             </button>
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAddingCollection(true)}
+            className="group inline-flex w-fit items-center gap-2 rounded-full border border-dashed border-border px-3 py-1.5 text-[13px] font-semibold text-foreground/60 transition-colors hover:border-[#0891B2]/40 hover:bg-[#0891B2]/5 hover:text-[#0e7490] dark:hover:text-[#22d3ee]"
+          >
+            <FolderPlus className="h-3.5 w-3.5" />
+            {l.newCollection}
+          </button>
         )}
 
+        {collectionId ? (
+          <p className="text-[11.5px] leading-snug text-foreground/45">
+            {l.savedInCollection(selectedName)}
+          </p>
+        ) : null}
+
         {error ? (
-          <p role="alert" className="text-sm font-medium text-error">
+          <p
+            role="alert"
+            className="rounded-xl border border-error/25 bg-error/5 px-3 py-2 text-[13px] font-medium text-error"
+          >
             {error}
           </p>
         ) : null}
