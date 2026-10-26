@@ -1,8 +1,24 @@
 # Mis evaluaciones — reusable exams & homework
 
-*Design for teacher feedback: "I want to create an exam and reuse it in another
-group." Written 26 Oct 2026, revised the same day after the owner's decisions.
-Status: **design — not built**.*
+*Teacher feedback: "I want to create an exam and reuse it in another group."
+Written 26 Oct 2026, revised the same day after the owner's decisions.*
+
+**Status: phases B1–B5 built (26 Oct 2026).** B6 (pull library changes into an
+existing draft) ships as updateAssessmentFromLibrary but has no UI entry yet.
+What exists:
+
+| Piece | Where |
+| ----- | ----- |
+| Rubro routing by kind (B1) | lib/dashboard/rubro-routing.ts + migrations 20261026150000, 20261026151000 |
+| Library tables + RLS (B2) | weeon-tenants/supabase/migrations/20261026160000_exam_library.sql |
+| Pure helpers + tests | lib/assessments/library.ts (+ library.test.ts, 29 tests) |
+| Loaders | lib/dashboard/library.ts, library-options.ts |
+| Actions | lib/teachers/library-actions.ts, library-picker-actions.ts, library-client-actions.ts |
+| Library page (Mías / Compartidas) | /aula-virtual/mis-evaluaciones + components/library/ |
+| Save from the builder | **Guardar en mis evaluaciones** in `assessment-editor.tsx` |
+| Use in a class (B3) | **Crear → Desde mis evaluaciones…** in `assessments-panel.tsx` |
+| Share with a teacher (B5) | Share dialog on the library card |
+| Item preview | /aula-virtual/mis-evaluaciones/[id] (student view, answers stripped) |
 
 ---
 
@@ -370,14 +386,14 @@ Item card:
 
 ## 7. Phases
 
-| Phase | Scope | Ships independently |
-| ----- | ----- | ------------------- |
-| **B1 — Rubro routing** | `grade_rubros.default_kind`, resolver, wizard + rubric editor set it, publish path uses it, gradeboard "Agregar columna" uses it | **Yes — do this first.** Fixes a live bug with no new UI. |
-| **B2 — Save to library** | Tables, RLS, **Guardar en mis evaluaciones** in the builder, `/aula-virtual/mis-evaluaciones` listing (Mías) | Yes |
-| **B3 — Use in a class** | **Desde mis evaluaciones…** drawer, copy semantics, rubro proposal | Yes |
-| **B4 — Collections & filters** | Collections CRUD, Materia/Nivel filters, **Usado en N grupos** | Yes |
-| **B5 — Share with a teacher** | `exam_library_shares`, **Compartir con un docente…**, **Compartidas conmigo**, duplicate-to-mine | Yes |
-| **B6 — Sync from library** | Divergence badge, **Actualizar desde mi biblioteca** | Yes |
+| Phase | Scope | Status |
+| ----- | ----- | ------ |
+| **B1 — Rubro routing** | `grade_rubros.default_kind`, resolver, wizard + rubric editor set it, publish path uses it, gradeboard "Agregar columna" uses it | **Built** |
+| **B2 — Save to library** | Tables, RLS, **Guardar en mis evaluaciones** in the builder, `/aula-virtual/mis-evaluaciones` listing (Mías) | **Built** |
+| **B3 — Use in a class** | **Desde mis evaluaciones…** dialog, copy semantics, rubro proposal per card | **Built** |
+| **B4 — Collections & filters** | Collections CRUD, Materia/Nivel filters, **Usado en N grupos** | **Built** |
+| **B5 — Share with a teacher** | `exam_library_shares`, **Compartir con un docente…**, **Compartidas conmigo**, duplicate-to-mine | **Built** |
+| **B6 — Sync from library** | `updateAssessmentFromLibrary` exists; divergence badge and the editor entry are still to do | Server side only |
 
 **B1 before the rest**, so the rubro bug is not reproduced into every reused
 assessment.

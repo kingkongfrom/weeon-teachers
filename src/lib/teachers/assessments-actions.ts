@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/session";
 import { getT } from "@/lib/i18n/server";
 import { categoryFor } from "@/lib/dashboard/exams";
+import { resolveRubroForKind } from "@/lib/dashboard/rubro-routing";
 import {
   computePointsTotal,
   emptyDoc,
@@ -223,23 +224,34 @@ async function syncGradeColumn(
     const tenantId = input.tenantId;
     if (tenantId == null) return true;
 
-    // Published columns must land in a rubro, or the weighted final would
-    // silently ignore them. Prefer the first active rubro; fall back to the
-    // same "General 100%" rubro the migration backfill uses.
+    // Published columns must land in the rubro that holds their KIND, or the
+    // weighted final silently mis-reads them (an Examen inside Tareas moved
+    // FINAL without anyone seeing why). Resolve by explicit `default_kind`,
+    // then by the rubro's name; if the rubric offers neither, leave the column
+    // UNASSIGNED — visible under "Sin rubro", one click to move — instead of
+    // guessing the first rubro.
     let rubroId: string | null = null;
     try {
-      const { data: rubro } = await supabase
+      const { data: rubros } = await supabase
         .from("grade_rubros")
-        .select("id")
+        .select("id, name, position, archived, default_kind")
         .eq("class_id", input.classId)
         .eq("subject_id", subjectId)
         .eq("archived", false)
-        .order("position")
-        .limit(1)
-        .maybeSingle();
-      rubroId = rubro?.id ?? null;
+        .order("position");
 
-      if (!rubroId) {
+      const rubric = (rubros ?? []).map((rubro) => ({
+        id: rubro.id as string,
+        name: (rubro.name as string) ?? "",
+        position: (rubro.position as number) ?? 0,
+        archived: Boolean(rubro.archived),
+        defaultKind: (rubro.default_kind as "homework" | "exam" | null) ?? null,
+      }));
+      rubroId = resolveRubroForKind(rubric, input.kind)?.id ?? null;
+
+      // No rubric at all yet: keep the historical fallback so a brand-new
+      // subject still has a home for its column.
+      if (rubric.length === 0) {
         const { data: created } = await supabase
           .from("grade_rubros")
           .insert({

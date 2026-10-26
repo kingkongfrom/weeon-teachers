@@ -1119,3 +1119,21 @@ a.btn-ink:hover {
     break-inside: avoid;
   }
 }
+/* Mis evaluaciones — a row inside a card menu (shared by the library cards). */
+.menu-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: color-mix(in oklab, var(--color-foreground) 80%, transparent);
+}
+
+.menu-row:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-foreground);
+}

@@ -6,11 +6,13 @@ import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/session";
 import {
   categoryFor,
+  kindForRouting,
   loadClassExams,
   loadClassRubros,
   type ExamColumn,
   type GradeRubro,
 } from "@/lib/dashboard/exams";
+import { resolveRubroForKind } from "@/lib/dashboard/rubro-routing";
 
 export type ExamActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -84,6 +86,8 @@ const rubroSchema = z.object({
   position: z.number().int().min(0).max(1000),
   archived: z.boolean().optional(),
   remove: z.boolean().optional(),
+  /** Which kind of column this rubro holds; drives publish routing. */
+  defaultKind: z.enum(["homework", "exam"]).nullable().optional(),
 });
 
 const saveRubrosSchema = z.object({
@@ -137,6 +141,33 @@ export async function addExamColumn(input: {
     }
   }
 
+  // A column added straight from the gradeboard is routed by kind, exactly like
+  // one published from Aula virtual: never the first rubro (that put Exams in
+  // Tareas), and unassigned when the rubric has no honest match.
+  let rubric: {
+    id: string;
+    name: string;
+    position: number;
+    archived: boolean;
+    defaultKind: "homework" | "exam" | null;
+  }[] = [];
+  if (parsed.data.rubroId == null) {
+    const { data: rubros } = await supabase
+      .from("grade_rubros")
+      .select("id, name, position, archived, default_kind")
+      .eq("class_id", parsed.data.classId)
+      .eq("subject_id", subjectId)
+      .eq("archived", false)
+      .order("position");
+    rubric = (rubros ?? []).map((rubro) => ({
+      id: rubro.id as string,
+      name: (rubro.name as string) ?? "",
+      position: (rubro.position as number) ?? 0,
+      archived: Boolean(rubro.archived),
+      defaultKind: (rubro.default_kind as "homework" | "exam" | null) ?? null,
+    }));
+  }
+
   const { data, error } = await supabase
     .from("assignments")
     .insert({
@@ -147,7 +178,10 @@ export async function addExamColumn(input: {
       points: parsed.data.points,
       kind: parsed.data.kind ?? "classwork",
       category: categoryFor(parsed.data.kind ?? "classwork"),
-      rubro_id: parsed.data.rubroId ?? null,
+      rubro_id:
+        parsed.data.rubroId ??
+        resolveRubroForKind(rubric, kindForRouting(parsed.data.kind))?.id ??
+        null,
     })
     .select("id")
     .single();
@@ -493,6 +527,7 @@ export async function saveRubros(input: {
     position: number;
     archived?: boolean;
     remove?: boolean;
+    defaultKind?: "homework" | "exam" | null;
   }>;
 }): Promise<ExamActionResult> {
   const parsed = saveRubrosSchema.safeParse(input);

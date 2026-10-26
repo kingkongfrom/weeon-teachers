@@ -19,6 +19,8 @@ type RubroRow = {
   name: string;
   peso: number;
   archived: boolean;
+  /** Which kind of column this rubro holds; drives publish routing. */
+  defaultKind: "homework" | "exam" | null;
 };
 
 function toRows(rubros: GradeRubro[]): RubroRow[] {
@@ -30,6 +32,7 @@ function toRows(rubros: GradeRubro[]): RubroRow[] {
       name: rubro.name,
       peso: rubro.peso,
       archived: rubro.archived,
+      defaultKind: rubro.defaultKind ?? null,
     }));
 }
 
@@ -65,11 +68,14 @@ export function RubricDialog({
   const [step, setStep] = useState(0);
   const [rows, setRows] = useState<RubroRow[]>(() => {
     if (mode === "wizard" && rubros.length === 0) {
+      // Seed the conventional rubros with the kind they hold, so a published
+      // exam routes to Exámenes instead of landing in the first rubro.
       return ["Tareas", "Exámenes", "Proyectos"].map((name, index) => ({
         key: `new-${index}`,
         name,
         peso: 0,
         archived: false,
+        defaultKind: name === "Exámenes" ? ("exam" as const) : null,
       }));
     }
     return toRows(rubros);
@@ -104,7 +110,13 @@ export function RubricDialog({
   function addRow() {
     setRows((current) => [
       ...current,
-      { key: `new-${nextKey.current++}`, name: "", peso: 0, archived: false },
+      {
+        key: `new-${nextKey.current++}`,
+        name: "",
+        peso: 0,
+        archived: false,
+        defaultKind: null,
+      },
     ]);
   }
 
@@ -166,6 +178,7 @@ export function RubricDialog({
           peso: row.peso,
           position: index,
           archived: row.archived,
+          defaultKind: row.defaultKind,
         })),
         ...removed
           .filter((row) => row.id)
@@ -320,6 +333,29 @@ export function RubricDialog({
                     </span>
                   </div>
                   <div className="flex items-center justify-end gap-0.5">
+                    {/* Tags the rubro so publishing a homework or an exam from
+                        Aula virtual routes its column here instead of into the
+                        first rubro. */}
+                    <select
+                      value={row.defaultKind ?? ""}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        patchRow(row.key, {
+                          defaultKind:
+                            value === "homework" || value === "exam" ? value : null,
+                        });
+                      }}
+                      aria-label={copy.rubroKind}
+                      title={copy.rubroKindHint}
+                      className={cn(
+                        "h-8 rounded-lg border border-border bg-background px-1 text-[11px] font-semibold outline-none focus:border-brand-400",
+                        row.defaultKind ? "text-brand-700 dark:text-brand-300" : "text-foreground/50",
+                      )}
+                    >
+                      <option value="">{copy.rubroKindAny}</option>
+                      <option value="homework">{copy.rubroKindHomework}</option>
+                      <option value="exam">{copy.rubroKindExam}</option>
+                    </select>
                     <button
                       type="button"
                       onClick={() => moveRow(row.key, -1)}

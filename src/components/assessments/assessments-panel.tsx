@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ClipboardCheck, FileText, Loader2, Plus } from "lucide-react";
+import { ChevronDown, ClipboardCheck, FileText, Library, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { createAssessment } from "@/lib/teachers/assessments-actions";
@@ -12,6 +12,7 @@ import {
   type AssessmentSummary,
 } from "@/lib/assessments/model";
 import { SubmissionStatus } from "@/components/assessments/submission-status";
+import { LibraryPickerDialog } from "@/components/library/library-picker-dialog";
 import { TONE_WELL } from "@/lib/dashboard/tones";
 
 /** "Trabajo de clase" list of homeworks/exams the teacher has created. */
@@ -31,6 +32,7 @@ export function AssessmentsPanel({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function create(kind: AssessmentKind) {
@@ -93,10 +95,29 @@ export function AssessmentsPanel({
                 <ClipboardCheck className="h-4 w-4" />
                 {a.addExam}
               </button>
+              <div className="my-1 border-t border-border" />
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setLibraryOpen(true);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground/80 transition-colors hover:bg-surface-muted hover:text-foreground"
+              >
+                <Library className="h-4 w-4" />
+                {t.library.openPicker}
+              </button>
             </div>
           ) : null}
         </div>
       </div>
+
+      <LibraryPickerDialog
+        open={libraryOpen}
+        classId={classId}
+        subjectId={defaultSubjectId}
+        onClose={() => setLibraryOpen(false)}
+      />
 
       {error ? <p className="text-sm font-medium text-error">{error}</p> : null}
 

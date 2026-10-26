@@ -23,6 +23,7 @@ import {
   Type,
   X,
   Camera,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
@@ -32,6 +33,7 @@ import { RichTextEditor } from "@/components/assessments/rich-text";
 import { AssessmentImageProvider } from "@/components/assessments/assessment-image-context";
 import { AssessmentPreview } from "@/components/assessments/assessment-preview";
 import { QuestionEditor } from "@/components/assessments/question-editor";
+import { SaveToLibraryDialog } from "@/components/library/save-to-library-dialog";
 import {
   computePointsTotal,
   emptyDoc,
@@ -124,6 +126,7 @@ export function AssessmentEditor({
   // must be visible immediately, not behind an extra click.
   const [addOpen, setAddOpen] = useState(initial.content.questions.length === 0);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -298,6 +301,16 @@ export function AssessmentEditor({
             >
               <Eye className="h-4 w-4" />
               {a.preview}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLibraryOpen(true)}
+              disabled={draft.content.questions.length === 0}
+              title={t.library.saveTitle}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+            >
+              <Library className="h-4 w-4" />
+              <span className="hidden lg:inline">{t.library.saveTitle}</span>
             </button>
             <button
               type="button"
@@ -659,6 +672,13 @@ export function AssessmentEditor({
         onCancel={() => {
           if (!deleting) setDeleteOpen(false);
         }}
+      />
+
+      <SaveToLibraryDialog
+        open={libraryOpen}
+        draft={draft}
+        onClose={() => setLibraryOpen(false)}
+        onSaved={() => setJustSaved(true)}
       />
       </div>
     </AssessmentImageProvider>

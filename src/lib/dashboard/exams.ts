@@ -35,6 +35,16 @@ export function categoryFor(kind: AssignmentKind): AssignmentCategory {
   return kind === "exam" || kind === "quiz" ? "evaluation" : "classwork";
 }
 
+/**
+ * The two rubro kinds a teacher can tag. `quiz` and `project` route to whichever
+ * side of the rubric their category lands on: quizzes are evaluations, projects
+ * are coursework. Keeps the resolver (two kinds) and the gradebook (five kinds)
+ * talking without a second mapping table.
+ */
+export function kindForRouting(kind: AssignmentKind | null | undefined): "homework" | "exam" {
+  return categoryFor(kind ?? "classwork") === "evaluation" ? "exam" : "homework";
+}
+
 export type ExamColumn = {
   id: string;
   title: string;
@@ -57,6 +67,8 @@ export type GradeRubro = {
   position: number;
   archived: boolean;
   color: string | null;
+  /** `grade_rubros.default_kind` — the kind of column this rubro holds. */
+  defaultKind: "homework" | "exam" | null;
 };
 
 type AssignmentRow = {
@@ -83,7 +95,7 @@ export async function loadClassRubros(
 
   const { data, error } = await supabase
     .from("grade_rubros")
-    .select("id, name, peso, position, archived, color")
+    .select("id, name, peso, position, archived, color, default_kind")
     .eq("class_id", classId)
     .eq("subject_id", subjectId)
     .order("position");
@@ -97,6 +109,10 @@ export async function loadClassRubros(
     position: row.position,
     archived: row.archived,
     color: row.color,
+    defaultKind:
+      row.default_kind === "homework" || row.default_kind === "exam"
+        ? row.default_kind
+        : null,
   }));
 }
 
