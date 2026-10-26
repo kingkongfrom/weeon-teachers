@@ -7,12 +7,12 @@ import {
 } from "@/lib/dashboard/attendance";
 import { loadClassConduct } from "@/lib/dashboard/conduct";
 import { loadClassExams, loadClassRubros } from "@/lib/dashboard/exams";
+import { orderedRubros } from "@/lib/dashboard/grade-weights";
 import {
-  orderedRubros,
-  studentFinal,
-  type RubroColumn,
-  type RubroInput,
-} from "@/lib/dashboard/grade-weights";
+  finalScore,
+  type ScoreColumn,
+  type ScoreRubro,
+} from "@/lib/dashboard/scoreboard";
 import { schoolAcademicYear, schoolPeriodLabel } from "@/lib/dashboard/school-period";
 import type {
   ReportAssignmentMeta,
@@ -138,31 +138,36 @@ export async function buildReportDraft(input: {
     };
   }
 
-  // Weighted subject finals, using the same module as the gradebook, so the
-  // report snapshot never disagrees with what the teacher saw.
+  // Weighted subject finals through `scoreboard` — the same module the gradebook
+  // matrix uses. The report used to call `studentFinal` from grade-weights, a
+  // module the matrix no longer uses: two copies of the FINAL rule, which is
+  // exactly how the gradebook once showed 225% next to a 93% final.
+  // `final-parity.test.ts` pins the two implementations together, so this switch
+  // is provably the same number on today's data while removing the chance of
+  // them drifting apart later.
   const weighted = rubros.length > 0 && exams.some((exam) => exam.rubroId);
   const finalScores: ReportFinalsSnapshot = {};
   if (weighted) {
-    const rubroInputs: RubroInput[] = rubros.map((rubro) => ({
+    const scoreRubros: ScoreRubro[] = rubros.map((rubro) => ({
       id: rubro.id,
       name: rubro.name,
       peso: rubro.peso,
       position: rubro.position,
       archived: rubro.archived,
     }));
-    const columns: RubroColumn[] = exams.map((exam) => ({
+    const scoreColumns: ScoreColumn[] = exams.map((exam) => ({
       id: exam.id,
       rubroId: exam.rubroId,
       points: exam.points,
       grades: Object.fromEntries(
         Object.entries(exam.grades).map(([studentId, grade]) => [
           studentId,
-          { mark: grade.mark, maxMarks: grade.maxMarks, status: "graded" as const },
+          { mark: grade.mark, maxMarks: grade.maxMarks },
         ]),
       ),
     }));
     for (const studentId of studentIds) {
-      const percent = studentFinal(rubroInputs, columns, studentId).percent;
+      const percent = finalScore(scoreRubros, scoreColumns, studentId).percent;
       if (percent != null) finalScores[studentId] = Math.round(percent);
     }
   }

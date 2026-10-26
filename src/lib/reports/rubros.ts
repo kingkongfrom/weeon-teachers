@@ -151,7 +151,44 @@ export type ReportStudentRubroRow = {
   contributions: Record<string, number | null>;
   /** `rubroId → rubro %`, used for the tooltip / detail. */
   rubroPercents: Record<string, number | null>;
+  /**
+   * `rubroId → points earned` inside the rubro.
+   *
+   * The gradebook's `Total` cell now reads `28/30 · 93%` — points *and* the
+   * grade — because a grade alone loses the evidence when a report lands on
+   * dirección's desk. The report must show the same thing or the two disagree
+   * on the page that gets printed.
+   */
+  rubroPoints: Record<string, { earned: number; max: number } | null>;
 };
+
+/**
+ * Points a student earned inside a rubro, against the points the rubro is worth.
+ *
+ * Mirrors the gradebook's `Total` cell: `28 / 30` beside `93%`. Only columns
+ * that carry a grade are counted as earned; every column counts toward the
+ * maximum, so a missing mark reads as "not yet" rather than as a zero.
+ */
+export function reportRubroPoints(
+  group: ReportRubroGroup,
+  grades: ReportGradesSnapshot,
+  studentId: string,
+): { earned: number; max: number } | null {
+  if (!group.id) return null;
+  let earned = 0;
+  let max = 0;
+  let graded = false;
+  for (const column of group.columns) {
+    const columnMax = column.points != null && column.points > 0 ? column.points : 100;
+    max += columnMax;
+    const cell = grades[column.assignmentId]?.[studentId];
+    if (!cell) continue;
+    earned += cell.mark;
+    graded = true;
+  }
+  if (!graded || max <= 0) return null;
+  return { earned: Math.round(earned * 10) / 10, max: Math.round(max * 10) / 10 };
+}
 
 export function buildReportStudentRows(
   groups: ReportRubroGroup[],
@@ -162,10 +199,12 @@ export function buildReportStudentRows(
   return studentIds.map((studentId) => {
     const contributions: Record<string, number | null> = {};
     const rubroPercents: Record<string, number | null> = {};
+    const rubroPoints: Record<string, { earned: number; max: number } | null> = {};
     for (const group of groups) {
       const key = group.id ?? "none";
       contributions[key] = reportRubroContribution(group, grades, studentId);
       rubroPercents[key] = reportRubroPercent(group, grades, studentId);
+      rubroPoints[key] = reportRubroPoints(group, grades, studentId);
     }
     const weighted = reportStudentPercent(grades, studentId, finals);
     return {
@@ -173,6 +212,7 @@ export function buildReportStudentRows(
       final: weighted == null ? null : Math.round(weighted),
       contributions,
       rubroPercents,
+      rubroPoints,
     };
   });
 }

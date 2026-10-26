@@ -10,6 +10,7 @@ import {
   reportIsWeighted,
   reportRubroContribution,
   reportRubroPercent,
+  reportRubroPoints,
 } from "@/lib/reports/rubros";
 
 const meta = (
@@ -95,5 +96,32 @@ describe("report rubro grouping", () => {
     expect(reportRubroContribution(groups[0], grades, "s1")).toBeNull();
     const rows = buildReportStudentRows(groups, { a: { s1: { mark: 80, maxMarks: 100 } } }, ["s1"]);
     expect(rows[0].final).toBe(80);
+  });
+});
+
+describe("report rubro points (the Total cell)", () => {
+  it("sums earned points against the rubro maximum", () => {
+    const groups = buildReportRubroGroups(Object.keys(assignmentsMeta), assignmentsMeta, {
+      tareas: { name: "Tareas", peso: 30, position: 0, archived: false },
+      exam: { name: "Examenes", peso: 40, position: 1, archived: false },
+    });
+    const tareas = groups.find((group) => group.id === "tareas")!;
+    // Tarea 1 (7/10) + Tarea 2 (19/20) = 26 of 30 — the gradebook reads the same.
+    expect(reportRubroPoints(tareas, grades, "s1")).toEqual({ earned: 26, max: 30 });
+  });
+
+  it("counts every column in the maximum but only graded ones as earned", () => {
+    const groups = buildReportRubroGroups(["t1", "t2"], assignmentsMeta, {
+      tareas: { name: "Tareas", peso: 30, position: 0, archived: false },
+    });
+    // s2 has no marks at all: no total rather than a misleading 0/30.
+    expect(reportRubroPoints(groups[0], grades, "s2")).toBeNull();
+  });
+
+  it("is null for a column with no rubro", () => {
+    // A column outside every rubro is not part of any Total cell.
+    const loose = { ...meta({ title: "Suelta" }), points: 10 };
+    const groups = buildReportRubroGroups(["loose"], { loose });
+    expect(reportRubroPoints(groups[0], grades, "s1")).toBeNull();
   });
 });

@@ -44,11 +44,11 @@ export function ReportExpandable({
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-foreground">{title}</span>
           {subtitle ? (
-            <span className="mt-0.5 block text-xs font-medium text-foreground/45">{subtitle}</span>
+            <span className="mt-0.5 block text-xs font-medium text-foreground/65">{subtitle}</span>
           ) : null}
         </span>
         {badge ? (
-          <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-foreground/55">
+          <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-foreground/70">
             {badge}
           </span>
         ) : null}

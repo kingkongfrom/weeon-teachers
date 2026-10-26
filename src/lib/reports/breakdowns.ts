@@ -6,6 +6,7 @@ import type {
   ReportGradesSnapshot,
 } from "@/lib/reports/model";
 import { reportStudentPercent } from "@/lib/reports/grades";
+import { classStats, type ClassStats } from "@/lib/dashboard/scoreboard";
 
 export type AssignmentBreakdownRow = {
   assignmentId: string;
@@ -71,25 +72,27 @@ export function buildConductCategoryBreakdown(
     .sort((a, b) => b.demeritCount + b.meritCount - (a.demeritCount + a.meritCount));
 }
 
+/**
+ * Class statistics for the report header.
+ *
+ * Delegates to `classStats` from `scoreboard` — the same function the gradebook
+ * summary strip uses — so the report and the screen a teacher is copying from
+ * cannot show a different average, pass rate, or range. It used to compute the
+ * average inline, which worked but meant two definitions of "average" in one app.
+ */
 export function classGradeStats(
   grades: ReportGradesSnapshot,
   studentIds: string[],
   finals?: Record<string, number>,
-): { average: number | null; passed: number; graded: number } {
-  let sum = 0;
-  let count = 0;
-  let passed = 0;
-  for (const studentId of studentIds) {
-    const pct = reportStudentPercent(grades, studentId, finals);
-    if (pct === null) continue;
-    sum += pct;
-    count += 1;
-    if (Math.round(pct) >= 70) passed += 1;
-  }
+): ClassStats & { passed: number } {
+  const stats = classStats(
+    studentIds.map((studentId) => reportStudentPercent(grades, studentId, finals)),
+  );
   return {
-    average: count > 0 ? sum / count : null,
-    passed,
-    graded: count,
+    ...stats,
+    // `passRate` is a percentage; the report prints "12 de 15".
+    passed:
+      stats.passRate == null ? 0 : Math.round((stats.passRate / 100) * stats.graded),
   };
 }
 

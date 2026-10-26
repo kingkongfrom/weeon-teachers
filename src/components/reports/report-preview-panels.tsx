@@ -13,6 +13,9 @@ import {
 } from "@/lib/attendance/model";
 import { signedPoints } from "@/lib/conduct/model";
 import { TONE_PILL } from "@/lib/dashboard/tones";
+// Grade bands and the points formatter are shared with the gradebook, so a
+// report cell and a matrix cell cannot drift apart in colour or format.
+import { formatPoints, tonePillClass } from "@/components/grades/score-cells";
 import {
   buildConductCategoryBreakdown,
   classGradeStats,
@@ -114,7 +117,7 @@ function ReportArchiveSnapshotPanel({ draft }: { draft: ReportDraft }) {
         <ReportAttendancePanel draft={draft} presentation="embedded" />
       </ReportExpandable>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-surface-muted/15 px-5 py-3">
-        <p className="text-xs font-medium text-foreground/50">{c.archiveLiveHint}</p>
+        <p className="text-xs font-medium text-foreground/65">{c.archiveLiveHint}</p>
         <Link
           href={`/grupos/${draft.classId}`}
           className="text-xs font-semibold text-brand-700 hover:underline dark:text-brand-300"
@@ -220,24 +223,30 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
       chips={[
         stats.average !== null ? `${Math.round(stats.average)}% ${c.classAvg}` : null,
         stats.graded > 0 ? c.passRate(stats.passed, stats.graded) : null,
+        // The screen a teacher is copying from shows the spread and the middle
+        // student, not just the mean — the report carries the same three facts.
+        stats.median !== null ? c.medianChip(Math.round(stats.median)) : null,
+        stats.highest !== null && stats.lowest !== null
+          ? c.rangeChip(Math.round(stats.lowest), Math.round(stats.highest))
+          : null,
       ].filter(Boolean) as string[]}
     >
       {assignmentIds.length === 0 || studentIds.length === 0 ? (
-        <p className="px-5 py-6 text-sm font-medium text-foreground/50">{c.noGrades}</p>
+        <p className="px-5 py-6 text-sm font-medium text-foreground/65">{c.noGrades}</p>
       ) : (
         <>
           <div className="overflow-x-auto">
             <table className="w-fit min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-foreground/50">
-                  <th rowSpan={2} className="px-4 py-2 text-left font-medium">
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-foreground/70">
+                  <th rowSpan={2} className="px-4 py-2 text-left font-medium text-foreground/70">
                     {c.student}
                   </th>
                   {groups.map((group) => (
                     <th
                       key={group.id ?? "none"}
                       colSpan={weighted ? group.columns.length + 1 : group.columns.length}
-                      className="border-l border-border px-3 py-2 text-center font-medium"
+                      className="border-l border-border px-3 py-2 text-center font-medium text-foreground/70"
                     >
                       {group.name ? (
                         <span className="inline-flex items-center gap-1.5">
@@ -249,18 +258,18 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
                           ) : null}
                         </span>
                       ) : (
-                        <span className="text-foreground/45">{w.noRubro}</span>
+                        <span className="text-foreground/65">{w.noRubro}</span>
                       )}
                     </th>
                   ))}
                   <th
                     rowSpan={2}
-                    className="border-l-2 border-l-foreground/25 px-4 py-2 text-right align-middle font-medium"
+                    className="border-l-2 border-l-foreground/25 px-4 py-2 text-right align-middle font-medium text-foreground/70"
                   >
                     {c.finalLabel}
                   </th>
                 </tr>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-foreground/45">
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-foreground/65">
                   {groups.map((group) => (
                     <ReportColumnSubheads
                       key={`cols-${group.id ?? "none"}`}
@@ -296,7 +305,7 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
                       ))}
                       <td className="border-l-2 border-l-foreground/25 px-4 py-2 text-right tabular-nums">
                         {row.final === null ? (
-                          <span className="text-foreground/40">—</span>
+                          <span className="text-foreground/65">—</span>
                         ) : (
                           <span className="inline-flex items-center justify-end gap-3">
                             <span className="w-10 text-right font-semibold text-foreground">
@@ -356,11 +365,11 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
                           >
                             {pct === null ? "—" : `${pct}%`}
                           </p>
-                          <p className="mt-0.5 text-[11px] font-medium text-foreground/45">
+                          <p className="mt-0.5 text-[11px] font-medium text-foreground/65">
                             {c.rubroAvg}
                           </p>
                         </div>
-                        <p className="text-right text-xs font-medium text-foreground/50">
+                        <p className="text-right text-xs font-medium text-foreground/65">
                           {c.rubroColumns(row.columnCount)}
                         </p>
                       </div>
@@ -414,7 +423,7 @@ function ReportColumnSubheads({
         </th>
       ))}
       {showTotal ? (
-        <th className="bg-surface-muted/40 px-3 py-1.5 text-right font-bold text-[#7c3aed] dark:text-[#b9a3f7]">
+        <th className="bg-surface-muted/40 px-3 py-1.5 text-right font-bold text-[#5b21b6] dark:text-[#c4b5fd]">
           {totalLabel}
         </th>
       ) : null}
@@ -436,6 +445,7 @@ function ReportStudentGroupCells({
   const key = group.id ?? "none";
   const contribution = row.contributions[key];
   const percent = row.rubroPercents[key];
+  const points = row.rubroPoints[key];
   return (
     <>
       {group.columns.map((column, index) => (
@@ -453,14 +463,37 @@ function ReportStudentGroupCells({
         <td
           title={
             percent == null || group.peso == null
-              ? group.name ?? undefined
+              ? (group.name ?? undefined)
               : `${group.name}: ${Math.round(percent)}% x ${group.peso}% = ${
                   contribution?.toFixed(1) ?? "—"
                 }%`
           }
-          className="bg-surface-muted/30 px-3 py-2 text-right font-bold tabular-nums text-[#7c3aed] dark:text-[#b9a3f7]"
+          className="bg-surface-muted/30 px-3 py-2 text-right tabular-nums"
         >
-          {contribution == null ? "—" : `${contribution.toFixed(1)}%`}
+          {/*
+           * Same shape as the gradebook's Total cell: points earned against the
+           * rubro's points, with the grade beside them. The contribution to FINAL
+           * stays in the tooltip — it answers a different question, and showing
+           * only that here made the printed report disagree with the screen.
+           */}
+          <span className="inline-flex items-baseline justify-end gap-1.5">
+            {points ? (
+              <span className="text-sm font-bold leading-none text-foreground">
+                {formatPoints(points.earned)}
+                <span className="ml-0.5 text-[10px] font-semibold text-foreground/65">
+                  /{formatPoints(points.max)}
+                </span>
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                "inline-block rounded-md px-1.5 py-0.5 text-[11px] font-bold leading-none",
+                percent == null ? "text-foreground/65" : tonePillClass(percent),
+              )}
+            >
+              {percent == null ? "—" : `${Math.round(percent)}%`}
+            </span>
+          </span>
         </td>
       ) : null}
     </>
@@ -485,13 +518,13 @@ function ReportConductPanel({
 
   const body =
     rows.length === 0 ? (
-      <p className="px-5 py-6 text-sm font-medium text-foreground/50">{c.noConduct}</p>
+      <p className="px-5 py-6 text-sm font-medium text-foreground/65">{c.noConduct}</p>
     ) : (
       <>
           <div className="overflow-x-auto">
             <table className="w-fit min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-foreground/50">
+                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-foreground/65">
                   <th className="px-4 py-2.5 font-medium">{c.student}</th>
                   <th className="px-4 py-2.5 text-right font-medium">{c.merits}</th>
                   <th className="px-4 py-2.5 text-right font-medium">{c.demerits}</th>
@@ -549,7 +582,7 @@ function ReportConductPanel({
                         <span className="font-semibold text-rose-600">−{row.demeritCount}</span>
                       ) : null}
                       {row.meritCount === 0 && row.demeritCount === 0 ? (
-                        <span className="text-foreground/40">—</span>
+                        <span className="text-foreground/65">—</span>
                       ) : null}
                     </div>
                   </div>
@@ -582,11 +615,11 @@ function ReportConductPanel({
                         >
                           {isMerit ? c.meritSingular : c.demeritSingular}
                         </span>
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground/45">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground/65">
                           <CalendarDays className="h-3.5 w-3.5" aria-hidden />
                           {formatIsoDate(entry.occurredOn, locale)}
                         </span>
-                        <span className="text-xs font-semibold text-foreground/55">
+                        <span className="text-xs font-semibold text-foreground/70">
                           {t.conduct.categories[entry.category]}
                         </span>
                         <span
@@ -689,14 +722,14 @@ function ReportAttendancePanel({
 
   const body =
     summaryRows.length === 0 ? (
-      <p className="px-5 py-6 text-sm font-medium text-foreground/50">{c.noAttendance}</p>
+      <p className="px-5 py-6 text-sm font-medium text-foreground/65">{c.noAttendance}</p>
     ) : (
       <>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[36rem] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/50">
+                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/65">
                     {c.student}
                   </th>
                   {ATTENDANCE_COLUMNS.map((status) => (
@@ -770,7 +803,7 @@ function ReportAttendancePanel({
               </tbody>
               <tfoot>
                 <tr className="border-t border-border bg-surface-muted/50">
-                  <td className="px-5 py-2.5 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                  <td className="px-5 py-2.5 text-xs font-bold uppercase tracking-wide text-foreground/65">
                     {c.attendanceTotals}
                   </td>
                   {columnTotals.map(({ status, total }) => (
@@ -785,7 +818,7 @@ function ReportAttendancePanel({
               </tfoot>
             </table>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border/60 px-5 py-2.5 text-[11px] font-medium text-foreground/50">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border/60 px-5 py-2.5 text-[11px] font-medium text-foreground/65">
             {ATTENDANCE_COLUMNS.map((status) => (
               <span key={status} className="inline-flex items-center gap-1.5">
                 <span
@@ -830,7 +863,7 @@ function ReportAttendancePanel({
               </div>
 
               {filteredLog.length === 0 ? (
-                <p className="py-4 text-center text-sm font-medium text-foreground/45">
+                <p className="py-4 text-center text-sm font-medium text-foreground/65">
                   {c.noAttendanceFiltered}
                 </p>
               ) : (
@@ -852,11 +885,11 @@ function ReportAttendancePanel({
                           >
                             {ATTENDANCE_CODE[entry.status]}
                           </span>
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground/45">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground/65">
                             <CalendarDays className="h-3.5 w-3.5" aria-hidden />
                             {formatIsoDate(entry.date, locale)}
                           </span>
-                          <span className="text-xs font-medium text-foreground/55">{statusLabel}</span>
+                          <span className="text-xs font-medium text-foreground/70">{statusLabel}</span>
                           <span
                             className={cn(
                               "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
@@ -946,7 +979,7 @@ function ReportSectionCard({
         {chips?.map((chip) => (
           <span
             key={chip}
-            className="rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-semibold text-foreground/55"
+            className="rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-semibold text-foreground/70"
           >
             {chip}
           </span>
