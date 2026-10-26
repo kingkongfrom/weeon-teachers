@@ -59,13 +59,20 @@ const TONE_COUNT_IDLE: Record<Tone, string> = {
   rose: "bg-[#fbdee7] text-[#9f1239] dark:bg-[#3a1622] dark:text-[#fda4af]/85",
 };
 
-/** Soft wash for timetable blocks — a little color, not a full card fill. */
+/**
+ * Soft wash for timetable blocks — a little color, not a full card fill.
+ *
+ * Ink values are chosen to clear WCAG AA (4.5:1) against their own wash, which
+ * matters here because these are the *active* tab labels: #2563eb on #d8e9fb was
+ * 4.18:1 and #e11d48 on #fbdee7 only 3.74:1, both caught by the gradebook a11y
+ * test. Ratios now: blue 5.4, purple 6.9, yellow 6.2, green 6.2, rose 6.4.
+ */
 export const TONE_WELL: Record<Tone, string> = {
-  blue: "bg-[#d8e9fb] text-[#2563eb]",
-  purple: "bg-[#e6defb] text-[#7c3aed]",
-  yellow: "bg-[#fdeecd] text-[#b45309]",
-  green: "bg-[#c9f0ec] text-[#0f766e]",
-  rose: "bg-[#fbdee7] text-[#e11d48]",
+  blue: "bg-[#d8e9fb] text-[#1d4ed8]",
+  purple: "bg-[#e6defb] text-[#5b21b6]",
+  yellow: "bg-[#fdeecd] text-[#92400e]",
+  green: "bg-[#c9f0ec] text-[#115e59]",
+  rose: "bg-[#fbdee7] text-[#9f1239]",
 };
 
 /** Flat marketing icon chips (white glyph). */

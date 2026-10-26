@@ -93,7 +93,9 @@ type Density = "compact" | "cozy" | "expanded";
 const DENSITY_ORDER: Density[] = ["compact", "cozy", "expanded"];
 
 /** Calificaciones module accent (purple tone) for text-level highlights. */
-const ACCENT_TEXT = "text-[#7c3aed] dark:text-[#b9a3f7]";
+// #5b21b6 instead of #7c3aed: the lighter violet failed WCAG AA (4.5:1) on the
+// muted table surface at 9 px, which the gradebook a11y test catches.
+const ACCENT_TEXT = "text-[#5b21b6] dark:text-[#c4b5fd]";
 
 /** Upper bound for a single bulk "Agregar columna" submission. */
 const MAX_NEW_COLUMNS = 20;
@@ -1518,7 +1520,7 @@ export function GradebookWorkspace({
                         )}
                         title={sb.rubroPoints}
                       >
-                        <span className="block text-[9px] font-bold uppercase leading-tight tracking-[0.08em] text-[#7c3aed] dark:text-[#b9a3f7]">
+                        <span className="block text-[9px] font-bold uppercase leading-tight tracking-[0.08em] text-[#5b21b6] dark:text-[#c4b5fd]">
                           {copy.subtotal}
                         </span>
                         <span className="block text-[8px] font-semibold uppercase tracking-[0.06em] text-foreground/40">
@@ -1544,7 +1546,7 @@ export function GradebookWorkspace({
                           <Link
                             href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}`)}`}
                             title={studentName(student)}
-                            className="font-medium leading-tight text-foreground transition-colors hover:text-[#7c3aed] dark:hover:text-[#b9a3f7]"
+                            className="font-medium leading-tight text-foreground transition-colors hover:text-[#5b21b6] dark:hover:text-[#c4b5fd]"
                           >
                             {studentName(student)}
                           </Link>
@@ -2040,7 +2042,7 @@ function FilterChip({
         "h-8 shrink-0 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-bold uppercase tracking-[0.04em] transition-colors",
         "[@media(orientation:landscape)]:h-9 [@media(orientation:landscape)]:px-3 [@media(orientation:landscape)]:text-xs [@media(orientation:landscape)]:tracking-wide",
         active
-          ? "border-[#7c3aed] bg-[#e6defb] text-[#4c1d95] dark:border-[#b9a3f7] dark:bg-[#241b45] dark:text-[#c4b5fd]"
+          ? "border-[#5b21b6] bg-[#e6defb] text-[#4c1d95] dark:border-[#b9a3f7] dark:bg-[#241b45] dark:text-[#c4b5fd]"
           : "border-border text-foreground/55 hover:text-foreground",
       )}
     >
