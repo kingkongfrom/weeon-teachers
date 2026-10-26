@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme/theme";
@@ -23,6 +23,18 @@ const bricolage = Bricolage_Grotesque({
   display: "swap",
   preload: true,
 });
+
+/**
+ * Mobile viewport. `viewport-fit=cover` lets the app paint under the notch and
+ * home indicator on iPhone, which the safe-area paddings in the shell and the
+ * dialogs rely on; pinch-zoom stays enabled so a teacher can still enlarge a
+ * dense gradebook.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();

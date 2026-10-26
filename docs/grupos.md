@@ -70,6 +70,10 @@ Page loader: `src/app/(app)/grupos/[id]/page.tsx`
   (≥ 70 %), rango and students without a grade; rows can be sorted by name or
   final grade and filtered to **Pendientes** / **En riesgo**. A student who can
   no longer reach 70 % with the remaining weight is flagged.
+- **Phones** get cards per student (final, risk, one bar per rubro) instead of
+  the matrix; **Tarjetas / Tabla** switches back to the grid. Toolbar icons
+  collapse, filters scroll sideways, and dialogs are dvh bottom sheets with
+  safe-area padding for iOS Safari.
 - **Imprimir** prints a landscape PDF for dirección (chrome and sticky offsets
   removed, header with grupo · materia · rubros · leyenda). The CSV carries the
   same numbers, including a per-rubro points/grade row and a footer.

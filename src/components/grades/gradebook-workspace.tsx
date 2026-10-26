@@ -71,6 +71,7 @@ import {
 } from "@/lib/dashboard/scoreboard";
 import { totalPeso } from "@/lib/dashboard/grade-weights";
 import { ScoreboardSummary } from "@/components/grades/scoreboard-summary";
+import { ScoreboardStudentList } from "@/components/grades/scoreboard-student-list";
 import { RubricDialog } from "@/components/grades/rubric-dialog";
 const PASS = 70;
 
@@ -257,6 +258,12 @@ export function GradebookWorkspace({
    * changing the column's max. A display mode only — never a data change.
    */
   const [markView, setMarkView] = useState<"points" | "percent">("points");
+  /**
+   * Phone view: cards per student, or the full matrix (side-scrolled). Cards
+   * are the default because a squeezed matrix on a phone is unreadable, but a
+   * teacher may still want the grid, so the choice is theirs.
+   */
+  const [phoneView, setPhoneView] = useState<"cards" | "grid">("cards");
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [closeTarget, setCloseTarget] = useState<ExamColumn | null>(null);
@@ -1065,10 +1072,10 @@ export function GradebookWorkspace({
   }
 
   return (
-    <div className="print-scoreboard flex flex-col gap-5">
-      <header className="print-hide flex flex-wrap items-center justify-between gap-3">
+    <div className="print-scoreboard flex flex-col gap-4 sm:gap-5">
+      <header className="print-hide flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-col">
-          <h1 className="brand-page-title text-3xl font-bold text-foreground sm:text-4xl">
+          <h1 className="brand-page-title text-2xl font-bold text-foreground sm:text-3xl lg:text-4xl">
             {groupName}
           </h1>
           {subjectName ? (
@@ -1077,14 +1084,14 @@ export function GradebookWorkspace({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {subjectId ? (
-            <div className="inline-flex items-stretch overflow-hidden rounded-full border border-border">
+            <div className="inline-flex min-w-0 items-stretch overflow-hidden rounded-full border border-border">
               <button
                 type="button"
                 onClick={() => void openRubric(activeRubros.length === 0 ? "wizard" : "edit")}
-                className="inline-flex h-9 items-center gap-1.5 pl-3.5 pr-3 text-sm font-semibold text-foreground/70 ui-hover"
+                className="inline-flex h-9 min-w-0 items-center gap-1.5 truncate pl-3.5 pr-3 text-sm font-semibold text-foreground/70 ui-hover sm:pl-3.5"
               >
-                <SlidersHorizontal className="h-4 w-4" />
-                {copy.edit}
+                <SlidersHorizontal className="h-4 w-4 shrink-0" />
+                <span className="truncate">{copy.edit}</span>
               </button>
               {/* Growing the rubric is a rubric decision, not a grade cell: it
                   belongs next to the other rubric actions, not in the grid. */}
@@ -1107,34 +1114,38 @@ export function GradebookWorkspace({
               )
             }
             title={w.density}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover"
+            aria-label={w.density}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-semibold text-foreground/70 ui-hover sm:px-3.5"
           >
             {density === "expanded" ? (
-              <Minimize2 className="h-4 w-4" />
+              <Minimize2 className="h-4 w-4 shrink-0" />
             ) : (
-              <Maximize2 className="h-4 w-4" />
+              <Maximize2 className="h-4 w-4 shrink-0" />
             )}
-            {density === "compact" ? w.dense : density === "cozy" ? w.cozy : w.expanded}
+            <span className="hidden sm:inline">
+              {density === "compact" ? w.dense : density === "cozy" ? w.cozy : w.expanded}
+            </span>
           </button>
-          {/* Totals are no longer a mode switch: each rubro Total always shows
-              points + grade, and FINAL/Promedio are always percentages. */}
           <button
             type="button"
             onClick={() => window.print()}
             title={sb.print}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover"
+            aria-label={sb.print}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-semibold text-foreground/70 ui-hover sm:px-3.5"
           >
-            <Printer className="h-4 w-4" />
-            {sb.print}
+            <Printer className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">{sb.print}</span>
           </button>
           <button
             type="button"
             onClick={exportCsv}
             disabled={exams.length === 0}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-sm font-semibold text-foreground/70 ui-hover disabled:opacity-50"
+            title={w.export}
+            aria-label={w.export}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-semibold text-foreground/70 ui-hover disabled:opacity-50 sm:px-3.5"
           >
-            <Download className="h-4 w-4" />
-            {w.export}
+            <Download className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">{w.export}</span>
           </button>
           <SubmitReport
             classId={classId}
@@ -1198,15 +1209,15 @@ export function GradebookWorkspace({
         total={finalStats.total}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative inline-flex items-center">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+        <div className="flex items-center gap-2 max-lg:-mx-1 max-lg:overflow-x-auto max-lg:px-1 max-lg:pb-1 lg:flex-wrap">
+          <label className="relative inline-flex min-w-0 items-center max-lg:flex-1">
             <Search className="pointer-events-none absolute left-3 h-4 w-4 text-foreground/40" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={w.search}
-              className="h-9 w-60 rounded-full border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:border-brand-400"
+              className="h-9 w-full min-w-0 rounded-full border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:border-brand-400 lg:w-60"
             />
           </label>
           {/* Sorting and row filters are the dirección view: order by grade,
@@ -1229,13 +1240,14 @@ export function GradebookWorkspace({
             {sb.onlyAtRisk}
           </FilterChip>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Marks read as points or as the grade they represent. Display only. */}
+        <div className="flex items-center justify-between gap-3 max-lg:mt-1 lg:flex-wrap">
+          {/* Marks read as points or as the grade they represent. The % view is
+              read-only; it exists for reading, not for entry. */}
           <div
             role="radiogroup"
             aria-label={sb.totalsHint}
             title={sb.totalsHint}
-            className="inline-flex h-9 items-center rounded-full border border-border p-0.5 print-hide"
+            className="inline-flex h-9 shrink-0 items-center rounded-full border border-border p-0.5 print-hide"
           >
             {(["points", "percent"] as const).map((mode) => {
               const active = markView === mode;
@@ -1247,7 +1259,7 @@ export function GradebookWorkspace({
                   aria-checked={active}
                   onClick={() => setMarkView(mode)}
                   className={cn(
-                    "h-8 rounded-full px-3 text-xs font-bold uppercase tracking-wide tabular-nums transition-colors",
+                    "h-8 min-w-11 rounded-full px-3 text-xs font-bold uppercase tracking-wide tabular-nums transition-colors",
                     active
                       ? "bg-[#e6defb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]"
                       : "text-foreground/55 hover:text-foreground",
@@ -1258,6 +1270,33 @@ export function GradebookWorkspace({
               );
             })}
           </div>
+          {/* Phone: switch between the per-student cards and the full matrix.
+              On desktop the matrix is always the view. */}
+          <div
+            role="radiogroup"
+            aria-label={sb.phoneView}
+            className="inline-flex h-9 items-center rounded-full border border-border p-0.5 lg:hidden"
+          >
+            {(["cards", "grid"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                role="radio"
+                aria-checked={phoneView === mode}
+                onClick={() => setPhoneView(mode)}
+                className={cn(
+                  "h-8 min-w-11 rounded-full px-3 text-xs font-bold uppercase tracking-wide transition-colors",
+                  phoneView === mode
+                    ? "bg-[#e6defb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]"
+                    : "text-foreground/55 hover:text-foreground",
+                )}
+              >
+                {mode === "cards" ? sb.cards : sb.grid}
+              </button>
+            ))}
+          </div>
+          {/* Legend: full band names on desktop, bands only on a phone where
+              the numbers are already on each card. */}
           <div className="flex items-center gap-3 text-xs font-semibold">
             <span className="flex items-center gap-1.5 text-foreground/50">
               <span className="h-2.5 w-2.5 rounded-full bg-[#abe3dc] ring-1 ring-[#7dd3c7]" />
@@ -1265,10 +1304,12 @@ export function GradebookWorkspace({
             </span>
             <span className="flex items-center gap-1.5 text-foreground/50">
               <span className="h-2.5 w-2.5 rounded-full bg-[#fdeecd] ring-1 ring-[#f5d88a]" />
-              50–69%
+              <span className="max-lg:hidden">50–69%</span>
+              <span className="lg:hidden">·</span>
             </span>
             <span className="flex items-center gap-1.5 text-foreground/50">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#fbdee7] ring-1 ring-[#f0b8c8]" /> &lt; 50%
+              <span className="h-2.5 w-2.5 rounded-full bg-[#fbdee7] ring-1 ring-[#f0b8c8]" />
+              <span className="max-lg:hidden">&lt; 50%</span>
             </span>
           </div>
         </div>
@@ -1334,9 +1375,48 @@ export function GradebookWorkspace({
           {sb.noActiveStudents}
         </p>
       ) : (
+        <>
+          {/* Phone: one card per student, unless the teacher asked for the grid. */}
+          <div className={cn(phoneView === "grid" && "hidden")}>
+            <ScoreboardStudentList
+              stats={finalStats}
+              hrefFor={(studentId) =>
+                `/estudiantes/${studentId}?from=${encodeURIComponent(`/grupos/${classId}`)}`
+              }
+              students={visibleStudents.map((student) => {
+                const risk = canStillPass(finalFor.get(student.id) ?? finalScore(rubros, exams, student.id));
+                return {
+                  id: student.id,
+                  name: studentName(student),
+                  final: finalForStudent(student.id),
+                  atRisk: risk?.pass === false,
+                  needed:
+                    risk?.pass && risk.neededOnRemaining != null && risk.neededOnRemaining > 0
+                      ? risk.neededOnRemaining
+                      : null,
+                  // One bar per active rubro, in the same order as the matrix.
+                  rubros: activeRubros
+                    .filter((rubro) => exams.some((column) => column.rubroId === rubro.id))
+                    .map((rubro) => ({
+                      key: rubro.id,
+                      name: rubro.name,
+                      peso: rubro.peso,
+                      percent: rubroPercentForStudent(rubro.id, student.id),
+                    })),
+                };
+              })}
+            />
+          </div>
+        </>
+      )}
+
+      {visibleStudents.length > 0 ? (
         <div
           className={cn(
-            "relative min-w-0 overflow-auto rounded-2xl border border-border bg-surface",
+            "relative min-w-0 overflow-auto overscroll-x-contain rounded-2xl border border-border bg-surface",
+            // Cards are the phone default; `grid` here means the teacher opted in.
+            "max-lg:hidden",
+            phoneView === "grid" && "max-lg:block",
             draggingBlock && "select-none",
           )}
         >
@@ -1681,7 +1761,7 @@ export function GradebookWorkspace({
               </tfoot>
             </table>
         </div>
-      )}
+      ) : null}
 
       {typeof document !== "undefined"
         ? createPortal(

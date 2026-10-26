@@ -37,7 +37,7 @@ export function ScoreboardSummary({
   const ungraded = total - graded;
 
   return (
-    <dl className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 xl:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border xl:grid-cols-4">
       <Cell label={s.finalAverage} hint={s.gradedOf(graded, total)}>
         <Value value={average} suffix="%" fallback="—" />
       </Cell>
@@ -46,7 +46,7 @@ export function ScoreboardSummary({
         <Value value={passRate} suffix="%" fallback="—" />
       </Cell>
 
-      <Cell label={s.range} hint={s.rangeHint}>
+      <Cell label={s.range} hint={s.rangeHint} className="col-span-2 xl:col-span-1">
         <RangeBar lowest={lowest} highest={highest} median={median} />
       </Cell>
 
@@ -54,6 +54,7 @@ export function ScoreboardSummary({
         label={s.pending}
         hint={s.pendingHint}
         emphasis={ungraded > 0 ? "warn" : undefined}
+        className="col-span-2 xl:col-span-1"
       >
         <span
           className={cn(
@@ -72,15 +73,22 @@ function Cell({
   label,
   hint,
   emphasis,
+  className,
   children,
 }: {
   label: string;
   hint: string;
   emphasis?: "warn";
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col justify-between gap-2 bg-surface px-4 py-3">
+    <div
+      className={cn(
+        "flex flex-col justify-between gap-2 bg-surface px-3.5 py-3",
+        className,
+      )}
+    >
       <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-foreground/45">
         {label}
       </dt>

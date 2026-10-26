@@ -60,7 +60,10 @@ export function Dialog({
             aria-modal="true"
             aria-label={title}
             className={cn(
-              "relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-3xl bg-surface shadow-2xl sm:rounded-3xl",
+              // `dvh` not `vh`: on iOS Safari the URL bar makes 100vh taller
+              // than the visible area, which cut the footer off. The bottom pad
+              // clears the home indicator on a sheet that reaches the edge.
+              "relative z-10 flex max-h-[90dvh] w-full max-w-lg flex-col rounded-t-3xl bg-surface pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-3xl sm:pb-0",
               panelClassName,
             )}
             initial={{ opacity: 0, y: 24 }}
