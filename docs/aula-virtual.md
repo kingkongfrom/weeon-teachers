@@ -573,6 +573,15 @@ class-material/calendar policies (`teaches_class` / enrolled / guardian).
 **Schedule:** Horarios no longer offers *Agregar examen o actividad*. A teacher
 sets the date from **Aula virtual → Fechas de examen**.
 
+### Reusable assessments — the banco
+
+An assessment is bound to one `class_id`, so today the same exam must be
+re-authored per group. The design for a **Banco de evaluaciones** (collections of
+reusable templates, "Usar en esta clase", and rubro-aware gradeboard columns)
+lives in [`banco-evaluaciones.md`](banco-evaluaciones.md). **Not built yet.**
+Its phase **B1** (rubro routing by kind instead of "first rubro") fixes a live
+bug and should ship before the rest.
+
 ## Grades & evaluation (P5b/P5c + the new gradebook)
 
 The rule: **an assessment is a grade column.** Evaluating once writes the grade —
