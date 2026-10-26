@@ -18,6 +18,7 @@ import {
   Lock,
   Maximize2,
   Minimize2,
+  Minus,
   Plus,
   Search,
   SlidersHorizontal,
@@ -42,11 +43,12 @@ import {
   fetchStudentEducationalSupports,
 } from "@/lib/teachers/educational-support-actions";
 import {
-  addExamColumn,
+  addExamColumns,
   closeExamColumn,
   fetchSubjectExams,
   removeExamColumn,
   saveGrade,
+  updateExamColumn,
 } from "@/lib/teachers/exams-actions";
 import type { AssignmentKind, ExamColumn, GradeRubro } from "@/lib/dashboard/exams";
 import type { ClassOption } from "@/lib/dashboard/gradebook";
@@ -75,6 +77,9 @@ const DENSITY_ORDER: Density[] = ["compact", "cozy", "expanded"];
 
 /** Calificaciones module accent (purple tone) for text-level highlights. */
 const ACCENT_TEXT = "text-[#7c3aed] dark:text-[#b9a3f7]";
+
+/** Upper bound for a single bulk "Agregar columna" submission. */
+const MAX_NEW_COLUMNS = 20;
 
 /**
  * Column lock/delete visibility.
@@ -381,6 +386,8 @@ export function GradebookWorkspace({
 
   // Auto label per column: short code + sequence among that type (CW 1) for the
   // compact view, and the full kind name (Classwork 1) for the expanded view.
+  // A teacher-renamed column keeps its own title; the sequence is only the
+  // default so a fresh gradebook reads "Tarea 1 / Tarea 2" without setup.
   const labels = new Map<
     string,
     { short: string; medium: string; full: string }
@@ -389,11 +396,16 @@ export function GradebookWorkspace({
   for (const column of orderedExams) {
     const next = (counters.get(column.kind) ?? 0) + 1;
     counters.set(column.kind, next);
-    labels.set(column.id, {
+    const custom = column.title.trim();
+    const auto = {
       short: `${w.kindShort[column.kind]} ${next}`,
       medium: `${w.kindMedium[column.kind]} ${next}`,
       full: `${w.kinds[column.kind]} ${next}`,
-    });
+    };
+    labels.set(
+      column.id,
+      custom && custom !== auto.full ? { short: custom, medium: custom, full: custom } : auto,
+    );
   }
 
   const groups = buildRubroGroups(orderedExams, rubros);
@@ -404,10 +416,18 @@ export function GradebookWorkspace({
   // Weighted only when the rubric exists and at least one column is assigned.
   const weighted = activeRubros.length > 0 && orderedExams.some((c) => c.rubroId);
 
-  /** Auto title for a new column: type + its sequence among that type. */
-  function nextTitleFor(kind: AssignmentKind): string {
-    const count = exams.filter((column) => column.kind === kind).length;
-    return `${w.kinds[kind]} ${count + 1}`;
+  /**
+   * Sequenced titles for the first `count` columns of this kind. Numbers continue
+   * after the columns that already exist, so asking for two more Tareas when one
+   * exists yields "Tarea 2" and "Tarea 3" — matching the auto labels.
+   */
+  function titlesFor(kind: AssignmentKind, count: number): string[] {
+    const existing = exams.filter((column) => column.kind === kind).length;
+    const total = Math.max(1, Math.min(MAX_NEW_COLUMNS, count));
+    return Array.from(
+      { length: total },
+      (_, index) => `${w.kinds[kind]} ${existing + index + 1}`,
+    );
   }
 
   function finalForStudent(studentId: string): number | null {
@@ -487,19 +507,19 @@ export function GradebookWorkspace({
   }
 
   async function handleCreate(
-    title: string,
+    titles: string[],
     points: number | null,
     kind: AssignmentKind,
     rubroId: string,
   ) {
     setError(null);
-    const res = await addExamColumn({
+    const res = await addExamColumns({
       classId,
-      title,
       points,
       subjectId,
       kind,
       rubroId,
+      titles,
     });
     if (!res.ok) {
       setError(res.error);
@@ -516,6 +536,48 @@ export function GradebookWorkspace({
   function deleteColumn(column: ExamColumn) {
     setError(null);
     setDeleteTarget(column);
+  }
+
+  /**
+   * Inline rename from the column header. The header commits optimistically, so
+   * `nextTitle` is already on screen; we persist in the background and only
+   * revert if the server rejects it. Only the title changes — points stay locked
+   * once the column has grades (see `updateExamColumn`).
+   */
+  async function handleRenameColumn(
+    column: ExamColumn,
+    nextTitle: string,
+  ): Promise<boolean> {
+    const title = nextTitle.trim();
+    setError(null);
+    if (!title || title === column.title) return true;
+
+    const previousTitle = column.title;
+    startTransition(() => {
+      setExams((current) =>
+        current.map((item) =>
+          item.id === column.id ? { ...item, title } : item,
+        ),
+      );
+    });
+
+    const res = await updateExamColumn({
+      classId,
+      assignmentId: column.id,
+      title,
+    });
+    if (!res.ok) {
+      startTransition(() => {
+        setExams((current) =>
+          current.map((item) =>
+            item.id === column.id ? { ...item, title: previousTitle } : item,
+          ),
+        );
+      });
+      setError(res.error);
+      return false;
+    }
+    return true;
   }
 
   async function handleDeleteColumn() {
@@ -849,6 +911,7 @@ export function GradebookWorkspace({
                               column={column}
                               label={label}
                               density={density}
+                              onRename={(title) => handleRenameColumn(column, title)}
                               onDelete={() => deleteColumn(column)}
                               onClose={
                                 column.assessmentId || column.closedAt
@@ -1028,7 +1091,7 @@ export function GradebookWorkspace({
                   key="add-column"
                   onCreate={handleCreate}
                   onClose={() => setAddOpen(false)}
-                  titleFor={nextTitleFor}
+                  titlesFor={titlesFor}
                   rubros={rubros}
                   defaultRubroId={
                     activeRubros.find((rubro) =>
@@ -1214,29 +1277,101 @@ function ColumnHeader({
   density,
   onDelete,
   onClose,
+  onRename,
 }: {
   column: ExamColumn;
   label: { short: string; medium: string; full: string };
   density: Density;
   onDelete: () => void;
   onClose?: () => void;
+  onRename: (title: string) => Promise<boolean>;
 }) {
   const t = useT();
   const w = t.gradebook.workspace;
   const compact = density === "compact";
   const maxPts = columnMaxPoints(column);
 
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(column.title);
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const display = compact ? label.short : density === "cozy" ? label.medium : label.full;
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  function startEditing() {
+    setDraft(column.title);
+    setEditing(true);
+  }
+
+  async function commit() {
+    if (saving) return;
+    const next = draft.trim();
+    if (!next || next === column.title) {
+      setEditing(false);
+      return;
+    }
+    // Leave edit mode now; the header updates optimistically and the request
+    // finishes in the background.
+    setEditing(false);
+    setSaving(true);
+    await onRename(next);
+    setSaving(false);
+  }
+
+  if (editing) {
+    return (
+      <div className="group/col flex w-full flex-col items-center gap-0.5 py-0.5">
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => void commit()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void commit();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              setEditing(false);
+            }
+          }}
+          maxLength={120}
+          disabled={saving}
+          aria-label={w.renameColumn}
+          placeholder={w.renameColumnPlaceholder}
+          className={cn(
+            "w-full min-w-0 border-0 bg-transparent px-1 text-center font-bold leading-tight text-foreground caret-brand-600 outline-none placeholder:font-medium placeholder:text-foreground/35 disabled:opacity-60",
+            compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
+          )}
+        />
+        <span className="text-[9px] font-semibold tabular-nums text-foreground/45">
+          {w.columnPointsShort(maxPts)}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="group/col flex w-full flex-col items-center gap-0.5 py-0.5">
-      <span
-        title={`${label.medium} · ${w.columnPointsShort(maxPts)}`}
+      <button
+        type="button"
+        onClick={startEditing}
+        title={`${label.medium} · ${w.renameColumn}`}
+        aria-label={`${label.medium} · ${w.renameColumn}`}
         className={cn(
-          "max-w-full whitespace-nowrap px-1 text-center font-bold leading-tight text-foreground/55",
+          "max-w-full whitespace-nowrap rounded-md px-1 text-center font-bold leading-tight text-foreground/55 transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:bg-surface-muted focus-visible:text-foreground focus-visible:outline-none",
           compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
         )}
       >
-        {compact ? label.short : density === "cozy" ? label.medium : label.full}
-      </span>
+        {display}
+      </button>
       <span className="text-[9px] font-semibold tabular-nums text-foreground/45">
         {w.columnPointsShort(maxPts)}
       </span>
@@ -1280,18 +1415,19 @@ function ColumnHeader({
 function AddColumnDialog({
   onCreate,
   onClose,
-  titleFor,
+  titlesFor,
   rubros,
   defaultRubroId,
 }: {
   onCreate: (
-    title: string,
+    titles: string[],
     points: number | null,
     kind: AssignmentKind,
     rubroId: string,
   ) => Promise<boolean>;
   onClose: () => void;
-  titleFor: (kind: AssignmentKind) => string;
+  /** Sequenced titles for the first `count` columns of this kind. */
+  titlesFor: (kind: AssignmentKind, count: number) => string[];
   rubros: GradeRubro[];
   defaultRubroId: string;
 }) {
@@ -1301,6 +1437,7 @@ function AddColumnDialog({
   const kinds: AssignmentKind[] = ["homework", "exam", "quiz", "classwork", "project"];
   const [points, setPoints] = useState("100");
   const [kind, setKind] = useState<AssignmentKind>("homework");
+  const [count, setCount] = useState(1);
   const [rubroId, setRubroId] = useState(defaultRubroId);
   const [pending, setPending] = useState(false);
 
@@ -1310,7 +1447,7 @@ function AddColumnDialog({
     setPending(true);
     const parsed = points.trim() === "" ? null : Number(points.replace(",", "."));
     const ok = await onCreate(
-      titleFor(kind),
+      titlesFor(kind, count),
       parsed == null || Number.isNaN(parsed) ? null : parsed,
       kind,
       rubroId,
@@ -1379,6 +1516,47 @@ function AddColumnDialog({
           />
           <span className="text-xs font-medium text-foreground/50">{w.columnPointsHint}</span>
         </label>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-foreground/70">{w.columnCount}</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCount((current) => Math.max(1, current - 1))}
+              disabled={count <= 1}
+              aria-label={w.columnCountless}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border text-foreground/70 transition-colors hover:border-brand-300 hover:text-foreground active:scale-95 disabled:opacity-40 disabled:hover:border-border"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <input
+              value={count}
+              onChange={(event) => {
+                const next = Number(event.target.value.replace(/[^0-9]/g, ""));
+                setCount(next >= 1 ? Math.min(MAX_NEW_COLUMNS, next) : 1);
+              }}
+              onBlur={() => {
+                if (!count || count < 1) setCount(1);
+              }}
+              inputMode="numeric"
+              aria-label={w.columnCount}
+              className="h-10 w-14 rounded-xl border border-border bg-background px-2 text-center text-sm font-semibold tabular-nums text-foreground outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-950"
+            />
+            <button
+              type="button"
+              onClick={() =>
+                setCount((current) => Math.min(MAX_NEW_COLUMNS, current + 1))
+              }
+              disabled={count >= MAX_NEW_COLUMNS}
+              aria-label={w.columnCountMore}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border text-foreground/70 transition-colors hover:border-brand-300 hover:text-foreground active:scale-95 disabled:opacity-40 disabled:hover:border-border"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <span className="text-xs font-medium text-foreground/50">
+              {w.columnCountHint}
+            </span>
+          </div>
+        </div>
         <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold text-foreground/70">{w.columnKind}</span>
           <div className="flex flex-wrap gap-1.5">
@@ -1399,7 +1577,9 @@ function AddColumnDialog({
               </button>
             ))}
           </div>
-          <p className="text-xs text-foreground/50">{titleFor(kind)}</p>
+          <p className="text-xs text-foreground/50">
+            {titlesFor(kind, count).join(" · ")}
+          </p>
         </div>
       </form>
     </Dialog>

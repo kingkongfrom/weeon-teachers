@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/session";
 import {
@@ -159,6 +160,91 @@ export async function addExamColumn(input: {
   return { ok: true, id: data.id };
 }
 
+const addColumnsSchema = z.object({
+  classId: z.string().uuid(),
+  subjectId: z.string().uuid().nullable().optional(),
+  /** Shared settings; the same points + kind + rubro for every new column. */
+  points: z.number().min(0).max(1000).nullable(),
+  kind: z.enum(["classwork", "homework", "exam", "quiz", "project"]),
+  rubroId: z.string().uuid(),
+  /** Final titles, already sequenced by the caller (Tarea 2, Tarea 3, …). */
+  titles: z.array(z.string().trim().min(1).max(120)).min(1).max(20),
+});
+
+/**
+ * Adds several grade columns in one round-trip (one INSERT, not N).
+ *
+ * The dialog lets a teacher create e.g. three more Tareas at once; doing that as
+ * N `addExamColumn` calls would cost N server actions and N refetches.
+ */
+export async function addExamColumns(input: {
+  classId: string;
+  subjectId?: string | null;
+  points: number | null;
+  kind: "classwork" | "homework" | "exam" | "quiz" | "project";
+  rubroId: string;
+  titles: string[];
+}): Promise<ExamActionResult & { ids?: string[] }> {
+  const parsed = addColumnsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "El título o los puntos no son válidos." };
+  }
+
+  const supabase = await createSessionClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const tenant_id = user?.app_metadata?.tenant_id ?? user?.user_metadata?.tenant_id;
+  if (typeof tenant_id !== "string") {
+    return { ok: false, error: "Sesión inválida. Inicie sesión de nuevo." };
+  }
+
+  // Same subject rule as the single-column path: never write an orphan column.
+  let subjectId = parsed.data.subjectId ?? null;
+  if (subjectId == null) {
+    const { data: lesson } = await supabase
+      .from("class_lessons")
+      .select("subject_id")
+      .eq("class_id", parsed.data.classId)
+      .not("subject_id", "is", null)
+      .limit(1)
+      .maybeSingle();
+    subjectId = (lesson?.subject_id as string | null) ?? null;
+    if (subjectId == null) {
+      return {
+        ok: false,
+        error: "Esta clase no tiene una materia asignada. Asigne una materia antes de agregar una columna de calificación.",
+      };
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("assignments")
+    .insert(
+      parsed.data.titles.map((title) => ({
+        tenant_id,
+        class_id: parsed.data.classId,
+        subject_id: subjectId,
+        title,
+        points: parsed.data.points,
+        kind: parsed.data.kind,
+        category: categoryFor(parsed.data.kind),
+        rubro_id: parsed.data.rubroId,
+      })),
+    )
+    .select("id");
+
+  if (error || !data) {
+    return { ok: false, error: "No se pudo agregar las columnas. Intente de nuevo." };
+  }
+
+  after(() => {
+    revalidatePath(`/grupos/${parsed.data.classId}`);
+  });
+  return { ok: true, ids: data.map((row) => row.id as string) };
+}
+
 /**
  * Sets a student's score in a column. Marks are clamped to the column's max
  * points (default 100). An empty value clears the grade (deletes the row).
@@ -298,7 +384,11 @@ export async function updateExamColumn(input: {
     .eq("class_id", classId);
   if (error) return { ok: false, error: "No se pudo actualizar la columna." };
 
-  revalidatePath(`/grupos/${classId}`);
+  // Inline renames commit on blur, so the response must not wait for the
+  // re-render; the client already has the new title optimistically.
+  after(() => {
+    revalidatePath(`/grupos/${classId}`);
+  });
   return { ok: true };
 }
 
@@ -318,7 +408,9 @@ export async function removeExamColumn(input: {
     .eq("class_id", parsed.data.classId);
   if (error) return { ok: false, error: "No se pudo eliminar la columna." };
 
-  revalidatePath(`/grupos/${parsed.data.classId}`);
+  after(() => {
+    revalidatePath(`/grupos/${parsed.data.classId}`);
+  });
   return { ok: true };
 }
 
