@@ -75,7 +75,9 @@ Page loader: `src/app/(app)/grupos/[id]/page.tsx`
   **Landscape and desktop always get the full matrix**, grade entry included —
   the rule keys on orientation, so turning an iPad sideways brings the matrix.
   Toolbar icons collapse, filters scroll sideways, and dialogs are dvh bottom
-  sheets with safe-area padding for iOS Safari.
+  sheets with safe-area padding for iOS Safari. Rationale, breakpoints and the
+  Safari notes: [`calificaciones-rubros.md`](calificaciones-rubros.md)
+  § 5.1.1 *Responsive layout — the decision*.
 - **Imprimir** prints a landscape PDF for dirección (chrome and sticky offsets
   removed, header with grupo · materia · rubros · leyenda). The CSV carries the
   same numbers, including a per-rubro points/grade row and a footer.

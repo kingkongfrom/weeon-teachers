@@ -187,10 +187,17 @@ blocks saving (a teacher mid-edit is not a corrupt state).
 
 ## 3. Calculation rules (one pure module, unit-tested)
 
-Module: **`src/lib/dashboard/grade-weights.ts`** — framework-free, no
-`"server-only"`, no Supabase. Gradebook, `/estudiantes/[id]` and (later) the
-report composer import **it**, not their own copy. Today the formula is inline
-(`studentAverage`, `gradebook-workspace.tsx:93`) — delete that.
+Module: **`src/lib/dashboard/scoreboard.ts`** — framework-free, no
+`"server-only"`, no Supabase. It owns every number the page shows:
+`rubroScore` (points + grade per rubro), `finalScore` (FINAL, renormalised),
+`classStats` (average, median, pass rate, range) and `canStillPass` (risk).
+18 tests in `scoreboard.test.ts`, run with
+`npx vitest run src/lib/dashboard --environment node`.
+
+The gradebook, the CSV, the print view and `/estudiantes/[id]` import **it**,
+not their own copy. `grade-weights.ts` remains for peso totals and the legacy
+helpers the wizard uses; the formula is no longer inline in
+`gradebook-workspace.tsx`.
 
 ### 3.1 Inputs
 
@@ -294,23 +301,24 @@ tiene notas: no cuenta"* until it is closed.
 ### 5.1 Matrix header
 
 ```
- ┌───────────────────────────────────────────────────────────────────┐
- │  [Editar rubros]                      [Buscar]      [Exportar]    │
- ├──────────────┬───────────────────┬────────────────────┬───────────┤
- │              │  Tareas · 30%     │  Exámenes · 50%    │ Proy ·20% │
- │ Estudiante   │ TAR 1   TAR 2     │ EXAM 1   PRUE 1    │ PROY 1    │
- │              │ 10 pts  20 pts    │ 100 pts  50 pts    │ 100 pts   │
- ├──────────────┼───────────────────┼────────────────────┼───────────┤
- │ Ana Pérez    │ 7       19        │ 60       35        │ 90        │   FIN 74%
- ├──────────────┼───────────────────┼────────────────────┼───────────┤
- │ Prom. col.   │ 70%     97%       │ 60%      70%       │ 90%       │
- │ Total rubro  │       88%         │       63%          │ 90%       │  Promedio 74%
- └──────────────┴───────────────────┴────────────────────┴───────────┘
+ [Editar rubros][+]  [Buscar] [Ordenar] [Pendientes] [En riesgo] [%|Pts]
+ [Imprimir] [Exportar] [Subir reporte] [+ Agregar columna]
+
+ ─────────────┬────────────────────────────────┬───────────────────────────┬───────
+  Estudiante  │  Tareas · 25%                  │  Exámenes · 40%           │ FINAL
+              │  TAR 1   TAR 2   TOTAL         │  EXAM 1   TOTAL           │   %
+              │ 10 pts  10 pts   pts · %       │ 30 pts    pts · %         │
+ ─────────────┼────────────────────────────────┼───────────────────────────┼───────
+ 1 Ana Pérez  │   8       10     18/20   90%   │   28      28/30   93%     │  91%
+ 2 Luis Rojas │   5        7     12/20   60%   │   22      22/30   73%     │  68%
+ ─────────────┼────────────────────────────────┼───────────────────────────┼───────
+  Promedio    │ Tareas · 75% · 25% · 15 pts    │ Exámenes · 83% · 40%      │  80%
+ ─────────────┴────────────────────────────────┴───────────────────────────┴───────
 ```
 
-The footer names each rubro again (`Tareas 88%`) and closes with
-**Promedio**; every displayed percentage is a whole number (`Math.round`),
-including the student FIN.
+The footer names each rubro again with its class grade, its peso and the class
+points average, and closes with **Promedio del grupo**. Every displayed
+percentage is a whole number (`Math.round`), including FINAL.
 
 Each rubro group ends with a **Total** column showing that student's **points
 earned with the resulting grade**: `28 / 30` and `93%` side by side. Points
@@ -354,22 +362,75 @@ outlier is pulling the average all read at a glance) and **sin nota**
 the weight that is left gets a red **En riesgo** flag; a student who is below
 but can still pass shows the grade they must average on what remains.
 
-**Portrait screens** — the matrix is replaced by **cards**, one per student:
-name, final grade, risk chip and a thin bar per rubro. A squeezed matrix needs
-side-scrolling and hides the answer, so the card is the default;
-**Tarjetas / Tabla** switches to the real matrix when a teacher wants it.
+### 5.1.1 Responsive layout — the decision
 
-**Landscape and desktop** — the full matrix is always shown, grade entry
-included, and the switch is hidden. This keys on **orientation**, not width:
-an iPad in portrait (768 px) gets the cards, the same iPad turned sideways gets
-the matrix. A phone in landscape (844 px wide) gets it too.
-[@media(orientation:…)] is used instead of a min-width breakpoint so the
-behaviour follows how the device is held. The
-toolbar collapses to icon-only buttons, the search/filter row scrolls
-horizontally, and the summary grid becomes 2 × 2 with the range spanning a row.
-The viewport is exported from src/app/layout.tsx with iewport-fit=cover
-and the dialogs are bottom sheets sized in dvh with safe-area padding, so
-iOS Safari's URL bar and home indicator do not cut content off.
+The gradebook has two faces and one rule. Which face you get is decided by
+**how the device is held**, not by a width breakpoint, because a 768 px portrait
+iPad and a 844 px landscape phone are both "tablet width" but have opposite
+needs.
+
+| Screen | View | Switch | Why |
+| ------ | ---- | ------ | --- |
+| Portrait — phone or iPad | **Cards** | Tarjetas / Tabla | A vertical screen fits 3–4 matrix columns. The matrix would need side-scrolling, which hides the one thing a director opens the page for: the student's standing. Cards put the answer — name, final grade, per-rubro bars — in the first 120 px. |
+| Landscape — phone, iPad, desktop | **Full matrix** | hidden | Landscape has the width to show a rubro block plus FINAL without scrolling. This is also where grades are entered, so it must be the editable view. |
+| Desktop (≥ 1024 px) | Full matrix | hidden | Same reason as landscape; the orientation query happens to match, so no extra rule is needed. |
+
+**Why orientation and not `min-width`.** An earlier attempt keyed on width
+(`lg`, then `md`) and got the iPad wrong both times: at 768 px portrait the
+matrix was forced, at 1024 px landscape the cards were unreachable if the state
+was left on them. `@media(orientation: portrait)` matches the hardware
+directly, so rotating the device flips the view live with no reload and no stale
+state:
+
+- cards render with `[@media(orientation:landscape)]:hidden`
+- the matrix renders with `showCards && "[@media(orientation:portrait)]:hidden"`
+
+The switch is `[@media(orientation:landscape)]:hidden`, so it never appears in a
+view that has already decided for you.
+
+**Card anatomy** (`components/grades/scoreboard-student-list.tsx`)
+
+- Name (truncates), risk chip or "necesita N %", final grade pill, chevron.
+- One thin bar per rubro, in matrix order: 80 px label, bar, grade.
+- Compact strip on top with class average, median and grading progress.
+- The footer repeats the legend, because the band colours need a key on paper
+  and on a phone.
+- Cards are read-only for grades by design: points are entered on the matrix,
+  and a 44 px input under a thumb invites mistyped grades on a report that goes
+  to dirección. Tap a card to open the student transcript.
+
+**Small-screen chrome** (portrait only; landscape uses the desktop chrome)
+
+- Density, print and export collapse to icon-only with `title` + `aria-label`;
+  Editar rubros, Subir reporte and Agregar columna keep their text because they
+  are the primary actions.
+- Search goes full width; sort and filter chips scroll horizontally instead of
+  wrapping into four rows.
+- Summary grid becomes 2 × 2 with the range bar spanning a row.
+- Legend drops to band dots — the numbers are already on every card.
+
+**iOS Safari specifics**
+
+- `export const viewport` in `src/app/layout.tsx` sets `viewport-fit=cover`;
+  without it the `env(safe-area-inset-*)` paddings resolve to 0 and content
+  sits under the notch. Pinch-zoom stays enabled.
+- Dialogs are bottom sheets capped with `max-h-[90dvh]`. `vh` is measured
+  *including* Safari's URL bar, which cut the footer off the sheet while the bar
+  was visible; `dvh` follows the visible area.
+- Bottom sheets pad with `env(safe-area-inset-bottom)` so the primary button
+  clears the home indicator.
+- Matrix scrolling uses `overscroll-x-contain`, so a horizontal swipe at the end
+  of the table does not trigger Safari's back-navigation gesture.
+- Column lock/delete icons stay visible on touch: the `hover: hover and
+  pointer: fine` guard excludes iPadOS Pencil/trackpad, which reports
+  `pointer: coarse`.
+
+**Verified** against the built CSS at 390×844, 844×390, 768×1024, 1024×768,
+820×1180, 1180×820 and 1440×900: cards only in portrait, matrix only in
+landscape/desktop, switch only where it can change something, and no horizontal
+overflow at any width.
+
+### 5.1.2 Print and export
 
 **Print (Imprimir)** — the app chrome, toolbars and sticky offsets are dropped
 and the table prints landscape with a header (grupo · materia · rubros · leyenda)
@@ -377,6 +438,8 @@ for the PDF that goes to dirección (`globals.css` § print-scoreboard).
 
 **CSV** — one row per student plus a second row with each rubro's
 `puntos/posibles` and grade, closed by a class-average footer.
+
+**Matrix details**
 
 - Group header: **nombre · peso**, purple badge; sticky, no wrap.
 - Column line keeps the **kind** label (`TAR 1`, `EXAM 1`) so a rubro mixing
