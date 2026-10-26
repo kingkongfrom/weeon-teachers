@@ -43,6 +43,7 @@ const questionSchema = z.object({
     "short_answer",
     "paragraph",
     "number",
+    "matching",
   ]),
   prompt: z.record(z.string(), z.unknown()),
   points: z.number().min(0).max(1000),
@@ -51,6 +52,8 @@ const questionSchema = z.object({
   ),
   correctOptionIds: z.array(z.string()),
   answerKey: z.string().max(2000).nullable(),
+  /** Matching only: left-hand premises, index-aligned with correctOptionIds. */
+  premises: z.array(z.string().max(1000)).max(20).optional(),
 });
 
 const contentSchema = z.object({ questions: z.array(questionSchema) });

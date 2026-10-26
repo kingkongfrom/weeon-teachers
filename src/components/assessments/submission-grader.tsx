@@ -508,6 +508,54 @@ function StudentAnswer({
   const t = useT();
   const a = t.assessments;
 
+  if (question.type === "matching") {
+    const premises = question.premises ?? [];
+    const given = answer?.optionIds ?? [];
+    const labelFor = (optionId: string | undefined) => {
+      const option = question.options.find((item) => item.id === optionId);
+      return option?.text?.trim() || a.optionPlaceholder;
+    };
+    return (
+      <ul className="flex flex-col gap-2">
+        {premises.map((premise, index) => {
+          const chosen = given[index];
+          const expected = question.correctOptionIds[index];
+          const hit = Boolean(chosen) && chosen === expected;
+          const missed = chosen !== expected;
+          return (
+            <li
+              key={index}
+              className={cn(
+                "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-2 text-sm",
+                hit
+                  ? "border-emerald-300 bg-emerald-50/60 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+                  : missed
+                    ? "border-rose-300 bg-rose-50/60 text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
+                    : "border-border text-foreground/60",
+              )}
+            >
+              <span className="font-semibold tabular-nums text-foreground/50">
+                {index + 1}.
+              </span>
+              <span className="font-semibold">
+                {premise.trim() || `${a.matchingPremise} ${index + 1}`}
+              </span>
+              <span aria-hidden className="text-foreground/30">
+                →
+              </span>
+              <span>{chosen ? labelFor(chosen) : a.grading.noAnswer}</span>
+              {missed ? (
+                <span className="ml-auto text-[11px] font-semibold text-foreground/50">
+                  {a.matchingExpected}: {labelFor(expected)}
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
   if (isChoiceType(question.type)) {
     const chosen = new Set(answer?.optionIds ?? []);
     return (

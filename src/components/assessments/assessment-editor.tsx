@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   AlignLeft,
   ArrowLeft,
+  ArrowLeftRight,
   Award,
   CheckCheck,
   Eye,
@@ -58,6 +59,7 @@ const QUESTION_TYPE_ICON = {
   short_answer: Type,
   paragraph: AlignLeft,
   number: Hash,
+  matching: ArrowLeftRight,
 } satisfies Record<QuestionType, typeof ListChecks>;
 
 const ADD_TYPES: QuestionType[] = [
@@ -67,6 +69,7 @@ const ADD_TYPES: QuestionType[] = [
   "short_answer",
   "paragraph",
   "number",
+  "matching",
 ];
 
 /** ISO timestamp → local `YYYY-MM-DD` for the date picker. */

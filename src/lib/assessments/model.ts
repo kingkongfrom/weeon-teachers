@@ -21,7 +21,8 @@ export type QuestionType =
   | "true_false"
   | "short_answer"
   | "paragraph"
-  | "number";
+  | "number"
+  | "matching";
 
 export const QUESTION_TYPES: QuestionType[] = [
   "multiple_choice",
@@ -30,6 +31,7 @@ export const QUESTION_TYPES: QuestionType[] = [
   "short_answer",
   "paragraph",
   "number",
+  "matching",
 ];
 
 export type QuestionOption = { id: string; text: string };
@@ -44,9 +46,18 @@ export type AssessmentQuestion = {
   correctOptionIds: string[];
   /** For short_answer/number: the expected answer (auto-grade). */
   answerKey: string | null;
+  /**
+   * For matching (Pareo): the left-hand premises, in display order.
+   * `correctOptionIds[i]` is the response id that premise `i` matches, so the
+   * two arrays are index-aligned. Each pair is worth `points / premises.length`,
+   * which is why a Pareo question's points equal its premise count (each pair
+   * = 1 pt) — see `matchingPairPoints`.
+   */
+  premises?: string[];
 };
 
 export type AssessmentContent = { questions: AssessmentQuestion[] };
+
 
 export type AssessmentKind = "homework" | "exam";
 
@@ -119,14 +130,34 @@ export function newQuestion(type: QuestionType): AssessmentQuestion {
     type,
     prompt: emptyDoc(),
     points: 1,
-    options: defaultOptionsFor(type),
+    options: type === "matching" ? defaultMatchingOptions() : defaultOptionsFor(type),
     correctOptionIds: [],
     answerKey: null,
+    ...(type === "matching" ? { premises: ["", ""] } : {}),
   };
 }
 
 export function isChoiceType(type: QuestionType): boolean {
   return type === "multiple_choice" || type === "multiple_answer" || type === "true_false";
+}
+
+/** Pareo: number of left premises (equals the question's points, 1 pt each). */
+export function matchingPairCount(question: Pick<AssessmentQuestion, "premises">): number {
+  return question.premises?.length ?? 0;
+}
+
+/** Points awarded per correctly matched pair (1 when points track the count). */
+export function matchingPairPoints(
+  question: Pick<AssessmentQuestion, "points" | "premises">,
+): number {
+  const pairs = matchingPairCount(question);
+  if (pairs <= 0) return 0;
+  return question.points / pairs;
+}
+
+/** A Pareo always starts with two premise/response pairs to fill in. */
+export function defaultMatchingOptions(): QuestionOption[] {
+  return [newOption(), newOption()];
 }
 
 export function computePointsTotal(content: AssessmentContent): number {
@@ -154,6 +185,7 @@ export function isObjective(type: QuestionType): boolean {
     type === "multiple_answer" ||
     type === "true_false" ||
     type === "short_answer" ||
-    type === "number"
+    type === "number" ||
+    type === "matching"
   );
 }

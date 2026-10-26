@@ -1,9 +1,55 @@
 /** Grading helpers shared by the teacher grader UI. Pure functions only — no
  * server imports — so the scoring suggestions are easy to reason about. */
 
-import { isChoiceType, type AssessmentQuestion } from "@/lib/assessments/model";
+import {
+  isChoiceType,
+  matchingPairCount,
+  matchingPairPoints,
+  type AssessmentQuestion,
+} from "@/lib/assessments/model";
 
 export type AnswerLike = { optionIds: string[]; textValue: string };
+
+/**
+ * Matching (Pareo): how many premises point at their correct response.
+ *
+ * `optionIds` is positional — index `i` is the response chosen for premise `i` —
+ * so the same response used for two premises only counts once, and swapped
+ * answers are wrong (unlike the set comparison used for multiple choice).
+ * An unanswered premise (`undefined`/empty slot) never matches.
+ */
+export function matchingHits(
+  question: AssessmentQuestion,
+  answer: AnswerLike | undefined,
+): number {
+  const premises = question.premises ?? [];
+  const given = answer?.optionIds ?? [];
+  let hits = 0;
+  for (let index = 0; index < premises.length; index += 1) {
+    const chosen = given[index];
+    if (!chosen) continue;
+    if (chosen === question.correctOptionIds[index]) hits += 1;
+  }
+  return hits;
+}
+
+/** Whether a Pareo has an answer key complete enough to auto-score. */
+export function matchingIsScoreable(question: AssessmentQuestion): boolean {
+  const pairs = matchingPairCount(question);
+  if (pairs === 0) return false;
+  return Array.from({ length: pairs }, (_, index) => question.correctOptionIds[index]).every(
+    (value) => Boolean(value),
+  );
+}
+
+/** Points earned on a Pareo: one share per correctly matched pair. */
+export function matchingScore(
+  question: AssessmentQuestion,
+  answer: AnswerLike | undefined,
+): number {
+  if (!matchingIsScoreable(question)) return 0;
+  return matchingHits(question, answer) * matchingPairPoints(question);
+}
 
 /** Lowercase, trim, collapse spaces, and drop accents for tolerant compares. */
 export function normalizeAnswer(value: string): string {
@@ -38,6 +84,11 @@ export function answerIsCorrect(
   question: AssessmentQuestion,
   answer: AnswerLike | undefined,
 ): boolean | null {
+  if (question.type === "matching") {
+    if (!matchingIsScoreable(question)) return null;
+    return matchingHits(question, answer) === matchingPairCount(question);
+  }
+
   if (isChoiceType(question.type)) {
     if (question.correctOptionIds.length === 0) return null;
     return sameSet(answer?.optionIds ?? [], question.correctOptionIds);
@@ -61,11 +112,19 @@ export function answerIsCorrect(
   return null;
 }
 
-/** Suggested points: full when correct, zero when wrong, `null` when manual. */
+/**
+ * Suggested points: full when correct, zero when wrong, `null` when manual.
+ * Matching scores per pair, so a partially correct Pareo earns partial credit
+ * (3 of 5 pairs on a 5-pt question → 3 pts).
+ */
 export function suggestScore(
   question: AssessmentQuestion,
   answer: AnswerLike | undefined,
 ): number | null {
+  if (question.type === "matching") {
+    if (!matchingIsScoreable(question)) return null;
+    return matchingScore(question, answer);
+  }
   const correct = answerIsCorrect(question, answer);
   if (correct === null) return null;
   return correct ? question.points : 0;

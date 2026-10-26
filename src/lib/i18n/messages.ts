@@ -638,6 +638,7 @@ const es = {
       short_answer: "Respuesta corta",
       paragraph: "Párrafo",
       number: "Número",
+      matching: "Pareo",
     },
     questionTypeHints: {
       multiple_choice: "Una sola respuesta correcta",
@@ -646,7 +647,22 @@ const es = {
       short_answer: "Respuesta escrita breve",
       paragraph: "Respuesta abierta larga",
       number: "Resultado numérico",
+      matching: "Emparejar dos columnas",
     },
+    matchingHint: "Empareje cada elemento de la izquierda con su respuesta.",
+    matchingPremise: "Columna izquierda",
+    matchingResponse: "Columna derecha",
+    matchingPremisePlaceholder: "Elemento a emparejar",
+    matchingResponsePlaceholder: "Respuesta",
+    matchingAddPair: "Añadir par",
+    matchingNoResponse: "Sin respuesta",
+    matchingExpected: "Correcta",
+    matchingPairPoints: (pairs: number, points: number) =>
+      pairs === points
+        ? `${pairs} ${pairs === 1 ? "par" : "pares"} · 1 pt por par`
+        : `${pairs} ${pairs === 1 ? "par" : "pares"} · ${points} pts (${(points / Math.max(1, pairs)).toFixed(2).replace(/\.00$/, "")} por par)`,
+    matchingDraftHint:
+      "Los puntos definen la cantidad de pares: 10 puntos = 10 pares, 1 punto por par.",
     noQuestionsTitle: "Aún no hay preguntas",
     noQuestionsHint:
       "Añada la primera pregunta para que los estudiantes puedan responder.",
@@ -1898,6 +1914,7 @@ const en: Messages = {
       short_answer: "Short answer",
       paragraph: "Paragraph",
       number: "Number",
+      matching: "Matching",
     },
     questionTypeHints: {
       multiple_choice: "One correct answer",
@@ -1906,7 +1923,22 @@ const en: Messages = {
       short_answer: "Brief written answer",
       paragraph: "Long open answer",
       number: "Numeric result",
+      matching: "Match two columns",
     },
+    matchingHint: "Match each item on the left with its response.",
+    matchingPremise: "Left column",
+    matchingResponse: "Right column",
+    matchingPremisePlaceholder: "Item to match",
+    matchingResponsePlaceholder: "Response",
+    matchingAddPair: "Add pair",
+    matchingNoResponse: "No answer",
+    matchingExpected: "Correct",
+    matchingPairPoints: (pairs: number, points: number) =>
+      pairs === points
+        ? `${pairs} ${pairs === 1 ? "pair" : "pairs"} · 1 pt per pair`
+        : `${pairs} ${pairs === 1 ? "pair" : "pairs"} · ${points} pts (${(points / Math.max(1, pairs)).toFixed(2).replace(/\.00$/, "")} each)`,
+    matchingDraftHint:
+      "Points set the number of pairs: 10 points = 10 pairs, 1 point per pair.",
     noQuestionsTitle: "No questions yet",
     noQuestionsHint: "Add the first question so students can answer.",
     questionPromptPlaceholder: "Write the question…",

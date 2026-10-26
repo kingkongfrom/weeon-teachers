@@ -74,6 +74,30 @@ function QuestionAnswerPreview({ question }: { question: AssessmentQuestion }) {
   const t = useT();
   const a = t.assessments;
 
+  if (question.type === "matching") {
+    const premises = question.premises ?? [];
+    return (
+      <ul className="flex flex-col gap-1.5">
+        {premises.map((premise, index) => (
+          <li
+            key={index}
+            className="flex items-center gap-2 text-sm text-foreground/70"
+          >
+            <span className="min-w-0 flex-1 truncate rounded-md border border-border px-2 py-1">
+              {premise.trim() || `${a.matchingPremise} ${index + 1}`}
+            </span>
+            <span aria-hidden className="text-foreground/30">
+              →
+            </span>
+            <span className="min-w-0 flex-1 truncate rounded-md border border-dashed border-border px-2 py-1 text-foreground/45">
+              {a.matchingResponse}
+            </span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   if (isChoiceType(question.type)) {
     const multiple = question.type === "multiple_answer";
     return (
