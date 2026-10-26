@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeRubroName, resolveRubroForKind } from "./rubro-routing";
+import { kindForRouting } from "./exams";
 
 const rubro = (over: {
   id: string;
@@ -13,6 +14,69 @@ const rubro = (over: {
   position: over.position ?? 0,
   archived: false,
   defaultKind: over.defaultKind ?? null,
+});
+
+/**
+ * Contract shared with `public.resolve_rubro_for_kind` in
+ * weeon-tenants/supabase/migrations/20261026180000_grade_wiring.sql.
+ *
+ * The ladder is implemented twice on purpose (publishing runs in TypeScript,
+ * grading inside SQL). These cases are the contract: if either copy drifts, a
+ * column can be filed by one path and not the other — which is exactly how the
+ * "grades that never count toward FINAL" bug happened.
+ * See docs/grade-wiring.md § 4 and § 9.
+ */
+describe("rubro ladder contract (SQL parity)", () => {
+  it("reduces the five assignment kinds to the two rubro kinds", () => {
+    expect(kindForRouting("homework")).toBe("homework");
+    expect(kindForRouting("classwork")).toBe("homework");
+    expect(kindForRouting("project")).toBe("homework");
+    expect(kindForRouting("exam")).toBe("exam");
+    expect(kindForRouting("quiz")).toBe("exam");
+    // A column with no kind must route predictably rather than throw.
+    expect(kindForRouting(null)).toBe("homework");
+  });
+
+  it("matches whole names only, in both directions", () => {
+    expect(
+      resolveRubroForKind(
+        [
+          rubro({ id: "t", name: "Tareas" }),
+          rubro({ id: "e", name: "Exámenes", position: 1 }),
+        ],
+        "exam",
+      )?.id,
+    ).toBe("e");
+    // Partial names must not be treated as the category.
+    const decoys = [
+      rubro({ id: "d1", name: "Repaso de examen" }),
+      rubro({ id: "d2", name: "Entrega de tareas atrasadas", position: 1 }),
+    ];
+    expect(resolveRubroForKind(decoys, "exam")).toBeNull();
+    expect(resolveRubroForKind(decoys, "homework")).toBeNull();
+  });
+
+  it("prefers the tag so a renamed rubro keeps working", () => {
+    const rubric = [
+      rubro({ id: "x", name: "Evaluaciones cortas", defaultKind: "exam" }),
+      rubro({ id: "y", name: "Exámenes", position: 1 }),
+    ];
+    expect(resolveRubroForKind(rubric, "exam")?.id).toBe("x");
+  });
+
+  it("ignores archived rubros on both rungs", () => {
+    const rubric = [
+      { ...rubro({ id: "a", name: "Tareas" }), archived: true },
+      rubro({ id: "b", name: "Trabajo en clase", position: 1 }),
+    ];
+    expect(resolveRubroForKind(rubric, "homework")?.id).toBe("b");
+  });
+
+  it("is tolerant of accents, case and padding, like the SQL normalize", () => {
+    for (const name of [" examen ", "EXÁMENES", "Exámen", "examenes"]) {
+      expect(resolveRubroForKind([rubro({ id: "e", name })], "exam")?.id).toBe("e");
+    }
+  });
 });
 
 describe("normalizeRubroName", () => {

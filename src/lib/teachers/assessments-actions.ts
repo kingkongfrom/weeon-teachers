@@ -226,48 +226,66 @@ async function syncGradeColumn(
 
     // Published columns must land in the rubro that holds their KIND, or the
     // weighted final silently mis-reads them (an Examen inside Tareas moved
-    // FINAL without anyone seeing why). Resolve by explicit `default_kind`,
-    // then by the rubro's name; if the rubric offers neither, leave the column
-    // UNASSIGNED — visible under "Sin rubro", one click to move — instead of
-    // guessing the first rubro.
+    // FINAL without anyone seeing why).
+    //
+    // The ladder lives in the DATABASE as `rubro_for_new_column` so grading and
+    // publishing cannot drift apart — grading runs in SQL and cannot call a
+    // TypeScript helper, and two copies of a rule this consequential is how the
+    // original bug happened. The TS resolver stays as the fallback for a
+    // database that has not been migrated yet, and as the single implementation
+    // the unit tests pin.
+    // See docs/grade-wiring.md § 4.
     let rubroId: string | null = null;
-    try {
-      const { data: rubros } = await supabase
-        .from("grade_rubros")
-        .select("id, name, position, archived, default_kind")
-        .eq("class_id", input.classId)
-        .eq("subject_id", subjectId)
-        .eq("archived", false)
-        .order("position");
+    const { data: routed, error: routeError } = await supabase.rpc(
+      "rubro_for_new_column",
+      {
+        p_tenant: tenantId,
+        p_class: input.classId,
+        p_subject: subjectId,
+        p_kind: input.kind,
+      },
+    );
 
-      const rubric = (rubros ?? []).map((rubro) => ({
-        id: rubro.id as string,
-        name: (rubro.name as string) ?? "",
-        position: (rubro.position as number) ?? 0,
-        archived: Boolean(rubro.archived),
-        defaultKind: (rubro.default_kind as "homework" | "exam" | null) ?? null,
-      }));
-      rubroId = resolveRubroForKind(rubric, input.kind)?.id ?? null;
-
-      // No rubric at all yet: keep the historical fallback so a brand-new
-      // subject still has a home for its column.
-      if (rubric.length === 0) {
-        const { data: created } = await supabase
+    if (!routeError) {
+      rubroId = (routed as string | null) ?? null;
+    } else {
+      // Unmigrated database: resolve client-side, same rules.
+      try {
+        const { data: rubros } = await supabase
           .from("grade_rubros")
-          .insert({
-            tenant_id: tenantId,
-            class_id: input.classId,
-            subject_id: subjectId,
-            name: "General",
-            peso: 100,
-            position: 0,
-          })
-          .select("id")
-          .single();
-        rubroId = created?.id ?? null;
+          .select("id, name, position, archived")
+          .eq("class_id", input.classId)
+          .eq("subject_id", subjectId)
+          .eq("archived", false)
+          .order("position");
+
+        const rubric = (rubros ?? []).map((rubro) => ({
+          id: rubro.id as string,
+          name: (rubro.name as string) ?? "",
+          position: (rubro.position as number) ?? 0,
+          archived: Boolean(rubro.archived),
+        }));
+        rubroId = resolveRubroForKind(rubric, input.kind)?.id ?? null;
+
+        // No rubric at all: the documented compatibility fallback.
+        if (rubric.length === 0) {
+          const { data: created } = await supabase
+            .from("grade_rubros")
+            .insert({
+              tenant_id: tenantId,
+              class_id: input.classId,
+              subject_id: subjectId,
+              name: "General",
+              peso: 100,
+              position: 0,
+            })
+            .select("id")
+            .single();
+          rubroId = created?.id ?? null;
+        }
+      } catch {
+        rubroId = null;
       }
-    } catch {
-      rubroId = null;
     }
 
     const { error: insertError } = await supabase.from("assignments").insert({
