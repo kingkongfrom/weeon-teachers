@@ -1466,7 +1466,7 @@ export function GradebookWorkspace({
                       <span className={cn("text-xs font-bold uppercase tracking-wide", ACCENT_TEXT)}>
                         {w.final}
                       </span>
-                      <span className="text-[9px] font-semibold text-foreground/45">
+                      <span className="text-[9px] font-semibold text-foreground/65">
                         {w.finalPercentSuffix}
                       </span>
                     </div>
@@ -1523,7 +1523,7 @@ export function GradebookWorkspace({
                         <span className="block text-[9px] font-bold uppercase leading-tight tracking-[0.08em] text-[#5b21b6] dark:text-[#c4b5fd]">
                           {copy.subtotal}
                         </span>
-                        <span className="block text-[8px] font-semibold uppercase tracking-[0.06em] text-foreground/40">
+                        <span className="block text-[8px] font-semibold uppercase tracking-[0.06em] text-foreground/65">
                           {copy.pointsShort} · {w.finalPercentSuffix}
                         </span>
                       </th>
@@ -1648,7 +1648,7 @@ export function GradebookWorkspace({
                           title={sb.finalColumn}
                           className={cn(
                             "inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none tabular-nums",
-                            final == null ? "text-foreground/40" : tonePillClass(final),
+                            final == null ? "text-foreground/65" : tonePillClass(final),
                           )}
                         >
                           {final == null ? "—" : `${final}${w.finalPercentSuffix}`}
@@ -1680,22 +1680,22 @@ export function GradebookWorkspace({
                         className="sticky bottom-0 z-30 border-r border-t border-l-2 border-l-foreground/25 border-border bg-surface-muted px-1 py-1 text-center text-xs font-bold"
                       >
                         <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5">
-                          <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/45">
+                          <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/65">
                             {group.name ?? copy.noRubro}
                           </span>
                           <span
                             className={cn(
                               "inline-block rounded-md px-2 py-0.5 tabular-nums",
-                              gradeAvg == null ? "text-foreground/40" : tonePillClass(gradeAvg),
+                              gradeAvg == null ? "text-foreground/65" : tonePillClass(gradeAvg),
                             )}
                           >
                             {gradeAvg == null ? "—" : `${gradeAvg}%`}
                           </span>
-                          <span className="text-[9px] font-semibold text-foreground/40">
+                          <span className="text-[9px] font-semibold text-foreground/65">
                             {copy.pesoTotalValue(group.peso ?? 0)}
                           </span>
                           {pointsAvg != null ? (
-                            <span className="text-[9px] font-semibold tabular-nums text-foreground/40">
+                            <span className="text-[9px] font-semibold tabular-nums text-foreground/65">
                               {sb.pointsAverage(formatPoints(pointsAvg))}
                             </span>
                           ) : null}
@@ -1705,13 +1705,13 @@ export function GradebookWorkspace({
                   })}
                   <td className={cn("sticky bottom-0 right-0 z-40 min-w-[6rem] border-l-2 border-t border-l-foreground/25 border-border bg-surface-muted px-2 text-center text-xs font-bold", headY)}>
                     <div className="flex items-baseline justify-center gap-1.5">
-                      <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/45">
+                      <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/65">
                         {copy.average}
                       </span>
                       <span
                         className={cn(
                           "inline-block rounded-md px-2 py-0.5 tabular-nums",
-                          overall == null ? "text-foreground/40" : tonePillClass(overall),
+                          overall == null ? "text-foreground/65" : tonePillClass(overall),
                         )}
                       >
                         {overall == null ? "—" : `${overall}%`}
@@ -2288,7 +2288,7 @@ function ColumnHeader({
           title={pointsEditable ? w.columnPointsEdit : w.columnPointsLocked}
           aria-label={`${w.columnPointsShort(maxPts)} · ${w.columnPoints}`}
           className={cn(
-            "rounded px-1 text-[9px] font-semibold tabular-nums text-foreground/45",
+            "rounded px-1 text-[9px] font-semibold tabular-nums text-foreground/65",
             pointsEditable
               ? "cursor-text hover:bg-surface-muted hover:text-foreground hover:ring-1 hover:ring-brand-400/40"
               : "cursor-default",
@@ -2303,7 +2303,7 @@ function ColumnHeader({
       <span
         className={cn(
           "flex h-3 items-center justify-center text-[9px] font-semibold uppercase tracking-wide",
-          column.closedAt ? "text-foreground/45" : "invisible",
+          column.closedAt ? "text-foreground/65" : "invisible",
         )}
         aria-hidden={!column.closedAt}
       >

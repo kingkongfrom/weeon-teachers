@@ -16,7 +16,7 @@ const TONE_PILL: Record<ReturnType<typeof gradeTone>, string> = {
   pass: "bg-[#abe3dc] text-[#0f4c47] dark:bg-[#0f2f2c] dark:text-[#6ee7d7]",
   warn: "bg-[#fdeecd] text-[#92400e] dark:bg-[#3a2a12] dark:text-[#fde68a]",
   fail: "bg-[#fbdee7] text-[#9f1239] dark:bg-[#3a1622] dark:text-[#fda4af]",
-  none: "text-foreground/35",
+  none: "text-foreground/65",
 };
 
 export function tonePillClass(value: number | null): string {
@@ -56,7 +56,7 @@ export function RubroTotalCell({
       {showPoints ? (
         <span className="text-sm font-bold leading-none text-foreground">
           {formatPoints(points)}
-          <span className="ml-0.5 text-[10px] font-semibold text-foreground/40">
+          <span className="ml-0.5 text-[10px] font-semibold text-foreground/65">
             /{formatPoints(max)}
           </span>
         </span>
