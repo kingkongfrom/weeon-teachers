@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, FileText, Loader2, Search, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { Dialog } from "@/components/ui/dialog";
 import { Dropdown } from "@/components/ui/dropdown";
 import { filterLibraryItems, type LibraryItem } from "@/lib/assessments/library";
@@ -35,7 +35,7 @@ export function LibraryPickerDialog({
   subjectId: string | null;
   onClose: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const l = t.library;
   const router = useRouter();
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Dropdown } from "@/components/ui/dropdown";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import type { LessonChoice, LessonWeekday } from "@/lib/agenda/lesson-choice";
 import { createCalendarEvent, type CalendarEventInput } from "@/lib/teachers/calendar-actions";
 
@@ -73,7 +73,7 @@ export function EventFormDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
 
   return (
     <Dialog open={open} title={t.agenda.events.dialogTitle} onClose={onClose}>
@@ -101,7 +101,7 @@ function EventForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const a = t.agenda.events;
 
   const date =

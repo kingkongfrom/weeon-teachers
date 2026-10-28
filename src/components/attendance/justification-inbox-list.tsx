@@ -5,13 +5,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { JustificationDecision } from "@/components/attendance/justification-decision";
 import type { JustificationInboxItem } from "@/lib/dashboard/justification-inbox";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 
 /** Pending justifications — drops each row as soon as the teacher decides. */
 export function JustificationInboxList({ items }: { items: JustificationInboxItem[] }) {
   const router = useRouter();
-  const locale = useLocale();
-  const t = useT();
+  const locale = useLiveLocale();
+  const t = useLiveT();
   const a = t.attendance;
   const [visible, setVisible] = useState(items);
 

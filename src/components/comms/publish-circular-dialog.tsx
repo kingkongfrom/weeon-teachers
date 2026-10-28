@@ -22,7 +22,7 @@ import { messagesTone } from "@/lib/comms/messages-tone";
 import type { CircularCategory } from "@/lib/dashboard/teacher-circulars";
 import { publishTeacherCircular } from "@/lib/teachers/circular-actions";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 const MAX_ATTACHMENTS = 10;
 
@@ -64,7 +64,7 @@ export function PublishCircularDialog({
   onClose: () => void;
   onPublished?: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

@@ -1,7 +1,9 @@
 import "server-only";
 
+import { cache } from "react";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
+import { signJustificationPaths } from "@/lib/dashboard/justification-urls";
 import { loadTeacherTeachingScope } from "@/lib/dashboard/teacher-scope";
 import type { AttendanceStatus } from "@/lib/attendance/model";
 import { normalizeAttendanceStatus } from "@/lib/attendance/model";
@@ -19,8 +21,25 @@ export type JustificationInboxItem = {
   sentAt: string | null;
 };
 
+/** Pending parent justifications for one group — the class header badge. */
+export const loadJustificationCountForClass = cache(
+  async (classId: string): Promise<number> => {
+    const session = await getTeacherSession();
+    if (!session) return 0;
+
+    const supabase = await createSessionClient();
+    const { count, error } = await supabase
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("class_id", classId)
+      .eq("guardian_decision", "pending");
+    if (error) return 0;
+    return count ?? 0;
+  },
+);
+
 /** Parent justifications the teacher has not accepted or rejected yet. */
-export async function loadJustificationInbox(): Promise<JustificationInboxItem[]> {
+export const loadJustificationInbox = cache(async (): Promise<JustificationInboxItem[]> => {
   const session = await getTeacherSession();
   if (!session) return [];
 
@@ -61,19 +80,20 @@ export async function loadJustificationInbox(): Promise<JustificationInboxItem[]
   }
 
   const items: JustificationInboxItem[] = [];
+  const paths = data
+    .map((row) =>
+      typeof row.guardian_attachment_path === "string" ? row.guardian_attachment_path.trim() : "",
+    )
+    .filter((path) => path.length > 0);
+  const signed = await signJustificationPaths(supabase, paths);
+
   for (const row of data) {
     const status = normalizeAttendanceStatus(row.status);
     const note = typeof row.guardian_note === "string" ? row.guardian_note.trim() : "";
     if (!status || !note) continue;
     const attachmentPath =
       typeof row.guardian_attachment_path === "string" ? row.guardian_attachment_path.trim() : "";
-    let attachmentUrl: string | null = null;
-    if (attachmentPath) {
-      const signed = await supabase.storage
-        .from("attendance-justifications")
-        .createSignedUrl(attachmentPath, 60 * 60);
-      attachmentUrl = signed.data?.signedUrl ?? null;
-    }
+    const attachmentUrl = attachmentPath ? (signed.get(attachmentPath) ?? null) : null;
     items.push({
       recordId: row.id,
       classId: row.class_id,
@@ -88,4 +108,4 @@ export async function loadJustificationInbox(): Promise<JustificationInboxItem[]
     });
   }
   return items;
-}
+});

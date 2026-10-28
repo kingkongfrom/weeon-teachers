@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { BarChart3, CalendarDays, Clock, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import { ReportExpandable } from "@/components/reports/report-expandable";
 import {
   ATTENDANCE_CODE,
@@ -103,7 +103,7 @@ export function ReportPreviewPanels({
 type PanelPresentation = "section" | "collapsible" | "embedded";
 
 function ReportArchiveSnapshotPanel({ draft }: { draft: ReportDraft }) {
-  const t = useT();
+  const t = useLiveT();
   const c = t.composer;
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
@@ -131,7 +131,7 @@ function ReportArchiveSnapshotPanel({ draft }: { draft: ReportDraft }) {
 
 function snapshotBundleSubtitle(
   draft: ReportDraft,
-  c: ReturnType<typeof useT>["composer"],
+  c: ReturnType<typeof useLiveT>["composer"],
 ): string {
   const conduct = conductTotals(draft);
   const late = draft.attendanceLog.filter((r) => isLateAttendanceStatus(r.status)).length;
@@ -158,7 +158,7 @@ function conductTotals(draft: ReportDraft): { merits: number; demerits: number }
 
 function conductSummaryLine(
   draft: ReportDraft,
-  c: ReturnType<typeof useT>["composer"],
+  c: ReturnType<typeof useLiveT>["composer"],
 ): string {
   const { merits, demerits } = conductTotals(draft);
   if (merits === 0 && demerits === 0 && draft.conductLog.length === 0) {
@@ -169,7 +169,7 @@ function conductSummaryLine(
 
 function attendanceSummaryLine(
   draft: ReportDraft,
-  c: ReturnType<typeof useT>["composer"],
+  c: ReturnType<typeof useLiveT>["composer"],
 ): string {
   const late = draft.attendanceLog.filter((r) => isLateAttendanceStatus(r.status)).length;
   const absence = draft.attendanceLog.filter((r) => isAbsenceAttendanceStatus(r.status)).length;
@@ -180,7 +180,7 @@ function attendanceSummaryLine(
 }
 
 function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
-  const t = useT();
+  const t = useLiveT();
   const c = t.composer;
   const w = t.gradebook.workspace.rubros;
   const assignmentIds = Object.keys(draft.grades);
@@ -507,9 +507,9 @@ function ReportConductPanel({
   draft: ReportDraft;
   presentation?: PanelPresentation;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const c = t.composer;
-  const locale = useLocale();
+  const locale = useLiveLocale();
   const rows = draft.studentIds.filter((id) => draft.conduct[id] != null);
   const categoryBreakdown = useMemo(
     () => buildConductCategoryBreakdown(draft.conductLog),
@@ -689,9 +689,9 @@ function ReportAttendancePanel({
   draft: ReportDraft;
   presentation?: PanelPresentation;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const c = t.composer;
-  const locale = useLocale();
+  const locale = useLiveLocale();
   const [filter, setFilter] = useState<AttendanceFilter>("all");
 
   const summaryRows = draft.studentIds.filter((id) => {

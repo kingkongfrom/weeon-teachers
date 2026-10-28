@@ -23,7 +23,7 @@ import {
   trashTeacherCircular,
 } from "@/lib/teachers/circular-actions";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 type View = "all" | "uncategorized" | "category" | "trash";
 
@@ -63,7 +63,7 @@ export function CircularesWorkspace({
   categories: CircularCategory[];
   groups: CommsGroupWithGrade[];
 }) {
-  const t = useT();
+  const t = useLiveT();
   const router = useRouter();
   const previewRequest = useRef(0);
   const [query, setQuery] = useState("");

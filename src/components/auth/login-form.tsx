@@ -5,14 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AmbientPage } from "@/components/brand/ambient-page";
 import { PasswordInput } from "@/components/ui/password-input";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import {
   completeTeacherPasswordLogin,
   startTeacherLogin,
 } from "@/lib/auth/actions";
 
 export function LoginForm({ initialError = null }: { initialError?: string | null }) {
-  const t = useT();
+  const t = useLiveT();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");

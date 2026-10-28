@@ -17,7 +17,7 @@ import {
   weekdayIndex,
 } from "@/lib/dashboard/month";
 import { addDays, isoDate, mondayOf } from "@/lib/dashboard/week";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { eventHubChip, eventHubDot } from "@/lib/dashboard/tones";
 import type { CalendarEventType, TeacherCalendarEvent, TeacherExamDue } from "@/lib/dashboard/calendar";
@@ -75,8 +75,8 @@ export function CalendarView({
   events: TeacherCalendarEvent[];
   exams: TeacherExamDue[];
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const cal = t.agenda.calendario;
   const intlLocale = locale === "en" ? "en-US" : "es-CR";
   const router = useRouter();
@@ -292,8 +292,8 @@ function MonthView({
   onSelect: (key: string) => void;
   onOpenDay: (key: string) => void;
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const month = anchor.getMonth();
   const cells = monthCells(anchor);
 
@@ -396,7 +396,7 @@ function WeekView({
   onSelect: (key: string) => void;
   onOpenDay: (key: string) => void;
 }) {
-  const locale = useLocale();
+  const locale = useLiveLocale();
   const monday = mondayOf(anchor);
   const days = Array.from({ length: 5 }, (_, index) => addDays(monday, index));
   const now = useNow();
@@ -489,8 +489,8 @@ function DayView({
   itemsOn: (key: string) => CalItem[];
   onSelect: (key: string) => void;
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const key = isoDate(anchor);
   const allDay = itemsOn(key).filter((item) => item.allDay || !item.startTime);
   const now = useNow();
@@ -559,8 +559,8 @@ function AgendaView({
   itemsOn: (key: string) => CalItem[];
   onOpenDay: (key: string) => void;
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const intlLocale = locale === "en" ? "en-US" : "es-CR";
   const days = Array.from({ length: AGENDA_DAYS }, (_, index) => addDays(anchor, index)).filter(
     (day) => weekdayIndex(day) < 5 && itemsOn(isoDate(day)).length > 0,
@@ -704,10 +704,10 @@ function ItemRow({
   showDate = false,
 }: {
   item: CalItem;
-  t: ReturnType<typeof useT>;
+  t: ReturnType<typeof useLiveT>;
   showDate?: boolean;
 }) {
-  const locale = useLocale();
+  const locale = useLiveLocale();
   const intlLocale = locale === "en" ? "en-US" : "es-CR";
   const when = item.allDay || !item.startTime ? t.agenda.events.form.allDay : item.startTime;
   const meta = [
@@ -805,7 +805,7 @@ function weekdayLabels(locale: string): string[] {
   );
 }
 
-function typeLabel(t: ReturnType<typeof useT>, type: StyleKey): string {
+function typeLabel(t: ReturnType<typeof useLiveT>, type: StyleKey): string {
   return t.agenda.events.types[type];
 }
 

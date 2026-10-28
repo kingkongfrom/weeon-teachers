@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import {
   bindRealtimeAuthRefresh,
   getAuthedRealtimeClient,
@@ -44,7 +44,7 @@ export function AdminTeacherChatWorkspace({
   me: string;
   realtime: RealtimeConfig;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const m = t.messages;
   const router = useRouter();
   const { url: realtimeUrl, anonKey: realtimeAnonKey } = realtime;

@@ -5,8 +5,8 @@ import { loadClassMaterials } from "@/lib/dashboard/materials";
 import { loadClassAssessments } from "@/lib/dashboard/assessments";
 import { loadClassExamDates, loadClassLessonDays } from "@/lib/dashboard/exam-dates";
 import { loadClassTurnIns } from "@/lib/dashboard/submissions";
-import { loadClassAttendance } from "@/lib/dashboard/attendance";
-import { loadJustificationInbox } from "@/lib/dashboard/justification-inbox";
+import { loadClassAttendance, type AttendanceMark } from "@/lib/dashboard/attendance";
+import { loadJustificationCountForClass } from "@/lib/dashboard/justification-inbox";
 import { normalizeAttendanceDate } from "@/lib/attendance/model";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { loadSchoolName } from "@/lib/dashboard/school";
@@ -17,7 +17,14 @@ export const dynamic = "force-dynamic";
 /**
  * Virtual classroom class page. The subject badges below the banner switch the
  * active subject; the banner shows the current one and Trabajo de clase is
- * filtered to it, so documents and work stay separated per subject.
+ * filtered to it, so documents and work stay separate per subject.
+ *
+ * **What each request loads is decided by the tab.** Every subject pill, tab
+ * and class navigation lands here, and it used to run every loader — materials,
+ * assessments, submissions, attendance, exam dates, timetable periods and the
+ * whole school-wide justification inbox — before painting anything. Now only
+ * the active tab's data is fetched, in one parallel round; a subject switch is
+ * just the classwork pair again.
  */
 export default async function AulaVirtualClassPage({
   params,
@@ -29,7 +36,7 @@ export default async function AulaVirtualClassPage({
   const { classId } = await params;
   const { tab, subject, date, lesson } = await searchParams;
 
-  const detail = await loadTeacherGrupo(classId);
+  const [detail, session] = await Promise.all([loadTeacherGrupo(classId), getTeacherSession()]);
   if (!detail) notFound();
 
   const attendanceDate = normalizeAttendanceDate(date);
@@ -37,29 +44,43 @@ export default async function AulaVirtualClassPage({
     lesson && /^[0-9a-fA-F-]{36}$/.test(lesson) ? lesson : null;
 
   const { grupo, students } = detail;
-  const [
-    session,
-    materials,
-    rawAssessments,
-    attendanceMarks,
-    turnIns,
-    pendingJustifications,
-    examDates,
-    lessonDays,
-  ] = await Promise.all([
-    getTeacherSession(),
-    loadClassMaterials(classId),
-    loadClassAssessments(classId),
-    loadClassAttendance(classId, attendanceDate),
-    loadClassTurnIns(classId, students),
-    loadJustificationInbox().then((rows) => rows.filter((row) => row.classId === classId).length),
-    loadClassExamDates(classId),
-    loadClassLessonDays(classId),
-  ]);
-  const schoolName = session ? await loadSchoolName(session.tenantId) : null;
+  const worksOnClasswork =
+    tab !== "examenes" && tab !== "personas" && tab !== "asistencia" && tab !== "calificaciones";
+  const worksOnExams = tab === "examenes";
+  const worksOnAttendance = tab === "asistencia";
+
+  // Every entry is an awaited promise of its own type: a union of
+  // `Promise<A> | Promise<B>` collapses to `Promise<A | B>` and the tuple
+  // below stops checking, so a tab that loads nothing must still resolve to an
+  // *empty* value of the right type (`[]`, `new Map()`), never `undefined`.
+  const [materials, rawAssessments, turnIns, attendanceMarks, examDates, lessonDays, pendingJustifications, schoolName] =
+    await Promise.all([
+      worksOnClasswork
+        ? loadClassMaterials(classId)
+        : Promise.resolve([] as Awaited<ReturnType<typeof loadClassMaterials>>),
+      worksOnClasswork
+        ? loadClassAssessments(classId)
+        : Promise.resolve([] as Awaited<ReturnType<typeof loadClassAssessments>>),
+      worksOnClasswork
+        ? loadClassTurnIns(classId, students)
+        : Promise.resolve(new Map() as Awaited<ReturnType<typeof loadClassTurnIns>>),
+      worksOnAttendance
+        ? loadClassAttendance(classId, attendanceDate)
+        : Promise.resolve({} as Record<string, AttendanceMark>),
+      worksOnExams
+        ? loadClassExamDates(classId)
+        : Promise.resolve([] as Awaited<ReturnType<typeof loadClassExamDates>>),
+      worksOnExams
+        ? loadClassLessonDays(classId)
+        : Promise.resolve([] as Awaited<ReturnType<typeof loadClassLessonDays>>),
+      // Only a badge, so ask for a count scoped to this group instead of
+      // loading (and signing attachments for) the teacher's whole inbox.
+      worksOnAttendance ? loadJustificationCountForClass(classId) : Promise.resolve(0),
+      session ? loadSchoolName(session.tenantId) : Promise.resolve(null),
+    ]);
   const t = await getT();
 
-  const assessments = rawAssessments.map((item) => {
+  const assessments = (Array.isArray(rawAssessments) ? rawAssessments : []).map((item) => {
     const stat = turnIns.get(item.id);
     return {
       ...item,

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { TONE_AVATAR } from "@/lib/dashboard/tones";
 import { guardianInitial } from "@/lib/messages/chat-display";
 import { COMMS_ADMIN_CHAT } from "@/lib/comms/paths";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import {
   bindRealtimeAuthRefresh,
   getAuthedRealtimeClient,
@@ -67,7 +67,7 @@ export function AdminTeacherChatThread({
   realtime: RealtimeConfig;
   embedded?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const m = t.messages;
   const { url: realtimeUrl, anonKey: realtimeAnonKey } = realtime;
   const [messages, setMessages] = useState<AdminTeacherChatMessage[]>(initialMessages);

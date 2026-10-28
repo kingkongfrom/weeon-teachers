@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { actionButtonSecondaryClass } from "@/lib/ui/action-button";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import { RichTextView } from "@/components/assessments/rich-text";
 import {
   answerIsCorrect,
@@ -28,6 +28,7 @@ import {
   type Assessment,
   type AssessmentQuestion,
 } from "@/lib/assessments/model";
+import { assessmentTitleFor } from "@/lib/assessments/title";
 import { gradeAssessmentSubmission } from "@/lib/teachers/grading-actions";
 import type {
   AssessmentSubmissionDetail,
@@ -81,9 +82,9 @@ export function SubmissionGrader({
   studentName: string;
   groupName: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const g = t.assessments.grading;
-  const locale = useLocale();
+  const locale = useLiveLocale();
   const router = useRouter();
 
   const [scores, setScores] = useState<ScoreMap>(() => initialScores(assessment, submission));
@@ -205,7 +206,15 @@ export function SubmissionGrader({
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-xl font-bold text-foreground">{studentName}</h1>
           <p className="mt-0.5 text-xs font-medium text-foreground/50">
-            {assessment.title || t.assessments.untitled} · {groupName}
+            {assessmentTitleFor({
+              title: assessment.title,
+              kind: assessment.kind,
+              // The grader has no subject list; an auto-name without a subject
+              // still renders correctly ("Examen" / "Exam"), never "sin título".
+              subject: null,
+              locale,
+            })}{" "}
+            · {groupName}
             {submittedLabel ? ` · ${g.submittedAt}: ${submittedLabel}` : ""}
           </p>
         </div>
@@ -415,7 +424,7 @@ function QuestionCard({
   onScoreChange: (value: number | null) => void;
   onCommentChange: (value: string) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const g = t.assessments.grading;
   const correctness = answerIsCorrect(question, answer);
 
@@ -505,7 +514,7 @@ function StudentAnswer({
   question: AssessmentQuestion;
   answer: SubmissionAnswer | undefined;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const a = t.assessments;
 
   if (question.type === "matching") {
@@ -613,7 +622,7 @@ function StudentAnswer({
 }
 
 function StatusBadge({ correctness }: { correctness: boolean | null }) {
-  const t = useT();
+  const t = useLiveT();
   const g = t.assessments.grading;
   if (correctness === null) {
     return (

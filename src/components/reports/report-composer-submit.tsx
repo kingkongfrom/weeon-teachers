@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { submitClassReport } from "@/lib/teachers/reports-actions";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 
 type ReportComposerSubmitProps = {
   classId: string;
@@ -13,7 +13,7 @@ type ReportComposerSubmitProps = {
 };
 
 export function ReportComposerSubmit({ classId, subjectId }: ReportComposerSubmitProps) {
-  const t = useT();
+  const t = useLiveT();
   const router = useRouter();
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);

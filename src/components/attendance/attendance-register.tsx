@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
@@ -79,7 +79,7 @@ export function AttendanceRegister({
   students: AttendanceStudent[];
   initialMarks: Record<string, AttendanceEntry>;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const a = t.attendance;
   const router = useRouter();
   const marksRef = useRef(defaultMarks(students, initialMarks));

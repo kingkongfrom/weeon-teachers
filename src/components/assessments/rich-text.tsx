@@ -39,7 +39,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import type { RichTextDoc, RichTextNode } from "@/lib/assessments/model";
 import { checkGrammar } from "@/lib/ai/grammar-actions";
 import {
@@ -89,7 +89,7 @@ export function RichTextEditor({
   /** Locks editing (assessment already has turn-ins). */
   readOnly?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const imageContext = useAssessmentImageContext();
   const [issues, setIssues] = useState<UiIssue[]>([]);
   const [checking, setChecking] = useState(false);
@@ -324,7 +324,7 @@ function GrammarPanel({
   onIgnore: (issue: UiIssue) => void;
   onFixAll: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const fixable = issues.some((issue) => issue.replacements.length > 0);
   return (
     <div className="flex max-h-56 flex-col gap-1 overflow-y-auto border-t border-border bg-surface-muted/30 p-2">
@@ -393,7 +393,7 @@ function Toolbar({
   /** Read-only document: no formatting controls. */
   hidden?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const e = t.editor;
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");

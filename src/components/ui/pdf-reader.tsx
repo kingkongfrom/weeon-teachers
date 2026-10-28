@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Download, Loader2, Maximize2, Minus, Plus, RotateCw, X } from "lucide-react";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 const ZOOM_STEPS = [0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -73,7 +73,7 @@ export function PdfReaderDialog({
   name: string;
   onClose: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
 
   useEffect(() => {
     if (!open) return;
@@ -152,7 +152,7 @@ export function PdfViewport({
   /** When set, the toolbar shows a download button saving as this name. */
   downloadName?: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const frameRef = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<PdfPageHandle[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");

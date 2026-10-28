@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import type { SubmissionSummary } from "@/lib/dashboard/submissions";
 import { hubToneSurface, TONE_ICON } from "@/lib/dashboard/tones";
 
@@ -40,9 +40,9 @@ export function AssessmentSubmissions({
   submissions: SubmissionSummary[];
   maxMarks: number;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const g = t.assessments.grading;
-  const locale = useLocale() === "en" ? "en-US" : "es-CR";
+  const locale = useLiveLocale() === "en" ? "en-US" : "es-CR";
 
   const gradedCount = submissions.filter((item) => item.state === "returned").length;
   const pendingCount = submissions.length - gradedCount;

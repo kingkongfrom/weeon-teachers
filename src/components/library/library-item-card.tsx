@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import type { LibraryCollection, LibraryItem } from "@/lib/assessments/library";
 
 /**
@@ -49,7 +49,7 @@ export function LibraryItemCard({
   onShare: () => void;
   onMove: (collectionId: string | null) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const l = t.library;
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -182,7 +182,7 @@ function CardMenu({
   onShare: () => void;
   onMove: (collectionId: string | null) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const l = t.library;
 
   const act = (fn: () => void) => () => {

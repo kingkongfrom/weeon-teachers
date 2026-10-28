@@ -37,7 +37,7 @@ import {
 import { cn } from "@/lib/utils";
 import { FileEmbed } from "@/lib/comms/tiptap-file-embed";
 import type { RichTextDoc, RichTextNode } from "@/lib/comms/model";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 const CommsImage = TiptapImage.extend({
   addAttributes() {
@@ -123,7 +123,7 @@ export function RichTextEditor({
 }
 
 function RichTextToolbar({ editor }: { editor: Editor }) {
-  const t = useT();
+  const t = useLiveT();
   const [, rerenderToolbar] = useReducer((version: number) => version + 1, 0);
 
   useEffect(() => {

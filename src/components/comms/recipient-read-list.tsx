@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 import {
   partitionReadRecipients,
   READ_RECEIPT_NAME_CAP,
@@ -23,7 +23,7 @@ function formatDate(iso: string): string {
 }
 
 function RecipientRows({ rows }: { rows: MessageRecipient[] }) {
-  const t = useT();
+  const t = useLiveT();
   return (
     <ul className="divide-y divide-border/60">
       {rows.map((recipient) => (
@@ -45,7 +45,7 @@ function RecipientRows({ rows }: { rows: MessageRecipient[] }) {
 
 /** Who opened a circular or a message the school sent — compact for bulk sends. */
 export function RecipientReadList({ recipients }: { recipients: MessageRecipient[] }) {
-  const t = useT();
+  const t = useLiveT();
   const [open, setOpen] = useState(false);
   const [showUnreadNames, setShowUnreadNames] = useState(false);
 

@@ -3,7 +3,7 @@
 import { HandHeart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TONE_WELL } from "@/lib/dashboard/tones";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 
 export function EducationalSupportBadgeButton({
   needsReview,
@@ -18,7 +18,7 @@ export function EducationalSupportBadgeButton({
   onClick: () => void;
   className?: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   if (count <= 0) return null;
 
   const pending = needsReview || needsPeriodRegistration;

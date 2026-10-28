@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, HandHeart, Loader2, Pencil, X } from "lucide-react";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { Dropdown } from "@/components/ui/dropdown";
 import {
   periodOptionLabel,
@@ -23,7 +23,7 @@ export function StudentEducationalSupportsPanel({
   /** When present, editing revalidates the group badges too. */
   classId?: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const copy = t.educationalSupports;
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -114,7 +114,7 @@ function SupportEditForm({
   onCancel: () => void;
   onSaved: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const copy = t.educationalSupports;
   const [observations, setObservations] = useState(support.observations ?? "");
   const [periods, setPeriods] = useState<SchoolPeriodOption[]>([]);

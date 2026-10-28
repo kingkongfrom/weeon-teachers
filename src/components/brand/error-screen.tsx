@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Home, RotateCcw } from "lucide-react";
 import { LogoCompact } from "@/components/brand/logo";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -19,8 +19,8 @@ export function ErrorScreen({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
 
   return (
     <main className="not-found-bg fixed inset-0 z-[100] flex min-h-dvh w-full flex-col overflow-x-hidden overflow-y-auto">

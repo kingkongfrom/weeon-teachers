@@ -3,7 +3,7 @@
 import { RichTextView } from "@/components/comms/rich-text";
 import { formatComposeLongSent } from "@/lib/comms/compose-display-utils";
 import type { ComposeThreadHistoryMessage } from "@/lib/comms/message-draft";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 function HistoryMetaRow({ label, value }: { label: string; value: string }) {
   return (
@@ -16,7 +16,7 @@ function HistoryMetaRow({ label, value }: { label: string; value: string }) {
 
 /** Quoted thread below the editor (flat — no outer box). */
 export function ComposeThreadHistory({ messages }: { messages: ComposeThreadHistoryMessage[] }) {
-  const t = useT();
+  const t = useLiveT();
   if (messages.length === 0) return null;
 
   return (

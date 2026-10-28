@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, Download, Loader2, Pencil, RotateCcw, Trash2, Users } from "lucide-react";
 import { PdfReaderDialog, PdfViewport } from "@/components/ui/pdf-reader";
 import type { TeacherCircularDetail } from "@/lib/dashboard/teacher-circulars";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 function categoryBadgeStyle(color: string) {
   return {
@@ -33,7 +33,7 @@ export function CircularPreviewPane({
   onRestore?: () => void;
   onPermanentDelete?: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const primary = detail?.attachments[0];
   const [pdfFullscreen, setPdfFullscreen] = useState(false);
 

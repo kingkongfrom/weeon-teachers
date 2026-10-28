@@ -28,7 +28,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { hubToneSegment, SEGMENT_TRACK } from "@/lib/dashboard/tones";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog } from "@/components/ui/dialog";
@@ -237,7 +237,7 @@ export function GradebookWorkspace({
   initialRubros?: GradeRubro[];
   supportFlags?: ClassEducationalSupportFlags;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const w = t.gradebook.workspace;
   const copy = w.rubros;
   const sb = w.scoreboard;
@@ -1895,7 +1895,7 @@ function GradeCell({
   /** The saved mark (null = cleared), so the parent can patch one cell. */
   onSaved: (mark: number | null) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const w = t.gradebook.workspace;
   const stored = column.grades[studentId];
   const initial = stored?.mark ?? null;
@@ -2146,7 +2146,7 @@ function ColumnHeader({
   onRename: (title: string) => Promise<boolean>;
   onRenamePoints: (points: number | null) => Promise<boolean>;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const w = t.gradebook.workspace;
   const compact = density === "compact";
 
@@ -2367,7 +2367,7 @@ function AddColumnDialog({
   rubros: GradeRubro[];
   defaultRubroId: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const w = t.gradebook.workspace;
   const copy = w.rubros;
   const [points, setPoints] = useState("100");

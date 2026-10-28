@@ -1,8 +1,10 @@
 import "server-only";
 
 import { cache } from "react";
+
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { createSessionClient } from "@/lib/supabase/session";
+import { signJustificationPaths } from "@/lib/dashboard/justification-urls";
 import {
   emptyAttendanceCounts,
   isLateStatus,
@@ -48,18 +50,18 @@ export const loadClassAttendance = cache(
     if (!data) return {};
 
     const marks: Record<string, AttendanceMark> = {};
+    const signed = await signJustificationPaths(
+      supabase,
+      data.map((row) =>
+        typeof row.guardian_attachment_path === "string" ? row.guardian_attachment_path : "",
+      ),
+    );
     for (const row of data) {
       const status = normalizeAttendanceStatus(row.status);
       if (!status) continue;
-      let guardianAttachmentUrl: string | null = null;
       const attachmentPath =
         typeof row.guardian_attachment_path === "string" ? row.guardian_attachment_path.trim() : "";
-      if (attachmentPath) {
-        const signed = await supabase.storage
-          .from("attendance-justifications")
-          .createSignedUrl(attachmentPath, 60 * 60);
-        guardianAttachmentUrl = signed.data?.signedUrl ?? null;
-      }
+      const guardianAttachmentUrl = attachmentPath ? (signed.get(attachmentPath) ?? null) : null;
       const decision = row.guardian_decision;
       marks[row.student_id] = {
         recordId: row.id,

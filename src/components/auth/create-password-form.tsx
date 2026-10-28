@@ -4,10 +4,10 @@ import { useState } from "react";
 import { AmbientPage } from "@/components/brand/ambient-page";
 import { PasswordInput } from "@/components/ui/password-input";
 import { setTeacherPassword } from "@/lib/auth/actions";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 
 export function CreatePasswordForm() {
-  const t = useT();
+  const t = useLiveT();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);

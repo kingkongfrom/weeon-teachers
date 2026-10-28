@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { GripVertical, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 
 /** A header pill: the rubro name and its weight, both edited in place. */
 const PILL =
@@ -53,7 +53,7 @@ export function RubroHeaderCell({
   /** Starts a block drag; `null` when the header is not draggable. */
   onDragStart?: (event: ReactPointerEvent<HTMLElement>) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const copy = t.gradebook.workspace.rubros;
 
   const [editing, setEditing] = useState<"name" | "peso" | null>(null);

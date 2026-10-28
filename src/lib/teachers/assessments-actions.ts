@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/session";
-import { getT } from "@/lib/i18n/server";
+import { getLocale, getT } from "@/lib/i18n/server";
+import { subjectNameForLocale } from "@/lib/i18n/subject-names";
 import { categoryFor } from "@/lib/dashboard/exams";
 import { resolveRubroForKind } from "@/lib/dashboard/rubro-routing";
 import {
@@ -61,6 +62,9 @@ const contentSchema = z.object({ questions: z.array(questionSchema) });
 
 const instructionsSchema = z.record(z.string(), z.unknown()).nullable();
 
+// The due date is mandatory: a student must know when the work is due. The title
+// may be blank — it falls back to "Tarea de {materia}" (see below) — so this
+// schema only bounds it.
 const saveSchema = z.object({
   id: z.string().uuid(),
   classId: z.string().uuid(),
@@ -68,7 +72,7 @@ const saveSchema = z.object({
   kind: z.enum(["homework", "exam"]),
   subjectId: z.string().uuid().nullable(),
   topicId: z.string().uuid().nullable(),
-  dueAt: z.string().nullable(),
+  dueAt: z.string().min(1).nullable(),
   allowPhotoSubmission: z.boolean().optional(),
   instructions: instructionsSchema,
   content: contentSchema,
@@ -103,6 +107,24 @@ export async function createAssessment(input: {
     return { ok: false, error: t.assessments.errors.generic };
   }
 
+  // Name the draft after its subject from the start — "Tarea de Ciencias" —
+  // so an untitled draft never reads as "Tarea sin título" in any list.
+  let initialTitle = t.assessments.untitled;
+  if (parsed.data.subjectId) {
+    const { data: subjectRow } = await supabase
+      .from("subjects")
+      .select("name")
+      .eq("id", parsed.data.subjectId)
+      .maybeSingle();
+    const subjectName = (subjectRow?.name as string | null) ?? null;
+    if (subjectName) {
+      initialTitle = t.assessments.titleForSubject(
+        parsed.data.kind === "exam" ? t.assessments.exam : t.assessments.homework,
+        subjectNameForLocale(subjectName, await getLocale()) ?? subjectName,
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from("assessments")
     .insert({
@@ -111,7 +133,7 @@ export async function createAssessment(input: {
       kind: parsed.data.kind,
       topic_id: parsed.data.topicId ?? null,
       subject_id: parsed.data.subjectId ?? null,
-      title: t.assessments.untitled,
+      title: initialTitle,
       instructions: null,
       content: { questions: [] },
       published: false,
@@ -362,7 +384,43 @@ export async function saveAssessment(input: {
   };
 
   const pointsTotal = computePointsTotal(safeContent);
-  const safeTitle = title || t.assessments.untitled;
+
+  /*
+   * A blank title is allowed: name the work after what it is and its subject —
+   * "Tarea de Ciencias" / "Examen de Ciencias" (EN: "Science exam") — with the
+   * subject in the language in use. Mirrors the editor's placeholder so the
+   * teacher sees exactly what students will see.
+   *
+   * An auto-name stored earlier ("Tarea de Ciencias", "Homework for Science")
+   * counts as blank: it was written in whatever language was active then, so it
+   * is re-derived in the current one instead of freezing the old language in.
+   */
+  const locale = await getLocale();
+  const isAutoTitle = (value: string): boolean => {
+    const lowered = value.toLowerCase();
+    return /^(exam|homework|examen|tarea|prueba)\s+(de|for)\s+/i.test(value) ||
+      // Current-language noun form: "{subject} exam" / "{subject} homework".
+      [t.assessments.exam, t.assessments.homework].some((label) =>
+        lowered.endsWith(` ${label.toLowerCase()}`),
+      );
+  };
+
+  let safeTitle = isAutoTitle(title) ? "" : title;
+  if (!safeTitle) {
+    let subjectLabel: string | null = null;
+    if (subjectId) {
+      const { data: subjectRow } = await supabase
+        .from("subjects")
+        .select("name")
+        .eq("id", subjectId)
+        .maybeSingle();
+      const stored = (subjectRow?.name as string | null) ?? null;
+      subjectLabel = subjectNameForLocale(stored, locale);
+    }
+    safeTitle = subjectLabel
+      ? t.assessments.titleForSubject(kind === "exam" ? t.assessments.exam : t.assessments.homework, subjectLabel)
+      : t.assessments.untitled;
+  }
 
   const { error } = await supabase
     .from("assessments")

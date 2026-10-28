@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Clock, HandHeart, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import type { ClassEducationalSupportFlags } from "@/lib/educational-supports/model";
 import { Dropdown } from "@/components/ui/dropdown";
 import { TONE_PILL } from "@/lib/dashboard/tones";
@@ -44,7 +44,7 @@ export function AttendanceGroupWorkspace({
   locale: string;
   supportFlags?: ClassEducationalSupportFlags;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const a = t.attendance;
   const gv = a.groupView;
   const [query, setQuery] = useState("");

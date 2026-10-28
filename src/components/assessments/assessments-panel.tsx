@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ClipboardCheck, FileText, Library, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
+import { assessmentTitleFor } from "@/lib/assessments/title";
 import { createAssessment } from "@/lib/teachers/assessments-actions";
 import {
   type AssessmentKind,
@@ -24,6 +25,7 @@ export function AssessmentsPanel({
   studentCount,
   defaultSubjectId = null,
   subjectLabel = null,
+  subjects = [],
 }: {
   classId: string;
   assessments: AssessmentSummary[];
@@ -31,9 +33,24 @@ export function AssessmentsPanel({
   defaultSubjectId?: string | null;
   /** Shown beside the heading when the class has only one subject. */
   subjectLabel?: string | null;
+  /** Used to name untitled work "Tarea de {materia}". */
+  subjects?: { id: string; name: string }[];
 }) {
-  const t = useT();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const a = t.assessments;
+  /**
+   * Auto-names are re-derived in the live language; anything the teacher typed
+   * is shown verbatim. Never "Tarea sin título".
+   */
+  const titleFor = (assessment: AssessmentSummary): string =>
+    assessmentTitleFor({
+      title: assessment.title,
+      kind: assessment.kind,
+      subject:
+        subjects.find((item) => item.id === assessment.subjectId)?.name ?? subjectLabel,
+      locale,
+    });
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   /** Anchors the desktop dropdown to the Crear button. */
@@ -163,7 +180,7 @@ export function AssessmentsPanel({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-semibold text-foreground">
-                        {assessment.title || a.untitled}
+                        {titleFor(assessment)}
                       </p>
                       <span
                         className={cn(

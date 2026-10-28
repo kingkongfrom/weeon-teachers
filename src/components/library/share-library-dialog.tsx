@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Loader2, Search, Share2, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import {
   DIALOG_CONTROL,
   Dialog,
@@ -32,7 +32,7 @@ export function ShareLibraryDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const l = t.library;
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);

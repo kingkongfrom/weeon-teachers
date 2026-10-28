@@ -10,7 +10,7 @@ import { messagesTone } from "@/lib/comms/messages-tone";
 import { saveMessageMailboxSettings } from "@/lib/teachers/comms-actions";
 import type { MessageMailboxSettings } from "@/lib/dashboard/message-mailbox-settings";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 export function AutoReplyDialog({
   open,
@@ -23,7 +23,7 @@ export function AutoReplyDialog({
   onClose: () => void;
   onSaved?: (next: MessageMailboxSettings) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [enabled, setEnabled] = useState(settings.autoReplyEnabled);
   const [startDate, setStartDate] = useState(settings.autoReplyStart ?? "");
   const [endDate, setEndDate] = useState(settings.autoReplyEnd ?? "");

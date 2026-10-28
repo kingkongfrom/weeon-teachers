@@ -6,7 +6,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import { createMessageLabel } from "@/lib/teachers/comms-actions";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 export const FOLDER_COLOR_PRESETS = [
   "#5D87FF",
@@ -31,7 +31,7 @@ export function NewFolderDialog({
   onClose: () => void;
   onCreated?: (labelId: string) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [name, setName] = useState("");
   const [color, setColor] = useState<string>(FOLDER_COLOR_PRESETS[0]);
   const [saving, setSaving] = useState(false);

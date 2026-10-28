@@ -13,7 +13,7 @@ import { RecipientReadList } from "@/components/comms/recipient-read-list";
 import { RichTextView } from "@/components/comms/rich-text";
 import { TONE_PILL } from "@/lib/dashboard/hub-tones";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 import { MessageBodyEditor } from "@/components/comms/message-body-editor";
 import { Button } from "@/components/ui/button";
 import { emptyDoc, type RichTextDoc } from "@/lib/comms/model";
@@ -45,7 +45,7 @@ export function ThreadView({
   detail: MessageThreadDetail;
   mailboxBase: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const router = useRouter();
   const [showRecipients, setShowRecipients] = useState(false);
   const [replyBody, setReplyBody] = useState<RichTextDoc>(() => emptyDoc());

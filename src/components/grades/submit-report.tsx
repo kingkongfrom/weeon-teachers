@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, FileCheck2 } from "lucide-react";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 
 type SubmitReportProps = {
   classId: string;
@@ -31,7 +31,7 @@ export function SubmitReport({
   disabled,
   variant = "default",
 }: SubmitReportProps) {
-  const t = useT();
+  const t = useLiveT();
   const isFooter = variant === "footer";
   const label = subjectName
     ? t.gradebook.submit.labelSubject(subjectName)

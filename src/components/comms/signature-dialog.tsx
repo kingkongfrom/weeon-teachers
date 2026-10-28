@@ -9,7 +9,7 @@ import { messagesTone } from "@/lib/comms/messages-tone";
 import { saveMessageMailboxSettings } from "@/lib/teachers/comms-actions";
 import { cn } from "@/lib/utils";
 import type { MessageMailboxSettings } from "@/lib/dashboard/message-mailbox-settings";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 export function SignatureDialog({
   open,
@@ -22,7 +22,7 @@ export function SignatureDialog({
   onClose: () => void;
   onSaved?: (signatureBody: RichTextDoc) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [body, setBody] = useState<RichTextDoc>(() => settings.signatureBody);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

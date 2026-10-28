@@ -3,7 +3,7 @@
 import { Forward, Reply, ReplyAll } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 const iconClass =
   "h-[1.5rem] w-[1.5rem] shrink-0 stroke-[2.25] text-[#5e25cc] dark:text-[#a78bfa]";
@@ -23,7 +23,7 @@ export function ComposeActionBar({
   onForward: () => void;
   className?: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
 
   return (
     <div className={cn("inline-flex flex-wrap items-center gap-1.5", className)}>

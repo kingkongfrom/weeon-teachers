@@ -15,7 +15,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { COMMS_COMPOSE } from "@/lib/comms/paths";
 import { cn } from "@/lib/utils";
 import { messagesTone } from "@/lib/comms/messages-tone";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 import type { MessageFolder } from "@/lib/dashboard/messages";
 
 export type MailboxThreadToolbarProps = {
@@ -56,7 +56,7 @@ export function MailboxThreadToolbar({
   onRestore,
   onDeletePermanently,
 }: MailboxThreadToolbarProps) {
-  const t = useT();
+  const t = useLiveT();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const inTrash = folder === "trash";

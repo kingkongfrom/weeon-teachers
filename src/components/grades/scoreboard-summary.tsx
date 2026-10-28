@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { PASS_MARK, tonePillClass } from "@/components/grades/score-cells";
 import type { ClassStats } from "@/lib/dashboard/scoreboard";
 
@@ -32,7 +32,7 @@ export function ScoreboardSummary({
   ClassStats,
   "average" | "median" | "passRate" | "highest" | "lowest" | "graded" | "total"
 >) {
-  const t = useT();
+  const t = useLiveT();
   const s = t.gradebook.workspace.scoreboard;
   const ungraded = total - graded;
 
@@ -144,7 +144,7 @@ function RangeBar({
   highest: number | null;
   median: number | null;
 }) {
-  const s = useT().gradebook.workspace.scoreboard;
+  const s = useLiveT().gradebook.workspace.scoreboard;
   if (lowest == null || highest == null) {
     return <span className="text-2xl font-bold leading-none text-foreground/30">—</span>;
   }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import { capitalize, monthCells, weekdayIndex } from "@/lib/dashboard/month";
 import { isoDate } from "@/lib/dashboard/week";
 import type { ClassLessonDay } from "@/lib/dashboard/exam-dates";
@@ -31,8 +31,8 @@ export function LessonDatePicker({
   selectedLessonId?: string | null;
   clearLabel?: string;
 }) {
-  const locale = useLocale();
-  const t = useT();
+  const locale = useLiveLocale();
+  const t = useLiveT();
   const tag = locale === "en" ? "en-US" : "es-CR";
   const selected = value ? parseDay(value) : null;
   const [view, setView] = useState(() => monthStart(selected ?? new Date()));

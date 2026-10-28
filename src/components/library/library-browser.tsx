@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import {
   DIALOG_CONTROL,
   Dialog,
@@ -64,7 +64,7 @@ export function LibraryBrowser({
   /** Optional hook for hosts that manage their own refresh (class picker). */
   onChanged?: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const l = t.library;
   const router = useRouter();
 
@@ -484,7 +484,7 @@ function EmptyState({
   filtered: boolean;
   onClearFilters: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const l = t.library;
 
   if (hasItems && filtered) {

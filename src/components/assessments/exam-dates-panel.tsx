@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Clock, DoorOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SubjectBar, SubjectSwitcher } from "@/components/classroom/subject-switcher";
-import { useLocale, useT } from "@/lib/i18n/client";
-import { hubToneSegment, SEGMENT_TRACK, TONE_ICON, TONE_WELL, eventHubChip } from "@/lib/dashboard/tones";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
+import { TONE_ICON, TONE_WELL, eventHubChip } from "@/lib/dashboard/tones";
 import { addMonths, capitalize, firstOfMonth, monthCells, weekdayIndex } from "@/lib/dashboard/month";
 import { isoDate } from "@/lib/dashboard/week";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -38,9 +37,9 @@ export function ExamDatesPanel({
   subjects: { id: string; name: string }[];
   selectedSubjectId: string | null;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const e = t.examDates;
-  const locale = useLocale() === "en" ? "en-US" : "es-CR";
+  const locale = useLiveLocale() === "en" ? "en-US" : "es-CR";
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ExamDate | null>(null);
@@ -48,16 +47,22 @@ export function ExamDatesPanel({
   const [deleting, setDeleting] = useState<ExamDate | null>(null);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Subject is client state so the calendar filters instantly; the URL follows
+  // in the background and still seeds a fresh load or a shared link.
+  const [activeSubjectId, setActiveSubjectId] = useState<string | null>(selectedSubjectId);
+  useEffect(() => {
+    if (selectedSubjectId) setActiveSubjectId(selectedSubjectId);
+  }, [selectedSubjectId]);
 
   const shown = useMemo(
     () =>
       examDates
-        .filter((examDate) => !selectedSubjectId || examDate.subjectId === selectedSubjectId)
+        .filter((examDate) => !activeSubjectId || examDate.subjectId === activeSubjectId)
         .slice()
         .sort(
           (a, b) => a.date.localeCompare(b.date) || (a.startTime ?? "").localeCompare(b.startTime ?? ""),
         ),
-    [examDates, selectedSubjectId],
+    [examDates, activeSubjectId],
   );
 
   const today = new Date();
@@ -154,7 +159,8 @@ export function ExamDatesPanel({
             classId={classId}
             tab="examenes"
             subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
+            selectedSubjectId={activeSubjectId}
+            onSubjectChange={setActiveSubjectId}
           />
         </SubjectBar>
       ) : null}
@@ -372,7 +378,7 @@ export function ExamDatesPanel({
         <ExamDateDialog
           open={dialogOpen}
           classId={classId}
-          subjectId={selectedSubjectId}
+          subjectId={activeSubjectId}
           lessonDays={lessonDays}
           materials={materials}
           editing={editing}

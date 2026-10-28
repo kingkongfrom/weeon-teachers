@@ -10,7 +10,7 @@ import {
   DialogSecondary,
 } from "@/components/ui/dialog";
 import { SelectMenu } from "@/components/ui/select-menu";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import type { AssessmentDraft } from "@/lib/assessments/model";
 import type { LibraryCollection } from "@/lib/assessments/library";
 import {
@@ -40,7 +40,7 @@ export function SaveToLibraryDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const l = t.library;
 
   const [collections, setCollections] = useState<LibraryCollection[]>([]);

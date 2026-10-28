@@ -697,6 +697,15 @@ const es = {
   assessments: {
     title: "Tareas y exámenes",
     untitled: "Tarea sin título",
+    requiredTitle: "Escriba un título",
+    titleField: "Título",
+    /**
+     * Fallback title while the teacher has not typed one:
+     * "Tarea de Ciencias" / "Examen de Ciencias".
+     */
+    titleForSubject: (kind: string, subject: string) => `${kind} de ${subject}`,
+    requiredDue: "Elija la fecha de entrega",
+    requiredHint: "El título y la fecha de entrega son obligatorios para publicar.",
     showMore: (n: number) => `Ver ${n} más`,
     add: "Crear",
     addHomework: "Tarea",
@@ -2194,6 +2203,15 @@ const en: Messages = {
   assessments: {
     title: "Assignments & exams",
     untitled: "Untitled assignment",
+    requiredTitle: "Enter a title",
+    titleField: "Title",
+    /**
+     * Fallback title while the teacher has not typed one. English reads as a
+     * noun phrase — "Science exam" / "Science homework", not "Exam for Science".
+     */
+    titleForSubject: (kind: string, subject: string) => `${subject} ${kind.toLowerCase()}`,
+    requiredDue: "Choose a due date",
+    requiredHint: "Title and due date are required before publishing.",
     showMore: (n: number) => `Show ${n} more`,
     add: "Create",
     addHomework: "Homework",

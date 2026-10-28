@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, MoreVertical, Share, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -11,7 +11,84 @@ type InstallPromptEvent = Event & {
 };
 
 const DISMISSED_KEY = "weeon:install-dismissed";
-const DISMISS_DAYS = 30;
+/** Remembered dismissals; also the cookie fallback for Safari private mode. */
+const DISMISS_DAYS = 90;
+
+function readDismissedAt(): number {
+  try {
+    const stored = Number(window.localStorage.getItem(DISMISSED_KEY) ?? 0);
+    if (stored) return stored;
+  } catch {
+    /* private mode: fall through to the cookie */
+  }
+  // iOS Safari in private mode throws on localStorage writes; a cookie still
+  // survives the session, which is what stops the banner nagging on every visit.
+  const match = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${DISMISSED_KEY}=`));
+  return Number(match?.slice(DISMISSED_KEY.length + 1) ?? 0) || 0;
+}
+
+function writeDismissedAt(at: number): void {
+  try {
+    window.localStorage.setItem(DISMISSED_KEY, String(at));
+  } catch {
+    /* ignore */
+  }
+  // 400 days is the browser cap for cookie lifetime.
+  document.cookie = `${DISMISSED_KEY}=${at}; path=/; max-age=${Math.floor(
+    DISMISS_DAYS * 86_400,
+  )}; samesite=lax`;
+}
+
+/**
+ * Where can this browser be offered an install at all?
+ *
+ *  - `none`      — already installed, dismissed recently, or local dev.
+ *  - `event`     — Chrome/Edge/Android: wait for `beforeinstallprompt`.
+ *  - `ios`       — iOS Safari: no API, so written Share instructions.
+ *  - `huawei`    — Petal Browser: AppGallery path, menu instructions.
+ *
+ * Computed once before render so the banner never flashes in and out, and never
+ * comes back on every visit after being dismissed.
+ */
+function detectSurface(): "none" | "event" | "ios" | "huawei" {
+  if (typeof window === "undefined") return "none";
+
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as { standalone?: boolean }).standalone === true;
+  if (standalone) return "none";
+
+  const dismissedAt = readDismissedAt();
+  if (dismissedAt && Date.now() - dismissedAt < DISMISS_DAYS * 86_400_000) return "none";
+
+  const ua = window.navigator.userAgent;
+  const isIos = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && "ontouchend" in document);
+  const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  const isHuawei = /HuaweiBrowser\//.test(ua);
+
+  // Those two browsers can never report "installed", so a banner there would be
+  // permanent. Only offer it off localhost, from the second visit onward — a
+  // developer reloading the preview should never see it.
+  const devHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+  if (!devHost) {
+    const seenKey = "weeon:install-seen";
+    let visits = 0;
+    try {
+      visits = Number(window.localStorage.getItem(seenKey) ?? 0) + 1;
+      window.localStorage.setItem(seenKey, String(visits));
+    } catch {
+      /* private mode: treat as a first visit */
+    }
+    if (visits >= 2) {
+      if (isIos && isSafari) return "ios";
+      if (isHuawei) return "huawei";
+    }
+  }
+
+  return "event";
+}
 
 /**
  * "Install the app" banner.
@@ -27,85 +104,54 @@ const DISMISS_DAYS = 30;
  *   it gets the same kind of written instructions — browser menu → install.
  *
  * The banner stays out of the way: it never covers content, it is dismissible,
- * a dismissal is remembered for 30 days, and it hides itself when the app is
- * already running installed (`display-mode: standalone`).
+ * a dismissal is remembered for 90 days (cookie fallback so Safari private mode
+ * keeps it too), and it hides itself when the app is already running installed.
  */
 export function InstallPrompt() {
-  const t = useT();
+  const t = useLiveT();
+  const [surface] = useState(detectSurface);
   const [deferred, setDeferred] = useState<InstallPromptEvent | null>(null);
-  const [showIos, setShowIos] = useState(false);
-  const [showHuawei, setShowHuawei] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [installed, setInstalled] = useState(false);
+
+  const visible =
+    !dismissed && !installed && surface !== "none" && (surface !== "event" || deferred !== null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    // Already installed? Then there is nothing to offer.
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as { standalone?: boolean }).standalone === true;
-    if (standalone) return;
-
-    try {
-      const dismissedAt = Number(window.localStorage.getItem(DISMISSED_KEY) ?? 0);
-      if (dismissedAt && Date.now() - dismissedAt < DISMISS_DAYS * 86_400_000) return;
-    } catch {
-      /* private mode: show it, losing the memory only */
-    }
+    if (surface !== "event") return;
 
     function onBeforeInstall(event: Event) {
       event.preventDefault();
       setDeferred(event as InstallPromptEvent);
-      setVisible(true);
     }
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
-
-    // iOS and Huawei (Petal) fire no install event, so detect the platform
-    // and offer written instructions instead of a one-tap button.
-    const ua = window.navigator.userAgent;
-    const isIos = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && "ontouchend" in document);
-    const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
-    if (isIos && isSafari) {
-      setShowIos(true);
-      setVisible(true);
-    }
-    // HuaweiBrowser/x.x — Petal. Chromium under the hood, but the install
-    // prompt is suppressed in favour of AppGallery, so `beforeinstallprompt`
-    // rarely (if ever) arrives. The menu path is the reliable route.
-    const isHuawei = /HuaweiBrowser\//.test(ua);
-    if (isHuawei) {
-      setShowHuawei(true);
-      setVisible(true);
-    }
-
     function onInstalled() {
-      setVisible(false);
+      setDismissed(true);
       setDeferred(null);
     }
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
     };
-  }, []);
+  }, [surface]);
 
   if (!visible) return null;
 
+  const showIos = surface === "ios";
+  const showHuawei = surface === "huawei";
+
   function dismiss() {
-    setVisible(false);
-    try {
-      window.localStorage.setItem(DISMISSED_KEY, String(Date.now()));
-    } catch {
-      /* ignore */
-    }
+    setDismissed(true);
+    writeDismissedAt(Date.now());
   }
 
   async function install() {
     if (!deferred) return;
     await deferred.prompt();
     const choice = await deferred.userChoice;
-    if (choice.outcome === "accepted") setVisible(false);
+    if (choice.outcome === "accepted") setInstalled(true);
     setDeferred(null);
   }
 

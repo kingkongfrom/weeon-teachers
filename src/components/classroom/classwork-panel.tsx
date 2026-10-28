@@ -6,7 +6,15 @@ import { SubjectBar, SubjectSwitcher } from "@/components/classroom/subject-swit
 import type { AssessmentSummary } from "@/lib/assessments/model";
 import type { ClassMaterial } from "@/lib/dashboard/materials";
 
-/** "Trabajo de clase": assessments and materials for the active subject. */
+/**
+ * "Trabajo de clase": assessments and materials for the active subject.
+ *
+ * Both lists arrive **once, unfiltered** for the whole class (they are small —
+ * titles, dates and counts), and the subject is applied here on the client.
+ * Switching a subject therefore repaints instantly; it does not need a server
+ * render, a loading skeleton, or another query. The URL still carries
+ * `?subject=` so a reload or a shared link lands on the same subject.
+ */
 export function ClassworkPanel({
   classId,
   assessments,
@@ -14,6 +22,7 @@ export function ClassworkPanel({
   selectedSubjectId,
   subjects,
   studentCount,
+  onSubjectChange,
 }: {
   classId: string;
   assessments: AssessmentSummary[];
@@ -21,6 +30,8 @@ export function ClassworkPanel({
   selectedSubjectId: string | null;
   subjects: { id: string; name: string }[];
   studentCount: number;
+  /** Applies the subject immediately (local state) before the URL catches up. */
+  onSubjectChange?: (subjectId: string) => void;
 }) {
   /** Classwork is per subject: show only the active subject's items. Unassigned
    * items are not leaked into every subject. */
@@ -45,6 +56,7 @@ export function ClassworkPanel({
             tab="trabajo"
             subjects={subjects}
             selectedSubjectId={selectedSubjectId}
+            onSubjectChange={onSubjectChange}
           />
         </SubjectBar>
       ) : null}
@@ -62,6 +74,7 @@ export function ClassworkPanel({
           studentCount={studentCount}
           defaultSubjectId={selectedSubjectId}
           subjectLabel={subjects.length === 1 ? subjects[0].name : null}
+          subjects={subjects}
         />
       </div>
     </div>

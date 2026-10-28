@@ -12,7 +12,7 @@ import {
   connectGuardianChatLive,
   type ChatLiveHandle,
 } from "@/lib/comms/chat-realtime";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { COMMS_CHAT } from "@/lib/comms/paths";
@@ -85,7 +85,7 @@ export function ChatThread({
   embedded?: boolean;
 }) {
   const isAdminChat = channel === "admin";
-  const t = useT();
+  const t = useLiveT();
   const m = t.messages;
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessageItem[]>(initialMessages);

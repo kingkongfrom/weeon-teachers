@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { ClipboardCheck, Clock, HandHeart, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import { schoolPeriodLabel } from "@/lib/dashboard/school-period";
 import type {
   EducationalSupport,
@@ -64,8 +64,8 @@ export function EducationalSupportWorkflowDialog({
   onClose: () => void;
   onComplete?: (patch: { needsReview?: boolean; needsPeriodRegistration?: boolean }) => void;
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const copy = t.educationalSupports;
   const [ackSaving, setAckSaving] = useState(false);
   const [regSaving, setRegSaving] = useState(false);

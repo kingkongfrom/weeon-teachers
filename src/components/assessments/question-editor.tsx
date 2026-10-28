@@ -3,7 +3,7 @@
 import { ArrowDown, ArrowUp, Check, Copy, Plus, Trash2, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { RichTextEditor } from "@/components/assessments/rich-text";
 import {
   defaultMatchingOptions,
@@ -128,7 +128,7 @@ export function QuestionEditor({
   /** Locked because students already turned the assessment in. */
   readOnly?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const a = t.assessments;
 
   function patch(next: Partial<AssessmentQuestion>) {
@@ -400,7 +400,7 @@ function TrueFalseOptions({
   onToggle: (id: string) => void;
   readOnly?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   return (
     <div className="flex gap-3">
       {TRUE_FALSE_OPTIONS.map((option) => {
@@ -442,7 +442,7 @@ function MatchingEditor({
   patch: (next: Partial<AssessmentQuestion>) => void;
   readOnly?: boolean;
 }) {
-  const a = useT().assessments;
+  const a = useLiveT().assessments;
   const premises = question.premises ?? [];
   const pairs = premises.length;
 
@@ -571,7 +571,7 @@ function MatchingPairRow({
   onResponseChange: (text: string) => void;
   onRemove: () => void;
 }) {
-  const a = useT().assessments;
+  const a = useLiveT().assessments;
   const pairedId = question.correctOptionIds[index] ?? "";
   const stored = question.options.find((option) => option.id === pairedId)?.text ?? "";
   const [draft, setDraft] = useState(stored);

@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ACTION_NAV_LINK } from "@/lib/ui/action-button";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 import { COMMS_COMPOSE, COMMS_MESSAGES, COMMS_SETTINGS } from "@/lib/comms/paths";
 import { ChatAvatar } from "@/components/comms/chat-avatar";
 import { messagesTone } from "@/lib/comms/messages-tone";
@@ -134,7 +134,7 @@ export function MessagesWorkspace({
   mailboxSettings: MessageMailboxSettings;
   realtime?: RealtimeConfig | null;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const router = useRouter();
   const [removedThreadIds, setRemovedThreadIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");

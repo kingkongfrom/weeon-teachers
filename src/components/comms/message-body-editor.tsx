@@ -5,7 +5,7 @@ import type { Editor } from "@tiptap/react";
 import { Loader2, Paperclip } from "lucide-react";
 import { RichTextEditor } from "@/components/comms/rich-text";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 import { MESSAGE_ATTACHMENT_ACCEPT } from "@/lib/comms/attachment-mime";
 import { collectEmbedPaths } from "@/lib/comms/rich-text-embeds";
 import { uploadCommsDraftEmbed } from "@/lib/dashboard/comms-embed-actions";
@@ -53,7 +53,7 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
   },
   ref: React.Ref<MessageBodyEditorHandle>,
 ) {
-  const t = useT();
+  const t = useLiveT();
   const inputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<Editor | null>(null);
   const [dragging, setDragging] = useState(false);

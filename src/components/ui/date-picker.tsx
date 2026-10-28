@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 
 /**
  * App-styled date picker (replaces `<input type="date">`, whose native calendar
@@ -27,8 +27,8 @@ export function DatePicker({
   /** Full-width trigger styled like form fields (rounded-xl, h-10). */
   fullWidth?: boolean;
 }) {
-  const locale = useLocale();
-  const t = useT();
+  const locale = useLiveLocale();
+  const t = useLiveT();
   const d = t.datePicker;
   const tag = locale === "en" ? "en-US" : "es-CR";
 

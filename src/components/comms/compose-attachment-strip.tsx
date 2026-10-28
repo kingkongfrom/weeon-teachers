@@ -6,7 +6,7 @@ import { CloudImportSources } from "@/components/comms/cloud-import-sources";
 import { MESSAGE_ATTACHMENT_ACCEPT } from "@/lib/comms/attachment-mime";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 /** Compact attachments + allow-replies on one row. */
 export function ComposeAttachmentStrip({
@@ -32,7 +32,7 @@ export function ComposeAttachmentStrip({
   onCloudError: (message: string | null) => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const dropHint = t("comms.dropFilesHint");
   const attachmentsDisabled = sending || remainingAttachmentSlots <= 0;
 

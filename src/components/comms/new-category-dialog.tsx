@@ -9,7 +9,7 @@ import {
 } from "@/components/comms/new-folder-dialog";
 import { createTeacherCircularCategory } from "@/lib/teachers/circular-actions";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 /** Create a circular category (teacher-scoped; shares the school's categories). */
 export function NewCategoryDialog({
@@ -21,7 +21,7 @@ export function NewCategoryDialog({
   onClose: () => void;
   onCreated?: (categoryId: string) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [name, setName] = useState("");
   const [color, setColor] = useState<string>(FOLDER_COLOR_PRESETS[1]);
   const [saving, setSaving] = useState(false);

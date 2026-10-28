@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, FileText, Loader2, Plus, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { Dialog } from "@/components/ui/dialog";
 import { uploadMaterial } from "@/lib/teachers/materials-actions";
 import { MATERIAL_ACCEPT } from "@/lib/teachers/material-constants";
@@ -35,7 +35,7 @@ export function StudyMaterialPicker({
   selectedIds: string[];
   onChange: (ids: string[]) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const e = t.examDates;
   const router = useRouter();
   const [open, setOpen] = useState(false);

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronLeft, ChevronRight, Loader2, Settings2, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import type { ExamColumn } from "@/lib/dashboard/exams";
 import { saveGrade } from "@/lib/teachers/exams-actions";
 
@@ -72,7 +72,7 @@ export function GradingSheet({
   onSaved,
   onDeleteColumn,
 }: Props) {
-  const t = useT();
+  const t = useLiveT();
   const gs = t.gradebook.mobile;
 
   /** Draft marks keyed by column id; `undefined` = untouched. */

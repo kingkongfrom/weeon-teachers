@@ -12,11 +12,11 @@ import { pickGoogleDriveFiles } from "@/lib/comms/cloud-import/google-drive-clie
 import type { CloudImportRef } from "@/lib/comms/cloud-import/types";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 type BusySource = "dropbox" | "google-drive" | null;
 
-function mapCloudError(error: unknown, t: ReturnType<typeof useT>): string {
+function mapCloudError(error: unknown, t: ReturnType<typeof useLiveT>): string {
   const code = error instanceof Error ? error.message : "";
   if (code.includes("not_configured")) return t("comms.documents.cloudNotConfigured");
   if (code === "attachment_type_not_allowed") return t("comms.attachmentTypeNotAllowed");
@@ -113,7 +113,7 @@ export function CloudImportSources({
   onError: (message: string) => void;
   compact?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [busySource, setBusySource] = useState<BusySource>(null);
   const dropboxReady = isDropboxConfigured();
   const googleReady = isGoogleDriveConfigured();

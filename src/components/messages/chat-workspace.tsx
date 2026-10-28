@@ -7,8 +7,8 @@ import { Loader2, MessageCircle, MessageSquarePlus, Search, X } from "lucide-rea
 import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ChatAvatar } from "@/components/comms/chat-avatar";
-import { useLocale, useT } from "@/lib/i18n/client";
-import { useT as useCommsT } from "@/lib/i18n/use-i18n";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
+import { useLiveT as useCommsT } from "@/lib/i18n/use-i18n";
 import {
   bindRealtimeAuthRefresh,
   getAuthedRealtimeClient,
@@ -56,10 +56,10 @@ export function ChatWorkspace({
   selectedDetail: ChatConversationDetail | null;
   me: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const comms = useCommsT();
   const m = t.messages;
-  const locale = useLocale();
+  const locale = useLiveLocale();
   const router = useRouter();
   const { url: realtimeUrl, anonKey: realtimeAnonKey } = realtime;
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -408,7 +408,7 @@ function ChatPicker({
   onClose: () => void;
   onPick: (contact: ChatContact) => Promise<void>;
 }) {
-  const m = useT().messages;
+  const m = useLiveT().messages;
   return (
     <Dialog open={open} title={m.chatPickerTitle} onClose={onClose}>
       {open ? <ChatPickerBody contacts={contacts} onPick={onPick} /> : null}
@@ -423,7 +423,7 @@ function ChatPickerBody({
   contacts: ChatContact[];
   onPick: (contact: ChatContact) => Promise<void>;
 }) {
-  const m = useT().messages;
+  const m = useLiveT().messages;
   const [query, setQuery] = useState("");
   const [kindFilter, setKindFilter] = useState<"all" | NonNullable<ChatContact["kind"]>>("all");
   const [pendingKey, setPendingKey] = useState<string | null>(null);

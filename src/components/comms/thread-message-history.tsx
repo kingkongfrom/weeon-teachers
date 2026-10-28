@@ -13,7 +13,7 @@ import {
   formatComposeLongSent,
 } from "@/lib/comms/compose-display-utils";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
@@ -44,7 +44,7 @@ export function ThreadMessageHistory({
   allowReplies?: boolean;
   readOnly?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
 
   if (messages.length === 0) {
     return (

@@ -6,7 +6,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import { hubFilterChipClass } from "@/lib/dashboard/hub-tones";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 import {
   buildBulkRecipientCatalog,
   bulkItemRoleLabel,
@@ -50,7 +50,7 @@ export function RecipientPickerModal({
   mode?: "regular" | "bulk";
   allowBulk?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
 
   return (
     <Dialog open={open} title={t("comms.selectRecipientsTitle")} onClose={onClose}>
@@ -87,7 +87,7 @@ function PickerBody({
   initialMode: "regular" | "bulk";
   allowBulk: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [mode, setMode] = useState<"regular" | "bulk">(initialMode);
   const [query, setQuery] = useState("");
   const [bulkCategory, setBulkCategory] = useState<"all" | BulkRecipientCategory>("sections");
@@ -347,7 +347,7 @@ function PickerBody({
 }
 
 function KindBadge({ kind }: { kind: string }) {
-  const t = useT();
+  const t = useLiveT();
   const label =
     kind === "student"
       ? t("comms.kindStudent")

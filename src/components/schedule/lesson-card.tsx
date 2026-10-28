@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import { schoolCycleName } from "@/lib/dashboard/school-cycles";
 import { schoolWeekday } from "@/lib/attendance/model";
 import { hubTonePill, eventHubChip, type Tone } from "@/lib/dashboard/tones";
@@ -59,8 +59,8 @@ export function LessonCard({
   /** Exams/activities attached to this lesson (for that day). */
   events?: TeacherCalendarEvent[];
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const [open, setOpen] = useState(false);
   const pill = hubTonePill(LESSON_TONE[lesson.color] ?? "blue");
   const cycle = lesson.grade ? schoolCycleName(lesson.grade, locale) : "";

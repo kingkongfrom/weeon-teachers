@@ -1,15 +1,32 @@
 "use client";
 
 import { RichTextView } from "@/components/assessments/rich-text";
-import { useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
+import { assessmentTitleFor } from "@/lib/assessments/title";
 import { isChoiceType, type AssessmentQuestion } from "@/lib/assessments/model";
 import type { AssessmentDraft } from "@/lib/assessments/model";
 
 /** Read-only student view of an assessment. This is intentionally the same
- * rendering the mobile app mirrors, and what the teacher sees in Preview. */
-export function AssessmentPreview({ draft }: { draft: AssessmentDraft }) {
-  const t = useT();
+ * rendering the mobile app mirrors, and what the teacher sees in Preview.
+ * `subjectName` lets an untitled draft show its fallback name
+ * ("Tarea de Ciencias") instead of "Tarea sin título". */
+export function AssessmentPreview({
+  draft,
+  subjectName = null,
+}: {
+  draft: AssessmentDraft;
+  subjectName?: string | null;
+}) {
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const a = t.assessments;
+  // Auto-names are re-derived in the live language; a typed title is kept as is.
+  const title = assessmentTitleFor({
+    title: draft.title,
+    kind: draft.kind,
+    subject: subjectName,
+    locale,
+  });
 
   return (
     <div className="flex flex-col gap-6 rounded-2xl border border-border bg-surface p-6">
@@ -17,9 +34,7 @@ export function AssessmentPreview({ draft }: { draft: AssessmentDraft }) {
         <span className="inline-flex w-fit rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
           {draft.kind === "exam" ? a.exam : a.homework}
         </span>
-        <h1 className="text-xl font-bold text-foreground">
-          {draft.title || a.untitled}
-        </h1>
+        <h1 className="text-xl font-bold text-foreground">{title}</h1>
         <p className="text-xs font-medium text-foreground/50">
           {t.assessments.pointsTotal(
             Math.round(
@@ -71,7 +86,7 @@ export function AssessmentPreview({ draft }: { draft: AssessmentDraft }) {
 }
 
 function QuestionAnswerPreview({ question }: { question: AssessmentQuestion }) {
-  const t = useT();
+  const t = useLiveT();
   const a = t.assessments;
 
   if (question.type === "matching") {

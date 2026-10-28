@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 
 const PREVIEW_LIMIT = 4;
 
@@ -17,7 +17,7 @@ export function SubmissionStatus({
   submitterNames: string[];
   compact?: boolean;
 }) {
-  const a = useT().assessments;
+  const a = useLiveT().assessments;
   const extra = Math.max(0, submitterNames.length - PREVIEW_LIMIT);
   const preview = extra > 0 ? submitterNames.slice(0, PREVIEW_LIMIT) : submitterNames;
   const names =

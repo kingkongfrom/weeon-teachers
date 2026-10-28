@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
+import type { Locale } from "@/lib/i18n/config";
+import { subjectNameForLocale, subjectTranslationForLocale } from "@/lib/i18n/subject-names";
+import { useNavMeasure } from "@/lib/perf/nav-timing";
 
 export type SubjectOption = { id: string; name: string };
 
@@ -36,6 +39,7 @@ export function SubjectSwitcher({
   className,
   /** Heading the subject is shown *next to* when there is only one. */
   inline = false,
+  onSubjectChange,
 }: {
   classId: string;
   tab: string;
@@ -43,8 +47,13 @@ export function SubjectSwitcher({
   selectedSubjectId: string | null;
   className?: string;
   inline?: boolean;
+  /** Called on click, before navigation, so the lists can repaint instantly. */
+  onSubjectChange?: (subjectId: string) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
+  const locale = useLiveLocale();
+  const router = useRouter();
+  const measureSubject = useNavMeasure("subject");
 
   if (subjects.length === 0) return null;
 
@@ -53,14 +62,24 @@ export function SubjectSwitcher({
 
   // A single subject is a fact about the class, not a filter.
   if (subjects.length === 1) {
+    const primary = subjectNameForLocale(subjects[0].name, locale) ?? subjects[0].name;
+    const secondary = subjectTranslationForLocale(subjects[0].name, locale);
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-full bg-[#e6f7fb] px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[#0e6b7c] dark:bg-[#0f2f36] dark:text-[#7fdcea]",
+          "inline-flex flex-col items-center justify-center rounded-full bg-[#e6f7fb] px-2 py-0.5 text-center text-[11px] font-bold uppercase tracking-[0.06em] text-[#0e6b7c] dark:bg-[#0f2f36] dark:text-[#7fdcea]",
           className,
         )}
       >
-        {subjects[0].name}
+        <span className="whitespace-nowrap leading-tight">{primary}</span>
+        <span
+          className={cn(
+            "mt-px whitespace-nowrap text-[9px] font-medium normal-case leading-none tracking-normal opacity-55",
+            secondary ? "" : "invisible",
+          )}
+        >
+          {secondary ?? "\u00a0"}
+        </span>
       </span>
     );
   }
@@ -88,24 +107,62 @@ export function SubjectSwitcher({
         {subjects.map((subject) => {
           const active = subject.id === current.id;
           return (
-            <Link
+            <button
               key={subject.id}
+              type="button"
               role="tab"
               aria-selected={active}
-              href={`/aula-virtual/${classId}?subject=${subject.id}&tab=${tab}`}
+              onClick={() => {
+                // Repaint the filtered lists right away — no server render and
+                // no skeleton. The URL then catches up in the background
+                // (`replace`, so the back button is not polluted), which keeps
+                // reloads and shared links on the same subject.
+                measureSubject(subject.id);
+                onSubjectChange?.(subject.id);
+                router.replace(`/aula-virtual/${classId}?subject=${subject.id}&tab=${tab}`, {
+                  scroll: false,
+                });
+              }}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors",
+                // Two lines: `justify-center` on a flex column keeps a subject we
+                // have no translation for vertically centred instead of
+                // sitting on the top edge next to two-line neighbours.
+                "flex shrink-0 flex-col justify-center rounded-full px-3 py-1 text-center text-[13px] font-semibold leading-tight transition-colors",
                 active
                   ? "bg-[#e6f7fb] text-[#0e6b7c] ring-1 ring-inset ring-[#7dd3e8] dark:bg-[#0f2f36] dark:text-[#7fdcea] dark:ring-[#155e75]"
                   : "text-foreground/50 hover:bg-surface-muted hover:text-foreground",
               )}
             >
-              {subject.name}
-            </Link>
+              <SubjectPillLabel name={subject.name} locale={locale} />
+            </button>
           );
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * The pill's two lines: the subject in the UI language, and — tight beneath it,
+ * half the size — the other language's name ("Ciencias" / "Science"). The pair
+ * flips with the language switch; subjects we do not know keep one line.
+ */
+function SubjectPillLabel({ name, locale }: { name: string; locale: Locale }) {
+  const primary = subjectNameForLocale(name, locale) ?? name;
+  const secondary = subjectTranslationForLocale(name, locale);
+  return (
+    <>
+      <span className="block min-h-[1.05em] whitespace-nowrap">{primary}</span>
+      <span
+        aria-hidden={secondary ? undefined : true}
+        className={cn(
+          "mt-px block min-h-[1em] whitespace-nowrap text-[9.5px] font-medium leading-none tracking-normal opacity-55",
+          secondary ? "" : "invisible",
+        )}
+      >
+        {secondary ?? "\u00a0"}
+      </span>
+    </>
   );
 }
 

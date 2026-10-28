@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { decideAttendanceJustification } from "@/lib/teachers/attendance-actions";
 import { Dialog } from "@/components/ui/dialog";
 import { ATTENDANCE_COMMENT_MAX } from "@/lib/attendance/model";
@@ -16,7 +16,7 @@ export function JustificationDecision({
   recordId: string;
   onDecided?: (recordId: string, decision: "accepted" | "rejected") => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const a = t.attendance;
   const router = useRouter();
   const [busy, setBusy] = useState<"accepted" | "rejected" | null>(null);

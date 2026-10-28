@@ -40,7 +40,7 @@ import type { MessageContact } from "@/lib/dashboard/messages";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 /** Matches `composeSchema.recipients.max` in comms-actions. */
 const COMPOSE_RECIPIENT_MAX = 500;
@@ -73,7 +73,7 @@ export function UnifiedMessageComposer({
   realtime?: RealtimeConfig | null;
   fromLabel?: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const router = useRouter();
   const [discardOpen, setDiscardOpen] = useState(false);
   const [toSelected, setToSelected] = useState<PickerSelection[]>(

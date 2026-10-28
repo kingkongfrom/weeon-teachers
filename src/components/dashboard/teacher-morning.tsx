@@ -251,23 +251,34 @@ export function TeacherMorning({
       </div>
 
       <div className="border-t border-border-strong pt-5 morning-compact:pt-4 morning-tablet:col-span-2 morning-tablet:row-start-4 morning-compact:col-span-2 morning-compact:row-start-4 morning-desktop:absolute morning-desktop:left-1/2 morning-desktop:top-[calc(50%+70px)] morning-desktop:w-2/3 morning-desktop:-translate-x-1/2 morning-desktop:-translate-y-1/2">
-        <ol className="grid grid-cols-5 gap-2 morning-compact:gap-3">
+        <ol className="grid grid-cols-5 gap-1 gap-x-1.5 min-[380px]:gap-2 morning-compact:gap-3">
           {week.map((iso) => {
             const day = parseISO(iso);
             const isToday = iso === todayISO;
             const titles = titlesOn(weekEvents, iso).slice(0, 2);
             return (
-              <li key={iso} className="flex">
+              <li key={iso} className="flex min-w-0">
                 <Link
                   href={`/agenda/calendario?view=day&date=${iso}`}
-                  className="block h-full w-full rounded-xl border border-border bg-surface px-1 py-2 transition-colors hover:border-[#9ec5eb]/80 hover:bg-[#e8f1fc]/[0.4] morning-compact:px-2 morning-compact:py-2 dark:border-border dark:bg-surface dark:hover:border-[#3b6ea8]/70 dark:hover:bg-[#1a2f4a]"
+                  className="block h-full w-full min-w-0 rounded-xl border border-border bg-surface px-1 py-2 transition-colors hover:border-[#9ec5eb]/80 hover:bg-[#e8f1fc]/[0.4] morning-compact:px-2 morning-compact:py-2 dark:border-border dark:bg-surface dark:hover:border-[#3b6ea8]/70 dark:hover:bg-[#1a2f4a]"
                 >
-                  <p className="text-sm font-medium capitalize text-foreground/65 morning-compact:text-base dark:text-foreground/50">
-                    {day.toLocaleDateString(lang, { weekday: "long" })}
+                  {/*
+                    Phone (< 768px): five columns in ~340px leave ~60px each, so
+                    "Miércoles" at text-sm overflowed its card. Full name from
+                    sm up; the short form below it, the whole cell scaling with
+                    the viewport via clamp so 320px screens still fit.
+                  */}
+                  <p className="truncate text-[clamp(10px,2.9vw,14px)] font-medium capitalize leading-tight text-foreground/65 morning-compact:text-base dark:text-foreground/50">
+                    <span className="sm:hidden">
+                      {day.toLocaleDateString(lang, { weekday: "short" }).replace(".", "")}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {day.toLocaleDateString(lang, { weekday: "long" })}
+                    </span>
                   </p>
                   <p
                     className={cn(
-                      "mt-1 text-2xl font-semibold tabular-nums leading-none morning-compact:text-3xl",
+                      "mt-1 text-[clamp(15px,4.6vw,24px)] font-semibold tabular-nums leading-none morning-compact:text-3xl",
                       !isToday && "text-foreground/80 dark:text-foreground/70",
                     )}
                     style={isToday ? BRAND_NUMBER : undefined}
@@ -275,7 +286,7 @@ export function TeacherMorning({
                     {day.getDate()}
                   </p>
                   {titles.length > 0 ? (
-                    <p className="mt-2 line-clamp-2 text-[11px] leading-snug text-foreground/60 morning-compact:text-xs dark:text-foreground/45">
+                    <p className="mt-1.5 line-clamp-2 text-[clamp(9px,2.3vw,11px)] leading-snug text-foreground/60 morning-compact:mt-2 morning-compact:text-xs dark:text-foreground/45">
                       {titles.join(" · ")}
                     </p>
                   ) : (

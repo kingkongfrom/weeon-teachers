@@ -14,7 +14,7 @@ import {
 } from "@/lib/reports/submitted-view";
 import { schoolPeriodLabel } from "@/lib/dashboard/school-period";
 import { hubToneSurface } from "@/lib/dashboard/tones";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -36,8 +36,8 @@ function formatSubmittedAt(iso: string, locale: string): string {
 }
 
 export function ReportsSubmittedList({ reports }: Props) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const sorted = useMemo(() => sortSubmittedReports(reports), [reports]);
@@ -147,7 +147,7 @@ export function ReportsSubmittedList({ reports }: Props) {
 }
 
 function SubmittedReportDetail({ report }: { report: SubmittedReport }) {
-  const t = useT();
+  const t = useLiveT();
   const draft = useMemo(() => submittedReportAsDraft(report), [report]);
   const resubmitted =
     new Date(report.updatedAt).getTime() - new Date(report.submittedAt).getTime() > 1000;

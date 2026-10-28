@@ -10,7 +10,7 @@ import { presenceDotClass, type PresenceStatus } from "@/lib/comms/presence-stat
 import { useProfilePresence } from "@/lib/comms/use-profile-presence";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 import type { CommsMessageKey } from "@/lib/i18n/comms-messages";
 
 function presenceTitle(status: PresenceStatus, t: (key: CommsMessageKey) => string): string {
@@ -34,7 +34,7 @@ export function ParaRecipientInlineList({
   realtime?: RealtimeConfig | null;
   className?: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const { visible, hiddenCount } = splitVisibleParaRecipients(selections);
   const profileIds = useMemo(
     () =>

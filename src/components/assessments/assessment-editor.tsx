@@ -26,7 +26,9 @@ import {
   Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
+import { subjectNameForLocale } from "@/lib/i18n/subject-names";
+import { useLiveLocale } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { RichTextEditor } from "@/components/assessments/rich-text";
@@ -45,6 +47,11 @@ import {
   type AssessmentQuestion,
   type QuestionType,
 } from "@/lib/assessments/model";
+import {
+  assessmentTitleFor,
+  autoAssessmentTitle,
+  isAutoAssessmentTitle,
+} from "@/lib/assessments/title";
 import {
   closeAssessment,
   deleteAssessment,
@@ -96,7 +103,10 @@ export function AssessmentEditor({
   studentCount?: number;
   submissions?: SubmissionSummary[];
 }) {
-  const t = useT();
+  // Live translator: the labels repaint the moment the language changes, no
+  // server round-trip in the way.
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const a = t.assessments;
   const router = useRouter();
 
@@ -133,6 +143,31 @@ export function AssessmentEditor({
   const [closing, setClosing] = useState(false);
 
   const total = Math.round(computePointsTotal(draft.content));
+  /*
+   * Title fallback: leaving it blank is allowed, and the assessment is named
+   * "Tarea de {materia}" / "Examen de {materia}" (EN: "{subject} exam"), with the
+   * subject itself in the active language. It is shown as the placeholder (gray,
+   * not a real value) and saved as the real title on save/publish.
+   *
+   * A stored auto-name was written in whichever language was active at the time,
+   * so it is detected in every catalog and treated as unnamed — the title
+   * follows the language in use now instead of locking the exam to the old one.
+   */
+  const subjectLabel = subjectNameForLocale(subjectName, locale);
+  const storedTitle = draft.title.trim();
+  const isFallbackTitle = isAutoAssessmentTitle(storedTitle);
+  const fallbackTitle = autoAssessmentTitle({
+    kind: initial.kind === "exam" ? "exam" : "homework",
+    subject: subjectName,
+    locale,
+  });
+  const resolvedTitle = (): string =>
+    assessmentTitleFor({
+      title: storedTitle,
+      kind: initial.kind === "exam" ? "exam" : "homework",
+      subject: subjectName,
+      locale,
+    });
   // Keep the empty state out of the way while the picker is open.
   const allowEmptyPrompt = draft.content.questions.length === 0 && !addOpen;
 
@@ -194,6 +229,12 @@ export function AssessmentEditor({
 
   async function handleSave(): Promise<boolean> {
     setError(null);
+    // Only the due date is mandatory now: the title falls back to
+    // "Tarea de {materia}" when blank.
+    if (!draft.dueAt) {
+      setError(a.requiredHint);
+      return false;
+    }
     setSaving(true);
     // Plain-JSON clone: rich-text docs come from ProseMirror with non-plain
     // `attrs` objects, which React's server-action serializer drops (it emits a
@@ -202,7 +243,7 @@ export function AssessmentEditor({
     const res = await saveAssessment({
       id: initial.id,
       classId: initial.classId,
-      title: draft.title,
+      title: resolvedTitle(),
       kind: draft.kind,
       subjectId: draft.subjectId,
       topicId: null,
@@ -222,6 +263,11 @@ export function AssessmentEditor({
   }
 
   async function handleTogglePublish() {
+    // A student needs to know when the work is due; the title has a fallback.
+    if (!initial.published && !draft.dueAt) {
+      setError(a.requiredHint);
+      return;
+    }
     // Persist pending edits first so we never publish a stale draft.
     if (dirty) {
       const saved = await handleSave();
@@ -367,6 +413,12 @@ export function AssessmentEditor({
         </div>
       ) : null}
 
+      {/*
+        No standing warning here: a fresh draft is expected to be incomplete, so
+        the message appears only after the teacher actually tries to save or
+        publish (handleSave / handleTogglePublish set it in `error`).
+      */}
+
       {locked ? (
         <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
           <Lock className="mt-0.5 h-4 w-4 shrink-0" />
@@ -385,14 +437,14 @@ export function AssessmentEditor({
       ) : null}
 
       <section className="overflow-hidden rounded-2xl border border-border bg-surface">
-        {subjectName ? (
-          <div className="border-b border-border bg-surface-muted/50 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-foreground/50">
-            {subjectName}
-          </div>
-        ) : null}
-
         <div className="flex flex-col gap-5 p-5">
+          {/* Subject + kind + state: the document's own identity row. */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            {subjectLabel ? (
+              <span className="inline-flex h-7 items-center rounded-md bg-brand-50 px-2.5 text-xs font-bold uppercase tracking-wide text-brand-700 dark:bg-brand-600/20 dark:text-brand-100">
+                {subjectLabel}
+              </span>
+            ) : null}
             {/* Kind is chosen at creation (Tarea / Examen) and frozen after. */}
             <span className="inline-flex h-7 items-center rounded-md bg-[#e6f7fb] px-2.5 text-xs font-bold uppercase tracking-wide text-[#0e6b7c] dark:bg-[#0f2f36] dark:text-[#7fdcea]">
               {initial.kind === "exam" ? a.exam : a.homework}
@@ -422,14 +474,33 @@ export function AssessmentEditor({
             </span>
           </div>
 
-          <input
-            value={draft.title}
-            readOnly={locked}
-            onChange={(event) => update({ title: event.target.value })}
-            placeholder={a.untitled}
-            aria-label={a.title}
-            className="w-full rounded-xl bg-transparent text-3xl font-bold leading-tight text-foreground outline-none transition-colors placeholder:text-foreground/30 focus:bg-surface-muted/40"
-          />
+          {/*
+            Title reads as a field through its label and placeholder alone — no
+            border or filled box, so the page keeps the document-like look.
+          */}
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/50">
+              {a.titleField}
+            </span>
+            <input
+              /*
+               * An auto-name is shown as its *current-language* form. Binding the
+               * raw stored title kept "Examen de Ciencias" on screen after
+               * switching to English — only the placeholder was translating.
+               */
+              value={isFallbackTitle ? "" : draft.title}
+              readOnly={locked}
+              onChange={(event) => update({ title: event.target.value })}
+              placeholder={fallbackTitle}
+              aria-label={a.title}
+              className={cn(
+                "w-full rounded-lg bg-transparent px-0 py-1 text-3xl font-bold leading-tight outline-none transition-colors placeholder:font-bold placeholder:text-foreground/30 focus:bg-surface-muted/40 focus:px-2",
+                // Only an unnamed (or old auto-name) draft renders gray; a real
+                // title the teacher typed is always shown at full contrast.
+                isFallbackTitle ? "text-foreground/35" : "text-foreground",
+              )}
+            />
+          </label>
 
           <div className="flex flex-wrap items-center gap-3">
             <DatePicker
@@ -627,7 +698,7 @@ export function AssessmentEditor({
                         <X className="h-5 w-5" />
                       </button>
                     </div>
-                    <AssessmentPreview draft={draft} />
+                    <AssessmentPreview draft={draft} subjectName={subjectLabel} />
                   </motion.div>
                 </div>
               ) : null}
@@ -664,7 +735,7 @@ export function AssessmentEditor({
       <ConfirmDialog
         open={deleteOpen}
         title={a.deleteConfirm}
-        description={draft.title || a.untitled}
+        description={resolvedTitle()}
         confirmLabel={a.delete}
         cancelLabel={t.classroom.materialsPanel.cancel}
         pending={deleting}

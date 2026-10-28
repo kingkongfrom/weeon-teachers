@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { ArrowLeft, Home } from "lucide-react";
 import { LogoCompact } from "@/components/brand/logo";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -16,8 +16,8 @@ const EASE = [0.22, 1, 0.36, 1] as const;
  * when this screen renders inside {@link AppShell}'s max-width column.
  */
 export function NotFoundScreen() {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const router = useRouter();
 
   /** Browser history only; a deep link with no history falls back to `/inicio`. */

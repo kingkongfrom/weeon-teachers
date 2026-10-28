@@ -8,7 +8,7 @@ import { COMMS_COMPOSE } from "@/lib/comms/paths";
 import type { MessageDraftSummary } from "@/lib/comms/message-draft";
 import type { MessageDraftRecord } from "@/lib/comms/message-draft";
 import { deleteMessageDraft, fetchMessageDraft } from "@/lib/teachers/comms-actions";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 function formatDate(iso: string): string {
@@ -34,7 +34,7 @@ export function MailboxDraftReadingPane({
   summary: MessageDraftSummary | null;
   onDeleted: (id: string) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [record, setRecord] = useState<MessageDraftRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);

@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocale, useT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import {
   fullName,
   finalScoreStatus,
@@ -102,8 +102,8 @@ export function StudentGradesView({
   educationalSupports?: EducationalSupport[];
   medicalInfo?: StudentMedicalInfo | null;
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const r = t.student.report;
   const [groupFilter, setGroupFilter] = useState("all");
 
@@ -263,7 +263,7 @@ export function StudentGradesView({
 }
 
 function GroupSection({ group }: { group: StudentGroupReport }) {
-  const t = useT();
+  const t = useLiveT();
   const r = t.student.report;
 
   return (
@@ -307,8 +307,8 @@ function SubjectRow({
   subject: StudentSubjectReport;
   tone: Tone;
 }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const r = t.student.report;
   const [open, setOpen] = useState(false);
   const status = finalScoreStatus(subject.average, locale);
@@ -379,8 +379,8 @@ function SubjectRow({
 }
 
 function GradeRow({ item }: { item: StudentGradeItem }) {
-  const t = useT();
-  const locale = useLocale();
+  const t = useLiveT();
+  const locale = useLiveLocale();
   const w = t.gradebook.workspace;
   const r = t.student.report;
 
@@ -455,7 +455,7 @@ function StatCard({
 }
 
 function AttendanceCodes({ counts }: { counts: AttendanceCounts }) {
-  const t = useT();
+  const t = useLiveT();
   if (counts.present + counts.late_justified + counts.late_unjustified + counts.absence_justified + counts.absence_unjustified === 0) {
     return null;
   }

@@ -7,7 +7,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AmbientPage } from "@/components/brand/ambient-page";
 import { PasswordInput } from "@/components/ui/password-input";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import {
   completePasswordResetTeacher,
   validateResetToken,
@@ -15,7 +15,7 @@ import {
 
 function NewPasswordSubmit() {
   const { pending } = useFormStatus();
-  const t = useT();
+  const t = useLiveT();
   return (
     <button
       type="submit"
@@ -28,7 +28,7 @@ function NewPasswordSubmit() {
 }
 
 function SetPasswordCard({ token }: { token: string }) {
-  const t = useT();
+  const t = useLiveT();
   const [state, formAction] = useActionState(completePasswordResetTeacher, {});
   const [password, setPassword] = useState("");
 
@@ -83,7 +83,7 @@ function SetPasswordCard({ token }: { token: string }) {
 }
 
 function ResetController() {
-  const t = useT();
+  const t = useLiveT();
   const params = useSearchParams();
   const token = params.get("token");
   const [state, setState] = useState<

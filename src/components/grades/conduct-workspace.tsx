@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Dropdown } from "@/components/ui/dropdown";
@@ -77,7 +77,7 @@ export function ConductWorkspace({
   locale: string;
   supportFlags?: ClassEducationalSupportFlags;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const router = useRouter();
   const c = t.conduct;
   const [records, setRecords] = useState(initialRecords);
@@ -493,7 +493,7 @@ function AddConductDialog({
   }) => Promise<boolean>;
   onClose: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const c = t.conduct;
   const today = new Date().toISOString().slice(0, 10);
   const [studentIds, setStudentIds] = useState<string[]>(students[0] ? [students[0].id] : []);

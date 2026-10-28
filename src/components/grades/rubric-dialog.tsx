@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Check, Loader2, Plus, RotateCcw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import {
   assignOrphanColumns,
   moveColumnToRubro,
@@ -60,7 +60,7 @@ export function RubricDialog({
   onClose: () => void;
   onSaved: () => Promise<void> | void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const w = t.gradebook.workspace;
   const copy = w.rubros;
 

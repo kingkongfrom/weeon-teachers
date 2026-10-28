@@ -12,7 +12,7 @@ import {
 import type { MessageContact } from "@/lib/dashboard/messages";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 export function ComposeParaRecipientField({
   contacts,
@@ -29,7 +29,7 @@ export function ComposeParaRecipientField({
   realtime?: RealtimeConfig | null;
   disabled?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);

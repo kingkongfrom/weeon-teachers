@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 
 type SortBy = "name" | "finalDesc" | "finalAsc";
 
@@ -44,7 +44,7 @@ export function GradebookToolbar({
   onPhoneViewChange: (value: "cards" | "grid") => void;
   passMark: number;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const w = t.gradebook.workspace;
   const sb = w.scoreboard;
 

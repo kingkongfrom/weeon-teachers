@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Clock, DoorOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { LessonDatePicker } from "@/components/assessments/lesson-date-picker";
@@ -47,7 +47,7 @@ export function ExamDateDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const examDates = t.examDates;
   // Subject lives in the header ("Examen · Ciencias"), not as a body field —
   // it is already chosen by the active tab.
@@ -95,7 +95,7 @@ function ExamDateForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const e = t.examDates;
 
   const [date, setDate] = useState<string | null>(editing?.date ?? initialDate);

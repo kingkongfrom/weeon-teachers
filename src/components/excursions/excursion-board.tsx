@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { MapPin, Wallet, X } from "lucide-react";
 import { PdfThumb } from "@/components/excursions/pdf-thumb";
 import { PdfFileButton } from "@/components/ui/pdf-reader";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import type { Messages } from "@/lib/i18n/messages";
 import {
   type ExcursionDecision,
@@ -23,7 +23,7 @@ export function ExcursionBoard({
   upcoming: TeacherExcursion[];
   past: TeacherExcursion[];
 }) {
-  const copy = useT().agenda.excursiones;
+  const copy = useLiveT().agenda.excursiones;
   const [viewing, setViewing] = useState<TeacherExcursion | null>(null);
 
   useEffect(() => {
@@ -181,7 +181,7 @@ function TripDetail({
   copy: Copy;
   onClose: () => void;
 }) {
-  const closeLabel = useT().common.close;
+  const closeLabel = useLiveT().common.close;
   const [coverFailed, setCoverFailed] = useState(false);
   const time = trip.allDay ? copy.allDay : timeRange(trip);
   const stamp = dayStamp(trip.date);

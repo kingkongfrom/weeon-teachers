@@ -9,7 +9,7 @@ import {
 } from "@/lib/comms/compose-display-utils";
 import type { ComposeThreadHistoryMessage } from "@/lib/comms/message-draft";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
@@ -27,7 +27,7 @@ function MessageMetaBlock({
   message: ComposeThreadHistoryMessage;
   subjectLine: string;
 }) {
-  const t = useT();
+  const t = useLiveT();
   return (
     <div className="space-y-2">
       <MetaRow label={t("comms.historyFrom")} value={message.fromLabel} />
@@ -41,7 +41,7 @@ function MessageMetaBlock({
 function buildQuotedBlocks(
   messages: ComposeThreadHistoryMessage[],
   subjectLine: string,
-  t: ReturnType<typeof useT>,
+  t: ReturnType<typeof useLiveT>,
   replying: boolean,
 ): Array<{ message: ComposeThreadHistoryMessage; sectionLabel: string | null }> {
   const latest = messages[messages.length - 1];
@@ -102,7 +102,7 @@ export function ComposeThreadQuotedSection({
   subject: string;
   replying: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   if (messages.length === 0) return null;
 
   const latest = messages[messages.length - 1]!;
@@ -142,7 +142,7 @@ export function ComposeThreadReadPhase({
   replyEditor?: ReactNode;
   deferQuotedThread?: boolean;
 }) {
-  const t = useT();
+  const t = useLiveT();
   if (messages.length === 0) return null;
 
   const latest = messages[messages.length - 1]!;

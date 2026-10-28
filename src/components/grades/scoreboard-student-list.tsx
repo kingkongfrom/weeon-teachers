@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { PASS_MARK, tonePillClass } from "@/components/grades/score-cells";
 import type { ClassStats } from "@/lib/dashboard/scoreboard";
 
@@ -41,7 +41,7 @@ export function ScoreboardStudentList({
   /** Opens the phone grading sheet for that student. */
   onGrade: (studentId: string) => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const s = t.gradebook.workspace.scoreboard;
 
   return (

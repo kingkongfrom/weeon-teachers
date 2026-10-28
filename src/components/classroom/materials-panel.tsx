@@ -25,7 +25,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useShowMore } from "@/lib/dashboard/use-show-more";
 import { isPdfFile, PdfReaderDialog } from "@/components/ui/pdf-reader";
@@ -88,7 +88,7 @@ export function MaterialsPanel({
   /** Shown beside the heading when the class has only one subject. */
   subjectLabel?: string | null;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const tPanel = t.classroom.materialsPanel;
   const [open, setOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -378,7 +378,7 @@ function UploadDialog({
   defaultSubjectId: string | null;
   onClose: () => void;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const tPanel = t.classroom.materialsPanel;
   const [file, setFile] = useState<File | null>(initialFile);
   const [title, setTitle] = useState(initialFile ? initialFile.name.replace(/\.[^.]+$/, "") : "");

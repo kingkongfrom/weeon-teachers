@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { ArrowLeft, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { AULA_TEAL } from "@/lib/dashboard/tones";
+import { useNavMeasure } from "@/lib/perf/nav-timing";
 
 export type ClassTabId = "trabajo" | "examenes" | "personas" | "asistencia" | "calificaciones";
 
@@ -50,8 +51,9 @@ export function ClassHeader({
   onTabChange: (tab: ClassTabId) => void;
   justificationBadge: number;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const short = t.classroom.tabsShort;
+  const measureTab = useNavMeasure("tab");
 
   return (
     <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-background/90 px-4 backdrop-blur-md sm:-mx-5 sm:px-5 md:mx-0 md:rounded-2xl md:border md:px-4">
@@ -110,7 +112,10 @@ export function ClassHeader({
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => onTabChange(id)}
+                onClick={() => {
+                  measureTab(id);
+                  onTabChange(id);
+                }}
                 className={cn(
                   // Full pill on every tab (not just the active one) so the row
                   // reads as a set of round buttons; only the active one is

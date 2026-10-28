@@ -20,7 +20,7 @@ import { fetchThreadDetail, markThreadRead } from "@/lib/teachers/comms-actions"
 import type { MessageThreadDetail, MessageThreadSummary } from "@/lib/dashboard/messages";
 import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { Tooltip } from "@/components/ui/tooltip";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 const readPaneHeaderClass =
   "sticky top-0 z-10 flex items-start gap-2 border-b border-border bg-surface/95 px-4 pt-4 pb-3 backdrop-blur-sm sm:px-5 sm:pt-5 sm:pb-3.5";
@@ -38,7 +38,7 @@ export function MailboxReadingPane({
   toolbar?: MailboxThreadToolbarProps | null;
   realtime?: RealtimeConfig | null;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const router = useRouter();
   const [detail, setDetail] = useState<MessageThreadDetail | null>(null);
   const [loading, setLoading] = useState(false);

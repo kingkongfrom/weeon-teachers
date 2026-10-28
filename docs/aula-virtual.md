@@ -43,6 +43,14 @@ Route `loading.tsx` files mirror the live UI. Reuse
 Grupos list uses `GrupoCardSkeleton`; gradebook detail keeps its grid-specific
 loader (see `docs/grupos.md`).
 
+> **Known gap (fix before the next class-page PR).** The class page no longer
+> has the hero card (`1506d87` replaced it with one sticky `ClassHeader`), but
+> `src/app/(app)/aula-virtual/[classId]/loading.tsx` still renders
+> `BackLinkSkeleton` + `AulaClassHeroSkeleton` + `ClassTabsBarSkeleton`. So the
+> **old chrome flashes on every server render** — which reads as "the old header
+> came back". The skeleton must mirror the live header: one 56 px row
+> (back · class name · school · year · student count) plus the tab pill row.
+
 ## Ownership
 
 | Concern | Where |
@@ -123,6 +131,22 @@ Honest snapshot — do not assume the rest exists.
       subject is not repeated on the banner — it is chosen with the Trabajo de
       clase subject pills. The tone palette is defined once in `src/lib/dashboard/tones.ts`
       and shared with the hub and lesson tiles.
+    - *Materia labels are bilingual* (28 Oct 2026): each pill is **two lines** —
+      the subject in the active UI language, and 1 px beneath it, at ~9.5 px and
+      55 % opacity, **the other language's name** ("Ciencias" / *Science*). The
+      pair flips with the language switch. `src/lib/i18n/subject-names.ts` owns
+      the map (`subjectNameForLocale`, `subjectTranslationForLocale`,
+      `isTranslatedSubjectName`); a subject the school invented ("Robótica")
+      keeps one line and its reserved second-line height, so pills stay aligned.
+      EN uses **Mathematics** (not "Math"). Do not add subject names to the
+      message catalog — the map is shared by the editor, previews, exam dates
+      and library.
+    - *Subject switching is client-side* (28 Oct 2026): the pills are buttons
+      that update local state **first** and then `router.replace()` the URL. The
+      classwork/exam lists arrive once, unfiltered, and are filtered in the
+      client, so a switch paints immediately with no server round trip. `?subject=`
+      still seeds a fresh load and shared links. **Do not turn these back into
+      `<Link href>` navigations** — that re-introduces the full page render.
   - **Personas** — teacher and enrolled students as a card grid; each student opens their
     transcript (`/estudiantes/[id]`). This is the home for the roster — there is
     no separate students section in the hub.
@@ -708,6 +732,130 @@ types are refreshed in this repo.
   (`short_answer`/`number` are exact-compare with accent/case folding).
 - Editable-PDF scope: which forms, and whether annotations are per-student
   copies or a shared layer (`P6`).
+
+## Performance — architecture, budgets, and how to measure (28 Oct 2026)
+
+Read this before touching the class page, the subject pills, or any
+`/lib/dashboard` loader they call.
+
+### What each request loads (tab-scoped)
+
+`src/app/(app)/aula-virtual/[classId]/page.tsx` derives the work from `?tab=`:
+
+| Tab | Loaders |
+| --- | --- |
+| **Trabajo de clase** (default) | `loadClassMaterials`, `loadClassAssessments`, `loadClassTurnIns` |
+| **Fechas de examen** | `loadClassExamDates`, `loadClassLessonDays` |
+| **Asistencia** | `loadClassAttendance`, `loadJustificationCountForClass` |
+| Personas / Calificaciones | none (roster already comes from `loadTeacherGrupo`) |
+
+Always loaded: `loadTeacherGrupo` and `getTeacherSession` (in parallel), school
+name, translations. **Never** make the class page await every loader again —
+that is what made every pill click cost a full render.
+
+Badge counts are **counts**: the Asistencia badge uses
+`loadJustificationCountForClass` (a `head: true` query) — do not reintroduce
+`loadJustificationInbox()` there; it loads the teacher's whole school-wide inbox
+and signs an attachment per row.
+
+Attachment URLs are signed in **one** call (`createSignedUrls`) through
+`src/lib/dashboard/justification-urls.ts`. Keep it that way: per-row
+`createSignedUrl` is one storage round trip per row.
+
+### Client-side state
+
+- Subject: `activeSubjectId` in `ClassTabs` (and `ExamDatesPanel`), seeded from
+  `selectedSubjectId`, updated on pill click before `router.replace`.
+- Tab: `tab` state in `ClassTabs` (no URL round trip).
+- Chrome strings read **`useLiveT` / `useLiveLocale`** (`src/lib/i18n/client.tsx`).
+  `useT` / `useLocale` return the *server* locale and only repaint after the RSC
+  refresh — that is why language switches used to feel slow on some screens.
+  Comunicación's flat translator (`lib/i18n/use-i18n.ts`) is live too, exported
+  as `useLiveT`.
+
+### Budgets (what "done" means)
+
+| Interaction | Target |
+| --- | --- |
+| Subject pill → active | < 50 ms (one frame) |
+| Subject pill → content painted | < 100 ms, **0** blocking RSC fetches |
+| Tab pill → active | < 50 ms |
+| First class page paint | < 1.5 s warm server, city Wi-Fi |
+
+An RSC fetch may still happen in the background (URL sync). It must not gate
+the paint; if *content* waits for it, the switch regressed to a server render.
+
+### Measuring
+
+Instrumentation lives in `src/lib/perf/nav-timing.ts` — dev only, enabled in a
+production build only with `NEXT_PUBLIC_PERF_INSTRUMENTATION=1`. It records
+`performance.measure()` entries:
+
+```
+weeon:subject:active    click → clicked pill is the active one
+weeon:subject:content   click → filtered lists painted
+weeon:tab:active        click → tab pill active
+weeon:tab:content       click → that tab's panel painted
+```
+
+**1. Browser (ad hoc).** Click between subjects ~10 times, then:
+
+```js
+window.weeonPerf.summary() // { subject: {active:{n,median,p90,max}, content:{…}}, tab: {...} }
+window.weeonPerf.table()   // raw entries, newest first
+window.weeonPerf.reset()   // fresh sample
+```
+
+`window.weeonPerf` is installed lazily by the first measured click, so nothing
+is mounted in the layout.
+
+**2. DevTools → Performance → record.** The same measures appear on the
+**Timings** track beside the network waterfall — this is how you tell React
+work apart from a Supabase call or an RSC fetch.
+
+**3. Scripted (`npm run perf:aula`).** Repeatable numbers, no human:
+
+```powershell
+$env:PERF_EMAIL = "teacher@example.com"; $env:PERF_PASSWORD = "…"
+npm run perf:aula -- --url "http://localhost:3000/aula-virtual/<classId>" --clicks 12 --headed
+npm run perf:aula -- --storage .auth/state.json --json --out perf.json   # CI-friendly
+```
+
+Requires `playwright` (`npm i -D playwright; npx playwright install chromium`)
+and a running dev server. It clicks subject pills in rotation and prints
+median / p90 / max for both phases plus **RSC requests per switch**. `--storage`
+skips the login flow (create it once with `page.context().storageState(...)`).
+
+**4. Production (real users).** `weeon-tenants` ships
+`@vercel/speed-insights`; `weeon-teachers` does not yet. Adding
+`<SpeedInsights />` to `src/app/layout.tsx` gives INP/LCP/CLS per route — the
+only honest measure on school Wi-Fi. Planned, not built.
+
+### Does the instrumentation slow the app down?
+
+Practically no. Per click it creates 3 marks + 2 measures — a few microseconds
+of `performance` bookkeeping, no network, no layout, no React re-render,
+nothing on the server. Marks older than 30 s are pruned so a long session does
+not grow unbounded, and the whole module is a no-op in production unless
+`NEXT_PUBLIC_PERF_INSTRUMENTATION=1`. The cost is smaller than the noise it
+measures, so it does not skew the numbers. The one exception is **Playwright**
+runs sharing the machine with the dev server: that is why the budget is measured
+on a warm server, not while a second build is compiling.
+
+### Regression guards — what to add next
+
+Following `weeon-tenants/tests/performance/` (source-inspection tests, cheaper
+and more stable than timing assertions):
+
+- `classwork-panel.tsx` receives full lists and filters client-side (no
+  `router.refresh`/loader import).
+- `subject-switcher.tsx` uses `onClick` + `router.replace`, never `<Link href>`
+  for a subject.
+- The class page never awaits `loadClassAttendance` on the classwork path, and
+  never calls `loadJustificationInbox` for the badge.
+- `useT`/`useLocale` do not appear in components under `src/components`.
+
+Ship these before the aula virtual is declared performance-stable.
 
 ## References
 

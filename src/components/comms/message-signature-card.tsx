@@ -8,14 +8,14 @@ import { saveMessageMailboxSettings } from "@/lib/teachers/comms-actions";
 import type { MessageMailboxSettings } from "@/lib/dashboard/message-mailbox-settings";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/use-i18n";
+import { useLiveT } from "@/lib/i18n/use-i18n";
 
 export function MessageSignatureCard({
   initialSettings,
 }: {
   initialSettings: MessageMailboxSettings;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const [body, setBody] = useState<RichTextDoc>(() => initialSettings.signatureBody);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);

@@ -3,12 +3,12 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AmbientPage } from "@/components/brand/ambient-page";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { requestPasswordResetTeacher } from "@/lib/auth/password-reset-actions";
 
 function ResetSubmitButton() {
   const { pending } = useFormStatus();
-  const t = useT();
+  const t = useLiveT();
   return (
     <button
       type="submit"
@@ -21,7 +21,7 @@ function ResetSubmitButton() {
 }
 
 export function ForgotPasswordForm() {
-  const t = useT();
+  const t = useLiveT();
   const [state, formAction] = useActionState(requestPasswordResetTeacher, {});
 
   if (state.ok) {

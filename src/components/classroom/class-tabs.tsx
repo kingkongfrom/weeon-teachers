@@ -6,7 +6,7 @@ import { ArrowUpRight, ChevronRight, GraduationCap, HandHeart } from "lucide-rea
 import { fetchClassEducationalSupportFlags } from "@/lib/teachers/educational-support-actions";
 import type { ClassEducationalSupportFlags } from "@/lib/educational-supports/model";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n/client";
+import { useLiveT } from "@/lib/i18n/client";
 import { ClassHeader } from "@/components/classroom/class-header";
 import { hubToneSurface, TONE_AVATAR } from "@/lib/dashboard/tones";
 import { ProfileAvatarDisplay } from "@/components/layout/profile-avatar-display";
@@ -69,11 +69,17 @@ export function ClassTabs({
   schoolName: string | null;
   year: number;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const VALID_TABS: TabId[] = ["trabajo", "personas", "asistencia", "calificaciones", "examenes"];
   const [tab, setTab] = useState<TabId>(
     VALID_TABS.includes(initialTab as TabId) ? (initialTab as TabId) : "trabajo",
   );
+  // The subject is client state: a switch filters the lists immediately and the
+  // URL follows. The server value only seeds it (fresh load, reload, shared link).
+  const [activeSubjectId, setActiveSubjectId] = useState<string | null>(selectedSubjectId);
+  useEffect(() => {
+    if (selectedSubjectId) setActiveSubjectId(selectedSubjectId);
+  }, [selectedSubjectId]);
   const [justificationBadge, setJustificationBadge] = useState(pendingJustifications);
   const [supportFlags, setSupportFlags] = useState<ClassEducationalSupportFlags>({});
 
@@ -83,14 +89,14 @@ export function ClassTabs({
     let active = true;
     void fetchClassEducationalSupportFlags({
       classId,
-      subjectId: selectedSubjectId,
+      subjectId: activeSubjectId,
     }).then((res) => {
       if (active && res.ok) setSupportFlags(res.flags);
     });
     return () => {
       active = false;
     };
-  }, [classId, selectedSubjectId]);
+  }, [classId, activeSubjectId]);
 
   useEffect(() => {
     setJustificationBadge(pendingJustifications);
@@ -127,9 +133,10 @@ export function ClassTabs({
             classId={classId}
             assessments={assessments}
             materials={materials}
-              selectedSubjectId={selectedSubjectId}
+            selectedSubjectId={activeSubjectId}
             subjects={subjects}
             studentCount={students.length}
+            onSubjectChange={setActiveSubjectId}
           />
         ) : null}
 
@@ -138,13 +145,13 @@ export function ClassTabs({
             classId={classId}
             examDates={examDates}
             lessonDays={
-              selectedSubjectId
-                ? lessonDays.filter((lesson) => lesson.subjectId === selectedSubjectId)
+              activeSubjectId
+                ? lessonDays.filter((lesson) => lesson.subjectId === activeSubjectId)
                 : lessonDays
             }
             materials={materials}
             subjects={subjects}
-            selectedSubjectId={selectedSubjectId}
+            selectedSubjectId={activeSubjectId}
           />
         ) : null}
 
@@ -267,7 +274,7 @@ function PersonCard({
   /** Active Apoyos Eduativos, shown as a discreet badge next to the name. */
   supportCount?: number;
 }) {
-  const t = useT();
+  const t = useLiveT();
   const content = (
     <div
       className={cn(
