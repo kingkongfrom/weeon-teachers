@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Folder, FolderPlus, Loader2 } from "lucide-react";
+import { Folder, FolderPlus, Loader2, Users } from "lucide-react";
 import {
   DIALOG_CONTROL,
   Dialog,
@@ -13,12 +13,15 @@ import { SelectMenu } from "@/components/ui/select-menu";
 import { useLiveT } from "@/lib/i18n/client";
 import type { AssessmentDraft } from "@/lib/assessments/model";
 import type { LibraryCollection } from "@/lib/assessments/library";
+import { fetchShareableTeachers } from "@/lib/teachers/library-client-actions";
+import { cn } from "@/lib/utils";
 import {
   createLibraryCollection,
   saveAssessmentToLibrary,
+  shareLibraryItem,
 } from "@/lib/teachers/library-actions";
 import { loadLibraryForPicker } from "@/lib/teachers/library-picker-actions";
-import { cn } from "@/lib/utils";
+
 
 /**
  * "Guardar en mis evaluaciones" — the one action that turns a class assessment
@@ -49,19 +52,28 @@ export function SaveToLibraryDialog({
   const [title, setTitle] = useState(draft.title);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [addingCollection, setAddingCollection] = useState(false);
+  const [creatingCollection, setCreatingCollection] = useState(false);
   const [newCollection, setNewCollection] = useState("");
   const newCollectionRef = useRef<HTMLInputElement>(null);
+  const [teachers, setTeachers] = useState<
+    Array<{ id: string; name: string; email: string | null }>
+  >([]);
+  const [sharedWith, setSharedWith] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
     setTitle(draft.title);
     setError(null);
-    setSaved(false);
     setAddingCollection(false);
     setNewCollection("");
+    setSharedWith([]);
     void loadLibraryForPicker().then((res) => setCollections(res.collections));
+    // Sharing is optional: the list loads alongside the collections so a saved
+    // item can go straight to colleagues without opening Mis evaluaciones.
+    void fetchShareableTeachers({ itemId: null }).then((res) => {
+      if (res.ok) setTeachers(res.teachers);
+    });
   }, [open, draft.title]);
 
   useEffect(() => {
@@ -85,23 +97,50 @@ export function SaveToLibraryDialog({
       setError(res.error);
       return;
     }
-    setSaved(true);
+    // Shares need the saved item id, so they run after the write. A failure
+    // here must not look like a failed save: the item exists either way, so the
+    // dialog closes and the teacher can retry from Mis evaluaciones.
+    if (res.id && sharedWith.length > 0) {
+      const results = await Promise.all(
+        sharedWith.map((teacherId) => shareLibraryItem({ itemId: res.id!, teacherId })),
+      );
+      const failed = results.filter((result) => !result.ok).length;
+      if (failed > 0) {
+        setError(
+          `Se guardó, pero ${failed} de ${sharedWith.length} no se pudo compartir.`,
+        );
+        return;
+      }
+    }
+    // Close on success: the refresh from `onSaved` is the confirmation, so
+    // leaving the dialog open only added a second "Guardado" state to dismiss.
+    onClose();
     onSaved();
   }
 
   async function addCollection() {
     const name = newCollection.trim();
-    if (!name) return;
+    if (!name || creatingCollection) return;
+    setCreatingCollection(true);
+    setError(null);
     const res = await createLibraryCollection({ name });
-    if (res.ok && res.id) {
-      setCollections((current) => [
-        ...current,
-        { id: res.id!, name, color: null, position: current.length, itemCount: 0 },
-      ]);
-      setCollectionId(res.id);
-      setAddingCollection(false);
-      setNewCollection("");
+    setCreatingCollection(false);
+    if (!res.ok) {
+      // Surface the server message: a silent failure left the teacher typing
+      // into a collection that was never created.
+      setError(res.error);
+      return;
     }
+    const created = res.collection ?? {
+      id: res.id!,
+      name,
+      color: null,
+      position: collections.length,
+    };
+    setCollections((current) => [...current, { ...created, itemCount: 0 }]);
+    setCollectionId(created.id);
+    setAddingCollection(false);
+    setNewCollection("");
   }
 
   const selectedName =
@@ -118,16 +157,15 @@ export function SaveToLibraryDialog({
       footer={
         <>
           <DialogSecondary onClick={onClose} className="sm:mr-auto">
-            {saved ? t.common.close : t.common.cancel}
+            {t.common.cancel}
           </DialogSecondary>
           <DialogPrimary
             onClick={() => void submit()}
-            disabled={pending || saved || draft.content.questions.length === 0}
+            disabled={pending || draft.content.questions.length === 0}
             className="w-full sm:w-auto"
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {saved ? <Check className="h-4 w-4" /> : null}
-            {saved ? l.saved : l.saveAction}
+            {l.saveAction}
           </DialogPrimary>
         </>
       }
@@ -199,10 +237,14 @@ export function SaveToLibraryDialog({
             <button
               type="button"
               onClick={() => void addCollection()}
-              disabled={!newCollection.trim()}
+              disabled={!newCollection.trim() || creatingCollection}
               className="h-11 shrink-0 rounded-xl bg-surface-muted px-3.5 text-sm font-semibold text-foreground/75 transition-colors hover:bg-border disabled:opacity-45"
             >
-              {l.createCollection}
+              {creatingCollection ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                l.createCollection
+              )}
             </button>
           </div>
         ) : (
@@ -220,6 +262,57 @@ export function SaveToLibraryDialog({
           <p className="text-[11.5px] leading-snug text-foreground/45">
             {l.savedInCollection(selectedName)}
           </p>
+        ) : null}
+
+        {teachers.length > 0 ? (
+          <div className="flex flex-col gap-2 border-t border-border pt-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-foreground/45" />
+              <p className="text-[12.5px] font-semibold text-foreground/70">
+                {l.shareWithTeachers}
+              </p>
+            </div>
+            <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+              {teachers.map((teacher) => {
+                const checked = sharedWith.includes(teacher.id);
+                return (
+                  <label
+                    key={teacher.id}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
+                      checked
+                        ? "bg-[#0891B2]/10 text-foreground"
+                        : "text-foreground/70 hover:bg-surface-muted",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) =>
+                        setSharedWith((current) =>
+                          event.target.checked
+                            ? [...current, teacher.id]
+                            : current.filter((id) => id !== teacher.id),
+                        )
+                      }
+                      className="h-3.5 w-3.5 accent-[#0891B2]"
+                    />
+                    <span className="truncate">{teacher.name}</span>
+                    {teacher.email ? (
+                      <span className="truncate text-[11.5px] text-foreground/40">
+                        {teacher.email}
+                      </span>
+                    ) : null}
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-[11.5px] leading-snug text-foreground/45">
+              {sharedWith.length === 0
+                ? l.shareWithNone
+                : l.shareWithCount(sharedWith.length)}
+            </p>
+          </div>
         ) : null}
 
         {error ? (

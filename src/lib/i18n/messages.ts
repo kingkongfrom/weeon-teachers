@@ -315,6 +315,13 @@ const es = {
     saveAction: "Guardar",
     saveAlreadySaved: "Actualizar la copia guardada",
     saveNew: "Guardar como nueva",
+    blooketAction: "Crear set de Blooket",
+    shareWithTeachers: "Compartir con otros docentes",
+    shareWithTeachersHint:
+      "Elijan quiÃ©nes pueden verla y duplicarla en su biblioteca. Puede quitar el acceso cuando quiera.",
+    shareWithNone: "Solo para mÃ­",
+    shareWithCount: (n: number) =>
+      n === 0 ? "Solo para mÃ­" : `Se compartirÃ¡ con ${n} ${n === 1 ? "docente" : "docentes"}`,
     savedInCollection: (name: string) => `Se guardará en la colección «${name}».`,
     notUsedYet: "Sin usar",
     moreActions: "Más acciones",
@@ -1772,6 +1779,13 @@ const en: Messages = {
     newCollection: "New collection",
     collectionName: "Collection name",
     collectionPlaceholder: "Fractions, grade 8",
+    blooketAction: "Create a Blooket set",
+    shareWithTeachers: "Share with other teachers",
+    shareWithTeachersHint:
+      "Pick who can view it and duplicate it into their library. You can revoke access at any time.",
+    shareWithNone: "Only me",
+    shareWithCount: (n: number) =>
+      n === 0 ? "Only me" : `Will be shared with ${n} ${n === 1 ? "teacher" : "teachers"}`,
     createCollection: "Create collection",
     saveCollection: "Save collection",
     renameCollection: "Rename collection",

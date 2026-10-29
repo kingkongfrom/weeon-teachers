@@ -7,6 +7,7 @@ import {
   BookMarked,
   Folder,
   FolderPlus,
+  Gamepad2,
   Loader2,
   PencilLine,
   Search,
@@ -184,17 +185,28 @@ export function LibraryBrowser({
         </div>
 
         {tab === "mine" ? (
-          <button
-            type="button"
-            onClick={() => {
-              setCollectionName("");
-              setCollectionDialog({ mode: "create" });
-            }}
-            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border px-4 text-[13px] font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
-          >
-            <FolderPlus className="h-4 w-4" />
-            {l.newCollection}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Entry point for /aula-virtual/blooket: the builder is a separate
+                page, and this repo has no sidebar to link it from. */}
+            <Link
+              href="/aula-virtual/blooket"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border px-4 text-[13px] font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              {l.blooketAction}
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setCollectionName("");
+                setCollectionDialog({ mode: "create" });
+              }}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border px-4 text-[13px] font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
+            >
+              <FolderPlus className="h-4 w-4" />
+              {l.newCollection}
+            </button>
+          </div>
         ) : null}
       </div>
 
@@ -337,7 +349,7 @@ export function LibraryBrowser({
                   {l.emptyCollection}
                 </p>
               ) : (
-                <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                   {section.items.map((item) => (
                     <li key={item.id} className="min-w-0">
                       <LibraryItemCard

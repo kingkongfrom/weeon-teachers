@@ -57,32 +57,32 @@ export function LibraryItemCard({
   const KindIcon = isExam ? ClipboardCheck : FileText;
 
   return (
-    <article className="group/card relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-[border-color,box-shadow] duration-200 hover:border-border-strong hover:shadow-[0_8px_24px_-14px_rgb(16_32_29/0.28)]">
+    <article className="group/card relative flex h-full flex-col rounded-xl border border-border bg-surface transition-[border-color,box-shadow] duration-200 hover:border-border-strong hover:shadow-[0_8px_24px_-14px_rgb(16_32_29/0.28)]">
       <span
         aria-hidden
         className={cn(
-          "h-[3px] w-full",
+          "h-[3px] w-full rounded-t-xl",
           isExam
             ? "bg-gradient-to-r from-[#7c3aed] to-[#a78bfa]"
             : "bg-gradient-to-r from-[#0d9488] to-[#5eead4]",
         )}
       />
 
-      <div className="flex flex-1 flex-col gap-2.5 p-4">
-        <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
+        <div className="flex items-center justify-between gap-2">
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
+              "inline-flex items-center gap-1 rounded px-1.5 py-[1px] text-[9.5px] font-bold uppercase tracking-[0.08em]",
               isExam
                 ? "bg-[#ede9fe] text-[#5b21b6] dark:bg-[#2a1f4a] dark:text-[#c4b5fd]"
                 : "bg-[#ccfbf1] text-[#115e59] dark:bg-[#0f2f2c] dark:text-[#5eead4]",
             )}
           >
-            <KindIcon className="h-3 w-3" strokeWidth={2.4} />
+            <KindIcon className="h-2.5 w-2.5" strokeWidth={2.4} />
             {isExam ? l.kindExam : l.kindHomework}
           </span>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {busy ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground/40" />
             ) : item.shared ? (
@@ -112,45 +112,38 @@ export function LibraryItemCard({
 
         <Link
           href={`/aula-virtual/mis-evaluaciones/${item.id}`}
-          className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground decoration-foreground/20 underline-offset-2 hover:underline"
+          className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-foreground decoration-foreground/20 underline-offset-2 hover:underline"
         >
-          {item.title || "—"}
+          {item.title || "â€”"}
         </Link>
 
-        <p className="text-[12.5px] font-medium tabular-nums text-foreground/50">
-          {l.questions(item.questionCount)}
-          <span className="mx-1.5 text-foreground/25">·</span>
-          {l.points(item.pointsTotal)}
-        </p>
-
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
-          <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold text-foreground/45">
-            {item.subjectName ? (
-              <span className="truncate">{item.subjectName}</span>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          <p className="truncate text-[11.5px] font-medium tabular-nums text-foreground/50">
+            {l.questions(item.questionCount)}
+            <span className="mx-1 text-foreground/25">Â·</span>
+            {l.points(item.pointsTotal)}
+            {item.gradeLevel ? (
+              <>
+                <span className="mx-1 text-foreground/25">Â·</span>
+                {item.gradeLevel}
+              </>
             ) : null}
-            {item.subjectName && item.gradeLevel ? (
-              <span className="text-foreground/25">·</span>
-            ) : null}
-            {item.gradeLevel ? <span className="shrink-0">{item.gradeLevel}</span> : null}
-            {!item.subjectName && !item.gradeLevel ? (
-              <span>{l.usedIn(item.usedCount)}</span>
-            ) : null}
-          </span>
+          </p>
 
           {item.shared ? (
             <button
               type="button"
               onClick={onDuplicate}
               disabled={busy}
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 text-[11.5px] font-bold text-foreground/70 transition-colors hover:border-[#0891B2]/40 hover:bg-[#0891B2]/5 hover:text-[#0e7490] disabled:opacity-50 dark:hover:text-[#22d3ee]"
+              className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-border px-2 text-[11px] font-bold text-foreground/70 transition-colors hover:border-[#0891B2]/40 hover:bg-[#0891B2]/5 hover:text-[#0e7490] disabled:opacity-50 dark:hover:text-[#22d3ee]"
             >
-              <FolderInput className="h-3.5 w-3.5" />
+              <FolderInput className="h-3 w-3" />
               {l.duplicate}
             </button>
           ) : (
             <span
               className={cn(
-                "shrink-0 text-[11px] font-semibold tabular-nums",
+                "shrink-0 text-[10.5px] font-semibold tabular-nums",
                 item.usedCount > 0 ? "text-foreground/45" : "text-foreground/30",
               )}
             >

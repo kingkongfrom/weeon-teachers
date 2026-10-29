@@ -13,7 +13,12 @@ import { stripImageUrls } from "@/lib/assessments/rich-text-images";
 import { resolveRubroForKind } from "@/lib/dashboard/rubro-routing";
 
 export type LibraryActionResult =
-  | { ok: true; id?: string }
+  | {
+      ok: true;
+      id?: string;
+      /** Present when a collection was created, so the dialog can select it. */
+      collection?: { id: string; name: string; color: string | null; position: number };
+    }
   | { ok: false; error: string };
 
 const saveSchema = z.object({
@@ -90,6 +95,33 @@ export async function saveAssessmentToLibrary(input: {
 
   // tenant_id is injected by the `exam_library_set_owner` trigger, so a forged
   // tenant or owner can never be written from the client.
+  //
+  // Duplicate guard: saving the same definition twice used to create two
+  // identical cards. An item with the same title and kind already in the target
+  // collection is treated as the same evaluation and updated in place, which is
+  // what "Guardar en mis evaluaciones" is expected to do when nothing changed.
+  const { data: existing, error: existingError } = await supabase
+    .from("exam_library_items")
+    .select("id")
+    .eq("title", patch.title)
+    .eq("kind", patch.kind)
+    .eq("archived", false)
+    .is("collection_id", patch.collection_id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (existingError) return { ok: false, error: existingError.message };
+
+  if (existing?.id) {
+    const { error: updateError } = await supabase
+      .from("exam_library_items")
+      .update(patch)
+      .eq("id", existing.id);
+    if (updateError) return { ok: false, error: updateError.message };
+    revalidatePath("/aula-virtual/mis-evaluaciones");
+    return { ok: true, id: existing.id };
+  }
+
   const { data, error } = await supabase
     .from("exam_library_items")
     .insert({
@@ -156,9 +188,16 @@ export async function createLibraryCollection(input: {
   if (!parsed.success) return { ok: false, error: "El nombre de la colección es obligatorio." };
 
   const supabase = await createSessionClient();
-  const { count } = await supabase
+
+  // Append after the last collection. The count query is checked: if it were
+  // ignored (as it used to be), every collection would get position 0 and the
+  // list order would be arbitrary.
+  const { count, error: countError } = await supabase
     .from("exam_library_collections")
     .select("id", { count: "exact", head: true });
+  if (countError) {
+    return { ok: false, error: countError.message };
+  }
 
   const { data, error } = await supabase
     .from("exam_library_collections")
@@ -168,13 +207,13 @@ export async function createLibraryCollection(input: {
       tenant_id: "00000000-0000-0000-0000-000000000000",
       owner_id: "00000000-0000-0000-0000-000000000000",
     })
-    .select("id")
+    .select("id, name, color, position")
     .single();
   if (error || !data) {
     return { ok: false, error: error?.message ?? "No se pudo crear la colección." };
   }
   revalidatePath("/aula-virtual/mis-evaluaciones");
-  return { ok: true, id: data.id };
+  return { ok: true, id: data.id, collection: data };
 }
 
 export async function renameLibraryCollection(input: {

@@ -61,7 +61,10 @@ export function SelectMenu({
   const isDefault = options[0]?.value === value;
 
   return (
-    <div className={cn(variant === "field" ? "relative" : "", className)}>
+    // `relative` on the wrapper is what anchors the popup. It used to be added
+    // only for the `field` variant, so a `pill` menu escaped to the viewport
+    // origin and stretched across the page.
+    <div className={cn("relative", variant === "pill" && "inline-flex", className)}>
       <Trigger
         open={open}
         onClick={() => setOpen((state) => !state)}
