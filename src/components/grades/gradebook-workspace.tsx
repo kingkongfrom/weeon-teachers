@@ -28,7 +28,9 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLiveT } from "@/lib/i18n/client";
+import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
+import { SubjectPillLabel } from "@/components/i18n/subject-pill-label";
+import { subjectNameForLocale } from "@/lib/i18n/subject-names";
 import { hubToneSegment, SEGMENT_TRACK } from "@/lib/dashboard/tones";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog } from "@/components/ui/dialog";
@@ -238,6 +240,7 @@ export function GradebookWorkspace({
   supportFlags?: ClassEducationalSupportFlags;
 }) {
   const t = useLiveT();
+  const locale = useLiveLocale();
   const w = t.gradebook.workspace;
   const copy = w.rubros;
   const sb = w.scoreboard;
@@ -1125,7 +1128,13 @@ export function GradebookWorkspace({
             {groupName}
           </h1>
           {subjectName ? (
-            <p className="mt-0.5 text-sm font-medium text-foreground/55">{subjectName}</p>
+            // The heading follows the UI language like the pills. The raw
+            // `subjectName` stays untranslated for the CSV filename, the print
+            // header and the report link, where the school's own wording is
+            // what the document should carry.
+            <p className="mt-0.5 text-sm font-medium text-foreground/55">
+              {subjectNameForLocale(subjectName, locale) ?? subjectName}
+            </p>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -1220,11 +1229,18 @@ export function GradebookWorkspace({
                 type="button"
                 onClick={() => void changeSubject(option.id)}
                 className={cn(
-                  "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                  // Two lines like the aula virtual: the subject in the UI
+                  // language with its translation beneath, so an English
+                  // session shows "Science / Ciencias" instead of only the
+                  // Spanish name the school typed.
+                  "flex shrink-0 flex-col items-center justify-center rounded-full px-3.5 py-1 text-sm font-semibold leading-tight transition-colors",
                   hubToneSegment("blue", active),
                 )}
               >
-                {option.name}
+                <SubjectPillLabel
+                  name={option.name}
+                  secondaryClassName="text-[9px] opacity-55"
+                />
               </button>
             );
           })}

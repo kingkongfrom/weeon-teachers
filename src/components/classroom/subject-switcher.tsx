@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
-import type { Locale } from "@/lib/i18n/config";
 import { subjectNameForLocale, subjectTranslationForLocale } from "@/lib/i18n/subject-names";
+import { SubjectPillLabel } from "@/components/i18n/subject-pill-label";
 import { useNavMeasure, setTelemetryRoute } from "@/lib/perf/nav-timing";
 
 export type SubjectOption = { id: string; name: string };
@@ -140,30 +140,6 @@ export function SubjectSwitcher({
         })}
       </div>
     </div>
-  );
-}
-
-/**
- * The pill's two lines: the subject in the UI language, and — tight beneath it,
- * half the size — the other language's name ("Ciencias" / "Science"). The pair
- * flips with the language switch; subjects we do not know keep one line.
- */
-function SubjectPillLabel({ name, locale }: { name: string; locale: Locale }) {
-  const primary = subjectNameForLocale(name, locale) ?? name;
-  const secondary = subjectTranslationForLocale(name, locale);
-  return (
-    <>
-      <span className="block min-h-[1.05em] whitespace-nowrap">{primary}</span>
-      <span
-        aria-hidden={secondary ? undefined : true}
-        className={cn(
-          "mt-px block min-h-[1em] whitespace-nowrap text-[9.5px] font-medium leading-none tracking-normal opacity-55",
-          secondary ? "" : "invisible",
-        )}
-      >
-        {secondary ?? "\u00a0"}
-      </span>
-    </>
   );
 }
 
