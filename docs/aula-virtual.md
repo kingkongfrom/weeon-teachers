@@ -826,10 +826,29 @@ and a running dev server. It clicks subject pills in rotation and prints
 median / p90 / max for both phases plus **RSC requests per switch**. `--storage`
 skips the login flow (create it once with `page.context().storageState(...)`).
 
-**4. Production (real users).** `weeon-tenants` ships
-`@vercel/speed-insights`; `weeon-teachers` does not yet. Adding
-`<SpeedInsights />` to `src/app/layout.tsx` gives INP/LCP/CLS per route — the
-only honest measure on school Wi-Fi. Planned, not built.
+**4. Production (real users, wired 28 Oct 2026).** In a production build the
+same durations are posted to `/api/telemetry/nav` and stored as hourly
+aggregates in `public.nav_timings` (migration
+`20261028120000_nav_timings.sql` in `weeon-tenants`). Ops reads them with the
+service role at **`ops.weeon.school/dashboard/observability`** → *Latencia de la
+app docente*: p50 / p90 / max per screen, interaction and phase, coloured
+against the budgets above (p90 over budget = red).
+
+How it stays cheap and safe:
+
+- **Sampled**: 25 % of navigations (`NEXT_PUBLIC_PERF_TELEMETRY=all` for every
+  one, `=0` to switch the beacon off entirely).
+- **Batched**: one `fetch`/`sendBeacon` at most every 20 s, max 50 samples per
+  request, plus a flush on `pagehide`.
+- **Anonymous**: route template (`/aula-virtual/[classId]`), interaction kind,
+  phase and milliseconds. No teacher, student or tenant identity beyond the
+  session's `tenant_id`, which only Ops can read.
+- **Never user-facing**: the endpoint answers `204` for signed-out tabs, bad
+  payloads and failed writes; telemetry must not create console noise.
+
+`@vercel/speed-insights` is still not installed here; the beacon covers the
+custom interactions (which Speed Insights cannot see), so the two are
+complementary rather than redundant.
 
 ### Does the instrumentation slow the app down?
 
