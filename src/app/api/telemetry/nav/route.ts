@@ -71,8 +71,13 @@ export async function POST(request: Request) {
     p_samples: samples,
   });
 
-  // A failed write is a missing data point, never a user-facing error.
-  if (error) return new NextResponse(null, { status: 204 });
+  // A failed write is a missing data point, never a user-facing error — but it
+  // must not be silent either: a revoked grant once made this return 204 while
+  // the panel showed "0 muestras" with nothing in the logs.
+  if (error) {
+    console.error("[telemetry] nav_timings write failed:", error.message);
+    return new NextResponse(null, { status: 204 });
+  }
 
   return new NextResponse(null, { status: 204 });
 }
