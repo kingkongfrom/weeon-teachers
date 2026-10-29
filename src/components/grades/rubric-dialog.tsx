@@ -120,13 +120,45 @@ export function RubricDialog({
     ]);
   }
 
+  /**
+   * Removes a rubro and re-balances the rest.
+   *
+   * A rubric must always total 100%. Deleting "Proyectos 33" used to leave the
+   * remaining rows at 67%, which silently disabled "Guardar rubros" — the
+   * teacher saw the row disappear and nothing get saved. The removed weight is
+   * now redistributed across the surviving rows so the dialog stays saveable;
+   * the teacher can still adjust the split afterwards.
+   */
   function removeRow(row: RubroRow) {
     if (row.id && (columnCount.get(row.id) ?? 0) > 0) {
       setError(copy.hasColumns);
       return;
     }
     if (row.id) setRemoved((current) => [...current, row]);
-    setRows((current) => current.filter((item) => item.key !== row.key));
+
+    setRows((current) => {
+      const next = current.filter((item) => item.key !== row.key);
+      const remaining = next.filter((item) => !item.archived);
+      if (remaining.length === 0) return next;
+
+      const total = remaining.reduce((sum, item) => sum + item.peso, 0);
+      if (total === 100) return next;
+
+      // Give each survivor its proportional share of 100, then hand the rounding
+      // remainder to the first row so the total is exactly 100.
+      const scaled = remaining.map((item) => ({
+        key: item.key,
+        peso: total > 0 ? (item.peso / total) * 100 : 100 / remaining.length,
+      }));
+      const rounded = scaled.map((entry) => ({ ...entry, peso: Math.round(entry.peso) }));
+      const drift = 100 - rounded.reduce((sum, entry) => sum + entry.peso, 0);
+      if (rounded.length > 0) rounded[0]!.peso += drift;
+
+      const byKey = new Map(rounded.map((entry) => [entry.key, entry.peso]));
+      return next.map((item) =>
+        byKey.has(item.key) ? { ...item, peso: byKey.get(item.key)! } : item,
+      );
+    });
   }
 
   function moveRow(key: string, direction: -1 | 1) {
