@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Loader2, Users } from "lucide-react";
 import {
   Dialog,
-  DialogField,
   DialogPrimary,
   DialogSecondary,
 } from "@/components/ui/dialog";
@@ -89,7 +88,7 @@ export function BlooketShareDialog({
         </>
       }
     >
-      <DialogField>
+      <div className="flex flex-col gap-2">
         {loading ? (
           <p className="flex items-center gap-2 text-sm text-foreground/55">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -140,7 +139,7 @@ export function BlooketShareDialog({
             {error}
           </p>
         ) : null}
-      </DialogField>
+      </div>
     </Dialog>
   );
 }
