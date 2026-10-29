@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useLiveLocale, useLiveT } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
 import { subjectNameForLocale, subjectTranslationForLocale } from "@/lib/i18n/subject-names";
-import { useNavMeasure } from "@/lib/perf/nav-timing";
+import { useNavMeasure, setTelemetryRoute } from "@/lib/perf/nav-timing";
 
 export type SubjectOption = { id: string; name: string };
 
@@ -118,6 +118,7 @@ export function SubjectSwitcher({
                 // (`replace`, so the back button is not polluted), which keeps
                 // reloads and shared links on the same subject.
                 measureSubject(subject.id);
+                setTelemetryRoute("/aula-virtual/[classId]");
                 onSubjectChange?.(subject.id);
                 router.replace(`/aula-virtual/${classId}?subject=${subject.id}&tab=${tab}`, {
                   scroll: false,

@@ -5,7 +5,7 @@ import { ArrowLeft, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLiveT } from "@/lib/i18n/client";
 import { AULA_TEAL } from "@/lib/dashboard/tones";
-import { useNavMeasure } from "@/lib/perf/nav-timing";
+import { useNavMeasure, setTelemetryRoute } from "@/lib/perf/nav-timing";
 
 export type ClassTabId = "trabajo" | "examenes" | "personas" | "asistencia" | "calificaciones";
 
@@ -114,6 +114,7 @@ export function ClassHeader({
                 aria-selected={active}
                 onClick={() => {
                   measureTab(id);
+                  setTelemetryRoute("/aula-virtual/[classId]");
                   onTabChange(id);
                 }}
                 className={cn(

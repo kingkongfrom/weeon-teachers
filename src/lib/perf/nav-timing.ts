@@ -12,25 +12,126 @@ import { useCallback, useEffect, useRef, useState } from "react";
  *      one (feedback), and
  *   2. **time to content** — when the new subject's lists are on screen.
  *
- * Both are recorded as `performance.measure()` entries named
- * `weeon:subject:active`, `weeon:subject:content`, `weeon:tab:active`,
- * `weeon:tab:content`. They appear in Chrome DevTools → Performance →
- * "Timings", and in the console via `window.weeonPerf.summary()`.
+ * Every measured navigation leaves `performance.measure()` entries
+ * (`weeon:subject:active`, `weeon:subject:content`, `weeon:tab:…`) that show up
+ * in DevTools → Performance → Timings and in `window.weeonPerf.summary()`.
  *
- * Dev only by default; `NEXT_PUBLIC_PERF_INSTRUMENTATION=1` enables it in a
- * preview/production build. Otherwise every function is a no-op.
+ * **Production telemetry.** In a production build the durations are also
+ * batched and posted to `/api/telemetry/nav`, which stores hourly aggregates in
+ * `public.nav_timings` for the Ops console. That costs one small `fetch` per
+ * 20 s at most (`sendBeacon` on page hide), carries no identifiers beyond the
+ * session cookie, and samples 25 % of navigations so a whole school does not
+ * add measurable load. Set `NEXT_PUBLIC_PERF_TELEMETRY=0` to switch it off.
+ *
+ * Dev treats every interaction as a local measurement and never posts.
  */
 
+const IS_DEV = process.env.NODE_ENV !== "production";
+/** Telemetry is on in production unless explicitly disabled; dev never posts. */
+const TELEMETRY_ON =
+  !IS_DEV && process.env.NEXT_PUBLIC_PERF_TELEMETRY !== "0";
 const ENABLED =
-  process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_PERF_INSTRUMENTATION === "1";
+  IS_DEV || process.env.NEXT_PUBLIC_PERF_INSTRUMENTATION === "1" || TELEMETRY_ON;
+
+const TELEMETRY_ENDPOINT = "/api/telemetry/nav";
+/** Fraction of navigations sent upstream (1 when `NEXT_PUBLIC_PERF_TELEMETRY=all`). */
+const SAMPLE_RATE =
+  process.env.NEXT_PUBLIC_PERF_TELEMETRY === "all" ? 1 : 0.25;
+/** Flush cadence and batch cap for the outbox. */
+const FLUSH_MS = 20_000;
+const MAX_BATCH = 50;
+
+type PendingSample = {
+  route: string;
+  kind: "subject" | "tab";
+  phase: "active" | "content";
+  ms: number;
+};
+
+const outbox: PendingSample[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let listenersInstalled = false;
+
+/** Stored in the payload so Ops can split by screen without parsing URLs. */
+let currentRoute = "unknown";
 
 /** Marks older than this are dropped so a long session stays cheap. */
 const KEEP_MS = 30_000;
 
 type MeasureRecord = { name: string; duration: number; startTime: number };
 
-function prune() {
-  if (typeof performance === "undefined") return;
+/**
+ * Records the route template for the *next* sample ("/aula-virtual/[classId]").
+ * Called once per measured navigation so Ops can group by screen.
+ */
+export function setTelemetryRoute(route: string) {
+  currentRoute = route || "unknown";
+}
+
+function installFlushListeners() {
+  if (listenersInstalled || typeof window === "undefined") return;
+  listenersInstalled = true;
+  // A tab being closed or hidden is the last chance to send what we have.
+  const flushOnHide = () => {
+    if (document.visibilityState === "hidden") flush(true);
+  };
+  document.addEventListener("visibilitychange", flushOnHide);
+  window.addEventListener("pagehide", () => flush(true));
+}
+
+function scheduleFlush() {
+  if (flushTimer !== null) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    flush(false);
+  }, FLUSH_MS);
+}
+
+/**
+ * Posts the outbox. `useBeacon` survives a page hide; otherwise plain `fetch`
+ * with `keepalive` so navigation does not cancel it.
+ *
+ * Failures are swallowed on purpose: telemetry must never surface an error or
+ * retry against a struggling server.
+ */
+function flush(useBeacon: boolean) {
+  if (typeof window === "undefined" || outbox.length === 0) return;
+
+  const payload = JSON.stringify({ samples: outbox.splice(0, MAX_BATCH) });
+
+  // Keep the remainder on the next tick rather than dropping it.
+  if (outbox.length > 0) scheduleFlush();
+
+  try {
+    if (useBeacon && typeof navigator.sendBeacon === "function") {
+      navigator.sendBeacon(TELEMETRY_ENDPOINT, new Blob([payload], { type: "application/json" }));
+      return;
+    }
+    void fetch(TELEMETRY_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true,
+      credentials: "same-origin",
+    }).catch(() => {});
+  } catch {
+    // Ignore: a measurement that cannot be sent is not a product error.
+  }
+}
+
+function recordSample(kind: "subject" | "tab", phase: "active" | "content", ms: number) {
+  if (!TELEMETRY_ON || typeof window === "undefined") return;
+  if (!Number.isFinite(ms) || ms < 0 || ms > 600_000) return;
+  // Sampling keeps the volume proportional to real usage instead of to clicks.
+  if (Math.random() > SAMPLE_RATE) return;
+
+  installFlushListeners();
+  outbox.push({ route: currentRoute, kind, phase, ms: Math.round(ms) });
+  if (outbox.length >= MAX_BATCH) flush(false);
+  else scheduleFlush();
+}
+
+function prune() {  if (typeof performance === "undefined") return;
   const now = performance.now();
   for (const entry of performance.getEntriesByType("mark")) {
     if (now - entry.startTime > KEEP_MS) performance.clearMarks(entry.name);
@@ -63,6 +164,7 @@ export function startNav(kind: "subject" | "tab", target: string) {
         end: "weeon:nav:active",
         detail: target,
       });
+      recordSample(kind, "active", measureSince("weeon:nav:start"));
     },
     /** Everything for that state is mounted (parents → children painted). */
     markContent() {
@@ -74,8 +176,16 @@ export function startNav(kind: "subject" | "tab", target: string) {
         end: "weeon:nav:content",
         detail: target,
       });
+      recordSample(kind, "content", measureSince("weeon:nav:start"));
     },
   };
+}
+
+/** Milliseconds from a mark to now, for the telemetry sample. */
+function measureSince(mark: string): number {
+  const entries = performance.getEntriesByName(mark, "mark");
+  const last = entries[entries.length - 1];
+  return last ? performance.now() - last.startTime : -1;
 }
 
 /** All nav measurements, newest first — for a debug panel or a console table. */
