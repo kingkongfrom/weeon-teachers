@@ -20,8 +20,8 @@ export const dynamic = "force-dynamic";
 const MAX_SAMPLES = 50;
 const MAX_ROUTE = 120;
 const MAX_MS = 600_000;
-const KINDS = new Set(["subject", "tab"]);
-const PHASES = new Set(["active", "content"]);
+const KINDS = new Set(["subject", "tab", "route"]);
+const PHASES = new Set(["active", "content", "navigate"]);
 
 type Sample = { route: string; kind: string; phase: string; ms: number };
 

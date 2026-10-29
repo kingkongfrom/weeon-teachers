@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * Perceived-latency instrumentation for the aula virtual.
@@ -41,10 +42,14 @@ const SAMPLE_RATE =
 const FLUSH_MS = 20_000;
 const MAX_BATCH = 50;
 
+/** A measured interaction: aula virtual subjects/tabs, or a route change. */
+type NavKind = "subject" | "tab" | "route";
+type NavPhase = "active" | "content" | "navigate";
+
 type PendingSample = {
   route: string;
-  kind: "subject" | "tab";
-  phase: "active" | "content";
+  kind: NavKind;
+  phase: NavPhase;
   ms: number;
 };
 
@@ -119,7 +124,7 @@ function flush(useBeacon: boolean) {
   }
 }
 
-function recordSample(kind: "subject" | "tab", phase: "active" | "content", ms: number) {
+function recordSample(kind: NavKind, phase: NavPhase, ms: number) {
   if (!TELEMETRY_ON || typeof window === "undefined") return;
   if (!Number.isFinite(ms) || ms < 0 || ms > 600_000) return;
   // Sampling keeps the volume proportional to real usage instead of to clicks.
@@ -281,4 +286,69 @@ function ensurePerfConsoleHelpers() {
       performance.clearMeasures();
     },
   };
+}
+
+/**
+ * Measures every route change in the app, not just the aula virtual.
+ *
+ * The subject and tab hooks only fire where a pill or tab is clicked, so the
+ * panel could never say whether Calificaciones, Grupos or Comunicación were
+ * slow. Mounted once in the root layout, this records how long each navigation
+ * takes from click to the new route being painted, tagged with a route template
+ * (`/grupos/[id]`) rather than the concrete URL so samples aggregate instead of
+ * splitting per student.
+ *
+ * The measurement is armed on click capture and closed when `usePathname`
+ * changes, which is the moment the new screen is committed.
+ */
+export function useRouteMeasure() {
+  const pathname = usePathname();
+  const armed = useRef<number | null>(null);
+  const lastPath = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!ENABLED || typeof window === "undefined") return;
+    const arm = () => {
+      // Only arm for real navigations, not modifier-clicks or downloads.
+      armed.current = performance.now();
+    };
+    window.addEventListener("click", arm, { capture: true, passive: true });
+    return () => window.removeEventListener("click", arm, { capture: true } as never);
+  }, []);
+
+  useEffect(() => {
+    if (!ENABLED || !pathname) return;
+    // Entering a new route: if the click that caused it was seen, report it.
+    if (lastPath.current === pathname) return;
+    const start = armed.current;
+    const previous = lastPath.current;
+    lastPath.current = pathname;
+    if (previous === null || start === null) return;
+
+    armed.current = null;
+    const template = routeTemplate(pathname);
+    currentRoute = template;
+    const duration = performance.now() - start;
+    // A navigation that took longer than the click-to-paint window is worth
+    // recording; sub-frame transitions are noise.
+    if (duration >= 0 && duration < 60_000) {
+      recordSample("route", "navigate", duration);
+    }
+  }, [pathname]);
+}
+
+/** `/grupos/abc123/reporte` → `/grupos/[id]/reporte` (aggregation-safe). */
+function routeTemplate(pathname: string): string {
+  return (
+    "/" +
+    pathname
+      .split("/")
+      .filter(Boolean)
+      .map((segment) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(segment) || /^\d+$/.test(segment)
+          ? "[id]"
+          : segment,
+      )
+      .join("/")
+  );
 }

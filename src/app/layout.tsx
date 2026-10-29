@@ -4,6 +4,7 @@ import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme/theme";
 import { LocaleProvider } from "@/lib/i18n/client";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { RouteTiming } from "@/components/perf/route-timing";
 import { getLocale, getT } from "@/lib/i18n/server";
 import "./globals.css";
 
@@ -82,6 +83,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {/* Installable-app affordance. Renders only when the browser offers
               an install and the app is not already running installed. */}
           <InstallPrompt />
+          {/* Every route change, not only the aula virtual: a click in any
+              module reports how long the new screen took to paint. */}
+          <RouteTiming />
         </LocaleProvider>
       </body>
     </html>
