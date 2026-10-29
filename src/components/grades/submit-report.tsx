@@ -72,10 +72,16 @@ export function SubmitReport({
     <Link
       href={href}
       aria-label={label}
-      className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+      // The label carries the subject name, so the button used to change width
+      // with the subject (183px for "Español", 239px for "Estudios Sociales").
+      // At the widths teachers actually use that pushed the toolbar onto a
+      // second line, so the subject pills and the grade table jumped every time
+      // they switched. A fixed width keeps the toolbar one stable size and long
+      // names truncate instead.
+      className="inline-flex h-9 w-[14rem] items-center justify-center gap-2 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
     >
       <FileCheck2 className="h-4 w-4 shrink-0" />
-      {label}
+      <span className="truncate">{label}</span>
       <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
     </Link>
   );
