@@ -785,13 +785,25 @@ export function GradebookWorkspace({
     if (id) setEditRubroId({ id, field: "name" });
   }
 
-  async function handleDeleteRubro() {    if (!rubroDeleteTarget) return;
+  async function handleDeleteRubro() {
+    if (!rubroDeleteTarget) return;
     const rubro = rubroDeleteTarget;
+    const previousRubros = rubros;
     setRubroBusy(rubro.id);
+
+    // Remove it from the grid first, like column delete does. Waiting for the
+    // refetch made the dialog close while the block was still on screen, which
+    // read as "the delete didn't work".
+    startTransition(() => {
+      setRubros((current) => current.filter((item) => item.id !== rubro.id));
+    });
+
     const res = await deleteRubro({ classId, rubroId: rubro.id });
     setRubroBusy(null);
     setRubroDeleteTarget(null);
     if (!res.ok) {
+      // Put it back: the grid must never show a state the database rejected.
+      startTransition(() => setRubros(previousRubros));
       setError(res.error);
       return;
     }
