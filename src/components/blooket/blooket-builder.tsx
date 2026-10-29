@@ -1,17 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
   Download,
   Loader2,
   Plus,
+  Save,
+  Share2,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SelectMenu } from "@/components/ui/select-menu";
+import {
+  deleteBlooketSet,
+  listBlooketSets,
+  loadBlooketSet,
+  saveBlooketSet,
+  type SavedBlooketSet,
+} from "@/lib/teachers/blooket-actions";
+import { BlooketShareDialog } from "@/components/blooket/blooket-share-dialog";
 import { cn } from "@/lib/utils";
 import {
   BLOOKET_DEFAULT_SECONDS,
@@ -123,6 +133,41 @@ export function BlooketBuilder() {
     blankQuestion("multiple_choice"),
   ]);
   const [exporting, setExporting] = useState(false);
+  const [gradeLevel, setGradeLevel] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [sets, setSets] = useState<SavedBlooketSet[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareTarget, setShareTarget] = useState<SavedBlooketSet | null>(null);
+  const [currentSetId, setCurrentSetId] = useState<string | null>(null);
+  const [gradeFilter, setGradeFilter] = useState("");
+
+  const refreshSets = useCallback(() => {
+    void listBlooketSets().then((res) => {
+      if (res.ok) setSets(res.sets);
+    });
+  }, []);
+
+  useEffect(() => {
+    refreshSets();
+  }, [refreshSets]);
+
+  /** Grades present in the saved sets, for the filter (same idea as the library). */
+  const grades = useMemo(() => {
+    const seen = new Set<string>();
+    for (const saved of sets) {
+      const level = saved.gradeLevel?.trim();
+      if (level) seen.add(level);
+    }
+    return [...seen].sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
+  }, [sets]);
+
+  const visibleSets = useMemo(
+    () =>
+      gradeFilter ? sets.filter((saved) => saved.gradeLevel === gradeFilter) : sets,
+    [sets, gradeFilter],
+  );
 
   const set = useMemo(
     () =>
@@ -150,6 +195,67 @@ export function BlooketBuilder() {
   };
 
   const canExport = set.rows.length > 0;
+  const canSave = canExport && title.trim().length > 0;
+
+  async function save() {
+    if (!canSave || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    setSaveNotice(null);
+    const res = await saveBlooketSet({
+      id: currentSetId ?? undefined,
+      title: title.trim(),
+      gradeLevel: gradeLevel || null,
+      rows: set.rows,
+      skipped: set.skipped,
+    });
+    setSaving(false);
+    if (!res.ok) {
+      setSaveError(res.error);
+      return;
+    }
+    setCurrentSetId(res.id ?? null);
+    setSaveNotice("Set guardado en Blooket.");
+    refreshSets();
+  }
+
+  async function openSet(id: string) {
+    const res = await loadBlooketSet(id);
+    if (!res.ok || !res.set) {
+      setSaveError(res.error ?? "No se pudo abrir el set.");
+      return;
+    }
+    setCurrentSetId(res.set.id);
+    setTitle(res.set.title);
+    setGradeLevel(res.set.gradeLevel ?? "");
+    setQuestions(
+      res.set.rows.map((row) => ({
+        id: newId(),
+        // A saved row keeps its answer texts; a single answer means it was a
+        // typed-answer question, anything wider is a choice question.
+        kind: (row.answers.length <= 1 ? "typed" : "multiple_choice") as BlooketKind,
+        prompt: row.prompt,
+        options: row.answers,
+        // Blooket answer numbers are 1-based.
+        correct: row.correct.map((n) => n - 1),
+        answerKey: row.answers[0] ?? "",
+        seconds: row.seconds,
+      })),
+    );
+    setSaveNotice(`Abriendo «${res.set.title}».`);
+    setSaveError(null);
+  }
+
+  async function removeSet(saved: SavedBlooketSet) {
+    if (!window.confirm(`¿Eliminar «${saved.title}»?`)) return;
+    const res = await deleteBlooketSet(saved.id);
+    if (!res.ok) {
+      setSaveError(res.error);
+      return;
+    }
+    if (currentSetId === saved.id) setCurrentSetId(null);
+    refreshSets();
+  }
 
   function download() {
     if (!canExport) return;
@@ -187,10 +293,136 @@ export function BlooketBuilder() {
           placeholder="Ciencias 8° — Repaso del sistema solar"
           className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
         />
+
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="flex w-40 flex-col gap-1.5">
+            <label
+              htmlFor="blooket-grade"
+              className="text-sm font-semibold text-foreground"
+            >
+              Nivel
+            </label>
+            {/* Grade is what the library filters by, so a saved set carries it.
+                Free text, matching how grade_level is stored elsewhere. */}
+            <input
+              id="blooket-grade"
+              value={gradeLevel}
+              onChange={(event) => setGradeLevel(event.target.value)}
+              placeholder="8°"
+              maxLength={40}
+              className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => void save()}
+            disabled={!canSave || saving}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {currentSetId ? "Actualizar set" : "Guardar set"}
+          </Button>
+        </div>
+
+        {saveError ? (
+          <p
+            role="alert"
+            className="mt-3 rounded-xl border border-error/25 bg-error/5 px-3 py-2 text-[13px] font-medium text-error"
+          >
+            {saveError}
+          </p>
+        ) : null}
+        {saveNotice ? (
+          <p className="mt-3 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+            {saveNotice}
+          </p>
+        ) : null}
+
         <p className="mt-2 text-xs text-foreground/50">
           Blooket lo usa como título; puedes cambiarlo después de importar.
         </p>
       </Card>
+
+      {sets.length > 0 ? (
+        <Card className="p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-foreground">
+              Mis sets de Blooket
+            </h2>
+            {grades.length > 0 ? (
+              <div className="w-40">
+                <SelectMenu
+                  value={gradeFilter}
+                  onChange={setGradeFilter}
+                  options={[
+                    { value: "", label: "Todos los niveles" },
+                    ...grades.map((level) => ({ value: level, label: level })),
+                  ]}
+                  label="Filtrar por nivel"
+                  variant="pill"
+                />
+              </div>
+            ) : (
+              <span className="text-xs text-foreground/45">{sets.length}</span>
+            )}
+          </div>
+          <ul className="mt-3 flex flex-col divide-y divide-border">
+            {visibleSets.map((saved) => (
+              <li
+                key={saved.id}
+                className="flex flex-wrap items-center gap-2 py-2 first:pt-0 last:pb-0"
+              >
+                <button
+                  type="button"
+                  onClick={() => void openSet(saved.id)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <span className="block truncate text-[13.5px] font-semibold text-foreground hover:underline">
+                    {saved.title}
+                  </span>
+                  <span className="text-[11.5px] text-foreground/50">
+                    {saved.questionCount}{" "}
+                    {saved.questionCount === 1 ? "pregunta" : "preguntas"}
+                    {saved.gradeLevel ? ` · ${saved.gradeLevel}` : ""}
+                    {saved.shared
+                      ? ` · compartido por ${saved.sharedByName || "otro docente"}`
+                      : ""}
+                  </span>
+                </button>
+                {/* A shared set belongs to someone else: open and duplicate only. */}
+                {saved.shared ? null : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShareTarget(saved);
+                        setShareOpen(true);
+                      }}
+                      aria-label={`Compartir ${saved.title}`}
+                      title="Compartir con docentes"
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/35 hover:bg-surface-muted hover:text-foreground"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void removeSet(saved)}
+                      aria-label={`Eliminar ${saved.title}`}
+                      title="Eliminar"
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/35 hover:bg-error/10 hover:text-error"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
 
       {questions.map((question, index) => (
         <Card key={question.id} className="p-5 sm:p-6">
@@ -380,6 +612,16 @@ export function BlooketBuilder() {
           pregunta y solo opción múltiple, verdadero/falso o respuesta escrita.
         </p>
       </Card>
+
+      <BlooketShareDialog
+        open={shareOpen}
+        set={shareTarget}
+        onClose={() => {
+          setShareOpen(false);
+          setShareTarget(null);
+          refreshSets();
+        }}
+      />
     </div>
   );
 }
