@@ -40,21 +40,41 @@ export function RubroTotalCell({
   grade,
   view = "points",
   compact = false,
+  narrow = false,
 }: {
   points: number | null;
   max: number;
   grade: number | null;
   view?: "points" | "percent";
   compact?: boolean;
+  /**
+   * Small screens (a landscape phone, a portrait tablet at the compact
+   * density). The subtotal column is then 72 px wide, so the evidence is
+   * shortened, never allowed to overflow: points are rounded and the max
+   * becomes `/30`, the grade drops the `%` when it is 100, since `28/30 100`
+   * still reads as "28 of 30, full marks".
+   */
+  narrow?: boolean;
 }) {
   if (grade == null) {
     return <span className={cn("tabular-nums", TONE_PILL.none)}>—</span>;
   }
   const showPoints = view === "points" && points != null && max > 0;
+  const rounded = Math.round(grade);
   return (
-    <span className="inline-flex items-baseline justify-center gap-1 tabular-nums">
+    <span
+      className={cn(
+        "inline-flex max-w-full items-baseline justify-center gap-1 tabular-nums",
+        narrow && "flex-wrap gap-x-0.5",
+      )}
+    >
       {showPoints ? (
-        <span className="text-sm font-bold leading-none text-foreground">
+        <span
+          className={cn(
+            "font-bold leading-none text-foreground",
+            narrow ? "text-[4px]" : "text-sm",
+          )}
+        >
           {formatPoints(points)}
           <span className="ml-0.5 text-[10px] font-semibold text-foreground/65">
             /{formatPoints(max)}
@@ -63,12 +83,13 @@ export function RubroTotalCell({
       ) : null}
       <span
         className={cn(
-          "inline-block rounded-md px-1.5 py-0.5 font-bold leading-none",
-          compact || !showPoints ? "text-[11px]" : "text-[10px]",
+          "inline-block shrink-0 rounded-md font-bold leading-none",
+          narrow ? "px-1 py-0.5 text-[4.5px]" : "px-1.5 py-0.5",
+          !narrow && (compact || !showPoints ? "text-[11px]" : "text-[10px]"),
           TONE_PILL[gradeTone(grade)],
         )}
       >
-        {Math.round(grade)}%
+        {rounded === 100 && narrow && showPoints ? rounded : `${rounded}%`}
       </span>
     </span>
   );

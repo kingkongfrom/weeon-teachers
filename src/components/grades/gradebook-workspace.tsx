@@ -3,15 +3,17 @@
 import {
   Fragment,
   startTransition,
+  useCallback,
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Check,
   ChevronDown,
@@ -25,6 +27,7 @@ import {
   Printer,
   Search,
   SlidersHorizontal,
+  Smartphone,
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -101,6 +104,30 @@ const ACCENT_TEXT = "text-[#5b21b6] dark:text-[#c4b5fd]";
 
 /** Upper bound for a single bulk "Agregar columna" submission. */
 const MAX_NEW_COLUMNS = 20;
+
+/**
+ * "This is a phone", in either orientation. The viewport's short side only
+ * changes when the *device* changes, so a phone is a phone at 844 x 390 in
+ * landscape just as it is at 390 x 844 upright. `(pointer: coarse)` keeps a
+ * narrow desktop window out of the phone layout.
+ */
+const PHONE_SHORT_SIDE = "(max-width: 640px), (pointer: coarse) and (max-height: 640px)";
+
+/** Shared subscription for the orientation queries (rotation + resize). */
+function subscribeMatchMedia(onChange: () => void) {
+  const phone = window.matchMedia(PHONE_SHORT_SIDE);
+  const sideways = window.matchMedia("(orientation: landscape)");
+  const coarse = window.matchMedia("(pointer: coarse)");
+  phone.addEventListener("change", onChange);
+  sideways.addEventListener("change", onChange);
+  coarse.addEventListener("change", onChange);
+  return () => {
+    phone.removeEventListener("change", onChange);
+    sideways.removeEventListener("change", onChange);
+    coarse.removeEventListener("change", onChange);
+  };
+}
+
 
 /**
  * Column type and auto-title noun are derived from the rubro name, not chosen by
@@ -276,6 +303,54 @@ export function GradebookWorkspace({
   const [phoneView, setPhoneView] = useState<"cards" | "grid">("cards");
   const showCards = phoneView === "cards";
   /**
+   * Is this a phone, in either orientation? Decided from the **short side**
+   * (`min(width, height) <= 640`), never the current width: a phone in
+   * landscape is ~844 px across and a width query there cannot tell it apart
+   * from an iPad in portrait or a small laptop. `(pointer: coarse)` keeps a
+   * narrow desktop window from being treated as a phone.
+   *
+   * `useSyncExternalStore` subscribes to the queries (rotation, resize) *and*
+   * answers the first render from them, so turning the phone re-renders — the
+   * rotation is the whole feature.
+   */
+  const matches = useCallback(
+    (query: string) => window.matchMedia(query).matches,
+    [],
+  );
+  const subscribeViewport = useCallback(
+    (onChange: () => void) => subscribeMatchMedia(onChange),
+    [],
+  );
+  const shortSidePhone = useSyncExternalStore(
+    subscribeViewport,
+    () => matches(PHONE_SHORT_SIDE),
+    () => false,
+  );
+  const landscape = useSyncExternalStore(
+    subscribeViewport,
+    () => matches("(orientation: landscape)"),
+    () => false,
+  );
+  /**
+   * A touch device — iPad included. `(pointer: coarse)` is browser-only, so the
+   * server render (and every unit test) answers `false`; after hydration the
+   * matrix can then size itself for a tablet instead of a desktop.
+   */
+  const coarsePointer = useSyncExternalStore(
+    subscribeViewport,
+    () => matches("(pointer: coarse)"),
+    () => false,
+  );
+  /**
+   * A portrait phone: cards only. The grid needs at least a rubro block and the
+   * student column, which does not fit across 390 px, so the "Tabla" selection
+   * is replaced by a rotate card until the phone is turned. Tablets and desktop
+   * keep the real switch.
+   */
+  const portraitPhone = shortSidePhone && !landscape;
+  /** The matrix reads 12 px on a landscape phone, 14 px everywhere else. */
+  const phoneMatrix = shortSidePhone && landscape;
+  /**
    * Phone grading: tapping a card opens that student's columns in a sheet. The
    * matrix is unworkable at 390 px, and navigating to the transcript to grade
    * was a detour — teachers asked for entry on the phone.
@@ -440,19 +515,47 @@ export function GradebookWorkspace({
   }
 
   // Density drives every cell, not just the grade columns, so the toggle is
-  // visible on a subject that has no columns yet.
-  const rowY = dense ? "py-0.5" : "py-1.5";
-  const headY = dense ? "py-1.5" : "py-2";
+  // visible on a subject that has no columns yet. A phone in landscape is
+  // squeezed exactly like the "compact" density (about 350 px of height, so
+  // three rows before the fold) and its cells have to shrink to 12 px to fit
+  // a rubro block — so the matrix tightens there even when the saved density
+  // is cozy. The teacher's own density toggle only decides from tablet up.
+  const matrixDense = dense || phoneMatrix;
+  /**
+   * A tablet — iPad in either orientation. Its 768 px short side is too wide to
+   * be a phone and too narrow for desktop cells: at 14 px with 40 px row
+   * padding the grade numbers dominate the sheet and the last rubro's totals
+   * run into FINAL. So touch screens that are not phones get one step down
+   * from the desktop sizes and are never as tight as a phone.
+   */
+  const tabletMatrix = coarsePointer && !shortSidePhone;
+  const rowY = matrixDense ? "py-0" : "py-1";
+  const headY = matrixDense ? "py-1.5" : "py-2";
   // Column width grows with density so the label can carry more of the name.
-  const colWidth = dense
-    ? "w-[2.75rem]"
-    : density === "cozy"
-      ? "w-[5.5rem]"
-      : "w-[9rem]";
+  const colWidth = matrixDense
+    ? "w-[2.5rem]"
+    : tabletMatrix
+      ? "w-[3.5rem]"
+      : density === "cozy"
+        ? "w-[4rem]"
+        : "w-[5rem]";
   // One subtotal column closes every rubro group (points + the rubro grade).
-  const subtotalWidth = dense ? "w-[4.5rem]" : "w-[5.5rem]";
-  const colTop = dense ? "top-8" : "top-9";
-  const colHeadH = dense ? "min-h-8" : "min-h-10";
+  const subtotalWidth = matrixDense ? "w-[4rem]" : "w-[4.5rem]";
+  const colTop = matrixDense ? "top-7" : "top-8";
+  const colHeadH = "min-h-7";
+  /*
+   * The two frozen left columns are the most expensive width in the table: a
+   * 13.5rem name column plus a 2.5rem index ate almost a quarter of a 844 px
+   * landscape phone. On a phone they collapse to an 8/9rem name column and a
+   * 1.75rem index, and the name splits onto two lines (surname, then first
+   * name) so the column can be narrow without truncating every student. The
+   * right FINAL column and the rubro blocks get that width back.
+   */
+  const indexCol = phoneMatrix ? "w-6" : "w-8";
+  const nameCol = phoneMatrix ? "w-28" : "w-[10rem]";
+  const nameLeft = phoneMatrix ? "left-6" : "left-8";
+  const finalCol = phoneMatrix ? "min-w-[4.5rem]" : "min-w-[6rem]";
+  const namePad = phoneMatrix ? "px-1.5" : "px-2";
 
 
   // Columns are displayed grouped by rubro: rubros in the teacher's saved
@@ -1296,6 +1399,7 @@ export function GradebookWorkspace({
         onMarkViewChange={setMarkView}
         phoneView={phoneView}
         onPhoneViewChange={setPhoneView}
+        cardsDisabled={landscape && shortSidePhone}
         passMark={PASS}
       />
 
@@ -1402,9 +1506,17 @@ export function GradebookWorkspace({
             // Cards are the phone default; `grid` here means the teacher opted
             // in. From `md` up the matrix is always shown, cards or not.
             // The matrix shows in landscape whatever the switch says; in portrait
-            // it is the teacher's explicit choice.
+            // it is the teacher's explicit choice — except on a phone, where a
+            // portrait matrix cannot fit and the rotate card takes its place.
+            // Printing is the exception: the portrait blocks are overridden
+            // below so "Imprimir" on a phone still prints the whole group.
             showCards && "[@media(orientation:portrait)]:hidden",
+            portraitPhone && "hidden print:block",
             draggingBlock && "select-none",
+            matrixDense &&
+              "[&_tbody_td]:text-[12px] [&_tbody_th]:text-[12px] [&_thead_button]:text-[10px] print:[&_tbody_td]:text-sm print:[&_tbody_th]:text-sm print:[&_thead_button]:text-[11px]",
+            tabletMatrix &&
+              "[&_tbody_td]:text-[12px] [&_tbody_th]:text-[12px] [&_thead_button]:text-[10px] print:[&_tbody_td]:text-sm print:[&_tbody_th]:text-sm print:[&_thead_button]:text-[11px]",
           )}
         >
             {loading ? (
@@ -1419,13 +1531,13 @@ export function GradebookWorkspace({
                 <tr>
                   <th
                     rowSpan={2}
-                    className={cn("sticky left-0 top-0 z-50 w-10 border-b border-r border-border bg-surface px-2 text-center text-xs font-bold text-foreground/40", headY)}
+                    className={cn("sticky left-0 top-0 z-50 border-b border-r border-border bg-surface px-1 text-center text-xs font-bold text-foreground/40", indexCol, headY)}
                   >
                     #
                   </th>
                   <th
                     rowSpan={2}
-                    className={cn("sticky left-10 top-0 z-50 w-[13.5rem] border-b border-r border-border bg-surface px-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}
+                    className={cn("sticky top-0 z-50 border-b border-r border-border bg-surface text-left font-bold uppercase tracking-wide text-foreground/50", nameLeft, nameCol, namePad, phoneMatrix ? "text-[10px]" : "text-xs", headY)}
                   >
                     {t.gradebook.headers.student}
                   </th>
@@ -1486,7 +1598,8 @@ export function GradebookWorkspace({
                   <th
                     rowSpan={2}
                     className={cn(
-                      "sticky right-0 top-0 z-50 min-w-[6rem] whitespace-nowrap border-b border-l-2 border-l-foreground/25 bg-surface-muted px-2 text-center align-middle",
+                      "sticky right-0 top-0 z-50 whitespace-nowrap border-b border-l-2 border-l-foreground/25 bg-surface-muted px-2 text-center align-middle",
+                      finalCol,
                       headY,
                     )}
                   >
@@ -1526,6 +1639,8 @@ export function GradebookWorkspace({
                               column={column}
                               label={label}
                               density={density}
+                              /** A sideways phone shows the compact label set. */
+                              phone={phoneMatrix}
                               pointsEditable={!hasGrades(column)}
                               onRename={(title) => handleRenameColumn(column, title)}
                               onRenamePoints={(points) => handleUpdatePoints(column, points)}
@@ -1566,17 +1681,34 @@ export function GradebookWorkspace({
                   const risk = canStillPass(finalFor.get(student.id) ?? finalScore(rubros, exams, student.id));
                   return (
                     <tr key={student.id} className={cn("group", dense ? "h-8" : "h-9")}>
-                      <td className={cn("sticky left-0 z-20 border-b border-r border-border bg-surface px-2 text-center text-xs font-semibold text-foreground/35", rowY)}>
+                      <td className={cn("sticky left-0 z-20 border-b border-r border-border bg-surface px-0.5 text-center text-[10px] font-semibold text-foreground/35", indexCol, phoneMatrix ? "py-0" : rowY)}>
                         {rowIndex + 1}
                       </td>
-                      <td className={cn("sticky left-10 z-20 border-b border-r border-border bg-surface px-3", rowY)}>
-                        <div className="flex min-w-0 items-center gap-1.5">
+                      <td className={cn("sticky z-20 border-b border-r border-border bg-surface", nameLeft, nameCol, namePad, phoneMatrix ? "py-0" : rowY)}>
+                        <div className="flex min-w-0 items-center gap-1">
                           <Link
                             href={`/estudiantes/${student.id}?from=${encodeURIComponent(`/grupos/${classId}`)}`}
                             title={studentName(student)}
-                            className="font-medium leading-tight text-foreground transition-colors hover:text-[#5b21b6] dark:hover:text-[#c4b5fd]"
+                            className={cn(
+                              "min-w-0 font-medium text-foreground transition-colors hover:text-[#5b21b6] dark:hover:text-[#c4b5fd]",
+                              // Phone: surname, then the first name in a
+                              // lighter 8.5px line — the pair still identifies
+                              // the student but the row stays 28px tall.
+                              phoneMatrix
+                                ? "flex flex-col text-[10.5px] leading-[1.1]"
+                                : "truncate text-[12.5px] leading-tight",
+                            )}
                           >
-                            {studentName(student)}
+                            {phoneMatrix ? (
+                              <>
+                                <span className="truncate">{student.lastName}</span>
+                                <span className="truncate text-[8.5px] font-medium text-foreground/55">
+                                  {student.firstName}
+                                </span>
+                              </>
+                            ) : (
+                              studentName(student)
+                            )}
                           </Link>
                           <EducationalSupportBadgeButton
                             count={localFlags[student.id]?.activeCount ?? 0}
@@ -1586,17 +1718,6 @@ export function GradebookWorkspace({
                             }
                             onClick={() => void openSupportReview(student)}
                           />
-                          {/* Dirección's early-warning: a student who can no
-                              longer reach the pass mark with the weight left. */}
-                          {risk?.pass === false ? (
-                            <span
-                              title={sb.cannotPass}
-                              aria-label={sb.atRisk}
-                              className="inline-flex shrink-0 items-center rounded-full bg-error/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-error"
-                            >
-                              {sb.atRisk}
-                            </span>
-                          ) : null}
                           {risk?.pass && risk.neededOnRemaining != null && risk.neededOnRemaining > 0 ? (
                             <span
                               title={sb.atRiskHint(risk.neededOnRemaining)}
@@ -1615,7 +1736,7 @@ export function GradebookWorkspace({
                               <td
                                 key={column.id}
                                 className={cn(
-                                  "border-b border-r border-border px-0.5",
+                                  "border-b border-r border-border px-0",
                                   columnIndex === 0 && "border-l-2 border-l-foreground/25",
                                 )}
                               >
@@ -1627,7 +1748,9 @@ export function GradebookWorkspace({
                                   studentId={student.id}
                                   row={rowIndex}
                                   col={colIndex}
-                                  dense={dense}
+                                  dense={matrixDense}
+                                  tablet={tabletMatrix}
+                                  phone={phoneMatrix}
                                   markView={markView}
                                   supportPending={supportActionPending({
                                     needsReview: localFlags[student.id]?.needsReview ?? false,
@@ -1663,7 +1786,8 @@ export function GradebookWorkspace({
                                     max={points.max}
                                     grade={grade}
                                     view={markView}
-                                    compact={dense}
+                                    compact={matrixDense}
+                                    narrow={matrixDense || tabletMatrix}
                                   />
                                 </span>
                               );
@@ -1671,11 +1795,14 @@ export function GradebookWorkspace({
                           </td>
                         </Fragment>
                       ))}
-                      <td className={cn("sticky right-0 z-20 min-w-[6rem] border-b border-l-2 border-l-foreground/25 bg-surface-muted px-2 text-center", rowY)}>
+                      <td className={cn("sticky right-0 z-20 border-b border-l-2 border-l-foreground/25 bg-surface-muted px-2 text-center", finalCol, rowY)}>
                         <span
                           title={sb.finalColumn}
                           className={cn(
-                            "inline-block rounded-md px-2 py-0.5 text-sm font-bold leading-none tabular-nums",
+                            "inline-block rounded-md px-2 py-0.5 font-bold leading-none tabular-nums",
+                            // Smaller type on a dense matrix so a three-digit
+                            // 100% still fits the 72 px FINAL column.
+                            matrixDense ? "text-[6px]" : tabletMatrix ? "text-[6px]" : "text-sm",
                             final == null ? "text-foreground/65" : tonePillClass(final),
                           )}
                         >
@@ -1689,8 +1816,8 @@ export function GradebookWorkspace({
 
               <tfoot>
                 <tr className={dense ? "h-8" : "h-10"}>
-                  <td className={cn("sticky bottom-0 left-0 z-40 border-r border-t border-border bg-surface-muted px-2", headY)} />
-                  <td className={cn("sticky bottom-0 left-10 z-40 border-r border-t border-border bg-surface-muted px-3 text-xs font-bold uppercase tracking-wide text-foreground/50", headY)}>
+                  <td className={cn("sticky bottom-0 left-0 z-40 border-r border-t border-border bg-surface-muted px-1", indexCol, headY)} />
+                  <td className={cn("sticky bottom-0 z-40 border-r border-t border-border bg-surface-muted font-bold uppercase tracking-wide text-foreground/50", nameLeft, nameCol, namePad, phoneMatrix ? "text-[9px]" : "text-xs", headY)}>
                     {sb.classAverage}
                   </td>
                   {groups.map((group) => {
@@ -1713,11 +1840,11 @@ export function GradebookWorkspace({
                           </span>
                           <span
                             className={cn(
-                              "inline-block rounded-md px-2 py-0.5 tabular-nums",
+                              "inline-block rounded-md px-1.5 py-0.5 text-[11px] tabular-nums",
                               gradeAvg == null ? "text-foreground/65" : tonePillClass(gradeAvg),
                             )}
                           >
-                            {gradeAvg == null ? "—" : `${gradeAvg}%`}
+                            {gradeAvg == null ? "—" : `${Math.round(gradeAvg)}%`}
                           </span>
                           <span className="text-[9px] font-semibold text-foreground/65">
                             {copy.pesoTotalValue(group.peso ?? 0)}
@@ -1731,18 +1858,22 @@ export function GradebookWorkspace({
                       </td>
                     );
                   })}
-                  <td className={cn("sticky bottom-0 right-0 z-40 min-w-[6rem] border-l-2 border-t border-l-foreground/25 border-border bg-surface-muted px-2 text-center text-xs font-bold", headY)}>
-                    <div className="flex items-baseline justify-center gap-1.5">
-                      <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.1em] text-foreground/65">
+                  <td className={cn("sticky bottom-0 right-0 z-40 border-l-2 border-t border-l-foreground/25 border-border bg-surface-muted px-1.5 text-center text-xs font-bold", finalCol, headY)}>
+                    {/* The footer row is the narrowest place in the grid: at 72 px
+                        the "PROMEDIO" label and its pill side by side spilled
+                        past the sticky FINAL column, which then covered the
+                        result. Stacked, the pair fits with room to spare. */}
+                    <div className="flex flex-col items-center justify-center gap-0.5">
+                      <span className="whitespace-nowrap text-[8.5px] font-bold uppercase tracking-[0.08em] text-foreground/65">
                         {copy.average}
                       </span>
                       <span
                         className={cn(
-                          "inline-block rounded-md px-2 py-0.5 tabular-nums",
+                          "inline-block rounded-md px-1.5 py-0.5 text-[11px] tabular-nums",
                           overall == null ? "text-foreground/65" : tonePillClass(overall),
                         )}
                       >
-                        {overall == null ? "—" : `${overall}%`}
+                        {overall == null ? "—" : `${Math.round(overall)}%`}
                       </span>
                     </div>
                   </td>
@@ -1750,6 +1881,10 @@ export function GradebookWorkspace({
               </tfoot>
             </table>
         </div>
+      ) : null}
+
+      {portraitPhone && !showCards ? (
+        <RotateToTableHint />
       ) : null}
 
       {typeof document !== "undefined"
@@ -1896,6 +2031,41 @@ export function GradebookWorkspace({
   );
 }
 
+/**
+ * Portrait phone, "Tabla" selected: the matrix cannot fit across 390 px, so it
+ * is replaced by this hint.
+ *
+ * Choreography, not decoration: the phone tips once on arrival, and the words
+ * slide in from the left as the turn lands — so the eye follows the motion into
+ * the sentence. Nothing loops; a pulsing hint reads as a loading state.
+ */
+function RotateToTableHint() {
+  const t = useLiveT();
+  const sb = t.gradebook.workspace.scoreboard;
+
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <motion.div
+        aria-hidden
+        className="text-[#141416] dark:text-white"
+        initial={{ rotate: 0 }}
+        animate={{ rotate: 90 }}
+        transition={{ duration: 0.9, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Smartphone className="h-24 w-24" strokeWidth={1} />
+      </motion.div>
+      <motion.p
+        className="mt-0.5 text-xl font-bold leading-tight text-foreground/75"
+        initial={{ clipPath: "inset(0 100% 0 0)", opacity: 0.35 }}
+        animate={{ clipPath: "inset(0 0% 0 0)", opacity: 1 }}
+        transition={{ duration: 0.9, delay: 1.05, ease: [0.4, 0, 0.2, 1] }}
+      >
+        {sb.rotateTitle}
+      </motion.p>
+    </div>
+  );
+}
+
 function GradeCell({
   classId,
   column,
@@ -1904,6 +2074,8 @@ function GradeCell({
   row,
   col,
   dense,
+  phone = false,
+  tablet = false,
   markView,
   supportPending,
   onRequireReview,
@@ -1916,6 +2088,10 @@ function GradeCell({
   row: number;
   col: number;
   dense: boolean;
+  /** A sideways phone: the mark is the only thing the cell has room for. */
+  phone?: boolean;
+  /** A touch tablet (iPad): one step down from desktop, not as tight as a phone. */
+  tablet?: boolean;
   /** `points` shows the mark, `percent` the grade it represents. */
   markView: "points" | "percent";
   supportPending: boolean;
@@ -1998,6 +2174,28 @@ function GradeCell({
   return (
     <div className="relative">
       {/*
+       * The visible mark: a chip sized to its own text, centred in the cell.
+       * It is `pointer-events-none` so the input underneath keeps every click
+       * and keystroke; the input paints the same digits, so focus, selection
+       * and caret position are unaffected. `-translate-y`-free: the input sits
+       * on top of it, which is why both use the same line box.
+       */}
+      {numeric != null && !asPercent ? (
+        <span
+          aria-hidden
+          className={cn(
+            // One fixed width for every mark, so a one-digit `5` and a
+            // two-digit `10` share the same pill and the column reads as a
+            // single alignment instead of ragged chips.
+            "pointer-events-none absolute inset-x-0 top-1/2 mx-auto flex -translate-y-1/2 items-center justify-center rounded-md px-1.5 py-0.5 font-semibold leading-none tabular-nums",
+            dense || phone || tablet ? "w-8 text-[12px]" : "w-10 text-sm",
+            status === "error" ? "bg-error/10 text-error" : tintFor(pct),
+          )}
+        >
+          {displayText}
+        </span>
+      ) : null}
+      {/*
        * Percent view is read-only: marks are entered in points, so typing here
        * would have to be converted back and would blur the difference between
        * "the grade I see" and "the points I stored". Switching to Pts is the
@@ -2033,14 +2231,19 @@ function GradeCell({
           }
         }}
         className={cn(
-          "w-full rounded-md border border-transparent px-1 text-center font-semibold tabular-nums outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-400/40",
-          dense ? "h-7 min-w-[1.75rem] text-[13px]" : "h-8 min-w-[2.5rem] text-sm",
+          // The input is the hit target and fills the cell, but it is
+          // transparent: the tint below is what the teacher sees, wrapped
+          // tightly around the digits (like a chip), never the whole cell.
+          "w-full rounded-md border border-transparent bg-transparent px-1 text-center font-semibold tabular-nums outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-400/40",
+          phone
+            ? "h-6 min-w-0 px-0.5 py-0 text-[12px]"
+            : dense
+              ? "h-6 min-w-[1.75rem] px-1 py-0 text-[12px]"
+              : tablet
+                ? "h-6 min-w-[2rem] px-1 py-0 text-[12px]"
+                : "h-8 min-w-[2.5rem] text-sm",
           asPercent && "cursor-default",
-          status === "error"
-            ? "border-error/60 text-error"
-            : pct == null
-              ? "text-foreground"
-              : tintFor(pct),
+          status === "error" ? "text-error" : "text-foreground",
         )}
       />
       {status === "saving" && !asPercent ? (
@@ -2158,6 +2361,7 @@ function ColumnHeader({
   column,
   label,
   density,
+  phone = false,
   pointsEditable,
   onDelete,
   onClose,
@@ -2167,6 +2371,8 @@ function ColumnHeader({
   column: ExamColumn;
   label: { short: string; medium: string; full: string };
   density: Density;
+  /** A sideways phone always shows the short label and the points inline. */
+  phone?: boolean;
   /** Points can only change before the first grade (see `updateExamColumn`). */
   pointsEditable: boolean;
   onDelete: () => void;
@@ -2176,7 +2382,7 @@ function ColumnHeader({
 }) {
   const t = useLiveT();
   const w = t.gradebook.workspace;
-  const compact = density === "compact";
+  const compact = density === "compact" || phone;
 
   const [editing, setEditing] = useState<"title" | "points" | null>(null);
   const [draft, setDraft] = useState(column.title);
@@ -2238,12 +2444,14 @@ function ColumnHeader({
   }
 
   const titleClass = cn(
-    "w-full min-w-0 rounded-md px-1 text-center font-bold leading-tight transition-colors",
+    // `wrap-anywhere` keeps a long title from widening the fixed column; the
+    // header row is 28px, so the label keeps one line wherever it can.
+    "w-full min-w-0 rounded-md px-0.5 pt-1 pb-0.5 text-center font-bold leading-[1.15] transition-colors",
     compact ? "text-[10px] uppercase tracking-wide" : "text-[11px]",
   );
 
   return (
-    <div className="group/col flex h-full w-full flex-col items-center justify-center gap-0.5 py-0.5">
+    <div className="group/col flex h-full w-full flex-col items-center justify-center gap-0.5 py-0">
       {editing === "title" ? (
         <input
           ref={titleRef}

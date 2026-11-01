@@ -82,7 +82,15 @@ export function SelectMenu({
   return (
     <div
       ref={wrapperRef}
-      className={cn("relative", variant !== "field" && "inline-flex", className)}
+      // While open the whole control is lifted, so its listbox paints over
+      // sibling rows, grid cells and any neighbouring control no matter what
+      // z-index they carry. `close` resets it with the list.
+      className={cn(
+        "relative",
+        variant !== "field" && "inline-flex",
+        open && "z-[46]",
+        className,
+      )}
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
           event.stopPropagation();

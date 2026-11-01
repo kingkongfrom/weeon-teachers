@@ -28,6 +28,7 @@ export function GradebookToolbar({
   onMarkViewChange,
   phoneView,
   onPhoneViewChange,
+  cardsDisabled = false,
   passMark,
 }: {
   query: string;
@@ -42,6 +43,8 @@ export function GradebookToolbar({
   onMarkViewChange: (value: "points" | "percent") => void;
   phoneView: "cards" | "grid";
   onPhoneViewChange: (value: "cards" | "grid") => void;
+  /** False where `Tarjetas` cannot apply — a landscape phone only offers `Tabla`. */
+  cardsDisabled?: boolean;
   passMark: number;
 }) {
   const t = useLiveT();
@@ -112,10 +115,13 @@ export function GradebookToolbar({
           })}
         </div>
 
+        {/* Cards or matrix. Only phones (either orientation) and portrait
+            tablets can be in cards; from `lg` up the matrix always wins, so the
+            switch is dropped instead of offering two identical views. */}
         <div
           role="radiogroup"
           aria-label={sb.phoneView}
-          className="inline-flex h-8 items-center rounded-full border border-border p-0.5 [@media(orientation:landscape)]:hidden"
+          className="inline-flex h-8 items-center rounded-full border border-border p-0.5 print-hide lg:hidden"
         >
           {(["cards", "grid"] as const).map((mode) => (
             <button
@@ -125,32 +131,43 @@ export function GradebookToolbar({
               aria-checked={phoneView === mode}
               onClick={() => onPhoneViewChange(mode)}
               className={cn(
-                "h-7 min-w-9 rounded-full px-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
+                "inline-flex h-7 min-w-9 items-center gap-1 rounded-full px-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
+                "disabled:cursor-not-allowed disabled:opacity-45",
                 phoneView === mode
                   ? "bg-[#e6defb] text-[#4c1d95] dark:bg-[#241b45] dark:text-[#c4b5fd]"
                   : "text-foreground/55 hover:text-foreground",
               )}
+              // "Tarjetas" is not an option on a landscape phone: the cards
+              // would have to be shown on a screen that is already wide, where
+              // the matrix is the point of turning the phone.
+              disabled={mode === "cards" && cardsDisabled}
             >
               {mode === "cards" ? sb.cards : sb.grid}
             </button>
           ))}
         </div>
 
-        {/* On a phone the numbers already sit on each card, so only the
-            swatches remain; the full ranges wrapped onto a second line. */}
-        <div className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold [@media(orientation:landscape)]:gap-3 [@media(orientation:landscape)]:text-xs">
-          <span className="flex items-center gap-1 text-foreground/50">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#abe3dc] ring-1 ring-[#7dd3c7]" />
-            <span className="hidden [@media(orientation:landscape)]:inline">≥ {passMark}%</span>
-          </span>
-          <span className="flex items-center gap-1 text-foreground/50">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#fdeecd] ring-1 ring-[#f5d88a]" />
-            <span className="hidden [@media(orientation:landscape)]:inline">50–69%</span>
-          </span>
-          <span className="flex items-center gap-1 text-foreground/50">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#fbdee7] ring-1 ring-[#f0b8c8]" />
-            <span className="hidden [@media(orientation:landscape)]:inline">&lt; 50%</span>
-          </span>
+        {/* A portrait phone would rather wrap the toolbar onto another line than
+            show three coloured dots nobody can read: the bands are the legend
+            for every pill in the grid, so their numbers stay visible here too. */}
+        <div
+          className="flex shrink-0 items-center gap-1 text-[9px] font-semibold [@media(orientation:landscape)]:gap-3 [@media(orientation:landscape)]:text-xs"
+          role="group"
+          aria-label={sb.legend}
+        >
+          {[
+            { dot: "bg-[#abe3dc] ring-[#7dd3c7]", label: `≥ ${passMark}%` },
+            { dot: "bg-[#fdeecd] ring-[#f5d88a]", label: "50–69%" },
+            { dot: "bg-[#fbdee7] ring-[#f0b8c8]", label: "< 50%" },
+          ].map((band) => (
+            <span key={band.label} className="flex items-center gap-0.5 text-foreground/50 [@media(orientation:landscape)]:gap-1">
+              <span
+                aria-hidden
+                className={cn("h-2 w-2 shrink-0 rounded-full ring-1 [@media(orientation:landscape)]:h-2.5 [@media(orientation:landscape)]:w-2.5", band.dot)}
+              />
+              <span>{band.label}</span>
+            </span>
+          ))}
         </div>
       </div>
     </div>

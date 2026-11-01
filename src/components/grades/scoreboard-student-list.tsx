@@ -65,78 +65,76 @@ export function ScoreboardStudentList({
 
       <ul className="flex flex-col gap-2">
         {students.map((student) => (
-          <li key={student.id}>
-            {/*
-             * The card itself grades: that is what a teacher reaches for on a
-             * phone. The transcript stays one tap away on the small arrow, so
-             * nothing that existed before was removed.
-             */}
-            <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface px-3.5 py-3">
-              <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => onGrade(student.id)}
-                    className="-mx-1 flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left active:bg-surface-muted"
-                  >
-                  <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">
-                    {student.name}
-                  </span>
-                  {student.atRisk ? (
-                    <span className="shrink-0 rounded-full bg-error/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-error">
-                      {s.atRisk}
-                    </span>
-                  ) : student.needed != null ? (
-                    // "Needs 87 %" is meaningless beside "67 %" without a label,
-                    // so the number carries its explanation.
-                    <span
-                      title={s.atRiskHint(student.needed)}
-                      className="shrink-0 rounded-full bg-[#fdeecd] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[#92400e] dark:bg-[#3a2a12] dark:text-[#fde68a]"
-                    >
-                      {s.needs(student.needed)}
-                    </span>
-                  ) : null}
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-lg px-2 py-1 text-base font-bold leading-none tabular-nums",
-                      student.final == null ? "text-foreground/30" : tonePillClass(student.final),
-                    )}
-                  >
-                    {student.final == null ? "—" : `${student.final}%`}
-                  </span>
-                </button>
-                <Link
-                  href={hrefFor(student.id)}
-                  aria-label={s.openTranscript(student.name)}
-                  title={s.openTranscript(student.name)}
-                  // Sits inside the button's flow but is its own target; the
-                  // negative margin keeps the tap area from stealing the row.
-                  className="-my-2 -mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/30 active:bg-surface-muted"
+          <li
+            key={student.id}
+            // The whole card is the tap target for grading: on a phone that is
+            // what a teacher reaches for, and two adjacent targets (name vs
+            // arrow) made the row ambiguous. The transcript is reached only
+            // from the arrow, which sits above the card's overlay.
+            className="relative flex flex-col gap-2 rounded-2xl border border-border bg-surface px-3.5 py-3 has-[>button:focus-visible]:ring-2 has-[>button:focus-visible]:ring-brand-400"
+          >
+            <button
+              type="button"
+              onClick={() => onGrade(student.id)}
+              aria-label={t.gradebook.mobile.gradeStudent(student.name)}
+              className="absolute inset-0 z-0 rounded-2xl outline-none active:bg-surface-muted/60"
+            />
+            <div className="pointer-events-none relative z-10 flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">
+                {student.name}
+              </span>
+              {student.atRisk ? null : student.needed != null ? (
+                // "Needs 87 %" is meaningless beside "67 %" without a label,
+                // so the number carries its explanation.
+                <span
+                  title={s.atRiskHint(student.needed)}
+                  className="shrink-0 rounded-full bg-[#fdeecd] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[#92400e] dark:bg-[#3a2a12] dark:text-[#fde68a]"
                 >
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-
-              {student.rubros.length > 0 ? (
-                <div className="flex flex-col gap-1">
-                  {student.rubros.map((rubro) => (
-                    <div key={rubro.key} className="flex items-center gap-2">
-                      <span className="w-20 shrink-0 truncate text-[11px] font-semibold uppercase tracking-wide text-foreground/65">
-                        {rubro.name}
-                      </span>
-                      <span className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
-                        <span
-                          className={cn("absolute inset-y-0 left-0 rounded-full", barTone(rubro.percent))}
-                          style={{ width: `${Math.max(0, Math.min(100, rubro.percent ?? 0))}%` }}
-                        />
-                      </span>
-                      <span className="w-9 shrink-0 text-right text-[11px] font-bold tabular-nums text-foreground/65">
-                        {rubro.percent == null ? "—" : `${Math.round(rubro.percent)}%`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                  {s.needs(student.needed)}
+                </span>
               ) : null}
+              <span
+                className={cn(
+                  "shrink-0 rounded-lg px-2 py-1 text-base font-bold leading-none tabular-nums",
+                  student.final == null ? "text-foreground/30" : tonePillClass(student.final),
+                )}
+              >
+                {student.final == null ? "—" : `${student.final}%`}
+              </span>
+              <Link
+                href={hrefFor(student.id)}
+                aria-label={s.openTranscript(student.name)}
+                title={s.openTranscript(student.name)}
+                // The one part of the card that leaves the gradebook: it opts
+                // back into pointer events over the grading overlay.
+                className="pointer-events-auto -my-2 -mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/30 active:bg-surface-muted"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Link>
             </div>
+
+            {student.rubros.length > 0 ? (
+              // Also inert, like the header row: the bars are read-only, so the
+              // tap must fall through to the grading overlay underneath.
+              <div className="pointer-events-none relative z-10 flex flex-col gap-1">
+                {student.rubros.map((rubro) => (
+                  <div key={rubro.key} className="flex items-center gap-2">
+                    <span className="w-20 shrink-0 truncate text-[11px] font-semibold uppercase tracking-wide text-foreground/65">
+                      {rubro.name}
+                    </span>
+                    <span className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
+                      <span
+                        className={cn("absolute inset-y-0 left-0 rounded-full", barTone(rubro.percent))}
+                        style={{ width: `${Math.max(0, Math.min(100, rubro.percent ?? 0))}%` }}
+                      />
+                    </span>
+                    <span className="w-9 shrink-0 text-right text-[11px] font-bold tabular-nums text-foreground/65">
+                      {rubro.percent == null ? "—" : `${Math.round(rubro.percent)}%`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>
