@@ -4,10 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
-  Download,
-  Loader2,
   Plus,
-  Save,
   Share2,
   Trash2,
 } from "lucide-react";
@@ -22,6 +19,7 @@ import {
   type SavedBlooketSet,
 } from "@/lib/teachers/blooket-actions";
 import { BlooketShareDialog } from "@/components/blooket/blooket-share-dialog";
+import { BlooketActionBar } from "@/components/blooket/blooket-action-bar";
 import { cn } from "@/lib/utils";
 import {
   BLOOKET_DEFAULT_SECONDS,
@@ -142,6 +140,9 @@ export function BlooketBuilder() {
   const [shareTarget, setShareTarget] = useState<SavedBlooketSet | null>(null);
   const [currentSetId, setCurrentSetId] = useState<string | null>(null);
   const [gradeFilter, setGradeFilter] = useState("");
+  /** A write happened since the last save — drives "Cambios sin guardar". */
+  const [mutatedFromSet, setMutatedFromSet] = useState(false);
+  const [savedRecently, setSavedRecently] = useState(false);
 
   const refreshSets = useCallback(() => {
     void listBlooketSets().then((res) => {
@@ -189,6 +190,8 @@ export function BlooketBuilder() {
   );
 
   const update = (id: string, patch: Partial<DraftQuestion>) => {
+    setMutatedFromSet(true);
+    setSavedRecently(false);
     setQuestions((current) =>
       current.map((question) => (question.id === id ? { ...question, ...patch } : question)),
     );
@@ -215,6 +218,8 @@ export function BlooketBuilder() {
       return;
     }
     setCurrentSetId(res.id ?? null);
+    setMutatedFromSet(false);
+    setSavedRecently(true);
     setSaveNotice("Set guardado en Blooket.");
     refreshSets();
   }
@@ -244,6 +249,8 @@ export function BlooketBuilder() {
     );
     setSaveNotice(`Abriendo «${res.set.title}».`);
     setSaveError(null);
+    setMutatedFromSet(false);
+    setSavedRecently(false);
   }
 
   async function removeSet(saved: SavedBlooketSet) {
@@ -289,42 +296,36 @@ export function BlooketBuilder() {
         <input
           id="blooket-title"
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => {
+            setTitle(event.target.value);
+            setMutatedFromSet(true);
+            setSavedRecently(false);
+          }}
           placeholder="Ciencias 8° — Repaso del sistema solar"
           className="mt-2 h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
         />
 
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <div className="flex w-40 flex-col gap-1.5">
-            <label
-              htmlFor="blooket-grade"
-              className="text-sm font-semibold text-foreground"
-            >
-              Nivel
-            </label>
-            {/* Grade is what the library filters by, so a saved set carries it.
-                Free text, matching how grade_level is stored elsewhere. */}
-            <input
-              id="blooket-grade"
-              value={gradeLevel}
-              onChange={(event) => setGradeLevel(event.target.value)}
-              placeholder="8°"
-              maxLength={40}
-              className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-          <Button
-            variant="secondary"
-            onClick={() => void save()}
-            disabled={!canSave || saving}
+        <div className="mt-4 flex w-40 flex-col gap-1.5">
+          <label
+            htmlFor="blooket-grade"
+            className="text-sm font-semibold text-foreground"
           >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            {currentSetId ? "Actualizar set" : "Guardar set"}
-          </Button>
+            Nivel
+          </label>
+          {/* Grade is what the library filters by, so a saved set carries it.
+              Free text, matching how grade_level is stored elsewhere. */}
+          <input
+            id="blooket-grade"
+            value={gradeLevel}
+            onChange={(event) => {
+              setGradeLevel(event.target.value);
+              setMutatedFromSet(true);
+              setSavedRecently(false);
+            }}
+            placeholder="8°"
+            maxLength={40}
+            className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
+          />
         </div>
 
         {saveError ? (
@@ -343,6 +344,7 @@ export function BlooketBuilder() {
 
         <p className="mt-2 text-xs text-foreground/50">
           Blooket lo usa como título; puedes cambiarlo después de importar.
+          Guarde el set con la barra de abajo cuando termine las preguntas.
         </p>
       </Card>
 
@@ -560,36 +562,25 @@ export function BlooketBuilder() {
       <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="secondary"
-          onClick={() => setQuestions((current) => [...current, blankQuestion("multiple_choice")])}
+          onClick={() => {
+            setMutatedFromSet(true);
+            setSavedRecently(false);
+            setQuestions((current) => [...current, blankQuestion("multiple_choice")]);
+          }}
         >
           <Plus className="h-4 w-4" />
           Añadir pregunta
         </Button>
       </div>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-base font-semibold text-foreground">
-              Listo para Blooket
-            </h2>
-            <p className="text-sm text-foreground/60">
-              {set.rows.length} de {questions.length}{" "}
-              {questions.length === 1 ? "pregunta" : "preguntas"} se pueden exportar.
-            </p>
-          </div>
-          <Button onClick={download} disabled={!canExport || exporting}>
-            {exporting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            Descargar CSV
-          </Button>
-        </div>
-
-        {problems.length > 0 ? (
-          <ul className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+      {/* Export feedback lives here; the actions themselves are pinned in the
+          bar below so they stay reachable at the end of a long set. */}
+      {problems.length > 0 ? (
+        <Card className="p-4 sm:p-5">
+          <h2 className="text-sm font-semibold text-foreground">
+            Revisa antes de importar
+          </h2>
+          <ul className="mt-3 flex flex-col gap-2">
             {problems.map((item) => (
               <li
                 key={`${item.index}-${item.reason}`}
@@ -604,14 +595,39 @@ export function BlooketBuilder() {
               </li>
             ))}
           </ul>
-        ) : null}
+        </Card>
+      ) : null}
 
-        <p className="mt-4 border-t border-border pt-4 text-xs text-foreground/50">
-          Descarga el archivo y súbelo en Blooket con{" "}
-          <strong>Create → CSV Import</strong>. Blooket acepta hasta 4 respuestas por
-          pregunta y solo opción múltiple, verdadero/falso o respuesta escrita.
+      <p className="text-xs leading-relaxed text-foreground/50">
+        Descargue el CSV y súbalo en Blooket con <strong>Create → CSV Import</strong>.
+        Blooket acepta hasta 4 respuestas por pregunta y solo opción múltiple,
+        verdadero/falso o respuesta escrita.
+      </p>
+
+      {/* Repeated next to the button that caused it: the header copy of the
+          message is far off-screen by the time a long set is saved. */}
+      {saveError ? (
+        <p
+          role="alert"
+          className="rounded-xl border border-error/25 bg-error/5 px-3.5 py-2.5 text-[13px] font-medium text-error"
+        >
+          {saveError}
         </p>
-      </Card>
+      ) : null}
+
+      <BlooketActionBar
+        canSave={canSave}
+        canExport={canExport}
+        saving={saving}
+        exporting={exporting}
+        savedRecently={savedRecently && !mutatedFromSet}
+        currentSetId={currentSetId}
+        rowCount={set.rows.length}
+        totalCount={questions.length}
+        missingTitle={canExport && title.trim().length === 0}
+        onSave={() => void save()}
+        onDownload={download}
+      />
 
       <BlooketShareDialog
         open={shareOpen}

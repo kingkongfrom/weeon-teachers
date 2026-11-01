@@ -98,11 +98,18 @@ export async function saveBlooketSet(input: {
     return { ok: true, id: parsed.data.id };
   }
 
-  const { data: existing, error: existingError } = await supabase
+  // `.is()` only takes null / true / false. An empty grade is stored as null, so
+  // the null branch uses `.is`, and a real grade must use `.eq` — passing the
+  // string to `.is` made PostgREST reject the request ("failed to parse filter").
+  let findByTitle = supabase
     .from("exam_library_blooket_sets")
     .select("id")
-    .eq("title", patch.title)
-    .is("grade_level", patch.grade_level)
+    .eq("title", patch.title);
+  findByTitle =
+    patch.grade_level === null
+      ? findByTitle.is("grade_level", null)
+      : findByTitle.eq("grade_level", patch.grade_level);
+  const { data: existing, error: existingError } = await findByTitle
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -1,13 +1,16 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   BookMarked,
+  ClipboardCheck,
+  FileText,
   Folder,
   FolderPlus,
   Gamepad2,
+  Layers,
   Loader2,
   PencilLine,
   Search,
@@ -26,6 +29,8 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LibraryItemCard } from "@/components/library/library-item-card";
+import { BlooketSetsList } from "@/components/blooket/blooket-sets-list";
+import type { SavedBlooketSet } from "@/lib/teachers/blooket-actions";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { ShareLibraryDialog } from "@/components/library/share-library-dialog";
 import {
@@ -57,11 +62,14 @@ export function LibraryBrowser({
   collections,
   items,
   subjects,
+  blookets = [],
   onChanged,
 }: {
   collections: LibraryCollection[];
   items: LibraryItem[];
   subjects: { id: string; name: string }[];
+  /** Saved Blooket sets, shown as their own collection under Mías. */
+  blookets?: SavedBlooketSet[];
   /** Optional hook for hosts that manage their own refresh (class picker). */
   onChanged?: () => void;
 }) {
@@ -147,133 +155,188 @@ export function LibraryBrowser({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Tabs + primary action ─────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div
-          role="tablist"
-          aria-label={l.tabs.aria}
-          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1"
-        >
-          {(["mine", "shared"] as const).map((value) => {
-            const active = tab === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setTab(value)}
-                className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors",
-                  active
-                    ? "bg-foreground text-background shadow-sm"
-                    : "text-foreground/60 hover:bg-surface-muted hover:text-foreground",
-                )}
-              >
-                {value === "mine" ? l.tabs.mine : l.tabs.shared}
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 text-[11px] font-bold tabular-nums",
-                    active ? "bg-background/20" : "bg-surface-muted text-foreground/50",
-                  )}
+      {/* ── Collection bar: one bordered toolbar for tabs, search, filters,
+             counts and the two secondary actions. Everything a teacher needs
+             to narrow the list stays in one visual band, so the cards below
+             start immediately. ──────────────────────────────────────────── */}
+      <div className="flex flex-col rounded-2xl border border-border bg-surface">
+        <div className="flex flex-col gap-3 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div
+              role="tablist"
+              aria-label={l.tabs.aria}
+              className="inline-flex items-center gap-1 rounded-full bg-surface-muted p-1"
+            >
+              {(["mine", "shared"] as const).map((value) => {
+                const active = tab === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(value)}
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors",
+                      active
+                        ? "bg-background text-foreground ring-1 ring-inset ring-border"
+                        : "text-foreground/55 hover:text-foreground",
+                    )}
+                  >
+                    <span className="sm:hidden">
+                      {value === "mine" ? l.tabs.mine : l.tabs.sharedShort}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {value === "mine" ? l.tabs.mine : l.tabs.shared}
+                    </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 text-[11px] font-bold tabular-nums",
+                        active
+                          ? "bg-surface-muted text-foreground/70"
+                          : "bg-background/70 text-foreground/45",
+                      )}
+                    >
+                      {counts[value]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {tab === "mine" ? (
+              <div className="flex items-center gap-2">
+                {/* Entry point for /aula-virtual/blooket: the builder is a separate
+                    page, and this repo has no sidebar to link it from. */}
+                <Link
+                  href="/aula-virtual/blooket"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-[12.5px] font-semibold text-foreground/65 transition-colors hover:border-border-strong hover:text-foreground"
                 >
-                  {counts[value]}
-                </span>
-              </button>
-            );
-          })}
+                  <Gamepad2 className="h-4 w-4 shrink-0" />
+                  <span className="hidden md:inline">{l.blooketAction}</span>
+                  <span className="md:hidden">{l.blooketShort}</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCollectionName("");
+                    setCollectionDialog({ mode: "create" });
+                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-[12.5px] font-semibold text-foreground/65 transition-colors hover:border-border-strong hover:text-foreground"
+                >
+                  <FolderPlus className="h-4 w-4 shrink-0" />
+                  <span className="hidden md:inline">{l.newCollection}</span>
+                  <span className="md:hidden">{l.newCollectionShort}</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          {scoped.length > 0 ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="relative flex min-w-0 flex-1 items-center">
+                <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-foreground/35" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={l.search}
+                  aria-label={l.search}
+                  className="h-10 w-full rounded-full border border-border bg-background pl-10 pr-9 text-[13.5px] text-foreground outline-none transition-[border-color,box-shadow,background-color] focus:border-[#0891B2] focus:bg-background focus:shadow-[0_0_0_3px_rgb(8_145_178/0.12)]"
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label={t.common.cancel}
+                    className="absolute right-2.5 flex h-6 w-6 items-center justify-center rounded-full text-foreground/35 hover:bg-surface-muted hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </label>
+
+              <div className="flex items-center gap-2">
+                {subjects.length > 1 ? (
+                  <SelectMenu
+                    label={l.subject}
+                    value={subjectId}
+                    onChange={setSubjectId}
+                    align="right"
+                    options={[
+                      { value: "", label: l.allSubjects },
+                      ...subjects.map((subject) => ({
+                        value: subject.id,
+                        label: subject.name,
+                      })),
+                    ]}
+                  />
+                ) : null}
+                {levels.length > 1 ? (
+                  <SelectMenu
+                    label={l.gradeLevel}
+                    value={level}
+                    onChange={setLevel}
+                    align="right"
+                    options={[
+                      { value: "", label: l.allLevels },
+                      ...levels.map((value) => ({ value, label: value })),
+                    ]}
+                  />
+                ) : null}
+                {activeFilters > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubjectId("");
+                      setLevel("");
+                    }}
+                    className="h-10 shrink-0 rounded-full px-2.5 text-[12.5px] font-semibold text-foreground/45 transition-colors hover:text-foreground"
+                  >
+                    {t.common.clearFilters}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {scoped.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/70 pt-2.5 text-[11.5px] font-semibold text-foreground/45">
+              <CountChip
+                icon={<Layers className="h-3.5 w-3.5" />}
+                label={l.summary.assessments(scoped.length)}
+              />
+              <CountChip
+                icon={<ClipboardCheck className="h-3.5 w-3.5" />}
+                label={l.summary.exams}
+                value={scoped.filter((item) => item.kind === "exam").length}
+              />
+              <CountChip
+                icon={<FileText className="h-3.5 w-3.5" />}
+                label={l.summary.homework}
+                value={scoped.filter((item) => item.kind !== "exam").length}
+              />
+              {tab === "mine" && collections.length > 0 ? (
+                <CountChip
+                  icon={<Folder className="h-3.5 w-3.5" />}
+                  label={l.summary.collections(collections.length)}
+                />
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
+        {/* Saved Blooket sets are stored in their own table, not as library items
+            (no points, no grading), so on the teacher's own tab they lead the list
+            as a collection of their own: the only place outside the builder where
+            a stored set is browsable, downloadable and reopened. Rendered even
+            when empty — the empty card is the only thing that explains the
+            collection exists at all. */}
         {tab === "mine" ? (
-          <div className="flex items-center gap-2">
-            {/* Entry point for /aula-virtual/blooket: the builder is a separate
-                page, and this repo has no sidebar to link it from. */}
-            <Link
-              href="/aula-virtual/blooket"
-              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border px-4 text-[13px] font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
-            >
-              <Gamepad2 className="h-4 w-4" />
-              {l.blooketAction}
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                setCollectionName("");
-                setCollectionDialog({ mode: "create" });
-              }}
-              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border px-4 text-[13px] font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
-            >
-              <FolderPlus className="h-4 w-4" />
-              {l.newCollection}
-            </button>
+          <div className="border-t border-border px-4 py-3">
+            <BlooketSetsList sets={blookets} onChanged={refresh} />
           </div>
         ) : null}
       </div>
-
-      {/* ── Search + filters ──────────────────────────────────────────────── */}
-      {scoped.length > 0 ? (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="relative flex min-w-0 flex-1 items-center">
-            <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-foreground/40" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={l.search}
-              aria-label={l.search}
-              className="h-10 w-full rounded-full border border-border bg-surface pl-10 pr-9 text-[13.5px] text-foreground outline-none transition-[border-color,box-shadow] focus:border-[#0891B2] focus:bg-background focus:shadow-[0_0_0_3px_rgb(8_145_178/0.12)]"
-            />
-            {query ? (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label={t.common.cancel}
-                className="absolute right-2.5 flex h-6 w-6 items-center justify-center rounded-full text-foreground/35 hover:bg-surface-muted hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : null}
-          </label>
-
-          <div className="flex items-center gap-2">
-            {subjects.length > 1 ? (
-              <SelectMenu
-                label={l.subject}
-                value={subjectId}
-                onChange={setSubjectId}
-                align="right"
-                options={[
-                  { value: "", label: l.allSubjects },
-                  ...subjects.map((subject) => ({ value: subject.id, label: subject.name })),
-                ]}
-              />
-            ) : null}
-            {levels.length > 1 ? (
-              <SelectMenu
-                label={l.gradeLevel}
-                value={level}
-                onChange={setLevel}
-                align="right"
-                options={[
-                  { value: "", label: l.allLevels },
-                  ...levels.map((value) => ({ value, label: value })),
-                ]}
-              />
-            ) : null}
-            {activeFilters > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setSubjectId("");
-                  setLevel("");
-                }}
-                className="h-10 rounded-full px-2.5 text-[12.5px] font-semibold text-foreground/45 transition-colors hover:text-foreground"
-              >
-                {t.common.clearFilters}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
 
       {error ? (
         <p
@@ -300,22 +363,23 @@ export function LibraryBrowser({
         <div className="flex flex-col gap-7">
           {sections.map((section) => (
             <section key={section.collection?.id ?? "loose"} className="flex flex-col gap-3">
-              <header className="flex items-center gap-2">
-                <h2 className="flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-foreground/40">
+              <header className="flex items-center gap-1.5">
+                <h2 className="flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-foreground/45">
                   {section.collection ? (
-                    <Folder className="h-3.5 w-3.5 shrink-0" />
+                    <Folder className="h-3.5 w-3.5 shrink-0 text-foreground/35" />
                   ) : (
-                    <BookMarked className="h-3.5 w-3.5 shrink-0" />
+                    <BookMarked className="h-3.5 w-3.5 shrink-0 text-foreground/35" />
                   )}
                   <span className="truncate">
                     {section.collection?.name ?? (tab === "shared" ? l.tabs.shared : l.unfiled)}
                   </span>
-                  <span className="shrink-0 rounded-full bg-surface-muted px-1.5 text-[10px] font-bold tabular-nums text-foreground/45">
+                  <span className="shrink-0 rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-foreground/50">
                     {section.items.length}
                   </span>
                 </h2>
+                <span aria-hidden className="mx-1.5 h-px min-w-4 flex-1 bg-border" />
                 {section.collection ? (
-                  <div className="ml-auto flex items-center gap-0.5">
+                  <div className="flex shrink-0 items-center gap-0.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -345,11 +409,11 @@ export function LibraryBrowser({
               </header>
 
               {section.items.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border px-3.5 py-3 text-[12.5px] font-medium text-foreground/40">
+                <p className="rounded-xl border border-dashed border-border px-3.5 py-4 text-[12.5px] font-medium text-foreground/40">
                   {l.emptyCollection}
                 </p>
               ) : (
-                <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                <ul className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                   {section.items.map((item) => (
                     <li key={item.id} className="min-w-0">
                       <LibraryItemCard
@@ -477,6 +541,31 @@ export function LibraryBrowser({
         onChanged={refresh}
       />
     </div>
+  );
+}
+
+/**
+ * Small, quiet summary in the toolbar footer. Numbers are tabular so the chips
+ * line up between tabs, and the value is optional — a collection count reads
+ * fine as "3 colecciones" without repeating the digit.
+ */
+function CountChip({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: React.ReactNode;
+  value?: number;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="text-foreground/30">{icon}</span>
+      {value === undefined ? null : (
+        <span className="tabular-nums text-foreground/70">{value}</span>
+      )}
+      <span className="truncate">{label}</span>
+    </span>
   );
 }
 
