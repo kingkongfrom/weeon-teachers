@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { Check, Loader2, Plus, RotateCcw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLiveT } from "@/lib/i18n/client";
+import { SelectMenu } from "@/components/ui/select-menu";
 import {
   assignOrphanColumns,
   moveColumnToRubro,
@@ -323,10 +324,13 @@ export function RubricDialog({
           </p>
 
           <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-[minmax(0,1fr)_5rem_14rem] items-center gap-2 px-1 text-[11px] font-bold uppercase tracking-wide text-foreground/45">
-              <span>{copy.name}</span>
-              <span>{copy.peso}</span>
-              <span />
+            {/* Column captions only on `lg`, where every row keeps its single
+                line; below that the rows wrap and headings would lie. */}
+            <div className="hidden items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-foreground/45 lg:flex">
+              <span className="min-w-[6rem] flex-1 basis-32">{copy.name}</span>
+              <span className="w-[3.75rem] shrink-0 text-center">{copy.peso}</span>
+              <span className="w-[7rem] shrink-0">{copy.rubroKind}</span>
+              <span className="flex-1" />
             </div>
 
             {rows.map((row, index) => {
@@ -335,7 +339,7 @@ export function RubricDialog({
                 <div
                   key={row.key}
                   className={cn(
-                    "grid grid-cols-[minmax(0,1fr)_5rem_14rem] items-center gap-2 rounded-xl border border-border px-2 py-1.5",
+                    "flex flex-wrap items-center gap-1.5 rounded-xl border border-border px-2 py-1.5",
                     row.archived && "opacity-60",
                   )}
                 >
@@ -345,9 +349,11 @@ export function RubricDialog({
                     aria-label={copy.name}
                     maxLength={60}
                     placeholder={copy.name}
-                    className="h-9 min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-sm font-semibold text-foreground outline-none focus:border-brand-400 focus:bg-background"
+                    className="h-9 min-w-[6rem] flex-1 basis-32 rounded-lg border border-transparent bg-transparent px-2 text-sm font-semibold text-foreground outline-none focus:border-brand-400 focus:bg-background"
                   />
-                  <div className="relative">
+                  {/* `%` is a flex sibling, not an absolutely placed glyph: on a
+                      5rem column it used to sit on top of the kind control. */}
+                  <div className="flex shrink-0 items-center gap-1">
                     <input
                       value={Number.isFinite(row.peso) ? String(row.peso) : ""}
                       onChange={(event) => {
@@ -357,37 +363,33 @@ export function RubricDialog({
                         });
                       }}
                       inputMode="numeric"
+                      maxLength={3}
                       aria-label={copy.peso}
-                      className="h-9 w-full rounded-lg border border-border bg-background px-2 pr-6 text-center text-sm font-bold tabular-nums text-foreground outline-none focus:border-brand-400"
+                      className="h-9 w-12 rounded-lg border border-border bg-background px-1 text-center text-sm font-bold tabular-nums text-foreground outline-none focus:border-brand-400"
                     />
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-foreground/40">
-                      %
-                    </span>
+                    <span className="text-xs font-semibold text-foreground/40">%</span>
                   </div>
-                  <div className="flex items-center justify-end gap-0.5">
-                    {/* Tags the rubro so publishing a homework or an exam from
-                        Aula virtual routes its column here instead of into the
-                        first rubro. */}
-                    <select
-                      value={row.defaultKind ?? ""}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        patchRow(row.key, {
-                          defaultKind:
-                            value === "homework" || value === "exam" ? value : null,
-                        });
-                      }}
-                      aria-label={copy.rubroKind}
-                      title={copy.rubroKindHint}
-                      className={cn(
-                        "h-8 rounded-lg border border-border bg-background px-1 text-[11px] font-semibold outline-none focus:border-brand-400",
-                        row.defaultKind ? "text-brand-700 dark:text-brand-300" : "text-foreground/50",
-                      )}
-                    >
-                      <option value="">{copy.rubroKindAny}</option>
-                      <option value="homework">{copy.rubroKindHomework}</option>
-                      <option value="exam">{copy.rubroKindExam}</option>
-                    </select>
+                  {/* Tags the rubro so publishing a homework or an exam from
+                      Aula virtual routes its column here instead of into the
+                      first rubro. */}
+                  <SelectMenu
+                    value={row.defaultKind ?? ""}
+                    onChange={(value) =>
+                      patchRow(row.key, {
+                        defaultKind:
+                          value === "homework" || value === "exam" ? value : null,
+                      })
+                    }
+                    variant="chip"
+                    label={copy.rubroKind}
+                    className="w-[7rem] shrink-0"
+                    options={[
+                      { value: "", label: copy.rubroKindAny },
+                      { value: "homework", label: copy.rubroKindHomework },
+                      { value: "exam", label: copy.rubroKindExam },
+                    ]}
+                  />
+                  <div className="flex shrink-0 items-center gap-0.5">
                     <button
                       type="button"
                       onClick={() => moveRow(row.key, -1)}
@@ -411,7 +413,7 @@ export function RubricDialog({
                         type="button"
                         onClick={() => patchRow(row.key, { archived: !row.archived })}
                         title={row.archived ? copy.unarchive : copy.archive}
-                        className="flex h-8 w-[4.5rem] items-center justify-center rounded px-1.5 text-[11px] font-semibold text-foreground/50 hover:text-foreground"
+                        className="flex h-8 items-center justify-center rounded px-2 text-[11px] font-semibold text-foreground/50 hover:text-foreground"
                       >
                         {row.archived ? copy.unarchive : copy.archive}
                       </button>
@@ -426,7 +428,7 @@ export function RubricDialog({
                     >
                       <X className="h-4 w-4" />
                     </button>
-                    <span className="ml-1 w-[4.75rem] shrink-0 text-right text-[10px] font-semibold tabular-nums text-foreground/40">
+                    <span className="w-[4.5rem] shrink-0 text-right text-[10px] font-semibold tabular-nums text-foreground/40">
                       {used > 0 ? copy.columnsCount(used) : ""}
                     </span>
                   </div>
@@ -540,29 +542,32 @@ export function RubricDialog({
                     key={column.id}
                     className="flex items-center justify-between gap-2 text-xs font-medium text-foreground/65"
                   >
-                    <span className="min-w-0 truncate">{column.title}</span>
-                    <label className="flex items-center gap-1.5">
-                      <span className="sr-only">{copy.moveColumn}</span>
-                      <select
-                        value={column.rubroId ?? ""}
-                        disabled={movingId === column.id}
-                        onChange={(event) =>
-                          void moveColumn(column.id, event.target.value)
-                        }
-                        className="h-8 max-w-[11rem] rounded-lg border border-border bg-background px-2 text-xs font-semibold text-foreground"
-                      >
-                        <option value="" disabled>
-                          {copy.columnRubro}
-                        </option>
-                        {rows
+                    <span className="min-w-0 flex-1 truncate">{column.title}</span>
+                    {/* The app's own listbox, not `<select>`: the native popup
+                        ignores the dialog's type, radius and colours (and on
+                        Windows opens as a grey Win32 menu), which is what made
+                        this list look unlike the rest of the sheet. */}
+                    <SelectMenu
+                      value={column.rubroId ?? ""}
+                      onChange={(value) => void moveColumn(column.id, value)}
+                      disabled={movingId === column.id}
+                      label={copy.moveColumn}
+                      align="right"
+                      up
+                      className="w-44 shrink-0"
+                      menuClassName="w-52"
+                      options={[
+                        ...(column.rubroId
+                          ? []
+                          : [{ value: "", label: copy.columnRubro, disabled: true }]),
+                        ...rows
                           .filter((row) => row.id && !row.archived)
-                          .map((row) => (
-                            <option key={row.key} value={row.id}>
-                              {row.name || copy.name}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
+                          .map((row) => ({
+                            value: row.id!,
+                            label: row.name || copy.name,
+                          })),
+                      ]}
+                    />
                   </div>
                 ))}
               </div>
