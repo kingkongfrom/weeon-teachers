@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -52,13 +53,12 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
           onClick={() => setNavOpen(false)}
         />
       ) : null}
-      {/* Desktop: fixed left rail. Phones: bottom sheet opened from the bar. */}
+      {/* Desktop: fixed left rail, untouched by motion. Phones use the sheet
+          below, which is `md:hidden` so an inline transform can never reach
+          the rail. */}
       <aside
         className={cn(
-          "fixed z-50 flex flex-col border-border bg-surface transition-[transform,border-radius] duration-300 ease-out md:inset-y-0 md:left-0 md:z-40 md:translate-x-0 md:translate-y-0 md:rounded-none md:border-r",
-          navOpen
-            ? "inset-x-0 bottom-0 max-h-[80dvh] translate-y-0 rounded-t-2xl border-t pb-[env(safe-area-inset-bottom,0px)]"
-            : "inset-x-0 bottom-0 translate-y-full rounded-t-2xl border-t",
+          "fixed z-50 hidden flex-col border-border bg-surface md:inset-y-0 md:left-0 md:z-40 md:flex md:translate-x-0 md:translate-y-0 md:border-r",
           collapsed ? "md:w-[4.5rem]" : "md:w-72",
         )}
       >
@@ -87,6 +87,46 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
           onNavigate={() => setNavOpen(false)}
         />
       </aside>
+
+      {/* Phone sheet: appears from the bottom with a spring. Lives in its own
+          `md:hidden` wrapper so its inline transform never touches the rail. */}
+      <AnimatePresence>
+        {navOpen ? (
+          <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
+            <motion.button
+              type="button"
+              aria-label="Cerrar menú"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setNavOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+            />
+            <motion.div
+              className="absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col rounded-t-2xl border-t border-border bg-surface pb-[env(safe-area-inset-bottom,0px)]"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.9 }}
+            >
+              <div className="flex h-14 shrink-0 items-center border-b border-border px-4">
+                <Link href="/inicio" className="transition-opacity hover:opacity-85" aria-label="Weeon School">
+                  <LogoCompact />
+                </Link>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                <AppSidebar
+                  open={navOpen}
+                  collapsed={false}
+                  commsNavAttention={commsNavAttention}
+                  onNavigate={() => setNavOpen(false)}
+                />
+              </div>
+            </motion.div>
+          </div>
+        ) : null}
+      </AnimatePresence>
 
       <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}>
         <AppHeader user={user} supabasePublic={supabasePublic} />
