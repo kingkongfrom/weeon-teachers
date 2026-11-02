@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { LogoCompact, LogoMark } from "@/components/brand/logo";
 import {
   useSidebarCollapsed,
@@ -48,15 +49,17 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
         <button
           type="button"
           aria-label="Cerrar menú"
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
           onClick={() => setNavOpen(false)}
         />
       ) : null}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface transition-[width,transform] duration-200 md:z-40 md:translate-x-0",
-          navOpen ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "w-72 md:w-[4.5rem]" : "w-72",
+          "fixed z-50 flex flex-col border-border bg-surface transition-[width,transform,border-radius] duration-300 ease-out md:inset-y-0 md:left-0 md:z-40 md:translate-x-0 md:translate-y-0 md:rounded-none md:border-r",
+          navOpen
+            ? "inset-x-0 bottom-0 max-h-[80dvh] translate-y-0 rounded-t-2xl border-t pb-[env(safe-area-inset-bottom,0px)]"
+            : "inset-x-0 bottom-0 translate-y-full rounded-t-2xl border-t",
+          collapsed ? "md:w-[4.5rem]" : "md:w-72",
         )}
       >
         <div
@@ -86,15 +89,16 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
       </aside>
 
       <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}>
-        <AppHeader
-          user={user}
-          supabasePublic={supabasePublic}
-          onMenu={() => setNavOpen(true)}
-        />
-        <main className="w-full px-4 pb-16 pt-6 sm:px-5 md:px-8">
+        <AppHeader user={user} supabasePublic={supabasePublic} />
+        <main className="w-full px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] pt-6 sm:px-5 md:px-8 md:pb-16">
           {children}
         </main>
       </div>
+
+      <BottomNav
+        commsNavAttention={commsNavAttention}
+        onMenu={() => setNavOpen(true)}
+      />
     </div>
   );
 }
