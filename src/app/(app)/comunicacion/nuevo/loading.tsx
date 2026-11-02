@@ -1,27 +1,33 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeaderSkeleton } from "@/components/ui/page-loading-skeletons";
 
 export default function NewMessageLoading() {
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeaderSkeleton withBack />
-
-      <div className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-5">
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-10 w-32 rounded-full" />
-          <Skeleton className="h-10 w-28 rounded-full" />
+    <div
+      className="min-h-[calc(100vh-8rem)] bg-surface px-[10px]"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 py-2.5">
+        <Skeleton className="h-9 w-9 rounded-lg" />
+        <Skeleton className="h-9 w-9 rounded-lg" />
+        <Skeleton className="h-9 w-9 rounded-lg" />
+        <div className="flex flex-1 justify-end gap-2">
+          <Skeleton className="h-9 w-24 rounded-full" />
         </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-10 w-full rounded-xl" />
+      </div>
+      <div className="flex flex-col">
+        <div className="flex h-9 items-center gap-2 border-b border-border/45">
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-3 w-40 max-w-full" />
         </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-48 w-full rounded-xl" />
+        <div className="flex h-9 items-center gap-2 border-b border-border/45">
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-3 w-24" />
         </div>
-        <Skeleton className="h-24 w-full rounded-2xl border border-dashed border-border" />
-        <div className="flex justify-end">
-          <Skeleton className="h-10 w-28 rounded-xl" />
+        <div className="flex h-[16rem] flex-col gap-2 py-3">
+          <Skeleton className="h-3 w-full max-w-sm" />
+          <Skeleton className="h-3 w-4/5 max-w-xs" />
         </div>
       </div>
     </div>

@@ -49,7 +49,7 @@ const MAX_ATTACHMENTS = 10;
 function selectionLabel(selection: PickerSelection): string {
   if (selection.type === "contact") return selection.name;
   if (selection.type === "collapsed") return selection.label;
-  return `${selection.item.label} Â· ${selection.item.subtitle}`;
+  return `${selection.item.label} · ${selection.item.subtitle}`;
 }
 
 export function UnifiedMessageComposer({

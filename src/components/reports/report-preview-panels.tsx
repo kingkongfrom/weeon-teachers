@@ -106,7 +106,7 @@ function ReportArchiveSnapshotPanel({ draft }: { draft: ReportDraft }) {
   const t = useLiveT();
   const c = t.composer;
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+    <section className="overflow-hidden border border-border bg-surface shadow-sm">
       <ReportExpandable
         title={c.snapshotBundleTitle}
         subtitle={snapshotBundleSubtitle(draft, c)}
@@ -116,7 +116,7 @@ function ReportArchiveSnapshotPanel({ draft }: { draft: ReportDraft }) {
         <div className="my-5 border-t border-border/70" aria-hidden />
         <ReportAttendancePanel draft={draft} presentation="embedded" />
       </ReportExpandable>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-surface-muted/15 px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-surface-muted/15 px-3.5 py-3">
         <p className="text-xs font-medium text-foreground/65">{c.archiveLiveHint}</p>
         <Link
           href={`/grupos/${draft.classId}`}
@@ -232,7 +232,7 @@ function ReportGradesPanel({ draft }: { draft: ReportDraft }) {
       ].filter(Boolean) as string[]}
     >
       {assignmentIds.length === 0 || studentIds.length === 0 ? (
-        <p className="px-5 py-6 text-sm font-medium text-foreground/65">{c.noGrades}</p>
+        <p className="px-3.5 py-6 text-sm font-medium text-foreground/65">{c.noGrades}</p>
       ) : (
         <>
           <div className="overflow-x-auto">
@@ -518,7 +518,7 @@ function ReportConductPanel({
 
   const body =
     rows.length === 0 ? (
-      <p className="px-5 py-6 text-sm font-medium text-foreground/65">{c.noConduct}</p>
+      <p className="px-3.5 py-6 text-sm font-medium text-foreground/65">{c.noConduct}</p>
     ) : (
       <>
           <div className="overflow-x-auto">
@@ -722,14 +722,14 @@ function ReportAttendancePanel({
 
   const body =
     summaryRows.length === 0 ? (
-      <p className="px-5 py-6 text-sm font-medium text-foreground/65">{c.noAttendance}</p>
+      <p className="px-3.5 py-6 text-sm font-medium text-foreground/65">{c.noAttendance}</p>
     ) : (
       <>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[36rem] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/65">
+                  <th className="px-3.5 py-3 text-left text-xs font-bold uppercase tracking-wide text-foreground/65">
                     {c.student}
                   </th>
                   {ATTENDANCE_COLUMNS.map((status) => (
@@ -763,7 +763,7 @@ function ReportAttendancePanel({
                       key={studentId}
                       className="transition-colors hover:bg-surface-muted/40"
                     >
-                      <td className="px-5 py-2.5">
+                      <td className="px-3.5 py-2.5">
                         <div className="flex items-center gap-2.5">
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[11px] font-bold text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
                             {initials(draft.studentNames[studentId])}
@@ -802,23 +802,18 @@ function ReportAttendancePanel({
                 })}
               </tbody>
               <tfoot>
-                <tr className="border-t border-border bg-surface-muted/50">
-                  <td className="px-5 py-2.5 text-xs font-bold uppercase tracking-wide text-foreground/65">
+                <tr className="border-t border-border">
+                  <td
+                    colSpan={ATTENDANCE_COLUMNS.length + 1}
+                    className="bg-surface-muted/50 px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-foreground/65"
+                  >
                     {c.attendanceTotals}
                   </td>
-                  {columnTotals.map(({ status, total }) => (
-                    <td
-                      key={status}
-                      className="px-2 py-2.5 text-center text-sm font-bold tabular-nums text-foreground/70"
-                    >
-                      {total > 0 ? total : <span className="text-foreground/25">0</span>}
-                    </td>
-                  ))}
                 </tr>
               </tfoot>
             </table>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border/60 px-5 py-2.5 text-[11px] font-medium text-foreground/65">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border/60 px-3.5 py-2.5 text-[11px] font-medium text-foreground/65">
             {ATTENDANCE_COLUMNS.map((status) => (
               <span key={status} className="inline-flex items-center gap-1.5">
                 <span
@@ -867,14 +862,14 @@ function ReportAttendancePanel({
                   {c.noAttendanceFiltered}
                 </p>
               ) : (
-                <ul className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto pr-1">
+                <ul className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto">
                   {filteredLog.map((entry, index) => {
                     const kind = ATTENDANCE_KIND[entry.status];
                     const statusLabel = t.attendance.statuses[entry.status];
                     return (
                       <li
                         key={`${entry.studentId}-${entry.date}-${index}`}
-                        className="rounded-xl border border-border bg-surface px-4 py-3"
+                        className="rounded-xl border border-border bg-surface px-3 py-3 sm:px-4"
                       >
                         <div className="flex flex-wrap items-center gap-2">
                           <span
@@ -970,8 +965,8 @@ function ReportSectionCard({
   children: ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-      <div className="flex flex-wrap items-center gap-3 border-b border-border bg-background px-5 py-3.5">
+    <section className="overflow-hidden border border-border bg-surface shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border bg-background px-3.5 py-3.5">
         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
           {icon}
         </span>

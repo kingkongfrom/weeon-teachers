@@ -80,7 +80,7 @@ function formatListTime(iso: string): string {
 
 const LABEL_REORDER_MIME = "application/x-weeon-label-reorder";
 
-/** Compact folder rail row â€” denser than the app-wide action nav link. */
+/** Compact folder rail row — denser than the app-wide action nav link. */
 const MAIL_FOLDER_ROW =
   "inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[13px] font-medium transition-colors";
 

@@ -479,7 +479,7 @@ function ChatPickerBody({
             className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-foreground/40 hover:text-foreground/70"
             aria-label="Limpiar"
           >
-            <span className="text-[10px] font-bold">Ã—</span>
+            <span className="text-[10px] font-bold">×</span>
           </button>
         ) : null}
       </label>
@@ -556,7 +556,7 @@ function ChatPickerBody({
                             {contact.name}
                           </span>
                           <span className="block truncate text-xs font-medium text-foreground/45">
-                            {[contact.context, contact.studentName].filter(Boolean).join(" Â· ")}
+                            {[contact.context, contact.studentName].filter(Boolean).join(" · ")}
                           </span>
                         </span>
                         {pendingKey === contact.key ? (

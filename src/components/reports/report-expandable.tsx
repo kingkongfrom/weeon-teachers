@@ -31,7 +31,7 @@ export function ReportExpandable({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-surface-muted/50"
+        className="flex w-full items-center gap-2 px-2 py-3.5 text-left transition-colors hover:bg-surface-muted/50 sm:gap-3 sm:px-5"
       >
         <span
           className={cn(
@@ -64,7 +64,7 @@ export function ReportExpandable({
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="border-t border-border/60 bg-surface-muted/20 px-5 py-4">{children}</div>
+            <div className="border-t border-border/60 bg-surface-muted/20 px-2 py-3 sm:px-5 sm:py-4">{children}</div>
           </motion.div>
         ) : null}
       </AnimatePresence>
