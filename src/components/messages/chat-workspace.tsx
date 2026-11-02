@@ -345,23 +345,22 @@ export function ChatWorkspace({
                   <MessageCircle className="h-11 w-11 text-[var(--wa-muted)]" strokeWidth={1.25} aria-hidden />
                 </span>
                 <div className="max-w-md space-y-2">
-                  <p className="text-[28px] font-light text-[var(--wa-text)]">{m.chatTitle}</p>
                   <p className="text-sm text-[var(--wa-muted)]">{m.chatSelectPrompt}</p>
                 </div>
               </div>
             )}
           </section>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setPickerOpen(true)}
-          aria-label={m.chatNew}
-          className="absolute bottom-5 right-5 z-20 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wa-fab)] text-[var(--wa-fab-ink)] shadow-lg transition-all hover:brightness-105 active:scale-95"
-        >
-          <MessageSquarePlus className="h-6 w-6" aria-hidden />
-        </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setPickerOpen(true)}
+        aria-label={m.chatNew}
+        className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wa-fab)] text-[var(--wa-fab-ink)] shadow-lg transition-all hover:brightness-105 active:scale-95 lg:bottom-8 lg:right-8"
+      >
+        <MessageSquarePlus className="h-6 w-6" aria-hidden />
+      </button>
 
       <ChatPicker
         open={pickerOpen}
