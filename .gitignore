@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local route previews, never shipped
+/src/app/dev/
+
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
