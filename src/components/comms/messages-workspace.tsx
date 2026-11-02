@@ -538,7 +538,7 @@ export function MessagesWorkspace({
             phonePane === "open" && "hidden md:flex md:w-[11.5rem] lg:w-48 tablet-portrait:hidden",
           )}
         >
-          <div className="flex h-12 shrink-0 items-center border-b border-border px-2">
+          <div className="flex h-14 shrink-0 items-center border-b border-border px-2 pt-2">
             <Link
               href={COMMS_COMPOSE}
               title={t("comms.composeMessage")}
