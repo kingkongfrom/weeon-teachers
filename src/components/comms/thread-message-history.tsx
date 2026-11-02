@@ -8,7 +8,6 @@ import type {
   MessageItem,
   MessageRecipient,
 } from "@/lib/dashboard/messages";
-import { ChatAvatar } from "@/components/comms/chat-avatar";
 import {
   formatComposeLongSent,
 } from "@/lib/comms/compose-display-utils";
@@ -17,9 +16,9 @@ import { useLiveT } from "@/lib/i18n/use-i18n";
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[5.5rem_1fr] gap-x-3 text-sm leading-snug sm:grid-cols-[6.5rem_1fr]">
-      <span className="font-semibold text-foreground/50">{label}</span>
-      <span className="min-w-0 break-words font-medium text-foreground/90">{value}</span>
+    <div className="flex flex-wrap items-baseline gap-x-1.5 text-[12px] leading-tight text-foreground/60">
+      <span className="shrink-0 font-medium text-foreground/45">{label}</span>
+      <span className="min-w-0 break-words font-semibold text-foreground/85">{value}</span>
     </div>
   );
 }
@@ -96,23 +95,16 @@ export function ThreadMessageHistory({
               {!isLatest ? (
                 <p className="mb-4 text-sm font-medium text-foreground/45">{sectionLabel}:</p>
               ) : null}
-              <header className="flex items-start gap-3">
-                <ChatAvatar
-                  name={authorName}
-                  imageUrl={message.avatarUrl}
-                  className="h-11 w-11 text-[16px]"
+              <header className="space-y-0.5">
+                <MetaRow label={t("comms.historyFrom")} value={authorName} />
+                <MetaRow label={t("comms.toLabel")} value={toLabel} />
+                <MetaRow
+                  label={t("comms.historySent")}
+                  value={formatComposeLongSent(message.createdAt)}
                 />
-                <div className="min-w-0 flex-1 space-y-3">
-                  <MetaRow label={t("comms.historyFrom")} value={authorName} />
-                  <MetaRow label={t("comms.toLabel")} value={toLabel} />
-                  <MetaRow
-                    label={t("comms.historySent")}
-                    value={formatComposeLongSent(message.createdAt)}
-                  />
-                  <MetaRow label={t("comms.subject")} value={subjectLine} />
-                </div>
+                <MetaRow label={t("comms.subject")} value={subjectLine} />
               </header>
-              <div className="mt-4 border-l-[3px] border-foreground/12 pl-5 text-sm leading-relaxed text-foreground/90">
+              <div className="mt-3 border-t border-border pt-3 text-sm leading-relaxed text-foreground/90">
                 <RichTextView doc={message.body} />
               </div>
             </article>

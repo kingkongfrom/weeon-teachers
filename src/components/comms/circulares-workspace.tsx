@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
+import { ChevronLeft, FileText, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
 import { CircularPreviewPane } from "@/components/comms/circular-preview-pane";
 import { NewCategoryDialog } from "@/components/comms/new-category-dialog";
 import { PublishCircularDialog } from "@/components/comms/publish-circular-dialog";
@@ -305,15 +305,15 @@ export function CircularesWorkspace({
 
   return (
     <>
-      <div className="wa-chat flex h-full min-h-0 overflow-hidden rounded-2xl border border-[var(--wa-border)] bg-[var(--wa-panel)] shadow-[var(--wa-shadow)]">
+      <div className="wa-chat flex h-full min-h-0 overflow-hidden bg-[var(--wa-panel)] md:rounded-2xl md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside
             className={cn(
               "flex min-h-0 flex-col border-[var(--wa-border)] bg-[var(--wa-header)]",
-              showPane ? "hidden lg:flex lg:border-r" : "flex",
+              showPane ? "hidden md:flex md:border-r" : "flex",
             )}
           >
-            <div className="shrink-0 px-4 pb-3 pt-4">
+            <div className="shrink-0 px-4 pb-3 pt-4 sm:px-5 md:px-4">
               <div className="mb-3.5 flex items-center justify-between gap-3">
                 <div className="flex items-baseline gap-2.5">
                   <h1 className="text-[22px] font-bold tracking-tight text-[var(--wa-text)]">
@@ -608,10 +608,20 @@ export function CircularesWorkspace({
           </aside>
 
           <section
-            className={cn("h-full min-h-0 min-w-0 flex-col", showPane ? "flex" : "hidden lg:flex")}
+            className={cn("h-full min-h-0 min-w-0 flex-col", showPane ? "flex" : "hidden md:flex")}
           >
             {showPane && selectedSummary ? (
               <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+                <div className="flex h-10 shrink-0 items-center gap-1 border-b border-[var(--wa-border)] px-2 md:hidden">
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    aria-label={t("comms.backToCirculares")}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--wa-text)] hover:bg-[var(--wa-hover)]"
+                  >
+                    <ChevronLeft className="h-4 w-4 shrink-0" />
+                  </button>
+                </div>
                 <CircularPreviewPane
                   detail={previewDetail}
                   loading={previewLoading}

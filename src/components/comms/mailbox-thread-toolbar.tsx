@@ -33,7 +33,7 @@ export type MailboxThreadToolbarProps = {
 };
 
 const iconBtn =
-  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-transparent text-foreground/55 transition-colors hover:border-border hover:bg-surface-muted hover:text-foreground disabled:opacity-45";
+  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-transparent text-foreground/55 transition-colors hover:border-border hover:bg-surface-muted hover:text-foreground disabled:opacity-45 sm:h-10 sm:w-10 sm:rounded-xl";
 
 function IconTooltip({ label, children }: { label: string; children: ReactElement }) {
   return (
@@ -84,7 +84,7 @@ export function MailboxThreadToolbar({
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
       {busy ? (
         <span className="inline-flex h-10 w-10 items-center justify-center text-foreground/35">
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" />
         </span>
       ) : null}
 
@@ -95,7 +95,7 @@ export function MailboxThreadToolbar({
             className={iconBtn}
             aria-label={t("comms.replySection")}
           >
-            <Reply className="h-5 w-5" />
+            <Reply className="h-4 w-4" />
           </Link>
         </IconTooltip>
       ) : null}
@@ -109,7 +109,7 @@ export function MailboxThreadToolbar({
             disabled={busy}
             onClick={onToggleFavorite}
           >
-            <Star className="h-5 w-5" fill={isFavorite ? "currentColor" : "none"} />
+            <Star className="h-4 w-4" fill={isFavorite ? "currentColor" : "none"} />
           </button>
         </IconTooltip>
       ) : null}
@@ -125,7 +125,7 @@ export function MailboxThreadToolbar({
                 onClick={onRestore}
                 aria-label={t("comms.restoreMessage")}
               >
-                <RotateCcw className="h-5 w-5" />
+                <RotateCcw className="h-4 w-4" />
               </button>
             </IconTooltip>
           ) : null}
@@ -138,7 +138,7 @@ export function MailboxThreadToolbar({
                 onClick={onDeletePermanently}
                 aria-label={t("comms.deletePermanently")}
               >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </IconTooltip>
           ) : null}
@@ -152,7 +152,7 @@ export function MailboxThreadToolbar({
             onClick={onMoveToTrash}
             aria-label={t("comms.moveToTrash")}
           >
-            <Trash2 className="h-5 w-5" />
+            <Trash2 className="h-4 w-4" />
           </button>
         </IconTooltip>
       )}
@@ -222,7 +222,7 @@ export function MailboxThreadToolbar({
 
 function KebabIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <circle cx="12" cy="5" r="2.5" />
       <circle cx="12" cy="12" r="2.5" />
       <circle cx="12" cy="19" r="2.5" />

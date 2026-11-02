@@ -317,13 +317,13 @@ function ChatListRowSkeleton() {
 export function MessagesWorkspaceSkeleton() {
   return (
     <div
-      className="flex h-[calc(100dvh-12rem)] min-h-[28rem] flex-col gap-3 md:h-[calc(100dvh-9rem)]"
+      className="-mx-4 -mt-6 flex h-[calc(100dvh-4rem)] min-h-[28rem] flex-col gap-3 max-md:gap-0 sm:-mx-5 md:mx-0 md:mt-0 md:h-[calc(100dvh-9rem)]"
       role="status"
       aria-live="polite"
       aria-busy="true"
     >
-      <Skeleton className="h-6 w-44 shrink-0" />
-      <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <Skeleton className="h-6 w-44 shrink-0 max-md:hidden" />
+      <div className="flex min-h-0 flex-1 overflow-hidden bg-surface md:rounded-2xl md:border md:border-border md:shadow-sm">
         <aside className="hidden w-44 shrink-0 flex-col border-r border-border lg:flex lg:w-52">
           <div className="flex h-14 shrink-0 items-center border-b border-border px-3">
             <Skeleton className="h-9 w-full rounded-full" />
@@ -360,15 +360,15 @@ export function MessagesWorkspaceSkeleton() {
 export function ChatWorkspaceSkeleton() {
   return (
     <div
-      className="h-[calc(100dvh-12rem)] min-h-[28rem] md:h-[calc(100dvh-9rem)]"
+      className="-mx-4 -mt-6 h-[calc(100dvh-4rem)] min-h-[28rem] sm:-mx-5 md:mx-0 md:mt-0 md:h-[calc(100dvh-9rem)]"
       role="status"
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex h-full min-h-0 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <div className="flex h-full min-h-0 overflow-hidden bg-surface md:rounded-2xl md:border md:border-border md:shadow-sm">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside className="flex min-h-0 flex-col border-r border-border bg-surface-muted/20">
-            <div className="shrink-0 space-y-3 px-4 pb-3 pt-4">
+            <div className="shrink-0 space-y-3 px-4 pb-3 pt-4 sm:px-5 md:px-4">
               <div className="flex items-center justify-between gap-3">
                 <Skeleton className="h-7 w-36" />
                 <Skeleton className="h-10 w-10 rounded-full" />

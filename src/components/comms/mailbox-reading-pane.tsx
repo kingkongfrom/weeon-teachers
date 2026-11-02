@@ -23,7 +23,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useLiveT } from "@/lib/i18n/use-i18n";
 
 const readPaneHeaderClass =
-  "sticky top-0 z-10 flex items-start gap-2 border-b border-border bg-surface/95 px-4 pt-4 pb-3 backdrop-blur-sm sm:px-5 sm:pt-5 sm:pb-3.5";
+  "sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-surface/95 px-4 pt-2 pb-0 backdrop-blur-sm sm:flex-nowrap sm:px-5";
 
 export function MailboxReadingPane({
   threadId,
@@ -149,7 +149,7 @@ export function MailboxReadingPane({
     return (
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className={readPaneHeaderClass}>
-          <h2 className="min-w-0 flex-1 text-lg font-semibold text-foreground">{headerSubject}</h2>
+          <h2 className="min-w-0 w-full flex-1 text-lg font-semibold text-foreground sm:w-auto">{headerSubject}</h2>
           {toolbar ? (
             <MailboxThreadToolbar
               {...toolbar}
@@ -159,7 +159,7 @@ export function MailboxReadingPane({
             />
           ) : null}
         </header>
-        <article className="flex-1 overflow-y-auto px-4 py-5 sm:px-5">
+        <article className="flex-1 overflow-y-auto px-4 pt-0 pb-5 sm:px-5">
           {waitingForDetail ? (
             <Loader2 className="h-5 w-5 animate-spin text-foreground/35" />
           ) : (
@@ -184,7 +184,7 @@ export function MailboxReadingPane({
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
       <header className={readPaneHeaderClass}>
-        <h2 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground sm:text-lg">
+        <h2 className="min-w-0 w-full flex-1 text-base font-semibold leading-snug text-foreground sm:w-auto sm:text-lg">
           {detail.summary.subject}
         </h2>
         {toolbar ? (
@@ -203,7 +203,7 @@ export function MailboxReadingPane({
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         <article
-          className="flex-1 cursor-pointer overflow-y-auto px-4 py-5 sm:px-5 hover:bg-surface-muted/20"
+          className="block w-full flex-1 cursor-pointer overflow-y-auto px-4 pt-0 pb-5 sm:px-5 hover:bg-surface-muted/20"
           onClick={bodyActivate}
         >
           <ThreadMessageHistory

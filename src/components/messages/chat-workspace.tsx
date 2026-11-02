@@ -178,7 +178,7 @@ export function ChatWorkspace({
 
   return (
     <>
-      <div className="wa-chat flex h-[calc(100dvh-12rem)] min-h-[28rem] flex-col overflow-hidden rounded-2xl border border-[var(--wa-border)] bg-[var(--wa-panel)] shadow-[var(--wa-shadow)] md:h-[calc(100dvh-9rem)]">
+      <div className="wa-chat -mx-4 -mt-6 flex h-[calc(100dvh-4rem)] min-h-[28rem] flex-col overflow-hidden bg-[var(--wa-panel)] sm:-mx-5 md:mx-0 md:mt-0 md:h-[calc(100dvh-9rem)] md:rounded-2xl md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside
             className={cn(
@@ -186,7 +186,7 @@ export function ChatWorkspace({
               showListOnMobile ? "flex" : "hidden lg:flex lg:border-r",
             )}
           >
-            <div className="shrink-0 px-4 pb-3 pt-4">
+            <div className="shrink-0 px-4 pb-3 pt-4 sm:px-5 md:px-4">
               <div className="mb-3.5 flex items-center justify-between gap-3">
                 <div className="flex items-baseline gap-2.5">
                   <h1 className="text-[22px] font-bold tracking-tight text-[var(--wa-text)]">

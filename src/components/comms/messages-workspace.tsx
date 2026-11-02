@@ -15,6 +15,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarClock,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Folder,
   GripVertical,
@@ -33,7 +34,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ACTION_NAV_LINK } from "@/lib/ui/action-button";
 import { useLiveT } from "@/lib/i18n/use-i18n";
 import { COMMS_COMPOSE, COMMS_MESSAGES, COMMS_SETTINGS } from "@/lib/comms/paths";
 import { ChatAvatar } from "@/components/comms/chat-avatar";
@@ -80,11 +80,15 @@ function formatListTime(iso: string): string {
 
 const LABEL_REORDER_MIME = "application/x-weeon-label-reorder";
 
-/** List vs reading split beside folder sidebar (35% / 65%). */
+/** Compact folder rail row — denser than the app-wide action nav link. */
+const MAIL_FOLDER_ROW =
+  "inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[13px] font-medium transition-colors";
+
+/** List vs reading split beside folder sidebar (35% / 65% from `md`). */
 const MAIL_LIST_PANE =
-  "min-w-[14rem] w-[35%] max-w-[35%] shrink-0 basis-[35%] overflow-hidden";
+  "w-full min-w-0 shrink-0 overflow-hidden md:min-w-[14rem] md:w-[35%] md:max-w-[35%] md:basis-[35%]";
 const MAIL_READ_PANE =
-  "flex min-h-0 min-w-[16rem] w-[65%] max-w-[65%] shrink-0 basis-[65%] flex-col overflow-hidden";
+  "flex min-h-0 w-full min-w-0 flex-col overflow-hidden md:min-w-[16rem] md:w-[65%] md:max-w-[65%] md:shrink-0 md:basis-[65%]";
 
 function PersonAvatar({
   name,
@@ -160,6 +164,11 @@ export function MessagesWorkspace({
   const [refreshing, setRefreshing] = useState(false);
   const [localDrafts, setLocalDrafts] = useState(drafts);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  /**
+   * Phone pane (below `md`): folders → list → message. The three columns only
+   * fit side by side from tablet up; `open` is the reading pane.
+   */
+  const [phonePane, setPhonePane] = useState<"folders" | "list" | "open">("list");
   const [draftDeleteTarget, setDraftDeleteTarget] = useState<MessageDraftSummary | null>(null);
   const [draftDeleting, setDraftDeleting] = useState(false);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -499,7 +508,7 @@ export function MessagesWorkspace({
   });
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col gap-3">
+    <div className="relative flex h-full min-h-0 w-full flex-col gap-3 max-md:gap-0">
       <AnimatePresence>
         {notice ? (
           <motion.div
@@ -514,27 +523,31 @@ export function MessagesWorkspace({
         ) : null}
       </AnimatePresence>
 
-      <h1 className="shrink-0 text-[18px] font-bold tracking-tight text-foreground">
+      <h1 className="shrink-0 text-[18px] font-bold tracking-tight text-foreground max-md:hidden">
         {t("comms.messagesTitle")}
       </h1>
 
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-surface md:rounded-2xl md:border md:border-border md:shadow-sm">
         <aside
           className={cn(
-            "flex w-44 shrink-0 flex-col overflow-y-auto border-r border-border lg:w-52",
-            !sidebarOpen && "hidden lg:flex",
+            "flex shrink-0 flex-col overflow-y-auto border-border bg-surface",
+            phonePane === "folders"
+              ? "w-full border-r-0 md:w-[11.5rem] md:border-r lg:w-48"
+              : "hidden border-r md:flex md:w-[11.5rem] lg:w-48",
           )}
         >
-          <div className="flex h-14 shrink-0 items-center border-b border-border px-3">
+          <div className="flex h-12 shrink-0 items-center border-b border-border px-2">
             <Link
               href={COMMS_COMPOSE}
+              title={t("comms.composeMessage")}
+              aria-label={t("comms.composeMessage")}
               className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full bg-[#0891B2] px-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#0e7490]"
             >
-              <PenSquare className="h-4 w-4" />
-              {t("comms.composeMessage")}
+              <PenSquare className="h-4 w-4 shrink-0" />
+              <span className="truncate">{t("comms.composeMessage")}</span>
             </Link>
           </div>
-          <div className="flex flex-col gap-0.5 px-2 pb-2">
+          <div className="flex flex-col gap-px px-1.5 pb-2 pt-1">
           {folders.map((item) => {
             const Icon = item.icon;
             const active =
@@ -543,14 +556,14 @@ export function MessagesWorkspace({
               (item.id === "drafts" ? folder === "draft" : item.id === folder);
             const body = (
               <>
-                <Icon className="h-4 w-4" />
-                <span className="flex-1">{item.label}</span>
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
                 {item.id === "inbox" ? (
                   <UnreadCountBadge count={item.count ?? 0} />
                 ) : item.count && item.count > 0 ? (
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-bold",
+                      "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
                       messagesTone.countBadge,
                     )}
                   >
@@ -564,7 +577,7 @@ export function MessagesWorkspace({
                 <span
                   key={item.id}
                   title={t("comms.comingSoon")}
-                  className={cn(ACTION_NAV_LINK, "cursor-not-allowed text-foreground/30")}
+                  className={cn(MAIL_FOLDER_ROW, "cursor-not-allowed text-foreground/30")}
                 >
                   {body}
                 </span>
@@ -574,8 +587,12 @@ export function MessagesWorkspace({
               <Link
                 key={item.id}
                 href={item.href}
+                onClick={() => {
+                  setPhonePane("list");
+                  setSidebarOpen(false);
+                }}
                 className={cn(
-                  ACTION_NAV_LINK,
+                  MAIL_FOLDER_ROW,
                   active ? "bg-[#0891B2]/10 text-[#0e7490] dark:text-[#99f6e4]" : "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground",
                   dropTarget === item.id &&
                     item.id === "trash" &&
@@ -727,22 +744,31 @@ export function MessagesWorkspace({
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
+          <div className="flex h-12 shrink-0 items-center gap-1.5 border-b border-border px-2">
+            <button
+              type="button"
+              onClick={() => setPhonePane(phonePane === "open" ? "list" : "folders")}
+              aria-label={phonePane === "open" ? t("comms.backToMessages") : t("comms.foldersSection")}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/70 hover:bg-foreground/[0.05] md:hidden"
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0" />
+            </button>
             <button
               type="button"
               onClick={() => setSidebarOpen((current) => !current)}
               aria-label={t("comms.messagesTitle")}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/60 hover:bg-foreground/[0.05] lg:hidden"
+              aria-pressed={sidebarOpen}
+              className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/60 hover:bg-foreground/[0.05] md:inline-flex lg:hidden"
             >
-              <Menu className="h-4 w-4" />
+              <Menu className="h-3.5 w-3.5" />
             </button>
-            <label className="flex w-[34.5%] shrink-0 items-center gap-2 rounded-full bg-surface-muted/70 px-3 py-2">
-              <Search className="h-4 w-4 shrink-0 text-foreground/40" />
+            <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-surface-muted/70 px-2.5 py-1.5 md:w-[39.7%] md:flex-none">
+              <Search className="h-3.5 w-3.5 shrink-0 text-foreground/40" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t("comms.searchMessages")}
-                className="h-5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/40"
+                className="h-5 w-full min-w-0 bg-transparent text-[13px] text-foreground outline-none placeholder:text-foreground/40"
               />
             </label>
             <button
@@ -751,22 +777,22 @@ export function MessagesWorkspace({
               aria-pressed={unreadOnly}
               aria-label={t("comms.unreadOnly")}
               className={cn(
-                "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold",
+                "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-semibold",
                 unreadOnly
                   ? "bg-[#0891B2]/10 text-[#0e7490]"
                   : "text-foreground/55 hover:bg-foreground/[0.05]",
               )}
             >
-              <Mail className="h-5 w-5" />
+              <Mail className="h-4 w-4" />
               <span className="hidden sm:inline">{t("comms.unreadOnly")}</span>
             </button>
             <button
               type="button"
               onClick={() => window.print()}
               aria-label={t("comms.printThread")}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05]"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05]"
             >
-              <Printer className="h-5 w-5" />
+              <Printer className="h-4 w-4" />
             </button>
             <button
               type="button"
@@ -777,14 +803,18 @@ export function MessagesWorkspace({
                 router.refresh();
                 window.setTimeout(() => setRefreshing(false), 800);
               }}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05] disabled:opacity-60"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05] disabled:opacity-60"
             >
-              <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
             </button>
           </div>
           <div className="flex min-h-0 min-w-0 flex-1">
         <section
-          className={cn("flex min-h-0 flex-col overflow-hidden border-r border-border", MAIL_LIST_PANE)}
+          className={cn(
+            "flex min-h-0 flex-col overflow-hidden border-r border-border",
+            MAIL_LIST_PANE,
+            phonePane === "open" ? "hidden md:flex" : "flex",
+          )}
         >
           <div className="min-h-0 flex-1 overflow-y-auto">
           {!labelId && folder === "inbox" && unreadInbox > 0 ? (
@@ -804,22 +834,26 @@ export function MessagesWorkspace({
                 </p>
               </div>
             ) : (
-              <ul className="flex flex-col gap-0.5 p-2">
+              <ul className="flex flex-col gap-0.5 p-0 md:p-2">
                 {localDrafts.map((draft) => (
                   <li key={draft.id} className="group relative">
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => setSelectedDraftId(draft.id)}
+                      onClick={() => {
+                        setSelectedDraftId(draft.id);
+                        setPhonePane("open");
+                      }}
                       onDoubleClick={() => router.push(`${COMMS_COMPOSE}?draft=${draft.id}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
                           setSelectedDraftId(draft.id);
+                          setPhonePane("open");
                         }
                       }}
                       className={cn(
-                        "relative w-full cursor-pointer rounded-xl px-2.5 py-2 pr-12 text-left hover:bg-foreground/[0.04]",
+                        "relative w-full cursor-pointer rounded-none px-3 py-2 pr-12 text-left hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
                         openDraftId === draft.id && "bg-[#0891B2]/10",
                       )}
                     >
@@ -841,7 +875,7 @@ export function MessagesWorkspace({
                         event.stopPropagation();
                         setDraftDeleteTarget(draft);
                       }}
-                      className="absolute right-3 top-3 rounded-lg p-1.5 text-foreground/35 opacity-0 transition-opacity hover:bg-error/10 hover:text-error group-hover:opacity-100"
+                      className="absolute bottom-1 right-1 rounded-lg p-1.5 text-foreground/35 transition-opacity hover:bg-error/10 hover:text-error md:opacity-0 md:group-hover:opacity-100"
                       aria-label={t("comms.deleteDraft")}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -862,7 +896,7 @@ export function MessagesWorkspace({
               </p>
             </div>
           ) : (
-            <motion.ul layout className="flex flex-col gap-0.5 p-2">
+            <motion.ul layout className="flex flex-col gap-0.5 p-0 md:p-2">
               <AnimatePresence mode="popLayout" initial={false}>
                 {displayThreads.map((thread) => (
                   <motion.li
@@ -885,21 +919,25 @@ export function MessagesWorkspace({
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => setSelectedId(thread.id)}
+                      onClick={() => {
+                        setSelectedId(thread.id);
+                        setPhonePane("open");
+                      }}
                       onDoubleClick={() => router.push(`${COMMS_COMPOSE}?thread=${thread.id}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
                           setSelectedId(thread.id);
+                          setPhonePane("open");
                         }
                       }}
                       className={cn(
-                        "relative w-full cursor-pointer rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-foreground/[0.04]",
+                        "relative w-full cursor-pointer rounded-none px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
                         openId === thread.id && "bg-[#0891B2]/10",
                       )}
                     >
                       {folder !== "trash" ? (
-                        <div className="absolute right-0 top-0.5 z-10 flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="absolute bottom-0.5 right-1 z-10 flex items-center gap-0.5 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
                           <button
                             type="button"
                             aria-label={
@@ -1008,7 +1046,7 @@ export function MessagesWorkspace({
           )}
           </div>
         </section>
-        <div className={MAIL_READ_PANE}>
+        <div className={cn(MAIL_READ_PANE, phonePane === "open" ? "flex w-full" : "hidden md:flex")}>
         {folder === "draft" ? (
           <MailboxDraftReadingPane
             draftId={openDraftId}
