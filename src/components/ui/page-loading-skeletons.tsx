@@ -317,37 +317,44 @@ function ChatListRowSkeleton() {
 export function MessagesWorkspaceSkeleton() {
   return (
     <div
-      className="flex h-[calc(100dvh-4rem)] min-h-[28rem] flex-col gap-3 max-md:gap-0 md:h-[calc(100dvh-9rem)]"
+      className="flex h-full min-h-0 flex-col"
       role="status"
       aria-live="polite"
       aria-busy="true"
     >
       <div className="flex min-h-0 flex-1 overflow-hidden bg-surface">
-        <aside className="hidden w-44 shrink-0 flex-col border-r border-border lg:flex lg:w-52">
-          <div className="flex h-14 shrink-0 items-center border-b border-border px-3">
+        <aside className="hidden w-[11.5rem] shrink-0 flex-col lg:flex lg:w-48">
+          <div className="flex h-14 shrink-0 items-center border-b border-border px-2 pt-2">
             <Skeleton className="h-9 w-full rounded-full" />
           </div>
-          <div className="flex flex-col gap-1 px-2 py-2">
+          <div className="flex flex-col gap-px px-1.5 pb-2 pt-1">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-9 w-full rounded-lg" />
             ))}
           </div>
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1">
-          <div className="flex min-w-[14rem] w-[35%] max-w-[35%] shrink-0 basis-[35%] flex-col border-r border-border">
-            <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-2">
-              <Skeleton className="h-8 w-8 rounded-full lg:hidden" />
+          <div className="flex min-w-[14rem] w-[35%] max-w-[35%] shrink-0 basis-[35%] flex-col border-r border-border bg-surface tablet-portrait:w-full tablet-portrait:max-w-none tablet-portrait:basis-full">
+            <div className="flex h-14 shrink-0 items-center gap-1.5 border-b border-border px-2 pt-2">
+              <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
               <Skeleton className="h-8 min-w-0 flex-1 rounded-full" />
             </div>
-            {Array.from({ length: 7 }).map((_, i) => (
-              <MailThreadRowSkeleton key={i} />
-            ))}
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <MailThreadRowSkeleton key={i} />
+              ))}
+            </div>
           </div>
-          <div className="hidden min-w-[16rem] w-[65%] max-w-[65%] shrink-0 basis-[65%] flex-col gap-4 p-6 md:flex">
-            <Skeleton className="h-7 w-2/3 max-w-sm" />
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-36 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
+          <div className="hidden min-w-[16rem] w-[65%] max-w-[65%] shrink-0 basis-[65%] flex-col bg-surface md:flex tablet-portrait:hidden">
+            <div className="flex h-12 shrink-0 items-center border-b border-border px-5 pt-2">
+              <Skeleton className="h-5 w-56 max-w-full" />
+            </div>
+            <div className="flex flex-col gap-3 p-5">
+              <Skeleton className="h-3 w-40" />
+              <Skeleton className="h-3 w-64 max-w-full" />
+              <Skeleton className="mt-3 h-4 w-full max-w-lg" />
+              <Skeleton className="h-4 w-3/4 max-w-md" />
+            </div>
           </div>
         </div>
       </div>
@@ -359,12 +366,12 @@ export function MessagesWorkspaceSkeleton() {
 export function ChatWorkspaceSkeleton() {
   return (
     <div
-      className="h-[calc(100dvh-4rem)] min-h-[28rem] md:h-[calc(100dvh-9rem)]"
+      className="h-full min-h-0"
       role="status"
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex h-full min-h-0 overflow-hidden bg-surface md:rounded-2xl md:border md:border-border md:shadow-sm">
+      <div className="flex h-full min-h-0 overflow-hidden bg-surface pb-[env(safe-area-inset-bottom,0px)] max-md:pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside className="flex min-h-0 flex-col border-r border-border bg-surface-muted/20">
             <div className="shrink-0 space-y-3 px-4 pb-3 pt-4 sm:px-5 md:px-4">
@@ -384,13 +391,20 @@ export function ChatWorkspaceSkeleton() {
               ))}
             </div>
           </aside>
-          <div className="hidden min-h-0 flex-col gap-4 p-6 lg:flex">
-            <div className="flex items-center gap-3 border-b border-border pb-4">
+          <div className="hidden min-h-0 flex-col lg:flex">
+            <div className="flex shrink-0 items-center gap-3 border-b border-border px-3 py-2.5">
               <Skeleton className="h-10 w-10 rounded-full" />
               <Skeleton className="h-5 w-40" />
             </div>
-            <Skeleton className="min-h-[12rem] flex-1 w-full rounded-2xl" />
-            <Skeleton className="h-12 w-full rounded-full" />
+            <div className="min-h-0 flex-1 space-y-3 overflow-hidden px-[4%] py-3">
+              <Skeleton className="ml-auto h-10 w-2/3 max-w-sm rounded-2xl" />
+              <Skeleton className="h-10 w-1/2 max-w-xs rounded-2xl" />
+              <Skeleton className="ml-auto h-10 w-3/5 max-w-sm rounded-2xl" />
+            </div>
+            <div className="flex shrink-0 items-end gap-2 border-t border-border px-3 py-2.5">
+              <Skeleton className="h-11 min-w-0 flex-1 rounded-3xl" />
+              <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
+            </div>
           </div>
         </div>
       </div>

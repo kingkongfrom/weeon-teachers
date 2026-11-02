@@ -178,7 +178,7 @@ export function ChatWorkspace({
 
   return (
     <>
-      <div className="wa-chat flex h-[calc(100dvh-4rem)] min-h-[28rem] flex-col overflow-hidden bg-[var(--wa-panel)] md:h-[calc(100dvh-9rem)] md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
+      <div className="wa-chat flex h-full min-h-0 flex-col overflow-hidden bg-[var(--wa-panel)] pb-[env(safe-area-inset-bottom,0px)] max-md:pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside
             className={cn(
