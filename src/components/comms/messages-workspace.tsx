@@ -538,7 +538,7 @@ export function MessagesWorkspace({
             phonePane === "open" && "hidden md:flex md:w-[11.5rem] lg:w-48 tablet-portrait:hidden",
           )}
         >
-          <div className="flex h-14 shrink-0 items-center border-b border-border px-2 pt-2">
+          <div className="flex h-16 shrink-0 items-center border-b border-border px-2 pt-3">
             <Link
               href={COMMS_COMPOSE}
               title={t("comms.composeMessage")}
@@ -746,7 +746,7 @@ export function MessagesWorkspace({
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex h-14 shrink-0 items-center gap-1.5 border-b border-border bg-surface px-2 pt-2">
+          <div className="flex h-16 shrink-0 items-center gap-1.5 border-b border-border bg-surface px-2 pt-3">
             <button
               type="button"
               onClick={() => setPhonePane(phonePane === "open" ? "list" : "folders")}

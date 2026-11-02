@@ -324,7 +324,7 @@ export function MessagesWorkspaceSkeleton() {
     >
       <div className="flex min-h-0 flex-1 overflow-hidden bg-surface">
         <aside className="hidden w-[11.5rem] shrink-0 flex-col lg:flex lg:w-48">
-          <div className="flex h-14 shrink-0 items-center border-b border-border px-2 pt-2">
+          <div className="flex h-16 shrink-0 items-center border-b border-border px-2 pt-3">
             <Skeleton className="h-9 w-full rounded-full" />
           </div>
           <div className="flex flex-col gap-px px-1.5 pb-2 pt-1">
@@ -335,7 +335,7 @@ export function MessagesWorkspaceSkeleton() {
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1">
           <div className="flex min-w-[14rem] w-[35%] max-w-[35%] shrink-0 basis-[35%] flex-col border-r border-border bg-surface tablet-portrait:w-full tablet-portrait:max-w-none tablet-portrait:basis-full">
-            <div className="flex h-14 shrink-0 items-center gap-1.5 border-b border-border px-2 pt-2">
+            <div className="flex h-16 shrink-0 items-center gap-1.5 border-b border-border px-2 pt-3">
               <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
               <Skeleton className="h-8 min-w-0 flex-1 rounded-full" />
             </div>
@@ -371,7 +371,7 @@ export function ChatWorkspaceSkeleton() {
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex h-full min-h-0 overflow-hidden bg-surface pb-[env(safe-area-inset-bottom,0px)] max-md:pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]">
+      <div className="flex h-full min-h-0 overflow-hidden bg-surface">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside className="flex min-h-0 flex-col border-r border-border bg-surface-muted/20">
             <div className="shrink-0 space-y-3 px-4 pb-3 pt-4 sm:px-5 md:px-4">

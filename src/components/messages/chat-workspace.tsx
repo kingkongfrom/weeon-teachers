@@ -178,7 +178,7 @@ export function ChatWorkspace({
 
   return (
     <>
-      <div className="wa-chat flex h-full min-h-0 flex-col overflow-hidden bg-[var(--wa-panel)] pb-[env(safe-area-inset-bottom,0px)] max-md:pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
+      <div className="wa-chat relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--wa-panel)] md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside
             className={cn(
@@ -187,26 +187,13 @@ export function ChatWorkspace({
             )}
           >
             <div className="shrink-0 px-4 pb-3 pt-4 sm:px-5 md:px-4">
-              <div className="mb-3.5 flex items-center justify-between gap-3">
-                <div className="flex items-baseline gap-2.5">
-                  <h1 className="text-[22px] font-bold tracking-tight text-[var(--wa-text)]">
-                    {m.chatTitle}
-                  </h1>
-                  {unreadCount > 0 ? (
-                    <span className="rounded-full bg-[var(--wa-accent-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--wa-accent)]">
-                      {unreadCount}
-                    </span>
-                  ) : null}
+              {unreadCount > 0 ? (
+                <div className="mb-2.5 flex items-baseline gap-2.5">
+                  <span className="rounded-full bg-[var(--wa-accent-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--wa-accent)]">
+                    {unreadCount}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPickerOpen(true)}
-                  aria-label={m.chatNew}
-                  className="group inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--wa-fab)] text-[var(--wa-fab-ink)] shadow-sm transition-all hover:brightness-105 active:scale-95"
-                >
-                  <MessageSquarePlus className="h-[19px] w-[19px]" aria-hidden />
-                </button>
-              </div>
+              ) : null}
 
               <label className="flex items-center gap-2.5 rounded-full border border-transparent bg-[var(--wa-search)] px-3.5 py-2.5 transition-colors focus-within:border-[var(--wa-ring)] focus-within:ring-2 focus-within:ring-[var(--wa-ring-soft)]">
                 <Search className="h-[17px] w-[17px] shrink-0 text-[var(--wa-muted)]" />
@@ -365,6 +352,15 @@ export function ChatWorkspace({
             )}
           </section>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          aria-label={m.chatNew}
+          className="absolute bottom-5 right-5 z-20 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wa-fab)] text-[var(--wa-fab-ink)] shadow-lg transition-all hover:brightness-105 active:scale-95"
+        >
+          <MessageSquarePlus className="h-6 w-6" aria-hidden />
+        </button>
       </div>
 
       <ChatPicker
