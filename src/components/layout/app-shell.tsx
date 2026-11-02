@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { AppHeader } from "@/components/layout/app-header";
@@ -40,6 +40,9 @@ type AppShellProps = {
 export function AppShell({ children, user, supabasePublic, commsNavAttention }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false);
   const collapsed = useSidebarCollapsed();
+  // motion writes an inline transform, which wins over md:translate-y-0. Drive
+  // the slide only below md and hand the desktop rail back to CSS.
+  const isDesktop = useIsDesktop();
 
   return (
     <div className="dashboard-shell min-h-screen bg-background">
@@ -70,7 +73,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
           collapsed ? "md:w-[4.5rem]" : "md:w-72",
         )}
         initial={false}
-        animate={navOpen ? { y: 0 } : { y: "105%" }}
+        animate={isDesktop ? { y: 0 } : navOpen ? { y: 0 } : { y: "105%" }}
         transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.9 }}
       >
         <div
@@ -140,4 +143,15 @@ function SidebarToggle({ collapsed }: { collapsed: boolean }) {
       </button>
   );
 }
-
+/** Tailwind's md breakpoint (48rem), used to keep motion off the desktop rail. */
+function useIsDesktop() {
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 48rem)");
+    const update = () => setDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return desktop;
+}
