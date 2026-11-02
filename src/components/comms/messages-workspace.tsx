@@ -511,7 +511,7 @@ export function MessagesWorkspace({
   });
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col gap-3 max-md:gap-0">
+    <div className="relative flex h-full min-h-0 w-full flex-col gap-3 bg-surface max-md:gap-0">
       <AnimatePresence>
         {notice ? (
           <motion.div
@@ -526,11 +526,7 @@ export function MessagesWorkspace({
         ) : null}
       </AnimatePresence>
 
-      <h1 className="shrink-0 text-[18px] font-bold tracking-tight text-foreground max-md:hidden">
-        {t("comms.messagesTitle")}
-      </h1>
-
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-surface md:rounded-2xl md:border md:border-border md:shadow-sm">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-surface">
         <aside
           className={cn(
             "flex shrink-0 flex-col overflow-y-auto border-border bg-surface",
