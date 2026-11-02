@@ -88,7 +88,7 @@ const MAIL_FOLDER_ROW =
 const MAIL_LIST_PANE =
   "w-full min-w-0 shrink-0 overflow-hidden md:min-w-[14rem] md:w-[35%] md:max-w-[35%] md:basis-[35%] md:grow-0 tablet-portrait:w-full tablet-portrait:max-w-none tablet-portrait:basis-full";
 const MAIL_READ_PANE =
-  "flex min-h-0 w-full min-w-0 flex-col overflow-hidden md:min-w-[16rem] md:w-[65%] md:max-w-[65%] md:shrink-0 md:basis-[65%]";
+  "flex min-h-0 w-full min-w-0 flex-col overflow-hidden md:min-w-[16rem] md:w-[65%] md:max-w-[65%] md:shrink-0 md:basis-[65%] tablet-portrait:w-full tablet-portrait:max-w-none tablet-portrait:basis-full";
 
 function PersonAvatar({
   name,
@@ -511,7 +511,7 @@ export function MessagesWorkspace({
   });
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col gap-3 bg-surface max-md:gap-0">
+    <div className="relative flex h-full min-h-0 w-full flex-col gap-3 max-md:gap-0">
       <AnimatePresence>
         {notice ? (
           <motion.div
@@ -526,13 +526,16 @@ export function MessagesWorkspace({
         ) : null}
       </AnimatePresence>
 
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-surface">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden">
         <aside
           className={cn(
-            "flex shrink-0 flex-col overflow-y-auto border-border bg-surface",
-            phonePane === "folders"
-              ? "w-full border-r-0 md:w-[11.5rem] md:border-r lg:w-48"
-              : "hidden border-r md:flex md:w-[11.5rem] lg:w-48",
+            "flex shrink-0 flex-col overflow-y-auto border-border",
+            phonePane === "folders" &&
+              "w-full border-r-0 md:w-[11.5rem] md:border-r lg:w-48",
+            phonePane === "list" &&
+              "hidden border-r md:flex md:w-[11.5rem] lg:w-48",
+            // iPad portrait: rail rides with the list, leaves for the reader.
+            phonePane === "open" && "hidden md:flex md:w-[11.5rem] lg:w-48 tablet-portrait:hidden",
           )}
         >
           <div className="flex h-12 shrink-0 items-center border-b border-border px-2">
@@ -743,7 +746,7 @@ export function MessagesWorkspace({
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex h-12 shrink-0 items-center gap-1.5 border-b border-border px-2">
+          <div className="flex h-14 shrink-0 items-center gap-1.5 border-b border-border bg-surface px-2 pt-2">
             <button
               type="button"
               onClick={() => setPhonePane(phonePane === "open" ? "list" : "folders")}
