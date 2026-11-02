@@ -284,7 +284,7 @@ export function ComunicacionHubActivitySkeleton() {
 
 function MailThreadRowSkeleton() {
   return (
-    <div className="flex gap-3 border-b border-border/60 px-3 py-3">
+    <div className="flex gap-2.5 border-b border-border/60 px-[10px] py-2 md:rounded-xl md:border-b-0">
       <Skeleton className="mt-0.5 h-10 w-10 shrink-0 rounded-full" />
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex items-center gap-2">
@@ -317,7 +317,7 @@ function ChatListRowSkeleton() {
 export function MessagesWorkspaceSkeleton() {
   return (
     <div
-      className="-mx-4 -mt-6 flex h-[calc(100dvh-4rem)] min-h-[28rem] flex-col gap-3 max-md:gap-0 sm:-mx-5 md:mx-0 md:mt-0 md:h-[calc(100dvh-9rem)]"
+      className="flex h-[calc(100dvh-4rem)] min-h-[28rem] flex-col gap-3 max-md:gap-0 md:h-[calc(100dvh-9rem)]"
       role="status"
       aria-live="polite"
       aria-busy="true"
@@ -336,9 +336,9 @@ export function MessagesWorkspaceSkeleton() {
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1">
           <div className="flex min-w-[14rem] w-[35%] max-w-[35%] shrink-0 basis-[35%] flex-col border-r border-border">
-            <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
-              <Skeleton className="h-9 w-9 rounded-lg lg:hidden" />
-              <Skeleton className="h-9 min-w-0 flex-1 rounded-lg" />
+            <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-2">
+              <Skeleton className="h-8 w-8 rounded-full lg:hidden" />
+              <Skeleton className="h-8 min-w-0 flex-1 rounded-full" />
             </div>
             {Array.from({ length: 7 }).map((_, i) => (
               <MailThreadRowSkeleton key={i} />
@@ -360,7 +360,7 @@ export function MessagesWorkspaceSkeleton() {
 export function ChatWorkspaceSkeleton() {
   return (
     <div
-      className="-mx-4 -mt-6 h-[calc(100dvh-4rem)] min-h-[28rem] sm:-mx-5 md:mx-0 md:mt-0 md:h-[calc(100dvh-9rem)]"
+      className="h-[calc(100dvh-4rem)] min-h-[28rem] md:h-[calc(100dvh-9rem)]"
       role="status"
       aria-live="polite"
       aria-busy="true"

@@ -80,7 +80,7 @@ function formatListTime(iso: string): string {
 
 const LABEL_REORDER_MIME = "application/x-weeon-label-reorder";
 
-/** Compact folder rail row — denser than the app-wide action nav link. */
+/** Compact folder rail row â€” denser than the app-wide action nav link. */
 const MAIL_FOLDER_ROW =
   "inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[13px] font-medium transition-colors";
 
@@ -165,7 +165,7 @@ export function MessagesWorkspace({
   const [localDrafts, setLocalDrafts] = useState(drafts);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
   /**
-   * Phone pane (below `md`): folders → list → message. The three columns only
+   * Phone pane (below `md`): folders â†’ list â†’ message. The three columns only
    * fit side by side from tablet up; `open` is the reading pane.
    */
   const [phonePane, setPhonePane] = useState<"folders" | "list" | "open">("list");
@@ -853,7 +853,7 @@ export function MessagesWorkspace({
                         }
                       }}
                       className={cn(
-                        "relative w-full cursor-pointer rounded-none px-3 py-2 pr-12 text-left hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
+                        "relative w-full cursor-pointer rounded-none px-[10px] py-2 pr-12 text-left hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
                         openDraftId === draft.id && "bg-[#0891B2]/10",
                       )}
                     >
@@ -932,7 +932,7 @@ export function MessagesWorkspace({
                         }
                       }}
                       className={cn(
-                        "relative w-full cursor-pointer rounded-none px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
+                        "relative w-full cursor-pointer rounded-none px-[10px] py-2 text-left transition-colors hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
                         openId === thread.id && "bg-[#0891B2]/10",
                       )}
                     >

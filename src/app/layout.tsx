@@ -51,6 +51,10 @@ export async function generateMetadata(): Promise<Metadata> {
     // iOS ignores the manifest for the home-screen icon and the status bar, so
     // these two are what make an installed app look native on an iPhone/iPad.
     icons: {
+      icon: [
+        { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
       apple: "/icons/apple-touch-icon.png",
     },
     appleWebApp: {

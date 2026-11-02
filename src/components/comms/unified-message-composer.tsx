@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
+  ChevronLeft,
   Loader2,
   Save,
   Send,
@@ -49,7 +49,7 @@ const MAX_ATTACHMENTS = 10;
 function selectionLabel(selection: PickerSelection): string {
   if (selection.type === "contact") return selection.name;
   if (selection.type === "collapsed") return selection.label;
-  return `${selection.item.label} · ${selection.item.subtitle}`;
+  return `${selection.item.label} Â· ${selection.item.subtitle}`;
 }
 
 export function UnifiedMessageComposer({
@@ -366,7 +366,7 @@ export function UnifiedMessageComposer({
                   "text-foreground/65 hover:bg-surface-muted hover:text-foreground",
                 )}
               >
-                <ArrowLeft className="h-4 w-4 shrink-0" />
+                <ChevronLeft className="h-4 w-4 shrink-0" />
                 <span className="hidden sm:inline">{t("comms.back")}</span>
               </Link>
             )}
@@ -634,7 +634,7 @@ function ComposeEmailFields({
   const rowClass = "flex min-h-[2.25rem] items-start gap-2 border-b border-border/45 py-1.5";
 
   return (
-    <div className="mb-1 rounded-lg border border-border/50 bg-surface-muted/20 px-3 py-0.5 sm:px-4">
+    <div className="mb-1">
       {fromLabel ? (
         <div className={cn(rowClass, "items-center py-2")}>
           <span className={cn(fieldLabel, "pt-0")}>{fromFieldLabel}</span>

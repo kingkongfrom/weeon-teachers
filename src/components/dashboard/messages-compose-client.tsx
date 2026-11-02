@@ -22,18 +22,16 @@ export function MessagesComposeClient({
   fromLabel?: string;
 }) {
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-surface-muted/35 px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+    <div className="min-h-[calc(100vh-8rem)] bg-surface px-[10px]">
       <div className="mx-auto w-full max-w-6xl">
-        <div className="rounded-2xl bg-surface px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-11">
-          <UnifiedMessageComposer
-            contacts={contacts}
-            groups={groups}
-            initialDraft={initialDraft}
-            persistDraft={persistDraft}
-            realtime={realtime}
-            fromLabel={fromLabel}
-          />
-        </div>
+        <UnifiedMessageComposer
+          contacts={contacts}
+          groups={groups}
+          initialDraft={initialDraft}
+          persistDraft={persistDraft}
+          realtime={realtime}
+          fromLabel={fromLabel}
+        />
       </div>
     </div>
   );

@@ -178,7 +178,7 @@ export function ChatWorkspace({
 
   return (
     <>
-      <div className="wa-chat -mx-4 -mt-6 flex h-[calc(100dvh-4rem)] min-h-[28rem] flex-col overflow-hidden bg-[var(--wa-panel)] sm:-mx-5 md:mx-0 md:mt-0 md:h-[calc(100dvh-9rem)] md:rounded-2xl md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
+      <div className="wa-chat flex h-[calc(100dvh-4rem)] min-h-[28rem] flex-col overflow-hidden bg-[var(--wa-panel)] md:h-[calc(100dvh-9rem)] md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside
             className={cn(
@@ -479,7 +479,7 @@ function ChatPickerBody({
             className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-foreground/40 hover:text-foreground/70"
             aria-label="Limpiar"
           >
-            <span className="text-[10px] font-bold">×</span>
+            <span className="text-[10px] font-bold">Ã—</span>
           </button>
         ) : null}
       </label>
@@ -556,7 +556,7 @@ function ChatPickerBody({
                             {contact.name}
                           </span>
                           <span className="block truncate text-xs font-medium text-foreground/45">
-                            {[contact.context, contact.studentName].filter(Boolean).join(" · ")}
+                            {[contact.context, contact.studentName].filter(Boolean).join(" Â· ")}
                           </span>
                         </span>
                         {pendingKey === contact.key ? (
