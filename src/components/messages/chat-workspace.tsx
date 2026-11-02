@@ -187,14 +187,6 @@ export function ChatWorkspace({
             )}
           >
             <div className="shrink-0 px-4 pb-3 pt-4 sm:px-5 md:px-4">
-              {unreadCount > 0 ? (
-                <div className="mb-2.5 flex items-baseline gap-2.5">
-                  <span className="rounded-full bg-[var(--wa-accent-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--wa-accent)]">
-                    {unreadCount}
-                  </span>
-                </div>
-              ) : null}
-
               <label className="flex items-center gap-2.5 rounded-full border border-transparent bg-[var(--wa-search)] px-3.5 py-2.5 transition-colors focus-within:border-[var(--wa-ring)] focus-within:ring-2 focus-within:ring-[var(--wa-ring-soft)]">
                 <Search className="h-[17px] w-[17px] shrink-0 text-[var(--wa-muted)]" />
                 <input

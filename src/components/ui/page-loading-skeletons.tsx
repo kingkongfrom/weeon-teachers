@@ -373,12 +373,8 @@ export function ChatWorkspaceSkeleton() {
     >
       <div className="flex h-full min-h-0 overflow-hidden bg-surface">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
-          <aside className="flex min-h-0 flex-col border-r border-border bg-surface-muted/20">
+          <aside className="flex min-h-0 flex-col bg-surface-muted/20">
             <div className="shrink-0 space-y-3 px-4 pb-3 pt-4 sm:px-5 md:px-4">
-              <div className="flex items-center justify-between gap-3">
-                <Skeleton className="h-7 w-36" />
-                <Skeleton className="h-10 w-10 rounded-full" />
-              </div>
               <Skeleton className="h-10 w-full rounded-full" />
               <div className="flex gap-2">
                 <Skeleton className="h-8 w-24 rounded-full" />
@@ -407,6 +403,8 @@ export function ChatWorkspaceSkeleton() {
             </div>
           </div>
         </div>
+
+        <Skeleton className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 h-14 w-14 rounded-full lg:bottom-8 lg:right-8" />
       </div>
     </div>
   );
