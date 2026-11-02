@@ -26,7 +26,7 @@ export function AppHeader({
           <LogoCompact />
         </span>
         <span className="inline-flex sm:hidden">
-          <LogoMark />
+          <LogoMark className="h-9 w-9" />
         </span>
       </Link>
 
