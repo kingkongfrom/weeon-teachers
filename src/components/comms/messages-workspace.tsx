@@ -86,7 +86,7 @@ const MAIL_FOLDER_ROW =
 
 /** List vs reading split beside folder sidebar (35% / 65% from `md`). */
 const MAIL_LIST_PANE =
-  "w-full min-w-0 shrink-0 overflow-hidden md:min-w-[14rem] md:w-[35%] md:max-w-[35%] md:basis-[35%]";
+  "w-full min-w-0 shrink-0 overflow-hidden md:min-w-[14rem] md:w-[35%] md:max-w-[35%] md:basis-[35%] md:grow-0 tablet-portrait:w-full tablet-portrait:max-w-none tablet-portrait:basis-full";
 const MAIL_READ_PANE =
   "flex min-h-0 w-full min-w-0 flex-col overflow-hidden md:min-w-[16rem] md:w-[65%] md:max-w-[65%] md:shrink-0 md:basis-[65%]";
 
@@ -165,8 +165,10 @@ export function MessagesWorkspace({
   const [localDrafts, setLocalDrafts] = useState(drafts);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
   /**
-   * Phone pane (below `md`): folders â†’ list â†’ message. The three columns only
-   * fit side by side from tablet up; `open` is the reading pane.
+   * Pane state below the three-column layout:
+   * - phones (below `md`): folders → list → message.
+   * - iPad portrait: two columns (folders + list); `open` swaps the list for
+   *   the reading pane, which carries a back button.
    */
   const [phonePane, setPhonePane] = useState<"folders" | "list" | "open">("list");
   const [draftDeleteTarget, setDraftDeleteTarget] = useState<MessageDraftSummary | null>(null);
@@ -481,6 +483,7 @@ export function MessagesWorkspace({
             folder === "trash" && openThreadSummary.mine
               ? () => setDeleteTarget(openThreadSummary)
               : undefined,
+          onBack: () => setPhonePane("list"),
         }
       : null;
 
@@ -762,7 +765,7 @@ export function MessagesWorkspace({
             >
               <Menu className="h-3.5 w-3.5" />
             </button>
-            <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-surface-muted/70 px-2.5 py-1.5 md:w-[39.7%] md:flex-none">
+            <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-surface-muted/70 px-2.5 py-1.5 md:w-[39.7%] md:flex-none tablet-portrait:w-auto tablet-portrait:flex-1">
               <Search className="h-3.5 w-3.5 shrink-0 text-foreground/40" />
               <input
                 value={query}
@@ -813,7 +816,9 @@ export function MessagesWorkspace({
           className={cn(
             "flex min-h-0 flex-col overflow-hidden border-r border-border",
             MAIL_LIST_PANE,
-            phonePane === "open" ? "hidden md:flex" : "flex",
+            phonePane === "open"
+              ? "hidden md:flex tablet-portrait:hidden"
+              : "flex",
           )}
         >
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -1046,7 +1051,12 @@ export function MessagesWorkspace({
           )}
           </div>
         </section>
-        <div className={cn(MAIL_READ_PANE, phonePane === "open" ? "flex w-full" : "hidden md:flex")}>
+        <div
+          className={cn(
+            MAIL_READ_PANE,
+            phonePane === "open" ? "flex w-full" : "hidden md:flex tablet-portrait:hidden",
+          )}
+        >
         {folder === "draft" ? (
           <MailboxDraftReadingPane
             draftId={openDraftId}

@@ -9,6 +9,10 @@
 @custom-variant morning-compact (@media (min-width: 1024px) and (max-width: 1535.98px));
 @custom-variant morning-tablet (@media (min-width: 768px) and (max-width: 1023.98px));
 
+/* iPad portrait only (768–1023.98 wide, taller than wide). Comms uses it to
+   drop from three columns to two; landscape iPads keep the desktop split. */
+@custom-variant tablet-portrait (@media (min-width: 768px) and (max-width: 1023.98px) and (orientation: portrait));
+
 :root {
   color-scheme: light;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than

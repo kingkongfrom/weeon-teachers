@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import Link from "next/link";
 import {
+  ChevronLeft,
   ExternalLink,
   Loader2,
   Printer,
@@ -30,6 +31,8 @@ export type MailboxThreadToolbarProps = {
   onMoveToTrash: () => void;
   onRestore?: () => void;
   onDeletePermanently?: () => void;
+  /** iPad portrait shows one pane at a time; this returns to the list. */
+  onBack?: () => void;
 };
 
 const iconBtn =
@@ -55,6 +58,7 @@ export function MailboxThreadToolbar({
   onMoveToTrash,
   onRestore,
   onDeletePermanently,
+  onBack,
 }: MailboxThreadToolbarProps) {
   const t = useLiveT();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -82,6 +86,16 @@ export function MailboxThreadToolbar({
 
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label={t("comms.backToMessages")}
+          className={`${iconBtn} hidden tablet-portrait:inline-flex mr-auto`}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      ) : null}
       {busy ? (
         <span className="inline-flex h-10 w-10 items-center justify-center text-foreground/35">
           <Loader2 className="h-4 w-4 animate-spin" />
