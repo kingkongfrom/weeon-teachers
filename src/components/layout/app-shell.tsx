@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "motion/react";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -40,41 +39,28 @@ type AppShellProps = {
 export function AppShell({ children, user, supabasePublic, commsNavAttention }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false);
   const collapsed = useSidebarCollapsed();
-  // motion writes an inline transform, which wins over md:translate-y-0. Drive
-  // the slide only below md and hand the desktop rail back to CSS.
-  const isDesktop = useIsDesktop();
-
   return (
     <div className="dashboard-shell min-h-screen bg-background">
       <TeacherAcademicRealtime realtime={supabasePublic} />
       <TeacherCommsNavRealtime realtime={supabasePublic} />
       <ProfilePresenceHeartbeat realtime={supabasePublic} enabled={Boolean(user)} />
-      <AnimatePresence>
-        {navOpen ? (
-          <motion.button
-            key="nav-scrim"
-            type="button"
-            aria-label="Cerrar menú"
-            className="fixed inset-0 z-40 bg-black/40 md:hidden"
-            onClick={() => setNavOpen(false)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
-          />
-        ) : null}
-      </AnimatePresence>
-      <motion.aside
+      {navOpen ? (
+        <button
+          type="button"
+          aria-label="Cerrar menú"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setNavOpen(false)}
+        />
+      ) : null}
+      {/* Desktop: fixed left rail. Phones: bottom sheet opened from the bar. */}
+      <aside
         className={cn(
-          "fixed z-50 flex flex-col border-border bg-surface md:inset-y-0 md:left-0 md:z-40 md:translate-x-0 md:translate-y-0 md:rounded-none md:border-r",
+          "fixed z-50 flex flex-col border-border bg-surface transition-[transform,border-radius] duration-300 ease-out md:inset-y-0 md:left-0 md:z-40 md:translate-x-0 md:translate-y-0 md:rounded-none md:border-r",
           navOpen
-            ? "inset-x-0 bottom-0 max-h-[80dvh] rounded-t-2xl border-t pb-[env(safe-area-inset-bottom,0px)]"
-            : "inset-x-0 bottom-0 rounded-t-2xl border-t",
+            ? "inset-x-0 bottom-0 max-h-[80dvh] translate-y-0 rounded-t-2xl border-t pb-[env(safe-area-inset-bottom,0px)]"
+            : "inset-x-0 bottom-0 translate-y-full rounded-t-2xl border-t",
           collapsed ? "md:w-[4.5rem]" : "md:w-72",
         )}
-        initial={false}
-        animate={isDesktop ? { y: 0 } : navOpen ? { y: 0 } : { y: "105%" }}
-        transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.9 }}
       >
         <div
           className={cn(
@@ -100,7 +86,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
           commsNavAttention={commsNavAttention}
           onNavigate={() => setNavOpen(false)}
         />
-      </motion.aside>
+      </aside>
 
       <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}>
         <AppHeader user={user} supabasePublic={supabasePublic} />
@@ -142,16 +128,4 @@ function SidebarToggle({ collapsed }: { collapsed: boolean }) {
         </svg>
       </button>
   );
-}
-/** Tailwind's md breakpoint (48rem), used to keep motion off the desktop rail. */
-function useIsDesktop() {
-  const [desktop, setDesktop] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia("(min-width: 48rem)");
-    const update = () => setDesktop(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  return desktop;
 }
