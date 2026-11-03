@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Download, Loader2, Pencil, RotateCcw, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Users } from "lucide-react";
 import { PdfReaderDialog, PdfViewport } from "@/components/ui/pdf-reader";
 import type { TeacherCircularDetail } from "@/lib/dashboard/teacher-circulars";
 import { useLiveT } from "@/lib/i18n/use-i18n";
@@ -170,62 +170,13 @@ export function CircularPreviewPane({
       ) : null}
 
       <div className="border-t border-border">
-        <div className="flex shrink-0 flex-nowrap items-center justify-between gap-3 bg-[var(--wa-header)] px-[15px] py-3">
-        <span
-          className="inline-flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold text-[var(--wa-muted)]"
-          title={detail?.recipientsLabel}
-        >
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-icon)]">
-            <Users className="h-4 w-4" />
-          </span>
-          <span className="truncate">{detail?.recipientsLabel}</span>
-        </span>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={onEdit}
-            disabled={!onEdit}
-            title={onEdit ? t("comms.documents.circularEditTitle") : t("comms.comingSoon")}
-            aria-label={t("comms.documents.circularEditTitle")}
-            className={cn(
-              "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-icon)] hover:bg-[var(--wa-hover)]",
-              !onEdit && "cursor-not-allowed border-[var(--wa-border)] text-[var(--wa-muted)]",
-            )}
+        <div className="flex shrink-0 items-center gap-2 bg-[var(--wa-header)] px-[15px] py-3">
+          <span
+            className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-[var(--wa-muted)]"
+            title={detail?.recipientsLabel}
           >
-            <Pencil className="h-4 w-4" />
-          </button>
-          {onRestore ? (
-            <button
-              type="button"
-              onClick={onRestore}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--wa-border)] px-3 text-sm font-semibold text-[var(--wa-text)] hover:bg-[var(--wa-hover)]"
-            >
-              <RotateCcw className="h-4 w-4" />
-              {t("comms.documents.restore")}
-            </button>
-          ) : null}
-          {onPermanentDelete ? (
-            <button
-              type="button"
-              onClick={onPermanentDelete}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-transparent bg-error/10 px-3 text-sm font-semibold text-error hover:bg-error/15"
-            >
-              <Trash2 className="h-4 w-4" />
-              {t("comms.deletePermanently")}
-            </button>
-          ) : null}
-          {onDelete ? (
-            <button
-              type="button"
-              onClick={onDelete}
-              aria-label={t("comms.folderTrash")}
-              title={t("comms.folderTrash")}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-error/25 text-error hover:bg-error/5"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          ) : null}
-        </div>
+            <span className="truncate">{detail?.recipientsLabel}</span>
+          </span>
         </div>
       </div>
 
