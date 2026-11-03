@@ -418,13 +418,43 @@ function ChatPickerBody({
   // A conversation is identified by the account, so the picker shows one row
   // per person even when the directory lists them once per class/child.
   const uniqueContacts = useMemo(() => {
+    // The directory can hold several roster accounts for what is visibly one
+    // person (the same guardian imported per child, sometimes with a slightly
+    // different surname). Surface one row per person + class + child, keeping
+    // the first account, so the picker never shows the same face twice.
     const seen = new Set<string>();
-    return contacts.filter((contact) => {
-      const identity = `${contact.kind ?? ""}::${contact.key.toLowerCase()}`;
-      if (seen.has(identity)) return false;
-      seen.add(identity);
-      return true;
-    });
+    const signature = (contact: ChatContact) => {
+      const name = contact.name.toLowerCase().replace(/\s+/g, " ").trim();
+      // Same person if one name contains the other ("Fernanda Acosta" vs
+      // "Fernanda Acosta Martinez"); first+last is enough to avoid merging
+      // different people who share a surname.
+      const parts = name.split(" ").filter(Boolean);
+      const short = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : name;
+      return [
+        contact.kind ?? "",
+        short,
+        contact.context.toLowerCase(),
+        contact.studentName.toLowerCase(),
+      ].join("::");
+    };
+    const kept: ChatContact[] = [];
+    for (const contact of contacts) {
+      const full = signature(contact);
+      if (seen.has(full)) continue;
+      // Also match a previously kept row whose name is a prefix of this one.
+      const name = contact.name.toLowerCase().replace(/\s+/g, " ").trim();
+      const clash = kept.some((other) => {
+        if ((other.kind ?? "") !== (contact.kind ?? "")) return false;
+        if (other.context.toLowerCase() !== contact.context.toLowerCase()) return false;
+        if (other.studentName.toLowerCase() !== contact.studentName.toLowerCase()) return false;
+        const otherName = other.name.toLowerCase().replace(/\s+/g, " ").trim();
+        return name.startsWith(otherName) || otherName.startsWith(name);
+      });
+      if (clash) continue;
+      seen.add(full);
+      kept.push(contact);
+    }
+    return kept;
   }, [contacts]);
 
   const filtered = useMemo(() => {
@@ -556,7 +586,7 @@ function ChatPickerBody({
                             {contact.name}
                           </span>
                           <span className="block truncate text-xs font-medium text-foreground/45">
-                            {[contact.context, contact.studentName].filter(Boolean).join(" · ")}
+                            {[contact.context, contact.studentName].filter(Boolean).join(" Â· ")}
                           </span>
                         </span>
                         {pendingKey === contact.key ? (
