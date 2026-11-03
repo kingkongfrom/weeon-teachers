@@ -135,16 +135,14 @@ export function CircularPreviewPane({
             gradient behind them so the text stays readable on any page. */}
         {detail ? (
           <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 rounded-xl bg-white/65 px-3 py-2 shadow-md ring-1 ring-black/10 backdrop-blur-lg dark:bg-neutral-900/60 dark:ring-white/15">
-            <div className="flex min-w-0 items-center gap-2">
-              <Users className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-300" aria-hidden />
-              <div className="min-w-0">
-                <h2 className="truncate text-[15px] font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
-                  {detail.title}
-                </h2>
-                <p className="truncate text-[12px] leading-tight text-neutral-600 dark:text-neutral-300">
-                  {detail.recipientsLabel || t("comms.noRecipients")}
-                </p>
-              </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-[15px] font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
+                {detail.title}
+              </h2>
+              <p className="flex items-center gap-1 truncate text-[12px] leading-tight text-neutral-600 dark:text-neutral-300">
+                <Users className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="truncate">{detail.recipientsLabel || t("comms.noRecipients")}</span>
+              </p>
             </div>
             {detail.categoryName && detail.categoryColor ? (
               <span
