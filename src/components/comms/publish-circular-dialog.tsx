@@ -19,8 +19,11 @@ import {
   type CloudImportRef,
 } from "@/lib/comms/cloud-import/types";
 import { messagesTone } from "@/lib/comms/messages-tone";
-import type { CircularCategory } from "@/lib/dashboard/teacher-circulars";
-import { publishTeacherCircular } from "@/lib/teachers/circular-actions";
+import {
+  buildBulkRecipientCatalog,
+} from "@/lib/comms/recipient-catalog";
+import type { CircularCategory, TeacherCircularEditable } from "@/lib/dashboard/teacher-circulars";
+import { publishTeacherCircular, updateTeacherCircular } from "@/lib/teachers/circular-actions";
 import { cn } from "@/lib/utils";
 import { useLiveT } from "@/lib/i18n/use-i18n";
 
@@ -57,20 +60,36 @@ export function PublishCircularDialog({
   groups,
   onClose,
   onPublished,
+  editing,
 }: {
   open: boolean;
   categories: CircularCategory[];
   groups: CommsGroupWithGrade[];
   onClose: () => void;
   onPublished?: () => void;
+  /** When set the dialog edits that circular instead of publishing a new one. */
+  editing?: TeacherCircularEditable | null;
 }) {
   const t = useLiveT();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [title, setTitle] = useState(editing?.title ?? "");
+  const [description, setDescription] = useState(editing?.description ?? "");
+  const [categoryId, setCategoryId] = useState(editing?.categoryId ?? "");
   const [notifyRecipients, setNotifyRecipients] = useState(true);
-  const [recipients, setRecipients] = useState<PickerSelection[]>([]);
+  const [recipients, setRecipients] = useState<PickerSelection[]>(() => {
+    const targets = editing?.targets ?? [];
+    if (targets.length === 0) return [];
+    const catalog = buildBulkRecipientCatalog(groups);
+    const restored: PickerSelection[] = [];
+    for (const target of targets) {
+      const match = catalog.find(
+        (item) => item.kind === target.kind && item.filter.classId === target.classId,
+      );
+      if (match) restored.push({ type: "bulk", item: match });
+    }
+    return restored;
+  });
+  const isEdit = Boolean(editing);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [cloudImports, setCloudImports] = useState<CloudImportRef[]>([]);
@@ -134,7 +153,7 @@ export function PublishCircularDialog({
       setError(t("comms.documents.titleRequired"));
       return;
     }
-    if (attachments.length === 0) {
+    if (!isEdit && attachments.length === 0) {
       setError(t("comms.documents.attachmentRequired"));
       return;
     }
@@ -144,6 +163,7 @@ export function PublishCircularDialog({
     }
 
     const formData = new FormData();
+    if (isEdit && editing) formData.set("documentId", editing.id);
     formData.set("title", title.trim());
     formData.set("description", description.trim());
     formData.set("categoryId", categoryId);
@@ -154,7 +174,9 @@ export function PublishCircularDialog({
 
     setSaving(true);
     try {
-      const result = await publishTeacherCircular(formData);
+      const result = isEdit
+        ? await updateTeacherCircular(formData)
+        : await publishTeacherCircular(formData);
       if (!result.ok) {
         setError(result.error || t("comms.error"));
         return;
@@ -173,7 +195,11 @@ export function PublishCircularDialog({
     <>
       <Dialog
         open={open}
-        title={t("comms.documents.circularPublishTitle")}
+        title={
+          isEdit
+            ? t("comms.documents.circularEditTitle")
+            : t("comms.documents.circularPublishTitle")
+        }
         onClose={() => {
           reset();
           onClose();
@@ -193,7 +219,12 @@ export function PublishCircularDialog({
             </button>
             <button
               type="button"
-              disabled={saving || !title.trim() || targets.length === 0 || attachments.length === 0}
+              disabled={
+                saving ||
+                !title.trim() ||
+                targets.length === 0 ||
+                (!isEdit && attachments.length === 0)
+              }
               onClick={() => void submit()}
               className={cn(
                 "inline-flex h-11 min-w-[8.5rem] items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold text-white",
@@ -201,7 +232,7 @@ export function PublishCircularDialog({
               )}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {t("comms.documents.publishCircular")}
+              {isEdit ? t("common.save") : t("comms.documents.publishCircular")}
             </button>
           </div>
         }
@@ -278,6 +309,11 @@ export function PublishCircularDialog({
             </div>
           </div>
 
+          {isEdit ? (
+            <p className="rounded-2xl border border-border bg-surface-muted/25 px-3.5 py-3 text-[13px] text-foreground/60">
+              {t("comms.documents.editPdfNote")}
+            </p>
+          ) : (
           <div className="flex flex-col gap-2.5">
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-[13px] font-semibold text-foreground">
@@ -380,6 +416,7 @@ export function PublishCircularDialog({
               </ul>
             ) : null}
           </div>
+          )}
 
           <label className="flex items-center justify-between gap-4 rounded-2xl bg-surface-muted/40 px-4 py-3">
             <span>

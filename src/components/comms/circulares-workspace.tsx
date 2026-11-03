@@ -11,11 +11,13 @@ import type { CommsGroupWithGrade } from "@/lib/comms/broadcast-filter";
 import type {
   CircularCategory,
   TeacherCircularDetail,
+  TeacherCircularEditable,
   TeacherCircularRow,
 } from "@/lib/dashboard/teacher-circulars";
 import {
   deleteTeacherCircular,
   fetchTeacherCircularDetail,
+  fetchTeacherCircularEditable,
   moveTeacherCircularCategory,
   reorderTeacherCircularCategories,
   reorderTeacherCirculars,
@@ -71,6 +73,7 @@ export function CircularesWorkspace({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [editing, setEditing] = useState<TeacherCircularEditable | null>(null);
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewDetail, setPreviewDetail] = useState<TeacherCircularDetail | null>(null);
@@ -188,6 +191,13 @@ export function CircularesWorkspace({
     if (request !== previewRequest.current) return;
     setPreviewDetail(detail);
     setPreviewLoading(false);
+  }
+
+  async function openEdit(documentId: string) {
+    const editable = await fetchTeacherCircularEditable(documentId);
+    if (!editable) return;
+    setEditing(editable);
+    setPublishOpen(true);
   }
 
   async function handleTrash(row: TeacherCircularRow) {
@@ -630,6 +640,11 @@ export function CircularesWorkspace({
                   onDelete={!inTrash ? () => setTrashTarget(selectedSummary) : undefined}
                   onRestore={inTrash ? () => void handleTrash(selectedSummary) : undefined}
                   onPermanentDelete={inTrash ? () => setDeleteTarget(selectedSummary) : undefined}
+                  onEdit={
+                    !inTrash && selectedSummary
+                      ? () => void openEdit(selectedSummary.id)
+                      : undefined
+                  }
                 />
               </div>
             ) : (
@@ -652,10 +667,15 @@ export function CircularesWorkspace({
       </div>
 
       <PublishCircularDialog
+        key={editing?.id ?? "new"}
         open={publishOpen}
         categories={categories}
         groups={groups}
-        onClose={() => setPublishOpen(false)}
+        editing={editing}
+        onClose={() => {
+          setPublishOpen(false);
+          setEditing(null);
+        }}
         onPublished={() => clearSelection()}
       />
 

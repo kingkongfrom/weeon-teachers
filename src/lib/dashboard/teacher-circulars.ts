@@ -86,6 +86,59 @@ export const loadCircularCategories = cache(async (): Promise<CircularCategory[]
 });
 
 /**
+ * Editable state of one of the teacher's circulars: the form values needed to
+ * prefill the publish dialog in edit mode (title, note, category, targets).
+ */
+export type TeacherCircularEditable = {
+  id: string;
+  title: string;
+  description: string;
+  categoryId: string | null;
+  targets: Array<{ classId: string; kind: "parents" | "students" }>;
+};
+
+export async function loadTeacherCircularEditable(
+  documentId: string,
+): Promise<TeacherCircularEditable | null> {
+  const session = await getCommsActor();
+  if (!session) return null;
+
+  const { data: document } = await session.actor
+    .from("published_documents")
+    .select("id, title, description, category_id")
+    .eq("id", documentId)
+    .eq("tenant_id", session.tenantId)
+    .eq("scope", "teacher")
+    .eq("published_by", session.userId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!document) return null;
+
+  const { data: targets } = await session.actor
+    .from("document_recipient_targets")
+    .select("broadcast_filter")
+    .eq("document_id", documentId)
+    .eq("tenant_id", session.tenantId);
+
+  const parsed: TeacherCircularEditable["targets"] = [];
+  for (const row of targets ?? []) {
+    const filter = row.broadcast_filter as { classId?: string; kind?: string } | null;
+    const classId = filter?.classId;
+    const kind = filter?.kind;
+    if (!classId || (kind !== "parents" && kind !== "students")) continue;
+    parsed.push({ classId, kind });
+  }
+
+  return {
+    id: document.id as string,
+    title: (document.title as string) ?? "",
+    description: (document.description as string | null) ?? "",
+    categoryId: (document.category_id as string | null) ?? null,
+    targets: parsed,
+  };
+}
+
+/**
  * Detail for one circular the teacher published (including trashed rows, so the
  * trash reading pane works). Signs `school-documents` objects for the owner.
  */

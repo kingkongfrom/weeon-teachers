@@ -67,6 +67,9 @@ export const commsEs = {
   "comms.documents.download": "Descargar",
   "comms.documents.previewUnavailable": "Vista previa no disponible para este tipo de archivo.",
   "comms.documents.expand": "Abrir el documento completo",
+  "comms.documents.circularEditTitle": "Editar circular",
+  "comms.documents.editPdfNote":
+    "El PDF no se puede reemplazar. Si el archivo cambió, envíe una circular nueva.",
   "comms.documents.noAttachments": "Este documento no tiene adjuntos.",
   "common.close": "Cerrar",
   "pdf.loading": "Abriendo el documento…",
@@ -441,6 +444,9 @@ export const commsEn: Record<CommsMessageKey, string> = {
   "comms.documents.download": "Download",
   "comms.documents.previewUnavailable": "Preview is not available for this file type.",
   "comms.documents.expand": "Open the full document",
+  "comms.documents.circularEditTitle": "Edit circular",
+  "comms.documents.editPdfNote":
+    "The PDF cannot be replaced. If the file changed, publish a new circular.",
   "comms.documents.noAttachments": "This document has no attachments.",
   "common.close": "Close",
   "pdf.loading": "Opening the document…",

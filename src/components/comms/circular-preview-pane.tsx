@@ -5,6 +5,7 @@ import { ArrowLeft, Download, Loader2, Pencil, RotateCcw, Trash2, Users } from "
 import { PdfReaderDialog, PdfViewport } from "@/components/ui/pdf-reader";
 import type { TeacherCircularDetail } from "@/lib/dashboard/teacher-circulars";
 import { useLiveT } from "@/lib/i18n/use-i18n";
+import { cn } from "@/lib/utils";
 
 function categoryBadgeStyle(color: string) {
   return {
@@ -12,6 +13,15 @@ function categoryBadgeStyle(color: string) {
     color,
     borderColor: `${color}44`,
   };
+}
+
+/**
+ * Category colours are picked to read as chips on the app surface, not as text
+ * on a scrolling document. Keep the hue but pull it toward the card's ink so
+ * the label stays legible in both themes.
+ */
+function readableCategoryText(color: string): string {
+  return `color-mix(in oklab, ${color} 72%, currentColor)`;
 }
 
 const primaryButton =
@@ -25,6 +35,7 @@ export function CircularPreviewPane({
   onDelete,
   onRestore,
   onPermanentDelete,
+  onEdit,
 }: {
   detail: TeacherCircularDetail | null;
   loading: boolean;
@@ -32,6 +43,8 @@ export function CircularPreviewPane({
   onDelete?: () => void;
   onRestore?: () => void;
   onPermanentDelete?: () => void;
+  /** Omitted for trashed circulares, which must be restored first. */
+  onEdit?: () => void;
 }) {
   const t = useLiveT();
   const primary = detail?.attachments[0];
@@ -121,23 +134,24 @@ export function CircularPreviewPane({
         {/* Title and category laid over the bottom of the preview, with a short
             gradient behind them so the text stays readable on any page. */}
         {detail ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 rounded-xl bg-white/95 px-3 py-2 shadow-md ring-1 ring-black/10 backdrop-blur-sm dark:bg-neutral-900/95 dark:ring-white/15">
             <div className="min-w-0">
-              <h2 className="truncate text-[15px] font-semibold leading-tight text-[var(--wa-text)]">
+              <h2 className="truncate text-[15px] font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
                 {detail.title}
               </h2>
-              <p className="truncate text-[12px] leading-tight text-[var(--wa-muted)]">
+              <p className="truncate text-[12px] leading-tight text-neutral-600 dark:text-neutral-300">
                 {detail.recipientsLabel || t("comms.noRecipients")}
               </p>
             </div>
             {detail.categoryName && detail.categoryColor ? (
               <span
-                className="shrink-0 rounded-full border bg-transparent px-3 py-1 text-[11px] font-semibold"
+                className="shrink-0 rounded-full border px-3 py-1 text-[11px] font-semibold"
                 style={{
                   ...categoryBadgeStyle(detail.categoryColor),
                   backgroundColor: "transparent",
                   borderColor: detail.categoryColor,
                   borderWidth: "0.5px",
+                  color: readableCategoryText(detail.categoryColor),
                 }}
               >
                 {detail.categoryName}
@@ -168,9 +182,14 @@ export function CircularPreviewPane({
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            disabled
-            title={t("comms.comingSoon")}
-            className="inline-flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-muted)]"
+            onClick={onEdit}
+            disabled={!onEdit}
+            title={onEdit ? t("comms.documents.circularEditTitle") : t("comms.comingSoon")}
+            aria-label={t("comms.documents.circularEditTitle")}
+            className={cn(
+              "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-icon)] hover:bg-[var(--wa-hover)]",
+              !onEdit && "cursor-not-allowed border-[var(--wa-border)] text-[var(--wa-muted)]",
+            )}
           >
             <Pencil className="h-4 w-4" />
           </button>

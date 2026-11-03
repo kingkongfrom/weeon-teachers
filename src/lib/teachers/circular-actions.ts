@@ -6,7 +6,9 @@ import { inferAttachmentMimeType, isAllowedAttachmentMime } from "@/lib/comms/at
 import { getCommsActor } from "@/lib/dashboard/comms-session";
 import {
   loadTeacherCircularDetail,
+  loadTeacherCircularEditable,
   type TeacherCircularDetail,
+  type TeacherCircularEditable,
 } from "@/lib/dashboard/teacher-circulars";
 import { tRequest } from "@/lib/i18n/server";
 
@@ -27,6 +29,14 @@ export async function fetchTeacherCircularDetail(
 ): Promise<TeacherCircularDetail | null> {
   if (!uuidSchema.safeParse(documentId).success) return null;
   return loadTeacherCircularDetail(documentId);
+}
+
+/** Form values for editing one of the teacher's own circulares. */
+export async function fetchTeacherCircularEditable(
+  documentId: string,
+): Promise<TeacherCircularEditable | null> {
+  if (!uuidSchema.safeParse(documentId).success) return null;
+  return loadTeacherCircularEditable(documentId);
 }
 
 const targetSchema = z.object({
@@ -137,6 +147,65 @@ export async function publishTeacherCircular(formData: FormData): Promise<Circul
 
 const documentIdSchema = z.string().uuid();
 const categoryIdSchema = z.string().uuid();
+
+/**
+ * Edit a published circular in place: title, description, category and the
+ * group/audience targets. The PDF cannot be swapped — correcting a wrong file
+ * means trashing this circular and publishing a new one.
+ */
+export async function updateTeacherCircular(formData: FormData): Promise<CircularActionResult> {
+  const session = await getCommsActor();
+  if (!session) return { ok: false, error: await tRequest("comms.error") };
+
+  const documentId = String(formData.get("documentId") ?? "");
+  if (!documentIdSchema.safeParse(documentId).success) {
+    return { ok: false, error: "Circular no válida." };
+  }
+
+  let targetsRaw: unknown = [];
+  try {
+    targetsRaw = JSON.parse(String(formData.get("targets") ?? "[]"));
+  } catch {
+    return { ok: false, error: "Seleccione al menos un grupo." };
+  }
+
+  const parsed = publishSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description") || undefined,
+    categoryId: formData.get("categoryId") ? String(formData.get("categoryId")) : null,
+    targets: targetsRaw,
+  });
+  if (!parsed.success) {
+    const missingTitle = parsed.error.issues.some((issue) => issue.path[0] === "title");
+    if (missingTitle) return { ok: false, error: "Escriba el título de la circular." };
+    return { ok: false, error: "Seleccione al menos un grupo y destinatario." };
+  }
+
+  const { error } = await session.actor.rpc("update_teacher_circular", {
+    p_document_id: documentId,
+    p_title: parsed.data.title,
+    p_description: parsed.data.description ?? null,
+    p_category_id: parsed.data.categoryId,
+    p_targets: parsed.data.targets,
+  });
+  if (error) {
+    const mapped = mapError(error.message);
+    if (mapped) return { ok: false, error: mapped };
+    if (/not_your_document/.test(error.message)) {
+      return { ok: false, error: "Solo puede editar sus propias circulares." };
+    }
+    if (/Could not find the function|PGRST202/.test(error.message)) {
+      return {
+        ok: false,
+        error: "Falta la migración de edición de circulares (20261102120000_teacher_circular_edit.sql).",
+      };
+    }
+    return { ok: false, error: "No se pudo guardar la circular." };
+  }
+
+  revalidatePath(TEACHER_CIRCULARS);
+  return { ok: true, documentId };
+}
 
 /** Move one of the teacher's circulars to trash (soft delete). */
 export async function trashTeacherCircular(documentId: string): Promise<CircularActionResult> {
