@@ -228,7 +228,7 @@ export function PdfViewport({
     : 1.4142;
   const widthFit = Math.max(280, Math.floor((frameWidth - pageGutter) * zoom));
   const heightFit = frameHeight > 0 ? Math.floor(frameHeight / pageRatio) : widthFit;
-  const pageWidth = showChrome ? widthFit : Math.min(widthFit, heightFit);
+  const pageWidth = showChrome ? widthFit : Math.max(widthFit, heightFit);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-[#eef1f6] dark:bg-[#1a2030]">
@@ -312,7 +312,10 @@ export function PdfViewport({
         </button>
       ) : null}
 
-      <div ref={frameRef} className="min-h-0 flex-1 overflow-auto">
+      <div
+        ref={frameRef}
+        className={`min-h-0 flex-1 ${showChrome ? "overflow-auto" : "flex items-center justify-center overflow-hidden bg-[var(--wa-panel)]"}`}
+      >
         {status === "loading" ? (
           <div className="flex h-full min-h-[280px] items-center justify-center">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground/50">
@@ -328,9 +331,11 @@ export function PdfViewport({
         ) : null}
         {status === "ready" ? (
           <div
-            className={`flex flex-col items-center ${
-              showChrome ? "gap-4 px-6 py-6" : "h-full justify-center gap-2"
-            }`}
+            className={
+              showChrome
+                ? "flex flex-col items-center gap-4 px-6 py-6"
+                : "flex h-full w-full items-center justify-center overflow-hidden"
+            }
           >
             {pages.map((page, index) => (
               <PdfPageCanvas key={index} page={page} width={pageWidth} rotation={rotation} />

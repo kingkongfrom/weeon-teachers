@@ -121,6 +121,9 @@ export function CircularPreviewPane({
               <h2 className="truncate text-[15px] font-semibold leading-tight text-[var(--wa-text)]">
                 {detail.title}
               </h2>
+              <p className="truncate text-[12px] leading-tight text-[var(--wa-muted)]">
+                {detail.recipientsLabel || t("comms.noRecipients")}
+              </p>
             </div>
             {detail.categoryName && detail.categoryColor ? (
               <span
