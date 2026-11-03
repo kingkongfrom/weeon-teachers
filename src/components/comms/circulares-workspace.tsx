@@ -481,7 +481,7 @@ export function CircularesWorkspace({
               <div className="mx-3 my-2 border-t border-[var(--wa-border)]" />
 
               {scopedDocuments.length === 0 ? (
-                <div className="mx-2 mt-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--wa-chip-line)] bg-[var(--wa-search)] px-5 py-10 text-center">
+                <div className="mx-2 mt-4 flex flex-col items-center gap-2 px-5 py-10 text-center">
                   <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wa-accent-soft)]">
                     <FileText className="h-7 w-7 text-[var(--wa-accent)]" aria-hidden />
                   </span>
