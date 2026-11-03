@@ -73,6 +73,7 @@ export function CircularPreviewPane({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--wa-panel)] p-3">
+        <div className="relative flex min-h-0 flex-1 flex-col">
         {loading ? (
           <div className="flex h-full min-h-[280px] items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-[var(--wa-muted)]" />
@@ -111,33 +112,35 @@ export function CircularPreviewPane({
             {t("comms.documents.noAttachments")}
           </div>
         )}
+
+        {/* Phones: title bottom-left and category bottom-right, laid over the
+            preview itself instead of a separate row. */}
+        {detail ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 lg:hidden">
+            <div className="min-w-0">
+              <h2 className="truncate text-[15px] font-semibold leading-tight text-[var(--wa-text)]">
+                {detail.title}
+              </h2>
+              <p className="truncate text-[12px] leading-tight text-[var(--wa-muted)]">
+                {detail.recipientsLabel || t("comms.noRecipients")}
+              </p>
+            </div>
+            {detail.categoryName && detail.categoryColor ? (
+              <span
+                className="shrink-0 rounded-full border px-3 py-1 text-xs font-bold"
+                style={categoryBadgeStyle(detail.categoryColor)}
+              >
+                {detail.categoryName}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        </div>
       </div>
 
       {detail?.description ? (
         <div className="shrink-0 border-t border-border px-5 py-3 text-sm font-medium text-[var(--wa-text)]">
           {detail.description}
-        </div>
-      ) : null}
-
-      {/* Phones: title bottom-left, category bottom-right (the header is hidden). */}
-      {detail ? (
-        <div className="flex shrink-0 items-end justify-between gap-3 border-t border-border bg-[var(--wa-header)] px-4 py-3 lg:hidden">
-          <div className="min-w-0">
-            <h2 className="truncate text-[16px] font-semibold leading-tight text-[var(--wa-text)]">
-              {detail.title}
-            </h2>
-            <p className="truncate text-[12.5px] leading-tight text-[var(--wa-muted)]">
-              {detail.recipientsLabel || t("comms.noRecipients")}
-            </p>
-          </div>
-          {detail.categoryName && detail.categoryColor ? (
-            <span
-              className="shrink-0 rounded-full border px-3 py-1 text-xs font-bold"
-              style={categoryBadgeStyle(detail.categoryColor)}
-            >
-              {detail.categoryName}
-            </span>
-          ) : null}
         </div>
       ) : null}
 

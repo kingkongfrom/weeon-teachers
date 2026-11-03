@@ -211,7 +211,10 @@ export function PdfViewport({
     };
   }, [url]);
 
-  const pageWidth = Math.max(280, Math.floor((frameWidth - 48) * zoom));
+  // The compact preview (no chrome) fills its box edge to edge; the full
+  // reader keeps the padded, centred sheet.
+  const pageGutter = showChrome ? 48 : 0;
+  const pageWidth = Math.max(280, Math.floor((frameWidth - pageGutter) * zoom));
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-[#eef1f6] dark:bg-[#1a2030]">
@@ -310,7 +313,7 @@ export function PdfViewport({
           </div>
         ) : null}
         {status === "ready" ? (
-          <div className="flex flex-col items-center gap-4 px-6 py-6">
+          <div className={`flex flex-col items-center ${showChrome ? "gap-4 px-6 py-6" : "gap-2"}`}>
             {pages.map((page, index) => (
               <PdfPageCanvas key={index} page={page} width={pageWidth} rotation={rotation} />
             ))}
