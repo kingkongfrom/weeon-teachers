@@ -72,7 +72,7 @@ export function CircularPreviewPane({
         ) : null}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--wa-panel)] p-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--wa-panel)] px-3 pb-3 pt-3">
         <div className="relative flex min-h-0 flex-1 flex-col">
         {loading ? (
           <div className="flex h-full min-h-[280px] items-center justify-center">
@@ -113,15 +113,18 @@ export function CircularPreviewPane({
           </div>
         )}
 
-        {/* Phones: title bottom-left and category bottom-right, laid over the
-            preview itself instead of a separate row. */}
+        {/* Title and category laid over the bottom of the preview, with a short
+            gradient behind them so the text stays readable on any page. */}
+        {detail ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] bg-gradient-to-t from-black/80 via-black/45 to-transparent" />
+        ) : null}
         {detail ? (
           <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-[15px] font-semibold leading-tight text-[var(--wa-text)]">
+              <h2 className="truncate text-[15px] font-semibold leading-tight text-white drop-shadow-sm">
                 {detail.title}
               </h2>
-              <p className="truncate text-[12px] leading-tight text-[var(--wa-muted)]">
+              <p className="truncate text-[12px] leading-tight text-white/75">
                 {detail.recipientsLabel || t("comms.noRecipients")}
               </p>
             </div>
