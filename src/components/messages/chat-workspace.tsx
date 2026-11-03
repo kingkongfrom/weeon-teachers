@@ -415,9 +415,21 @@ function ChatPickerBody({
   const [kindFilter, setKindFilter] = useState<"all" | NonNullable<ChatContact["kind"]>>("all");
   const [pendingKey, setPendingKey] = useState<string | null>(null);
 
+  // A conversation is identified by the account, so the picker shows one row
+  // per person even when the directory lists them once per class/child.
+  const uniqueContacts = useMemo(() => {
+    const seen = new Set<string>();
+    return contacts.filter((contact) => {
+      const identity = `${contact.kind ?? ""}::${contact.key.toLowerCase()}`;
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    });
+  }, [contacts]);
+
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return contacts.filter((contact) => {
+    return uniqueContacts.filter((contact) => {
       if (kindFilter !== "all" && contact.kind !== kindFilter) return false;
       if (!term) return true;
       return (
@@ -426,7 +438,7 @@ function ChatPickerBody({
         contact.studentName.toLowerCase().includes(term)
       );
     });
-  }, [contacts, query, kindFilter]);
+  }, [uniqueContacts, query, kindFilter]);
 
   const groups = useMemo(() => {
     const byKind = new Map<NonNullable<ChatContact["kind"]>, ChatContact[]>();
@@ -479,10 +491,11 @@ function ChatPickerBody({
           { key: "student", label: m.chatRoleStudent },
         ] as const).map((chip) => {
           const active = kindFilter === chip.key;
+          // Counted from the de-duplicated list so the chips agree with rows.
           const count =
             chip.key === "all"
-              ? contacts.length
-              : contacts.filter((c) => c.kind === chip.key).length;
+              ? uniqueContacts.length
+              : uniqueContacts.filter((c) => c.kind === chip.key).length;
           return (
             <button
               key={chip.key}
