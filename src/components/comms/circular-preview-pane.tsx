@@ -131,9 +131,9 @@ export function CircularPreviewPane({
           </div>
         )}
 
-        {/* Title and category laid over the bottom of the preview, with a short
-            gradient behind them so the text stays readable on any page. */}
-        {detail ? (
+        {/* The caption only appears once the page has rendered: showing it over
+            an empty box reads as a broken, half-loaded preview. */}
+        {detail && !loading ? (
           <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 rounded-xl bg-white/65 px-3 py-2 shadow-md ring-1 ring-black/10 backdrop-blur-lg dark:bg-neutral-900/60 dark:ring-white/15">
             <div className="min-w-0">
               <h2 className="truncate text-[15px] font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
