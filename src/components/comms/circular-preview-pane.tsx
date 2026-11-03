@@ -193,7 +193,7 @@ export function CircularPreviewPane({
             </button>
           ) : null}
         </div>
-      </div>
+        </div>
       </div>
 
       {primary?.kind === "pdf" && primary.url ? (
