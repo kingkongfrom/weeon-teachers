@@ -116,7 +116,7 @@ export function CircularPreviewPane({
         {/* Title and category laid over the bottom of the preview, with a short
             gradient behind them so the text stays readable on any page. */}
         {detail ? (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] bg-gradient-to-t from-black/80 via-black/45 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] bg-gradient-to-t from-black/45 via-black/20 to-transparent" />
         ) : null}
         {detail ? (
           <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
@@ -130,8 +130,11 @@ export function CircularPreviewPane({
             </div>
             {detail.categoryName && detail.categoryColor ? (
               <span
-                className="shrink-0 rounded-full border px-3 py-1 text-xs font-bold"
-                style={categoryBadgeStyle(detail.categoryColor)}
+                className="shrink-0 rounded-full border px-3 py-1 text-xs font-bold shadow-sm"
+                style={{
+                  ...categoryBadgeStyle(detail.categoryColor),
+                  backgroundColor: "#ffffff",
+                }}
               >
                 {detail.categoryName}
               </span>
