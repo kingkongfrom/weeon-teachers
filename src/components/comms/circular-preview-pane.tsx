@@ -72,21 +72,26 @@ export function CircularPreviewPane({
         ) : null}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--wa-panel)] px-3 pb-3 pt-3">
-        <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--wa-panel)] px-3 pb-3 pt-3 lg:items-center lg:justify-center">
+        <div className="relative flex min-h-0 w-full flex-1 flex-col lg:h-full lg:max-h-full lg:max-w-[min(460px,58vh)] lg:flex-none lg:self-center">
         {loading ? (
           <div className="flex h-full min-h-[280px] items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-[var(--wa-muted)]" />
           </div>
         ) : primary?.kind === "pdf" && primary.url ? (
-          <div className="flex min-h-[280px] flex-1 flex-col overflow-hidden rounded-xl border border-[var(--wa-border)]">
+          <button
+            type="button"
+            onClick={() => setPdfFullscreen(true)}
+            aria-label={t("comms.documents.expand")}
+            className="group flex min-h-[280px] w-full flex-1 cursor-zoom-in flex-col overflow-hidden rounded-xl border border-[var(--wa-border)] lg:h-full lg:max-h-full"
+          >
             <PdfViewport
               key={primary.url}
               url={primary.url}
               showChrome={false}
               onExpand={() => setPdfFullscreen(true)}
             />
-          </div>
+          </button>
         ) : primary?.kind === "image" && primary.url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
