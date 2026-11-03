@@ -306,8 +306,8 @@ export function CircularesWorkspace({
   return (
     <>
       <div className="wa-chat flex h-full min-h-0 overflow-hidden bg-[var(--wa-panel)]">
-        {/* Narrow, fixed-width list rail; the reader takes the rest. */}
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,25%)_minmax(0,1fr)]">
+        {/* Fixed 300px list rail; the reader takes the rest of the width. */}
+        <div className="grid min-h-0 flex-1 md:grid-cols-[18.75rem_minmax(0,1fr)]">
           <aside
             className={cn(
               "flex min-h-0 flex-col border-[var(--wa-border)] bg-[var(--wa-header)]",
@@ -329,7 +329,7 @@ export function CircularesWorkspace({
                 <button
                   type="button"
                   onClick={() => setPublishOpen(true)}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--wa-fab)] px-3.5 text-[13px] font-semibold text-[var(--wa-fab-ink)] shadow-sm transition-all hover:brightness-105 active:scale-95"
+                  className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--wa-fab)] px-3.5 text-[13px] font-semibold text-[var(--wa-fab-ink)] shadow-sm transition-all hover:brightness-105 active:scale-95"
                 >
                   <Plus className="h-4 w-4" aria-hidden />
                   {t("comms.newCircular")}

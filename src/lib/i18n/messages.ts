@@ -16,7 +16,7 @@ const es = {
   circulares: {
     title: "Circulares",
     description: "Avisos oficiales en PDF para los grupos que impartes.",
-    newCircular: "Nueva circular",
+    newCircular: "Publicar",
     listTitle: "Publicadas",
     empty: "Aún no has publicado circulares.",
     columnTitle: "Título",
@@ -1568,7 +1568,7 @@ const en: Messages = {
   circulares: {
     title: "Notices",
     description: "Official PDF notices for the groups you teach.",
-    newCircular: "New notice",
+    newCircular: "Publish",
     listTitle: "Published",
     empty: "You have not published any notices yet.",
     columnTitle: "Title",
