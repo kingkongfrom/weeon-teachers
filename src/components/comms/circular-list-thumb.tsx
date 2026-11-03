@@ -74,7 +74,7 @@ export function CircularListThumb({
     <span
       ref={frameRef}
       className={cn(
-        "relative inline-flex h-[44px] w-[35px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--wa-border)] bg-white shadow-sm dark:bg-neutral-100",
+        "relative inline-flex h-[56px] w-[44px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--wa-border)] bg-white shadow-sm sm:h-[44px] sm:w-[35px] dark:bg-neutral-100",
         className,
       )}
       aria-hidden
