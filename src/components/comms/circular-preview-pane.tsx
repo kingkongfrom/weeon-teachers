@@ -39,11 +39,13 @@ export function CircularPreviewPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--wa-header)]">
-      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 py-2.5">
+      {/* Phones read the title and category under the preview instead, so the
+          header row is desktop-only. */}
+      <div className="hidden shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 py-2.5 lg:flex">
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--wa-icon)] hover:bg-[var(--wa-hover)] lg:hidden"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--wa-icon)] hover:bg-[var(--wa-hover)]"
           aria-label={t("comms.backToCircularAudience")}
         >
           <ArrowLeft className="h-5 w-5" />
@@ -114,6 +116,28 @@ export function CircularPreviewPane({
       {detail?.description ? (
         <div className="shrink-0 border-t border-border px-5 py-3 text-sm font-medium text-[var(--wa-text)]">
           {detail.description}
+        </div>
+      ) : null}
+
+      {/* Phones: title bottom-left, category bottom-right (the header is hidden). */}
+      {detail ? (
+        <div className="flex shrink-0 items-end justify-between gap-3 border-t border-border bg-[var(--wa-header)] px-4 py-3 lg:hidden">
+          <div className="min-w-0">
+            <h2 className="truncate text-[16px] font-semibold leading-tight text-[var(--wa-text)]">
+              {detail.title}
+            </h2>
+            <p className="truncate text-[12.5px] leading-tight text-[var(--wa-muted)]">
+              {detail.recipientsLabel || t("comms.noRecipients")}
+            </p>
+          </div>
+          {detail.categoryName && detail.categoryColor ? (
+            <span
+              className="shrink-0 rounded-full border px-3 py-1 text-xs font-bold"
+              style={categoryBadgeStyle(detail.categoryColor)}
+            >
+              {detail.categoryName}
+            </span>
+          ) : null}
         </div>
       ) : null}
 
