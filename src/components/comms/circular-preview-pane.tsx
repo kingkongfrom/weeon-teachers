@@ -134,7 +134,7 @@ export function CircularPreviewPane({
         {/* Title and category laid over the bottom of the preview, with a short
             gradient behind them so the text stays readable on any page. */}
         {detail ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 rounded-xl bg-white/95 px-3 py-2 shadow-md ring-1 ring-black/10 backdrop-blur-sm dark:bg-neutral-900/95 dark:ring-white/15">
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 rounded-xl bg-white/80 px-3 py-2 shadow-md ring-1 ring-black/10 backdrop-blur-md dark:bg-neutral-900/75 dark:ring-white/15">
             <div className="min-w-0">
               <h2 className="truncate text-[15px] font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
                 {detail.title}
