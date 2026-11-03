@@ -230,6 +230,17 @@ export function PdfViewport({
   const heightFit = frameHeight > 0 ? Math.floor(frameHeight / pageRatio) : widthFit;
   const pageWidth = showChrome ? widthFit : Math.max(widthFit, heightFit);
 
+  // While loading there is no page to measure. Mirror the same fit math with
+  // an A4 ratio so the placeholder is the exact size of the incoming sheet in
+  // the compact preview, and the letterboxed sheet in the full reader.
+  const placeholderRatio = 1.4142;
+  const placeholderWidth = showChrome
+    ? Math.min(frameWidth > 0 ? frameWidth - pageGutter : 280, (frameHeight || Infinity) / placeholderRatio)
+    : Math.max(
+        frameWidth > 0 ? frameWidth - pageGutter : 280,
+        frameHeight > 0 ? frameHeight / placeholderRatio : 0,
+      );
+
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-[#eef1f6] dark:bg-[#1a2030]">
       {showChrome || topBar ? (
@@ -317,10 +328,36 @@ export function PdfViewport({
         className={`min-h-0 flex-1 ${showChrome ? "overflow-auto" : "flex items-center justify-center overflow-hidden bg-[var(--wa-panel)]"}`}
       >
         {status === "loading" ? (
-          <div className="flex h-full min-h-[280px] items-center justify-center">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground/50">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              {t("pdf.loading")}
+          // Same box the page will occupy (width from the frame, A4 ratio), so
+          // nothing shifts when the document paints.
+          <div
+            className={
+              showChrome
+                ? "flex h-full min-h-[280px] items-start justify-center px-6 py-6"
+                : "flex h-full w-full items-center justify-center"
+            }
+            role="status"
+            aria-live="polite"
+            aria-label={t("pdf.loading")}
+          >
+            <div
+              className="flex animate-pulse flex-col gap-3 rounded-sm bg-white p-6 shadow-[0_12px_40px_-18px_rgba(15,23,42,0.45)] dark:bg-neutral-100"
+              style={{
+                width: `${Math.max(1, Math.floor(placeholderWidth))}px`,
+                aspectRatio: `1 / ${placeholderRatio}`,
+              }}
+            >
+              <div className="h-2.5 w-1/3 rounded bg-neutral-200" />
+              <div className="h-2 w-1/5 rounded bg-neutral-200/70" />
+              <div className="mt-4 flex flex-1 flex-col gap-2">
+                {Array.from({ length: 10 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="h-2 rounded bg-neutral-200/70"
+                    style={{ width: `${[100, 96, 92, 88, 97, 74, 100, 94, 86, 58][index]}%` }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         ) : null}
