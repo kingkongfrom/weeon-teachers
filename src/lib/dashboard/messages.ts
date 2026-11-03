@@ -302,31 +302,27 @@ export const loadMessageContacts = cache(async (): Promise<MessageContact[]> => 
     student_name?: string | null;
   }>;
 
-  // The RPC fans a guardian out per child; a person must appear once in the
-  // picker. Keep the first row and merge the extra students into the hint.
-  const byKey = new Map<string, (typeof rows)[number]>();
-  for (const row of rows) {
-    const key = row.recipient_key?.trim();
-    if (!key) continue;
-    const existing = byKey.get(key);
-    if (!existing) {
-      byKey.set(key, row);
-      continue;
-    }
-    const merged = row.student_name?.trim();
-    if (merged && !existing.student_name?.includes(merged)) {
-      existing.student_name = [existing.student_name, merged].filter(Boolean).join(", ");
-    }
-  }
-
-  const contacts = [...byKey.values()].map((row) => ({
-    key: row.recipient_key,
-    name: row.full_name || "Contacto",
-    kind: row.kind,
-    context: row.context ?? "",
-    classId: row.class_id ?? null,
-    studentName: row.student_name?.trim() || undefined,
-  }));
+  // One row per (account, class): a guardian covering two classes legitimately
+  // appears twice, each labelled with its class and child. Collapse only exact
+  // repeats of the same account in the same class.
+  const seen = new Set<string>();
+  const contacts = rows
+    .filter((row) => {
+      const key = row.recipient_key?.trim();
+      if (!key) return false;
+      const dedupe = `${row.kind}::${key}::${row.context ?? ""}::${row.student_name ?? ""}`;
+      if (seen.has(dedupe)) return false;
+      seen.add(dedupe);
+      return true;
+    })
+    .map((row) => ({
+      key: row.recipient_key,
+      name: row.full_name || "Contacto",
+      kind: row.kind,
+      context: row.context ?? "",
+      classId: row.class_id ?? null,
+      studentName: row.student_name?.trim() || undefined,
+    }));
 
   return attachMessageContactEmails(session, contacts);
 });

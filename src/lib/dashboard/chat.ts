@@ -60,22 +60,11 @@ export const loadChatGuardianContacts = cache(async (): Promise<ChatContact[]> =
     const context = row.context?.trim() ?? "";
     const studentName =
       row.kind === "student" ? "" : (row.student_name?.trim() ?? "");
-    // One row per person. The RPC fans a guardian out per child (the same
-    // account appears once per student), which showed the same parent — and
-    // photo — several times in the new-chat picker. The conversation belongs to
-    // the account, so the person is the key.
-    const dedupe = key.toLowerCase();
-    if (seen.has(dedupe)) {
-      // Keep the first class context, but remember the extra student so the
-      // row still hints that this guardian covers more than one child.
-      const existing = contacts.find((contact) => contact.key === key);
-      if (existing && studentName && !existing.context.includes(studentName)) {
-        existing.studentName = [existing.studentName, studentName]
-          .filter(Boolean)
-          .join(", ");
-      }
-      continue;
-    }
+    // The RPC emits one row per (account, class): a guardian covering two
+    // classes legitimately appears twice, each labelled with its class and
+    // child. Collapse only exact repeats of the same account in the same class.
+    const dedupe = `${row.kind}::${key}::${context}::${studentName}`;
+    if (seen.has(dedupe)) continue;
     seen.add(dedupe);
     contacts.push({
       key,
