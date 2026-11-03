@@ -26,7 +26,9 @@ export function PdfThumb({ url, className }: { url: string; className?: string }
         const canvas = canvasRef.current;
         if (!canvas || cancelled) return;
         const base = page.getViewport({ scale: 1 });
-        const scale = 320 / Math.min(base.width, base.height);
+        // 320px covered a large card; a list thumbnail only needs ~2x its
+        // 44px box, and pdf.js cost scales with the raster size.
+        const scale = 120 / Math.min(base.width, base.height);
         const viewport = page.getViewport({ scale });
         canvas.width = Math.floor(viewport.width);
         canvas.height = Math.floor(viewport.height);

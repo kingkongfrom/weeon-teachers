@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, FileText, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
-import { CircularListThumb } from "@/components/comms/circular-list-thumb";
+import { CircularListThumb, loadCircularThumb } from "@/components/comms/circular-list-thumb";
 import { CircularPreviewPane } from "@/components/comms/circular-preview-pane";
 import { NewCategoryDialog } from "@/components/comms/new-category-dialog";
 import { PublishCircularDialog } from "@/components/comms/publish-circular-dialog";
@@ -208,6 +208,8 @@ export function CircularesWorkspace({
     setSelectedId(documentId);
     setPreviewLoading(true);
     setPreviewDetail(null);
+    // Warm the signed thumbnail in parallel — the row usually already has it.
+    void loadCircularThumb(documentId);
     const detail = await fetchTeacherCircularDetail(documentId);
     if (request !== previewRequest.current) return;
     setPreviewDetail(detail);
