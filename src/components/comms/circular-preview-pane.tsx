@@ -116,24 +116,23 @@ export function CircularPreviewPane({
         {/* Title and category laid over the bottom of the preview, with a short
             gradient behind them so the text stays readable on any page. */}
         {detail ? (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] bg-gradient-to-t from-black/45 via-black/20 to-transparent" />
-        ) : null}
-        {detail ? (
           <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-[15px] font-semibold leading-tight text-white drop-shadow-sm">
+              <h2 className="truncate text-[15px] font-semibold leading-tight text-[var(--wa-text)]">
                 {detail.title}
               </h2>
-              <p className="truncate text-[12px] leading-tight text-white/75">
+              <p className="truncate text-[12px] leading-tight text-[var(--wa-muted)]">
                 {detail.recipientsLabel || t("comms.noRecipients")}
               </p>
             </div>
             {detail.categoryName && detail.categoryColor ? (
               <span
-                className="shrink-0 rounded-full border px-3 py-1 text-xs font-bold shadow-sm"
+                className="shrink-0 rounded-full border bg-transparent px-3 py-1 text-[11px] font-semibold"
                 style={{
                   ...categoryBadgeStyle(detail.categoryColor),
-                  backgroundColor: "#ffffff",
+                  backgroundColor: "transparent",
+                  borderColor: detail.categoryColor,
+                  borderWidth: "0.5px",
                 }}
               >
                 {detail.categoryName}
