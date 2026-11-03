@@ -120,6 +120,26 @@ export function CircularesWorkspace({
       }),
     [circulars, localCategoriesByDoc, categories],
   );
+
+  const previewWithCategory = useMemo(() => {
+    if (!previewDetail) return previewDetail;
+    // The pane fetches its own detail, so a category move made from the list
+    // would leave the preview pill stale until a reload. The optimistic list
+    // row already knows the new category, so fold it in.
+    const row = withLocalCategory.find((item) => item.id === previewDetail.id);
+    if (!row) return previewDetail;
+    if (
+      row.categoryName === previewDetail.categoryName &&
+      row.categoryColor === previewDetail.categoryColor
+    ) {
+      return previewDetail;
+    }
+    return {
+      ...previewDetail,
+      categoryName: row.categoryName,
+      categoryColor: row.categoryColor,
+    };
+  }, [previewDetail, withLocalCategory]);
   const scoped = inTrash ? trash : withLocalCategory;
   const totalCount = withLocalCategory.length;
   const uncategorizedCount = useMemo(
@@ -634,7 +654,7 @@ export function CircularesWorkspace({
                   </button>
                 </div>
                 <CircularPreviewPane
-                  detail={previewDetail}
+                  detail={previewWithCategory}
                   loading={previewLoading}
                   onClose={clearSelection}
                   onDelete={!inTrash ? () => setTrashTarget(selectedSummary) : undefined}
