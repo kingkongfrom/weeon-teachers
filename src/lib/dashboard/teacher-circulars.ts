@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { attachmentKind } from "@/lib/comms/attachment-mime";
+import { attachmentKind, inferAttachmentMimeType } from "@/lib/comms/attachment-mime";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
 
 export type TeacherCircularRow = {
@@ -136,6 +136,38 @@ export async function loadTeacherCircularEditable(
     categoryId: (document.category_id as string | null) ?? null,
     targets: parsed,
   };
+}
+
+/**
+ * Signed URL of the first attachment of one of the teacher's circulares, for
+ * the list thumbnail. Kept separate from the detail RPC so a list can sign rows
+ * lazily instead of paying for every circular up front.
+ */
+export async function loadTeacherCircularThumbnail(
+  documentId: string,
+): Promise<{ url: string; kind: "pdf" | "image" } | null> {
+  const session = await getCommsActor();
+  if (!session) return null;
+
+  const { data: attachments } = await session.actor
+    .from("document_attachments")
+    .select("storage_path, mime_type, file_name, position")
+    .eq("document_id", documentId)
+    .eq("tenant_id", session.tenantId)
+    .order("position", { ascending: true })
+    .limit(1);
+  const first = attachments?.[0];
+  if (!first?.storage_path) return null;
+
+  const mime = inferAttachmentMimeType(first.file_name as string, first.mime_type as string | null);
+  const kind = mime === "application/pdf" ? "pdf" : mime.startsWith("image/") ? "image" : null;
+  if (!kind) return null;
+
+  const { data: signed } = await session.actor.storage
+    .from("school-documents")
+    .createSignedUrl(first.storage_path as string, 3600);
+  if (!signed?.signedUrl) return null;
+  return { url: signed.signedUrl, kind };
 }
 
 /**

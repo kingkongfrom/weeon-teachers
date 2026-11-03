@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, FileText, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
+import { CircularListThumb } from "@/components/comms/circular-list-thumb";
 import { CircularPreviewPane } from "@/components/comms/circular-preview-pane";
 import { NewCategoryDialog } from "@/components/comms/new-category-dialog";
 import { PublishCircularDialog } from "@/components/comms/publish-circular-dialog";
@@ -585,24 +586,10 @@ export function CircularesWorkspace({
                             }}
                             className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-left"
                           >
-                            {/* Miniature of the sheet: the category tint runs
-                                along the page with a text block underneath. */}
-                            <span
-                              className="relative inline-flex h-[52px] w-[42px] shrink-0 flex-col overflow-hidden rounded-md border bg-white shadow-sm dark:bg-neutral-100"
-                              style={{ borderColor: `${row.categoryColor || "#5e25cc"}55` }}
-                              aria-hidden
-                            >
-                              <span
-                                className="h-2 w-full shrink-0"
-                                style={{ backgroundColor: row.categoryColor || "#5e25cc" }}
-                              />
-                              <span className="flex flex-1 flex-col justify-center gap-[3px] px-1.5 py-1">
-                                <span className="h-[2px] w-full rounded-full bg-neutral-300" />
-                                <span className="h-[2px] w-4/5 rounded-full bg-neutral-300" />
-                                <span className="h-[2px] w-full rounded-full bg-neutral-300" />
-                                <span className="h-[2px] w-3/5 rounded-full bg-neutral-300" />
-                              </span>
-                            </span>
+                            <CircularListThumb
+                              documentId={row.id}
+                              categoryColor={row.categoryColor}
+                            />
                             <span className="flex min-w-0 flex-1 flex-col gap-1">
                               <span className="flex items-baseline gap-2">
                                 <span className="min-w-0 flex-1 truncate text-[16px] text-[var(--wa-text)]">

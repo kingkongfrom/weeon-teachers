@@ -7,6 +7,7 @@ import { getCommsActor } from "@/lib/dashboard/comms-session";
 import {
   loadTeacherCircularDetail,
   loadTeacherCircularEditable,
+  loadTeacherCircularThumbnail,
   type TeacherCircularDetail,
   type TeacherCircularEditable,
 } from "@/lib/dashboard/teacher-circulars";
@@ -29,6 +30,14 @@ export async function fetchTeacherCircularDetail(
 ): Promise<TeacherCircularDetail | null> {
   if (!uuidSchema.safeParse(documentId).success) return null;
   return loadTeacherCircularDetail(documentId);
+}
+
+/** Signed first-page URL for a list thumbnail (see CircularListThumb). */
+export async function fetchTeacherCircularThumbnail(
+  documentId: string,
+): Promise<{ url: string; kind: "pdf" | "image" } | null> {
+  if (!uuidSchema.safeParse(documentId).success) return null;
+  return loadTeacherCircularThumbnail(documentId);
 }
 
 /** Form values for editing one of the teacher's own circulares. */

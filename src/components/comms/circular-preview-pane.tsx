@@ -139,6 +139,10 @@ export function CircularPreviewPane({
               <h2 className="truncate text-[15px] font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
                 {detail.title}
               </h2>
+              <p className="flex items-center gap-1 truncate text-[12px] leading-tight text-neutral-600 dark:text-neutral-300">
+                <Users className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="truncate">{detail.recipientsLabel || t("comms.noRecipients")}</span>
+              </p>
             </div>
             {detail.categoryName && detail.categoryColor ? (
               <span
