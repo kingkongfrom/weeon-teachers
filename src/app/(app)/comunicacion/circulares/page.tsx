@@ -24,7 +24,7 @@ export default async function TeacherCircularesPage() {
   ]);
 
   return (
-    <div className="h-[calc(100dvh-4rem)] min-h-[28rem] md:h-[calc(100dvh-9rem)]">
+    <div className="h-full min-h-0">
       <CircularesWorkspace
         circulars={circulars}
         trash={trash}

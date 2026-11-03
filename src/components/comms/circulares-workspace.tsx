@@ -305,8 +305,9 @@ export function CircularesWorkspace({
 
   return (
     <>
-      <div className="wa-chat flex h-full min-h-0 overflow-hidden bg-[var(--wa-panel)] md:rounded-2xl md:border md:border-[var(--wa-border)] md:shadow-[var(--wa-shadow)]">
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
+      <div className="wa-chat flex h-full min-h-0 overflow-hidden bg-[var(--wa-panel)]">
+        {/* Narrow, fixed-width list rail; the reader takes the rest. */}
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,25%)_minmax(0,1fr)]">
           <aside
             className={cn(
               "flex min-h-0 flex-col border-[var(--wa-border)] bg-[var(--wa-header)]",
