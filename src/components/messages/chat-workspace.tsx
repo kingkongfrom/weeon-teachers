@@ -187,7 +187,8 @@ export function ChatWorkspace({
             )}
           >
             <div className="shrink-0 px-4 pb-3 pt-4 sm:px-5 md:px-4">
-              <label className="flex items-center gap-2.5 rounded-full border border-transparent bg-[var(--wa-search)] px-3.5 py-2.5 transition-colors focus-within:border-[var(--wa-ring)] focus-within:ring-2 focus-within:ring-[var(--wa-ring-soft)]">
+              <div className="flex items-center gap-2">
+              <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full border border-transparent bg-[var(--wa-search)] px-3.5 py-2.5 transition-colors focus-within:border-[var(--wa-ring)] focus-within:ring-2 focus-within:ring-[var(--wa-ring-soft)]">
                 <Search className="h-[17px] w-[17px] shrink-0 text-[var(--wa-muted)]" />
                 <input
                   value={listQuery}
@@ -206,6 +207,20 @@ export function ChatWorkspace({
                   </button>
                 ) : null}
               </label>
+              {/* With a conversation open the floating button would sit over the
+                  composer, so the action lives here instead. */}
+              {selectedId ? (
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(true)}
+                  aria-label={m.chatNew}
+                  title={m.chatNew}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0891B2] text-white transition-colors hover:bg-[#0e7490]"
+                >
+                  <MessageSquarePlus className="h-[18px] w-[18px]" aria-hidden />
+                </button>
+              ) : null}
+              </div>
 
               <div className="mt-3 flex gap-2">
                 {(["all", "unread"] as const).map((filter) => {
@@ -345,14 +360,18 @@ export function ChatWorkspace({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setPickerOpen(true)}
-        aria-label={m.chatNew}
-        className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-lg transition-all hover:bg-[#0e7490] active:scale-95 lg:bottom-8 lg:right-8"
-      >
-        <MessageSquarePlus className="h-6 w-6" aria-hidden />
-      </button>
+      {/* Floating only on the empty state: with a conversation open it would
+          sit over the composer, so the list header carries a compact button. */}
+      {selectedId ? null : (
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          aria-label={m.chatNew}
+          className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-lg transition-all hover:bg-[#0e7490] active:scale-95 lg:bottom-8 lg:right-8"
+        >
+          <MessageSquarePlus className="h-6 w-6" aria-hidden />
+        </button>
+      )}
 
       <ChatPicker
         open={pickerOpen}
