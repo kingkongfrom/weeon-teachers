@@ -333,7 +333,7 @@ export function PdfViewport({
           <div
             className={
               showChrome
-                ? "flex flex-col items-center gap-4 px-6 py-6"
+                ? "flex w-max min-w-full flex-col items-center gap-4 px-6 py-6"
                 : "flex h-full w-full items-center justify-center overflow-hidden"
             }
           >
@@ -377,9 +377,12 @@ function PdfPageCanvas({ page, width, rotation = 0 }: { page: PdfPageHandle; wid
   }, [page, width, rotation]);
 
   return (
+    // Width comes from the render viewport, so the canvas must never be
+    // clamped by CSS: max-w-full would squeeze the width while the height
+    // stayed, stretching the page. Overflow scrolls instead.
     <canvas
       ref={canvasRef}
-      className="max-w-full rounded-sm bg-white shadow-[0_12px_40px_-18px_rgba(15,23,42,0.45)]"
+      className="shrink-0 rounded-sm bg-white shadow-[0_12px_40px_-18px_rgba(15,23,42,0.45)]"
     />
   );
 }
