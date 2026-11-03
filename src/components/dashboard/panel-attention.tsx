@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ClipboardCheck, FileCheck, Inbox, MessageCircle } from "lucide-react";
+import { ChevronRight, ClipboardCheck, FileCheck, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PanelAttention } from "@/lib/dashboard/panel-attention";
 import { hubToneSurface, TONE_WELL, type Tone } from "@/lib/dashboard/tones";
@@ -29,15 +29,8 @@ export function PanelAttentionStrip({ attention, className }: PanelAttentionProp
           ...banner("yellow"),
         }
       : null,
-    attention.unreadChatCount > 0
-      ? {
-          key: "chat",
-          href: "/comunicacion/chat",
-          icon: MessageCircle,
-          label: t.panel.attention.unreadChat(attention.unreadChatCount),
-          ...banner("green"),
-        }
-      : null,
+    // The unread chat count lives on the Chat nav item and shortcut; this
+    // strip would repeat the same number as a card.
     attention.justificationCount > 0
       ? {
           key: "justifications",
