@@ -39,9 +39,9 @@ export function CircularPreviewPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--wa-header)]">
-      {/* Phones read the title and category under the preview instead, so the
-          header row is desktop-only. */}
-      <div className="hidden shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 py-2.5 lg:flex">
+      {/* The title and category are laid over the preview at every width, so
+          this header row stays hidden. */}
+      <div className="hidden shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 py-2.5">
         <button
           type="button"
           onClick={onClose}
@@ -116,14 +116,11 @@ export function CircularPreviewPane({
         {/* Phones: title bottom-left and category bottom-right, laid over the
             preview itself instead of a separate row. */}
         {detail ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 lg:hidden">
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-[15px] font-semibold leading-tight text-[var(--wa-text)]">
                 {detail.title}
               </h2>
-              <p className="truncate text-[12px] leading-tight text-[var(--wa-muted)]">
-                {detail.recipientsLabel || t("comms.noRecipients")}
-              </p>
             </div>
             {detail.categoryName && detail.categoryColor ? (
               <span
@@ -145,17 +142,17 @@ export function CircularPreviewPane({
       ) : null}
 
       <div className="border-t border-border">
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-[var(--wa-header)] px-4 py-3">
+        <div className="flex shrink-0 flex-nowrap items-center justify-between gap-3 bg-[var(--wa-header)] px-[15px] py-3">
         <span
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--wa-muted)]"
+          className="inline-flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold text-[var(--wa-muted)]"
           title={detail?.recipientsLabel}
         >
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-icon)]">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--wa-border)] text-[var(--wa-icon)]">
             <Users className="h-4 w-4" />
           </span>
-          {detail?.recipientsLabel}
+          <span className="truncate">{detail?.recipientsLabel}</span>
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             disabled

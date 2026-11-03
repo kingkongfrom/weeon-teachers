@@ -159,12 +159,16 @@ export function PdfViewport({
   const [zoomIndex, setZoomIndex] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [frameWidth, setFrameWidth] = useState(0);
+  const [frameHeight, setFrameHeight] = useState(0);
   const zoom = ZOOM_STEPS[zoomIndex] ?? 1;
 
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
-    const measure = () => setFrameWidth(frame.clientWidth);
+    const measure = () => {
+      setFrameWidth(frame.clientWidth);
+      setFrameHeight(frame.clientHeight);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(frame);
@@ -211,10 +215,20 @@ export function PdfViewport({
     };
   }, [url]);
 
-  // The compact preview (no chrome) fills its box edge to edge; the full
-  // reader keeps the padded, centred sheet.
+  // The compact preview (no chrome) fits the first page to the box — width or
+  // height, whichever is tighter — so it fills the thumbnail with no dead
+  // space below. The full reader keeps the padded, centred sheet.
   const pageGutter = showChrome ? 48 : 0;
-  const pageWidth = Math.max(280, Math.floor((frameWidth - pageGutter) * zoom));
+  const firstPage = pages[0];
+  const pageRatio = firstPage
+    ? (() => {
+        const base = firstPage.getViewport({ scale: 1 });
+        return base.height / base.width;
+      })()
+    : 1.4142;
+  const widthFit = Math.max(280, Math.floor((frameWidth - pageGutter) * zoom));
+  const heightFit = frameHeight > 0 ? Math.floor(frameHeight / pageRatio) : widthFit;
+  const pageWidth = showChrome ? widthFit : Math.min(widthFit, heightFit);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-[#eef1f6] dark:bg-[#1a2030]">
@@ -313,7 +327,11 @@ export function PdfViewport({
           </div>
         ) : null}
         {status === "ready" ? (
-          <div className={`flex flex-col items-center ${showChrome ? "gap-4 px-6 py-6" : "gap-2"}`}>
+          <div
+            className={`flex flex-col items-center ${
+              showChrome ? "gap-4 px-6 py-6" : "h-full justify-center gap-2"
+            }`}
+          >
             {pages.map((page, index) => (
               <PdfPageCanvas key={index} page={page} width={pageWidth} rotation={rotation} />
             ))}
