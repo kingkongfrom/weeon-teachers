@@ -33,8 +33,9 @@ it is, and what an agent must not undo.*
 | Performance harness | `src/lib/perf/nav-timing.ts`, `scripts/perf-aula.mjs`, `package.json` (`perf:aula`) | new |
 | Docs | `docs/aula-virtual.md` (§ Loading skeletons note, *Materias* bullets, § Performance) | changed |
 
-Everything above is **uncommitted** in the working tree except the pre-existing
-`1506d87` / `79b592a` commits on `main`, which this work builds on.
+Everything above is **committed** as of 3 Nov 2026 (when this was written it
+was uncommitted, building on the pre-existing `1506d87` / `79b592a` commits on
+`main`).
 
 ---
 
