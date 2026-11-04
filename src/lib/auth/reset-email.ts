@@ -2,7 +2,12 @@ import "server-only";
 
 import { Resend } from "resend";
 import { loadWordmarkAttachment } from "@/lib/email/branding";
-import { renderWeeonLetter, weeonLetterHello, WEEON_LETTER } from "@/lib/email/letter";
+import {
+  escapeHtml,
+  renderWeeonLetter,
+  weeonLetterHello,
+  WEEON_LETTER,
+} from "@/lib/email/letter";
 
 export type SendPasswordResetEmailInput = {
   to: string;
@@ -96,13 +101,4 @@ export async function sendPasswordResetEmail(
     const message = err instanceof Error ? err.message : "Error desconocido";
     return { success: false, error: message };
   }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
