@@ -13,6 +13,18 @@
    drop from three columns to two; landscape iPads keep the desktop split. */
 @custom-variant tablet-portrait (@media (min-width: 768px) and (max-width: 1023.98px) and (orientation: portrait));
 
+/*
+ * The Horarios timetable shows one day at a time on phones AND on a tablet in
+ * portrait, for the same reason: five day columns need ~150px each, which a
+ * phone and an iPad held upright do not both have once the page padding is out.
+ * Composition is done in the class name (`hidden phone:block
+ * tablet-portrait:block`) because @custom-variant takes a SINGLE media
+ * condition — a comma-separated list emits an invalid selector and fails the
+ * build.
+ */
+@custom-variant phone (@media (max-width: 767.98px));
+@custom-variant tablet-landscape (@media (min-width: 768px) and (max-width: 1023.98px) and (orientation: landscape));
+
 :root {
   color-scheme: light;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than

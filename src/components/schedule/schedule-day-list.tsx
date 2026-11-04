@@ -73,7 +73,7 @@ export function ScheduleDayList({
     : [];
 
   return (
-    <div className="md:hidden">
+    <div className="hidden phone:block tablet-portrait:block">
       {/* Day switcher. Counts per day so an empty day is visible before tapping. */}
       <div
         role="tablist"
