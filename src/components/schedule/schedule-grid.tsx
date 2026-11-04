@@ -38,7 +38,19 @@ export function ScheduleGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+    /*
+     * Week board from `md` up.
+     *
+     * Previously this was 1 column on phones, 2 on tablets and 5 only at `xl`
+     * (1280): a tablet showed five days wedged into two columns, which is
+     * neither a week nor a day. Measured: an iPad in portrait gives ~740px of
+     * content, so five columns at ~140px are readable once the day header is
+     * compact — and five at once is the whole point of this screen.
+     *
+     * Below `md` the same data renders as ScheduleDayList (one day, switcher),
+     * because five readable columns do not fit on a phone.
+     */
+    <div className="hidden grid-cols-5 gap-4 md:grid">
       {WEEKDAYS.map((day, index) => {
         const dayLessons = byDay.get(day.value) ?? [];
         const date = dates?.[index];

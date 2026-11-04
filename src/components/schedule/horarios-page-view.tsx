@@ -3,6 +3,7 @@
 import { CalendarDays } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { HorariosUpcomingEvaluationsView } from "@/components/schedule/horarios-upcoming-evaluations-view";
+import { ScheduleDayList } from "@/components/schedule/schedule-day-list";
 import { ScheduleGrid } from "@/components/schedule/schedule-grid";
 import { WeekNavigator } from "@/components/schedule/week-navigator";
 import { addDays, isoDate, weekRangeLabel } from "@/lib/dashboard/week";
@@ -58,6 +59,11 @@ export function HorariosPageView({
           </div>
         ) : (
           <div className="p-4 sm:p-5">
+            <ScheduleDayList
+              lessons={lessons}
+              weekStart={weekStart}
+              events={events}
+            />
             <ScheduleGrid
               lessons={lessons}
               weekStart={weekStart}
