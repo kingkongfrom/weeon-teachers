@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false,
+    "types": ["vitest/globals", "node"]
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "lib/**/*.test.ts",
+    "lib/**/*.test.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "**/*.d.ts"
+  ],
+  "exclude": ["node_modules", ".next", "tests/e2e"]
+}

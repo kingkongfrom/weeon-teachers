@@ -36,6 +36,10 @@ jobs:
         run: npm run lint --if-present
       - name: Typecheck
         run: npx next typegen && npm run typecheck --if-present
+        # tsconfig.json excludes **/*.test.ts, so the step above never sees
+        # the unit tests. This project types them.
+      - name: Typecheck the test suite
+        run: npm run typecheck:tests
       - name: Unit & component tests + coverage floor
         run: npm run test:coverage --if-present
       - name: Build
