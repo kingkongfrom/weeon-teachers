@@ -911,7 +911,12 @@ export function GradebookWorkspace({
       return;
     }
     setBlockOrder(null);
-    await refresh();
+    /*
+     * No `refresh()` here. The block is already out of the grid, and re-reading
+     * every column and mark to confirm a rubro deletion is the same full-subject
+     * cost that made typing feel slow before grade saves were patched in place.
+     * The local removal above produces the state the refetch would.
+     */
   }
 
   /* ── Block drag & drop ───────────────────────────────────────────────────
@@ -1137,18 +1142,28 @@ export function GradebookWorkspace({
   async function handleDeleteColumn() {
     if (!deleteTarget) return;
     const column = deleteTarget;
+    /*
+     * Optimistic, matching how a single grade save already behaves here: patch
+     * the column out of the grid immediately, then confirm with the server.
+     *
+     * It used to call `refresh()` after deleting — a full subject refetch of
+     * every column and mark — which is exactly the cost the grade-save path was
+     * already fixed to avoid. Removing one column should not re-read the whole
+     * subject, and the local filter produces the same state the refetch would.
+     */
+    const previousExams = exams;
     setDeleting(true);
-    const res = await removeExamColumn({ classId, assignmentId: column.id });
-    setDeleting(false);
     setDeleteTarget(null);
-    if (!res.ok) {
-      setError(res.error);
-      return;
-    }
     startTransition(() => {
       setExams((current) => current.filter((item) => item.id !== column.id));
     });
-    await refresh();
+
+    const res = await removeExamColumn({ classId, assignmentId: column.id });
+    setDeleting(false);
+    if (!res.ok) {
+      setExams(previousExams);
+      setError(res.error);
+    }
   }
 
   async function handleCloseColumn() {
