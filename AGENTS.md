@@ -201,6 +201,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 
 | Doc | Where |
 | --- | ----- |
+| **Deploy** (single canonical doc) | `docs/deploy.md` |
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
 | **Mis evaluaciones (reusable exams — design)** | `docs/mis-evaluaciones.md` |

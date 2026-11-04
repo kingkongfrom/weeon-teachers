@@ -53,7 +53,7 @@ live in `components/ui/page-loading-skeletons.tsx`:
 
 ## Mensajes (parity with tenants)
 
-**Canonical UX:** [`weeon-tenants/docs/comms-mailbox-ux.md`](../weeon-tenants/docs/comms-mailbox-ux.md)
+**Canonical UX:** `weeon-tenants/docs/comms-mailbox-ux.md`
 (reading pane vs full-page Redactar, Outlook reply expand). Keep ERP + teacher web in sync
 when changing mailbox or compose.
 

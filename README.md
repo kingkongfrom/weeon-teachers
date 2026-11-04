@@ -82,3 +82,9 @@ npm run build
    code.
 
 Private project — all rights reserved unless otherwise specified.
+---
+
+## Deploy
+
+There is one deploy story for all four Next apps — see [docs/deploy.md](docs/deploy.md),
+which points at the canonical weeon-tenants/docs/deploy.md.

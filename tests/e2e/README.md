@@ -30,3 +30,7 @@ the school from the roster. **Never point these at production.**
 
 Set `E2E_BASE_URL` to the teacher-web **Preview** deployment URL. Runbook:
 [`docs/e2e-preview-stack.md`](../../../docs/e2e-preview-stack.md).
+
+## Deploy
+
+Previews are produced by `.github/workflows/deploy.yml`; the single deploy story (token, projects, commands) is workspace [docs/index.md](../../../docs/index.md) § 4.
