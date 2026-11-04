@@ -1,7 +1,8 @@
 # Handover — Aula virtual: subject labels, speed, and how to measure it
 
-*Session date: 28 October 2026. Repo: **`weeon-teachers`**. Status: **built,
-uncommitted** (see § 9). Read `docs/aula-virtual.md` § Performance and
+*Session date: 28 October 2026. Repo: **`weeon-teachers`**. Status: **built and
+committed** — verified 3 Nov 2026, when the working tree was clean and every file
+named in § 9 was tracked. Read `docs/aula-virtual.md` § Performance and
 `AGENTS.md` first; this file is the narrative of *why* the current shape is what
 it is, and what an agent must not undo.*
 
@@ -182,28 +183,39 @@ else needs them.
 
 ## 9. Release state
 
-Working tree in `weeon-teachers` contains this work **plus earlier uncommitted
-work not from this session** (`assessment-editor.tsx`, `assessment-preview.tsx`,
-`submission-grader.tsx`, `teacher-morning.tsx`, `install-prompt.tsx`,
-`assessments-actions.ts`, `messages.ts`, `lib/assessments/title.ts`). Suggested
-commit split for this session's slice:
+**Superseded — kept for the history.** As of 28 Oct this work was sitting in the
+working tree. It has since been committed: on 3 Nov 2026 the repo was clean and
+every file named below was tracked, including the `weeon-tenants` migration
+`20261026200000_student_subject_teacher.sql` that this section called unapplied.
 
-1. `feat(aula-virtual): bilingual subject labels` — `subject-names.ts` +
-   test + `subject-switcher.tsx`.
-2. `perf(aula-virtual): subject switch without a server render` —
-   `classwork-panel.tsx`, `class-tabs.tsx`, `exam-dates-panel.tsx`,
-   `[classId]/page.tsx`, `justification-inbox.ts`, `justification-urls.ts`.
-3. `perf(i18n): live locale for every client component` — the 79 component
-   files + `use-i18n.ts`.
-4. `feat(perf): navigation timing harness` — `lib/perf/`, `scripts/perf-aula.mjs`,
-   `package.json`, docs.
+The commit split this section proposed is therefore already done. Kept because it
+is a useful map of *which change belongs with which* if one of these areas needs
+to be bisected later.
 
-Checks before any commit: `npx tsc --noEmit`, `npx eslint <changed>`,
-`npm test`, then `npm run perf:aula` for a baseline.
+Original text follows.
 
-Other repos have **unrelated** uncommitted work (`weeon-tenants` incl. an
-unapplied migration `20261026200000_student_subject_teacher.sql`,
-`weeon-mobile`, `weeon-management`). Do not sweep them into these commits.
+> Working tree in `weeon-teachers` contains this work **plus earlier uncommitted
+> work not from this session** (`assessment-editor.tsx`, `assessment-preview.tsx`,
+> `submission-grader.tsx`, `teacher-morning.tsx`, `install-prompt.tsx`,
+> `assessments-actions.ts`, `messages.ts`, `lib/assessments/title.ts`). Suggested
+> commit split for this session's slice:
+>
+> 1. `feat(aula-virtual): bilingual subject labels` — `subject-names.ts` +
+>    test + `subject-switcher.tsx`.
+> 2. `perf(aula-virtual): subject switch without a server render` —
+>    `classwork-panel.tsx`, `class-tabs.tsx`, `exam-dates-panel.tsx`,
+>    `[classId]/page.tsx`, `justification-inbox.ts`, `justification-urls.ts`.
+> 3. `perf(i18n): live locale for every client component` — the 79 component
+>    files + `use-i18n.ts`.
+> 4. `feat(perf): navigation timing harness` — `lib/perf/`, `scripts/perf-aula.mjs`,
+>    `package.json`, docs.
+>
+> Checks before any commit: `npx tsc --noEmit`, `npx eslint <changed>`,
+> `npm test`, then `npm run perf:aula` for a baseline.
+>
+> Other repos have **unrelated** uncommitted work (`weeon-tenants` incl. an
+> unapplied migration `20261026200000_student_subject_teacher.sql`,
+> `weeon-mobile`, `weeon-management`). Do not sweep them into these commits.
 
 ---
 
