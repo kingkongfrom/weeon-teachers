@@ -15,11 +15,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * while the user is selecting text or dragging. The threshold is deliberately 500ms:
  * short enough to feel responsive, long enough not to collide with a double-click.
  *
- * The hook owns the POSITION and the timer. It deliberately does not know which
- * message the menu belongs to — the caller does, and supplies it in `onOpen`.
- * An earlier version returned only raw handlers, so the menu had a position and no
- * message and therefore never rendered; `openAt` takes a callback for exactly that
- * reason.
+ * The hook reports TWO things, and the menu needs both:
+ *   position — where the pointer was, for the long-press fallback
+ *   bubble   — the bubble's box, because the menu hangs off its top-right corner
+ *              rather than sitting under the cursor, where it would cover the very
+ *              text being quoted.
  */
 const LONG_PRESS_MS = 500;
 /** Movement past this cancels the long press. */
@@ -27,8 +27,17 @@ const MOVE_TOLERANCE_PX = 8;
 
 export type ReplyMenuPosition = { x: number; y: number };
 
+/** The bubble's viewport rect, so the menu can anchor to its corner. */
+export type ReplyMenuAnchor = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
 export function useReplyMenu(enabled: boolean) {
   const [position, setPosition] = useState<ReplyMenuPosition | null>(null);
+  const [bubble, setBubble] = useState<ReplyMenuAnchor | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Where the current press began, so movement can cancel it. */
   const timerStart = useRef<{ x: number; y: number } | null>(null);
@@ -38,30 +47,18 @@ export function useReplyMenu(enabled: boolean) {
       clearTimeout(timer.current);
       timer.current = null;
     }
+    timerStart.current = null;
   }, []);
 
   useEffect(() => clearTimer, [clearTimer]);
 
   /** Show the menu at a point. The caller decides what it points at. */
-  const openAt = useCallback((x: number, y: number) => {
-    clearTimer();
-    setPosition({ x, y });
-  }, [clearTimer]);
-
-  /** Begin a long-press that fires `onFire` after the threshold. */
-  const startLongPress = useCallback(
-    (x: number, y: number, onFire: () => void) => {
-      if (!enabled) return;
+  const openAt = useCallback(
+    (x: number, y: number) => {
       clearTimer();
-      let start = { x, y };
-      timer.current = setTimeout(() => {
-        timer.current = null;
-        onFire();
-      }, LONG_PRESS_MS);
-      // Remember where it began so movement can cancel it.
-      timerStart.current = start;
+      setPosition({ x, y });
     },
-    [enabled, clearTimer],
+    [clearTimer],
   );
 
   /** Cancel a pending long press (movement, release, leaving the bubble). */
@@ -70,32 +67,45 @@ export function useReplyMenu(enabled: boolean) {
   const close = useCallback(() => {
     clearTimer();
     setPosition(null);
+    setBubble(null);
   }, [clearTimer]);
 
   /**
    * Ready-made handlers for a bubble that knows its own message.
    *
    * `onOpen` receives the point the menu should appear at; the caller closes over
-   * its message and records it. This is the shape both web chats use.
+   * its message and records it. The bubble's rect is recorded here, because only
+   * the handler has the element.
    */
   const bubbleProps = useCallback(
     (onOpen: (x: number, y: number) => void) => {
       if (!enabled) return {};
+
+      const remember = (el: Element) => {
+        const r = el.getBoundingClientRect();
+        setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+      };
+
       return {
         onContextMenu: (event: React.MouseEvent) => {
           event.preventDefault();
+          remember(event.currentTarget);
           openAt(event.clientX, event.clientY);
           onOpen(event.clientX, event.clientY);
         },
         onPointerDown: (event: React.PointerEvent) => {
           // Right-click is handled by onContextMenu.
           if (event.button === 2) return;
+          const el = event.currentTarget;
+          const x = event.clientX;
+          const y = event.clientY;
           clearTimer();
-          timerStart.current = { x: event.clientX, y: event.clientY };
+          timerStart.current = { x, y };
           timer.current = setTimeout(() => {
             timer.current = null;
-            setPosition({ x: event.clientX, y: event.clientY });
-            onOpen(event.clientX, event.clientY);
+            remember(el);
+            setPosition({ x, y });
+            onOpen(x, y);
           }, LONG_PRESS_MS);
         },
         onPointerMove: (event: React.PointerEvent) => {
@@ -118,6 +128,7 @@ export function useReplyMenu(enabled: boolean) {
 
   return {
     position,
+    bubble,
     close,
     openAt,
     cancelLongPress,

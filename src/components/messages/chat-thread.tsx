@@ -418,6 +418,7 @@ export function ChatThread({
       {menuFor && replyMenu.position ? (
         <ChatReplyMenu
           position={replyMenu.position}
+          bubble={replyMenu.bubble}
           label={m.chatReply}
           onReply={() => {
             setReplyTo({
