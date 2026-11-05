@@ -104,7 +104,7 @@ export function ChatReplyMenu({
         "fixed z-[100011] flex flex-col rounded-xl p-1",
         // No border: a border reads as a panel inside the page, and WhatsApp's menu
         // is a floating surface above it.
-        "bg-[var(--wa-panel)] ring-1 ring-[var(--wa-border)] shadow-[0_2px_6px_rgb(11_20_26/0.18),0_8px_20px_-6px_rgb(11_20_26/0.24)]",
+        "wa-chat bg-[var(--wa-panel)] ring-1 ring-[var(--wa-border)] shadow-[0_2px_6px_rgb(11_20_26/0.18),0_8px_20px_-6px_rgb(11_20_26/0.24)]",
       )}
     >
       <button
