@@ -283,6 +283,7 @@ export const loadChatConversation = cache(
           createdAt: message.createdAt,
           mine: message.mine,
           authorName: message.mine ? session.name : adminDetail.counterpartName,
+        reactions: message.reactions,
         })),
       };
     }
@@ -377,6 +378,8 @@ export const loadChatConversation = cache(
           createdAt: message.created_at,
           mine: isMine,
           authorName: isMine ? session.name : counterpartName,
+        // Reactions are fetched by the ERP-shaped loader; empty until then.
+        reactions: [],
           /*
            * The quote is a snapshot stored with the reply (docs/chat-replies.md
            * D1), so no join is needed -- and it still renders if the original is

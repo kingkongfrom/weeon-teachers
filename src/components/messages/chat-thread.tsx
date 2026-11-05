@@ -139,6 +139,8 @@ export function ChatThread({
             createdAt: payload.createdAt,
             mine,
             authorName: mine ? m.chatYou : counterpartName,
+              // A realtime INSERT carries no reactions; the next read fills them.
+              reactions: [],
           };
           setMessages((prev) => mergeChatMessages(prev, [incoming]));
         },
@@ -227,6 +229,7 @@ export function ChatThread({
           mine: true,
           authorName: m.chatYou,
           replyTo: replyTo ?? undefined,
+          reactions: [],
         };
         setMessages((prev) => mergeChatMessages(prev, [outgoing]));
         liveHandleRef.current?.broadcastMessage({

@@ -38,6 +38,21 @@ export type ChatMessageItem = {
   authorName: string;
   /** Present only when this message answers another (docs/chat-replies.md). */
   replyTo?: ChatMessageReply;
+  /**
+   * Aggregated reactions (docs/chat-reactions.md).
+   *
+   * ALWAYS an array, never undefined -- every message has zero or more, and no
+   * reader should need a null check. The optional reply field taught that lesson.
+   */
+  reactions: ChatMessageReaction[];
+};
+
+/** One emoji and everybody who chose it. */
+export type ChatMessageReaction = {
+  emoji: string;
+  count: number;
+  names: string[];
+  mine: boolean;
 };
 
 export type ChatConversationDetail = {

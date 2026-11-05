@@ -124,6 +124,7 @@ export function AdminTeacherChatThread({
                       body: row.body as string,
                       createdAt: row.created_at ?? new Date().toISOString(),
                       mine: row.author_profile_id === me,
+              reactions: [],
                     },
                   ],
             );
@@ -206,6 +207,7 @@ export function AdminTeacherChatThread({
                   body: value,
                   createdAt: new Date().toISOString(),
                   mine: true,
+              reactions: [],
                 },
               ],
         );

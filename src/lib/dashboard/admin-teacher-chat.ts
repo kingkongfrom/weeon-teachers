@@ -4,6 +4,7 @@ import { cache } from "react";
 import { getTeacherSession } from "@/lib/auth/teacher-session";
 import { avatarUrlsBySubjectKey } from "@/lib/comms/profile-avatar-urls";
 import { createSessionClient } from "@/lib/supabase/session";
+import type { ChatMessageReaction } from "@/lib/messages/chat-model";
 
 export type AdminTeacherChatSummary = {
   id: string;
@@ -19,6 +20,8 @@ export type AdminTeacherChatMessage = {
   body: string;
   createdAt: string;
   mine: boolean;
+  /** Aggregated reactions; always an array (docs/chat-reactions.md). */
+  reactions: ChatMessageReaction[];
 };
 
 export type AdminTeacherChatDetail = {
@@ -133,6 +136,8 @@ export const loadAdminTeacherChatDetail = cache(
         body: message.body,
         createdAt: message.created_at,
         mine: message.author_profile_id === session.userId,
+          // No reactions query in this loader yet; empty is honest.
+          reactions: [],
       })),
     };
   },
