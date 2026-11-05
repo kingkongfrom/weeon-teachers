@@ -267,7 +267,7 @@ export function ChatThread({
 
   return (
     <div className={shellClass}>
-      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 py-2.5">
+      <div className="flex min-h-14 shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 py-2">
         {embedded ? (
           <Link
             href="/comunicacion/chat"
@@ -280,7 +280,7 @@ export function ChatThread({
         <ChatAvatar
           name={counterpartName}
           imageUrl={counterpartAvatarUrl}
-          className="h-10 w-10 text-sm"
+          className="h-9 w-9 self-center text-sm"
         />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[16px] font-semibold leading-tight text-[var(--wa-text)]">{counterpartName}</p>
