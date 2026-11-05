@@ -10,12 +10,16 @@ import {
 } from "@/lib/dashboard/chat-guardian-context";
 import { loadAdminTeacherChatConversations, loadAdminTeacherChatDetail } from "@/lib/dashboard/admin-teacher-chat";
 import { cleanGuardianDisplayName } from "@/lib/messages/chat-display";
+import { loadSchoolLogoUrl } from "@/lib/dashboard/school";
 import type {
   ChatConversationDetail,
   ChatConversationSummary,
   ChatContact,
   ChatMessageItem,
 } from "@/lib/messages/chat-model";
+
+/** The role badge: who the person is, not which channel the thread travels over. */
+type CounterpartKind = ChatConversationSummary["kind"];
 
 export type {
   ChatConversationDetail,
@@ -108,19 +112,24 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
   ]);
 
   /*
-   * Authoritative role per conversation, fetched once.
+   * Authoritative PERSON role per conversation, fetched once.
    *
-   * `kind` decides the badge the teacher sees (ENCARGADO vs ESTUDIANTE), so it must
-   * come from roster data, not from comparing names. chat_counterpart_kinds reads
-   * roster_accounts.source_kind, which is the account's actual role.
+   * The badge describes the person, not the channel: someone who is school
+   * leadership stays "Dirección escolar" even in a thread that travels over the
+   * guardian channel because they also have a child at the school.
    *
-   * A missing entry means "not a roster account we can resolve"; the row then shows
-   * no role rather than an invented one.
+   * So `kind` may now be "admin" on a guardian-channel row. It must never be guessed
+   * from names -- an earlier version compared the student's name with the
+   * counterpart's and mislabelled real people.
+   *
+   * A missing entry means "cannot resolve this person"; the row keeps the channel's
+   * default rather than inventing a role.
    */
+  const schoolLogoUrl = await loadSchoolLogoUrl(session.tenantId);
   const conversationIds = (listRes.data ?? [])
     .map((row: { id: unknown }) => row.id as string)
     .filter(Boolean);
-  const kindByConversation = new Map<string, "parent" | "student">();
+  const kindByConversation = new Map<string, CounterpartKind>();
   if (conversationIds.length > 0) {
     const { data: kinds } = await supabase.rpc("chat_counterpart_kinds", {
       p_conversation_ids: conversationIds,
@@ -129,8 +138,9 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
       conversation_id: string;
       counterpart_kind: string | null;
     }>) {
-      if (row.counterpart_kind === "parent" || row.counterpart_kind === "student") {
-        kindByConversation.set(row.conversation_id, row.counterpart_kind);
+      const resolved = row.counterpart_kind;
+      if (resolved === "parent" || resolved === "student" || resolved === "admin") {
+        kindByConversation.set(row.conversation_id, resolved);
       }
     }
   }
@@ -179,21 +189,41 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
        * With no evidence the only honest label is the guardian channel's default,
        * and the row is left to show its context label instead of asserting a role.
        */
-      const kind: "parent" | "student" =
+      // Person-level: may be "admin" on this channel when the counterpart holds a
+      // staff role (see the fetch above). Never guessed from names.
+      const personKind: CounterpartKind =
         kindByConversation.get(row.id) ??
         (contact?.kind === "student" ? "student" : "parent");
+
+      /*
+       * School leadership is represented by the SCHOOL, not by a personal photo.
+       *
+       * The owner's rule: "if the user is from dirección, the avatar must be the
+       * school's logo". A dirección account answers as the institution, so showing
+       * one person's face would say the message came from that individual. The logo
+       * also matches the badge -- both then describe the role, not the person.
+       *
+       * Falls back to the normal avatar when the school has no logo uploaded, so
+       * this never renders an empty circle.
+       */
+      const personAvatar =
+        personKind === "admin"
+          ? (schoolLogoUrl ?? (recipientKey ? (avatarUrls.get(recipientKey) ?? null) : null))
+          : recipientKey
+            ? (avatarUrls.get(recipientKey) ?? null)
+            : null;
 
       guardianRows.push({
         id: row.id,
         channel: "guardian",
-        kind,
+        kind: personKind,
         counterpartName: cleanGuardianDisplayName(row.counterpart_name),
         classLabel,
         studentName,
         lastBody: row.last_body ?? "",
         lastAt: row.last_at ?? new Date(0).toISOString(),
         unread: Boolean(row.unread),
-        avatarUrl: recipientKey ? (avatarUrls.get(recipientKey) ?? null) : null,
+        avatarUrl: personAvatar,
       });
     }
   }
@@ -208,7 +238,8 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
     lastBody: row.preview,
     lastAt: row.lastMessageAt,
     unread: row.unread,
-    avatarUrl: row.avatarUrl,
+    // Same rule as the guardian channel: dirección shows the school, not a face.
+    avatarUrl: schoolLogoUrl ?? row.avatarUrl,
   }));
 
   return [...guardianRows, ...adminRows].sort(
