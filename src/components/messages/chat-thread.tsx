@@ -184,9 +184,16 @@ export function ChatThread({
    * quoting yourself has no use, and a menu that opens then does nothing is worse
    * than one that never opens.
    */
+  /**
+   * Reply affordance for one bubble: right-click or press-and-hold.
+   *
+   * Own messages are excluded (D4): a menu that opens and then does nothing is
+   * worse than one that never opens. The hook gives us the handlers; this closes
+   * over the message so the menu knows what it is quoting.
+   */
   function bubbleHandlers(message: ChatMessageItem) {
     if (message.mine) return {};
-    return replyMenu.handlers;
+    return replyMenu.bubbleProps(() => setMenuFor(message));
   }
   async function send() {
     const value = text.trim();
