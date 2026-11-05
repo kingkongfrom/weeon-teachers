@@ -192,7 +192,6 @@ export function ChatThread({
    * over the message so the menu knows what it is quoting.
    */
   function bubbleHandlers(message: ChatMessageItem) {
-    if (message.mine) return {};
     return replyMenu.bubbleProps(() => setMenuFor(message));
   }
   async function send() {
