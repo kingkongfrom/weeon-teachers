@@ -107,6 +107,33 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
       .eq("teacher_profile_id", session.userId),
   ]);
 
+  /*
+   * Authoritative role per conversation, fetched once.
+   *
+   * `kind` decides the badge the teacher sees (ENCARGADO vs ESTUDIANTE), so it must
+   * come from roster data, not from comparing names. chat_counterpart_kinds reads
+   * roster_accounts.source_kind, which is the account's actual role.
+   *
+   * A missing entry means "not a roster account we can resolve"; the row then shows
+   * no role rather than an invented one.
+   */
+  const conversationIds = (listRes.data ?? [])
+    .map((row: { id: unknown }) => row.id as string)
+    .filter(Boolean);
+  const kindByConversation = new Map<string, "parent" | "student">();
+  if (conversationIds.length > 0) {
+    const { data: kinds } = await supabase.rpc("chat_counterpart_kinds", {
+      p_conversation_ids: conversationIds,
+    });
+    for (const row of (kinds ?? []) as Array<{
+      conversation_id: string;
+      counterpart_kind: string | null;
+    }>) {
+      if (row.counterpart_kind === "parent" || row.counterpart_kind === "student") {
+        kindByConversation.set(row.conversation_id, row.counterpart_kind);
+      }
+    }
+  }
   const guardianRows: ChatConversationSummary[] = [];
   if (listRes.data && !listRes.error) {
     const recipientKeyById = new Map<string, string>();
@@ -136,14 +163,25 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
 
       if (studentName.trim().length === 0) continue;
 
+      /*
+       * kind decides the badge the teacher sees -- ENCARGADO vs ESTUDIANTE.
+       *
+       * The RPC returns an AUTHORITATIVE kind, derived from roster_accounts
+       * .source_kind = 'student' | 'guardian'. contact carries it. When it is
+       * absent -- a conversation whose counterpart is no longer in the contact
+       * list -- we must NOT guess from names: the old fallback compared the
+       * student's name with the counterpart's name and called it a student when
+       * they matched. A parent who happens to share the child's name (or an
+       * unnamed guardian whose display name was cleaned to the child's) was then
+       * shown as ESTUDIANTE, and everyone else as ENCARGADO -- wrong badges for
+       * real people.
+       *
+       * With no evidence the only honest label is the guardian channel's default,
+       * and the row is left to show its context label instead of asserting a role.
+       */
       const kind: "parent" | "student" =
-        contact?.kind === "student"
-          ? "student"
-          : contact?.kind === "parent"
-            ? "parent"
-            : studentName.trim() === cleanGuardianDisplayName(row.counterpart_name).trim()
-              ? "student"
-              : "parent";
+        kindByConversation.get(row.id) ??
+        (contact?.kind === "student" ? "student" : "parent");
 
       guardianRows.push({
         id: row.id,
