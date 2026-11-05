@@ -267,7 +267,13 @@ export const loadChatConversation = cache(
         classLabel: "",
         studentName: "",
         otherReadAt: adminDetail.otherReadAt,
-        avatarUrl: adminDetail.avatarUrl,
+        /*
+         * Every participant on the admin channel is school leadership, so this
+         * header shows the school's logo rather than one person's face -- the same
+         * rule the list row already applies. Without this the row showed the logo
+         * and opening the thread replaced it with a photo.
+         */
+        avatarUrl: (await loadSchoolLogoUrl(session.tenantId)) ?? adminDetail.avatarUrl,
         messages: adminDetail.messages.map((message) => ({
           id: message.id,
           body: message.body,
@@ -316,14 +322,28 @@ export const loadChatConversation = cache(
     const studentName = contact?.studentName || fromMap?.studentName || "";
 
     const counterpartKey = mine ? row.recipient_key : row.teacher_profile_id;
-    const [photos, { data: messages }] = await Promise.all([
+    /*
+     * Same role and avatar rules as the list, because the thread HEADER showed a
+     * personal photo for a conversation the list was labelling from the roster. The
+     * owner saw the mismatch: the row said one thing and the header another.
+     */
+    const [photos, { data: kinds }, { data: messages }] = await Promise.all([
       avatarUrlsBySubjectKey(supabase, [counterpartKey]),
+      supabase.rpc("chat_counterpart_kinds", { p_conversation_ids: [conversationId] }),
       supabase
         .from("chat_messages")
         .select("id, body, author_profile_id, created_at, reply_to_id, reply_to_sender_name, reply_to_preview, reply_to_created_at")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true }),
     ]);
+
+    // Dirección answers as the school, not as one person.
+    const resolvedKind =
+      (kinds as Array<{ counterpart_kind: string | null }> | null)?.[0]?.counterpart_kind ??
+      null;
+    const headerLogo =
+      resolvedKind === "admin" ? await loadSchoolLogoUrl(session.tenantId) : null;
+    const headerAvatar = headerLogo ?? (photos.get(counterpartKey) ?? null);
 
     return {
       id: conversationId,
@@ -332,7 +352,7 @@ export const loadChatConversation = cache(
       classLabel,
       studentName,
       otherReadAt: otherReadAt ?? null,
-      avatarUrl: photos.get(counterpartKey) ?? null,
+      avatarUrl: headerAvatar,
       messages: (
         (messages ?? []) as Array<{
           id: string;
