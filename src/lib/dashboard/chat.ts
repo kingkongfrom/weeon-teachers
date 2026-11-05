@@ -229,6 +229,8 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
         lastAt: row.last_at ?? new Date(0).toISOString(),
         unread: Boolean(row.unread),
         avatarUrl: personAvatar,
+        // Staff rows chain logo -> photo -> initials; everyone else is a face.
+        schoolLogoUrl: personKind === "admin" ? schoolLogoUrl : null,
       });
     }
   }
@@ -245,6 +247,7 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
     unread: row.unread,
     // Same rule as the guardian channel: dirección shows the school, not a face.
     avatarUrl: schoolLogoUrl ?? row.avatarUrl,
+    schoolLogoUrl,
   }));
 
   return [...guardianRows, ...adminRows].sort(

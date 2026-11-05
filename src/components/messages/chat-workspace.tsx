@@ -283,7 +283,8 @@ export function ChatWorkspace({
                         >
                           <ChatAvatar
                             name={conversation.counterpartName}
-                            imageUrls={[conversation.schoolLogoUrl, conversation.avatarUrl]}
+                            imageUrl={conversation.avatarUrl}
+                            schoolLogoUrl={conversation.schoolLogoUrl}
                             className="h-[49px] w-[49px] text-[18px]"
                           />
                           <span className="flex min-w-0 flex-1 flex-col gap-1">

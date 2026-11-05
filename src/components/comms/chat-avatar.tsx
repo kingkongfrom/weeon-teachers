@@ -26,11 +26,21 @@ export function ChatAvatar({
   name,
   imageUrl,
   imageUrls,
+  schoolLogoUrl,
   className,
 }: {
   name: string;
   /** Convenience for the common single-image case. */
   imageUrl?: string | null;
+  /**
+   * The school logo, rendered as a CIRCLE the way the account drawer does.
+   * 
+   * Explicit rather than inferred from chain position: an earlier version guessed
+   * "first of several = logo" by checking `chain.length > 1`, and when the caller
+   * passed a single URL or a null logo the logo silently rendered as a face crop --
+   * square corners and all. The caller knows what the image is; say so.
+   */
+  schoolLogoUrl?: string | null;
   /** Ordered candidates; the first that loads wins. */
   imageUrls?: Array<string | null | undefined>;
   className?: string;
@@ -60,7 +70,7 @@ export function ChatAvatar({
    * `overflow-hidden` + `rounded-full` alone does NOT reliably clip a transformed
    * child, which is why earlier attempts still showed corners.
    */
-  const showingLogo = showPhoto && chain.length > 1 && index === 0;
+  const showingLogo = Boolean(schoolLogoUrl) && current === schoolLogoUrl;
   /*
    * Read the rendered diameter from the caller's size class so the zoom matches the
    * drawer's formula at every size. Falls back to 44px (the common row avatar).

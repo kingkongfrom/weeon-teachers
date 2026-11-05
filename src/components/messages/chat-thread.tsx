@@ -282,7 +282,8 @@ export function ChatThread({
         ) : null}
         <ChatAvatar
           name={counterpartName}
-          imageUrls={[counterpartSchoolLogoUrl, counterpartAvatarUrl]}
+          imageUrl={counterpartAvatarUrl}
+          schoolLogoUrl={counterpartSchoolLogoUrl}
           className="h-9 w-9 self-center text-sm"
         />
         <div className="min-w-0 flex-1">
