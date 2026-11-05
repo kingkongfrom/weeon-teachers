@@ -44,12 +44,35 @@ export function ChatAvatar({
   const current = chain[index];
   const showPhoto = Boolean(current);
   /*
-   * The first candidate is the school logo when a chain has more than one entry --
-   * that is how the caller expresses "this person represents the institution". The
-   * logo gets a light circular backdrop and is contained rather than cropped;
-   * everyone else keeps the plain circular crop a face expects.
+   * A SCHOOL LOGO IS A RECTANGLE, NOT A PHOTO.
+   *
+   * The uploaded logo is a square PNG with a WHITE background baked into its pixels
+   * -- no transparency. Cropping it like a face leaves white corners visible and the
+   * avatar reads as a square inside a circle.
+   *
+   * The ERP already solved this for the account drawer and Ops tiles:
+   * `SchoolLogoAvatar` + `logoAvatarScale`. This reuses that geometry rather than
+   * inventing another zoom:
+   *
+   *   clipPath: circle(50%)           -- what actually clips a scaled child
+   *   scale: 1.42 + 20/diameter       -- zooms until only the roundel remains
+   *
+   * `overflow-hidden` + `rounded-full` alone does NOT reliably clip a transformed
+   * child, which is why earlier attempts still showed corners.
    */
   const showingLogo = showPhoto && chain.length > 1 && index === 0;
+  /*
+   * Read the rendered diameter from the caller's size class so the zoom matches the
+   * drawer's formula at every size. Falls back to 44px (the common row avatar).
+   */
+  const diameterPx = (() => {
+    const match = /(?:^|\s)(?:h|w)-\[(\d+(?:\.\d+)?)px\]/.exec(className ?? "");
+    if (match) return Number(match[1]);
+    const scale = /(?:^|\s)(?:h|w)-(\d+)(?:\s|$)/.exec(className ?? "");
+    if (scale) return Number(scale[1]) * 4;
+    return 44;
+  })();
+  const logoScale = 1.42 + (10 * 2) / diameterPx;
 
   return (
     <span
@@ -59,7 +82,8 @@ export function ChatAvatar({
       )}
       style={
         showingLogo
-          ? { backgroundColor: "#ffffff" }
+          ? // White matte under the logo, clipped to the circle, matching the drawer.
+            { backgroundColor: "#ffffff", clipPath: "circle(50% at 50% 50%)" }
           : showPhoto
             ? undefined
           : {
@@ -69,34 +93,12 @@ export function ChatAvatar({
       aria-hidden
     >
       {showPhoto ? (
-        /*
-         * A SCHOOL LOGO IS A RECTANGLE, NOT A PHOTO.
-         *
-         * The uploaded logo is a square PNG with a WHITE background baked into its
-         * pixels -- no transparency. Two consequences that one rule cannot cover:
-         *
-         *  - `object-cover` cropped it to the circle but the white corners still
-         *    filled the box, so it read as a square inside a circle.
-         *  - `object-contain` kept the mark whole but left the white rectangle
-         *    visible around it, which is the same square, slightly smaller.
-         *
-         * So the logo is SCALED UP and clipped by the circular frame: the white
-         * margin that would show as corners is pushed outside the circle, and what
-         * remains is the roundel itself. `p-[3px]` was doing the opposite -- it
-         * guaranteed bare white on every side.
-         *
-         * Faces are the normal case and keep `object-cover`.
-         */
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={current}
           alt=""
-          className={cn(
-            "h-full w-full",
-            showingLogo
-              ? "scale-[1.18] rounded-full object-cover object-center"
-              : "object-cover",
-          )}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={showingLogo ? { transform: `scale(${logoScale})` } : undefined}
           // Advance down the chain on failure; past the end, initials render.
           onError={() => setIndex((i) => i + 1)}
         />
