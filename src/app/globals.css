@@ -1008,6 +1008,12 @@ a.btn-ink:hover {
   --wa-ring-soft: rgb(0 168 132 / 0.16);
   --wa-shadow: 0 12px 32px -12px rgb(15 40 60 / 0.16);
   --wa-bubble-shadow: 0 1px 0.5px rgb(11 20 26 / 0.13);
+  /* Quoted reply inside a bubble. WhatsApp uses an accent bar plus a lifted
+     surface, not a border, so the quote reads as depth rather than a second box. */
+  --wa-quote-bar: #00a884;
+  --wa-quote-name: #00a884;
+  --wa-quote-text: #667781;
+  --wa-quote-bg: rgb(0 0 0 / 0.045);
 }
 
 .dark .wa-chat {
@@ -1046,6 +1052,10 @@ a.btn-ink:hover {
   --wa-ring-soft: rgb(0 168 132 / 0.22);
   --wa-shadow: 0 18px 44px -16px rgb(0 0 0 / 0.6);
   --wa-bubble-shadow: 0 1px 0.5px rgb(11 20 26 / 0.3);
+  --wa-quote-bar: #00a884;
+  --wa-quote-name: #00a884;
+  --wa-quote-text: #8696a0;
+  --wa-quote-bg: rgb(255 255 255 / 0.06);
 }
 
 .chat-wallpaper {

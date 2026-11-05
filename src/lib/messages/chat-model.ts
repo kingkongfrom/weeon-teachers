@@ -16,12 +16,23 @@ export type ChatConversationSummary = {
   avatarUrl: string | null;
 };
 
+export type ChatMessageReply = {
+  /** Id of the quoted message -- the ORIGINAL when the target was itself a reply. */
+  id: string;
+  senderName: string;
+  /** Truncated to 140 characters server-side. */
+  preview: string;
+  createdAt: string;
+};
+
 export type ChatMessageItem = {
   id: string;
   body: string;
   createdAt: string;
   mine: boolean;
   authorName: string;
+  /** Present only when this message answers another (docs/chat-replies.md). */
+  replyTo?: ChatMessageReply;
 };
 
 export type ChatConversationDetail = {

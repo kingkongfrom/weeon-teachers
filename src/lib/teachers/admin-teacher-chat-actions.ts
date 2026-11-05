@@ -31,23 +31,35 @@ export async function startTeacherAdminChat(): Promise<AdminTeacherChatActionRes
   return { ok: true, conversationId: data as string };
 }
 
+/**
+ * Posts a message in an admin <-> teacher thread.
+ *
+ * eplyToId quotes an earlier message; only the ID crosses the wire and the
+ * database snapshots the sender, preview and timestamp (docs/chat-replies.md D5).
+ */
 export async function sendAdminTeacherChatMessage(
   conversationId: string,
   body: string,
+  replyToId?: string,
 ): Promise<AdminTeacherChatActionResult> {
   const t = await getT();
   const session = await getTeacherSession();
   if (!session) return { ok: false, error: t.messages.chatLoadError };
 
   const parsed = z
-    .object({ conversationId: z.string().uuid(), body: z.string().trim().min(1).max(4000) })
-    .safeParse({ conversationId, body });
+    .object({
+      conversationId: z.string().uuid(),
+      body: z.string().trim().min(1).max(4000),
+      replyToId: z.string().uuid().optional(),
+    })
+    .safeParse({ conversationId, body, replyToId });
   if (!parsed.success) return { ok: false, error: t.messages.chatLoadError };
 
   const supabase = await createSessionClient();
   const { data, error } = await supabase.rpc("send_admin_teacher_chat_message", {
     p_conversation_id: parsed.data.conversationId,
     p_body: parsed.data.body,
+    ...(parsed.data.replyToId ? { p_reply_to_id: parsed.data.replyToId } : {}),
   });
   if (error || !data) return { ok: false, error: t.messages.chatLoadError };
 

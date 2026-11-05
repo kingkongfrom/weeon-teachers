@@ -26,7 +26,10 @@ import {
   markAdminTeacherChatRead,
   sendAdminTeacherChatMessage,
 } from "@/lib/teachers/admin-teacher-chat-actions";
-import type { ChatChannel, ChatMessageItem } from "@/lib/messages/chat-model";
+import type { ChatChannel, ChatMessageItem, ChatMessageReply } from "@/lib/messages/chat-model";
+import { ChatReplyQuote } from "@/components/messages/chat-reply-quote";
+import { ChatReplyMenu } from "@/components/messages/chat-reply-menu";
+import { useReplyMenu } from "@/components/messages/use-reply-menu";
 
 function dayKey(iso: string): string {
   const date = new Date(iso);
@@ -95,6 +98,12 @@ export function ChatThread({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [otherTyping, setOtherTyping] = useState(false);
+  /** The message being answered, shown above the composer until sent. */
+  const [replyTo, setReplyTo] = useState<ChatMessageReply | null>(null);
+  /** Right-click / long-press menu: which bubble, and where to draw it. */
+  const [menuFor, setMenuFor] = useState<ChatMessageItem | null>(null);
+  const replyMenu = useReplyMenu(true);
+
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const liveHandleRef = useRef<ChatLiveHandle | null>(null);
   const clearTypingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -168,6 +177,17 @@ export function ChatThread({
     bottomRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [messages.length, otherTyping]);
 
+  /**
+   * Reply affordance for one bubble.
+   *
+   * Right-click or press-and-hold opens the menu. Own messages are excluded (D4):
+   * quoting yourself has no use, and a menu that opens then does nothing is worse
+   * than one that never opens.
+   */
+  function bubbleHandlers(message: ChatMessageItem) {
+    if (message.mine) return {};
+    return replyMenu.handlers;
+  }
   async function send() {
     const value = text.trim();
     if (!value || sending) return;
@@ -175,22 +195,29 @@ export function ChatThread({
     setError(null);
     try {
       const res = isAdminChat
-        ? await sendAdminTeacherChatMessage(conversationId, value)
-        : await sendChatMessage(conversationId, value);
+        ? await sendAdminTeacherChatMessage(conversationId, value, replyTo?.id)
+        : await sendChatMessage(conversationId, value, replyTo?.id);
       if (!res.ok) {
         setError(res.error);
         return;
       }
       setText("");
+      setReplyTo(null);
       if (res.messageId) {
         const id = res.messageId;
         const createdAt = new Date().toISOString();
+        /*
+         * The optimistic row is what the SENDER sees until a refetch. It must
+         * carry the quote, or a reply looks like a plain message to the person
+         * who wrote it while the recipient sees the quote.
+         */
         const outgoing: ChatMessageItem = {
           id,
           body: value,
           createdAt,
           mine: true,
           authorName: m.chatYou,
+          replyTo: replyTo ?? undefined,
         };
         setMessages((prev) => mergeChatMessages(prev, [outgoing]));
         liveHandleRef.current?.broadcastMessage({
@@ -305,6 +332,7 @@ export function ChatThread({
                     )}
                   >
                     <div
+                      {...bubbleHandlers(message)}
                       className={cn(
                         "wa-bubble relative max-w-[min(78%,34rem)] px-2.5 py-1.5 text-[14.5px] leading-[20px] text-[var(--wa-bubble)] shadow-[var(--wa-bubble-shadow)]",
                         message.mine ? "bg-[var(--wa-out)]" : "bg-[var(--wa-in)]",
@@ -318,6 +346,11 @@ export function ChatThread({
                             : "",
                       )}
                     >
+                      {message.replyTo ? (
+                        <div className="mb-1">
+                          <ChatReplyQuote reply={message.replyTo} compact />
+                        </div>
+                      ) : null}
                       <p className="whitespace-pre-wrap break-words">
                         {message.body}
                         <span className="ml-2.5 inline-flex translate-y-1 items-center gap-1 align-bottom text-[11px] text-[var(--wa-time)]">
@@ -366,6 +399,38 @@ export function ChatThread({
         </p>
       ) : null}
 
+      {replyTo ? (
+        <div className="shrink-0 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 pt-2">
+          <ChatReplyQuote
+            reply={replyTo}
+            onCancel={() => setReplyTo(null)}
+            cancelLabel={t.common.cancel}
+          />
+        </div>
+      ) : null}
+      {menuFor && replyMenu.position ? (
+        <ChatReplyMenu
+          position={replyMenu.position}
+          label={m.chatReply}
+          onReply={() => {
+            setReplyTo({
+              id: menuFor.id,
+              senderName: menuFor.authorName,
+              preview:
+                menuFor.body.length > 140
+                  ? menuFor.body.slice(0, 140) + "\u2026"
+                  : menuFor.body,
+              createdAt: menuFor.createdAt,
+            });
+            setMenuFor(null);
+            replyMenu.close();
+          }}
+          onClose={() => {
+            setMenuFor(null);
+            replyMenu.close();
+          }}
+        />
+      ) : null}
       <div className="flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5">
         <div className="flex min-w-0 flex-1 items-end rounded-3xl bg-[var(--wa-input)] px-4 py-2 shadow-sm">
           <textarea

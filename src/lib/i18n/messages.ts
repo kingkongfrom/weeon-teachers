@@ -734,6 +734,8 @@ const es = {
     chatDeleteConfirm:
       "¿Eliminar esta conversación? Se borrarán todos los mensajes para ambas partes.",
     chatDeleteError: "No se pudo eliminar el chat.",
+    chatReply: "Responder",
+    chatReplyCancelled: "Respuesta cancelada",
   },
   assessments: {
     title: "Tareas y exámenes",
@@ -2282,6 +2284,8 @@ const en: Messages = {
     chatDeleteConfirm:
       "Delete this conversation? All messages will be removed for both participants.",
     chatDeleteError: "Could not delete the chat.",
+    chatReply: "Reply",
+    chatReplyCancelled: "Reply cancelled",
   },
   assessments: {
     title: "Assignments & exams",

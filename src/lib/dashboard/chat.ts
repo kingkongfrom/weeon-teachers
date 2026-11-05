@@ -246,7 +246,7 @@ export const loadChatConversation = cache(
       avatarUrlsBySubjectKey(supabase, [counterpartKey]),
       supabase
         .from("chat_messages")
-        .select("id, body, author_profile_id, created_at")
+        .select("id, body, author_profile_id, created_at, reply_to_id, reply_to_sender_name, reply_to_preview, reply_to_created_at")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true }),
     ]);
@@ -265,6 +265,10 @@ export const loadChatConversation = cache(
           body: string;
           author_profile_id: string | null;
           created_at: string;
+          reply_to_id: string | null;
+          reply_to_sender_name: string | null;
+          reply_to_preview: string | null;
+          reply_to_created_at: string | null;
         }>
       ).map((message) => {
         const isMine = message.author_profile_id === session.userId;
@@ -274,6 +278,22 @@ export const loadChatConversation = cache(
           createdAt: message.created_at,
           mine: isMine,
           authorName: isMine ? session.name : counterpartName,
+          /*
+           * The quote is a snapshot stored with the reply (docs/chat-replies.md
+           * D1), so no join is needed -- and it still renders if the original is
+           * gone. Only built when reply_to_id is set, so every pre-existing
+           * message keeps exactly the shape it had.
+           */
+          ...(message.reply_to_id
+            ? {
+                replyTo: {
+                  id: message.reply_to_id,
+                  senderName: message.reply_to_sender_name ?? '',
+                  preview: message.reply_to_preview ?? '',
+                  createdAt: message.reply_to_created_at ?? '',
+                },
+              }
+            : {}),
         };
       }),
     };

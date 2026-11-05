@@ -38,24 +38,38 @@ export async function startChatConversation(
   return { ok: true, conversationId: data as string };
 }
 
-/** Posts a plain-text chat message to a conversation the teacher is part of. */
+/**
+ * Posts a chat message to a conversation the teacher is part of.
+ *
+ * eplyToId quotes an earlier message. Only the ID crosses the wire: the sender
+ * name, preview and timestamp are snapshotted by the database from the target row
+ * (docs/chat-replies.md D5), so a caller cannot attribute words to someone else.
+ */
 export async function sendChatMessage(
   conversationId: string,
   body: string,
+  replyToId?: string,
 ): Promise<ChatActionResult> {
   const t = await getT();
   const session = await getTeacherSession();
   if (!session) return { ok: false, error: t.messages.chatLoadError };
 
   const parsed = z
-    .object({ conversationId: z.string().uuid(), body: z.string().trim().min(1).max(4000) })
-    .safeParse({ conversationId, body });
+    .object({
+      conversationId: z.string().uuid(),
+      body: z.string().trim().min(1).max(4000),
+      replyToId: z.string().uuid().optional(),
+    })
+    .safeParse({ conversationId, body, replyToId });
   if (!parsed.success) return { ok: false, error: t.messages.chatLoadError };
 
   const supabase = await createSessionClient();
   const { data, error } = await supabase.rpc("send_chat_message", {
     p_conversation_id: parsed.data.conversationId,
     p_body: parsed.data.body,
+    // Omitted entirely when not replying: the RPC declares it DEFAULT NULL and
+    // the generated type marks it optional.
+    ...(parsed.data.replyToId ? { p_reply_to_id: parsed.data.replyToId } : {}),
   });
   if (error || !data) return { ok: false, error: t.messages.chatLoadError };
 
