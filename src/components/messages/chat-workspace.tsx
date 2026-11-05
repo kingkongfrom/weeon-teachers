@@ -311,9 +311,13 @@ export function ChatWorkspace({
                               <span className="shrink-0 rounded-md bg-[var(--wa-search)] px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--wa-muted)]">
                                 {conversation.kind === "student" && conversation.classLabel
                                   ? `${m.chatRoleStudent} ${conversation.classLabel}`
-                                  : conversation.kind === "parent"
-                                    ? m.chatRoleParent
-                                    : m.chatAdminSubtitle}
+                                  : conversation.kind === "student"
+                                    ? m.chatRoleStudent
+                                    : conversation.kind === "parent"
+                                      ? m.chatRoleParent
+                                      : conversation.kind === "teacher"
+                                        ? m.chatRoleTeacher
+                                        : m.chatAdminSubtitle}
                               </span>
                             </span>
                           </span>
@@ -505,6 +509,7 @@ function ChatPickerBody({
 
   function roleLabel(kind: ChatContact["kind"]) {
     if (kind === "admin") return m.chatRoleAdmin;
+    if (kind === "teacher") return m.chatRoleTeacher;
     if (kind === "parent") return m.chatRoleParent;
     return m.chatRoleStudent;
   }

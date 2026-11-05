@@ -139,7 +139,12 @@ export const loadChatConversations = cache(async (): Promise<ChatConversationSum
       counterpart_kind: string | null;
     }>) {
       const resolved = row.counterpart_kind;
-      if (resolved === "parent" || resolved === "student" || resolved === "admin") {
+      if (
+        resolved === "parent" ||
+        resolved === "student" ||
+        resolved === "admin" ||
+        resolved === "teacher"
+      ) {
         kindByConversation.set(row.conversation_id, resolved);
       }
     }

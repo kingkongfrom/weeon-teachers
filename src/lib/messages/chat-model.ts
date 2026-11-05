@@ -6,7 +6,7 @@ export type ChatChannel = "guardian" | "admin";
 export type ChatConversationSummary = {
   id: string;
   channel: ChatChannel;
-  kind: "admin" | "parent" | "student";
+  kind: "admin" | "teacher" | "parent" | "student";
   counterpartName: string;
   classLabel: string;
   studentName: string;
@@ -56,6 +56,6 @@ export type ChatContact = {
   /** Class uuid — used for guardian ↔ student lookup. */
   classId?: string;
   /** Who this row is. Omitted on older guardian-only rows. */
-  kind?: "admin" | "parent" | "student";
+  kind?: "admin" | "teacher" | "parent" | "student";
   avatarUrl?: string | null;
 };
