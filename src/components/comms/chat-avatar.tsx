@@ -54,7 +54,7 @@ export function ChatAvatar({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white",
         className,
       )}
       style={
@@ -70,15 +70,22 @@ export function ChatAvatar({
     >
       {showPhoto ? (
         /*
-         * `object-contain`, not `cover`, plus a little inset.
+         * A SCHOOL LOGO IS A RECTANGLE, NOT A PHOTO.
          *
-         * A school logo is usually a wide mark on a WHITE background. `object-cover`
-         * scaled it to fill the circle, so its white corners filled the box and the
-         * avatar read as a SQUARE inside a circle. Containing it and insetting the
-         * image keeps the mark whole and lets the circular frame show.
+         * The uploaded logo is a square PNG with a WHITE background baked into its
+         * pixels -- no transparency. Two consequences that one rule cannot cover:
          *
-         * People's photos are roughly square, so `cover` still suits them -- hence
-         * the two cases rather than one rule for both.
+         *  - `object-cover` cropped it to the circle but the white corners still
+         *    filled the box, so it read as a square inside a circle.
+         *  - `object-contain` kept the mark whole but left the white rectangle
+         *    visible around it, which is the same square, slightly smaller.
+         *
+         * So the logo is SCALED UP and clipped by the circular frame: the white
+         * margin that would show as corners is pushed outside the circle, and what
+         * remains is the roundel itself. `p-[3px]` was doing the opposite -- it
+         * guaranteed bare white on every side.
+         *
+         * Faces are the normal case and keep `object-cover`.
          */
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -86,7 +93,9 @@ export function ChatAvatar({
           alt=""
           className={cn(
             "h-full w-full",
-            showingLogo ? "rounded-full object-contain p-[3px]" : "object-cover",
+            showingLogo
+              ? "scale-[1.18] rounded-full object-cover object-center"
+              : "object-cover",
           )}
           // Advance down the chain on failure; past the end, initials render.
           onError={() => setIndex((i) => i + 1)}
