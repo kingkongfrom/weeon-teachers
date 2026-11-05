@@ -54,27 +54,33 @@ export function ChatReplyQuote({
   return (
     <div
       className={cn(
-        "flex items-stretch gap-2 overflow-hidden rounded-[5px] bg-[var(--wa-quote-bg)]",
-        compact ? "px-1.5 py-1" : "px-2 py-1.5",
+        /*
+         * WhatsApp's composer quote is a filled block with a hard accent bar down
+         * the whole left edge, not a thin sliver: the bar is the full height of the
+         * block and sits flush, so the quote reads as one object rather than a
+         * label with a tick next to it.
+         */
+        "flex items-stretch gap-2.5 overflow-hidden rounded-md bg-[var(--wa-quote-bg)]",
+        compact ? "px-2 py-1" : "px-2.5 py-1.5",
       )}
     >
       {onClick ? (
         <button
           type="button"
           onClick={onClick}
-          className="flex min-w-0 flex-1 items-stretch gap-2 overflow-hidden rounded-[5px] text-left"
+          className="flex min-w-0 flex-1 items-stretch gap-2.5 overflow-hidden rounded-md text-left"
           aria-label={`${reply.senderName}: ${reply.preview}`}
         >
           <span
-            className="w-[3px] shrink-0 rounded-full bg-[var(--wa-quote-bar,#00a884)]"
+            className="w-[4px] shrink-0 rounded-full bg-[var(--wa-quote-bar,#00a884)]"
             aria-hidden
           />
           {content}
         </button>
       ) : (
-        <div className="flex min-w-0 flex-1 items-stretch gap-2">
+        <div className="flex min-w-0 flex-1 items-stretch gap-2.5">
           <span
-            className="w-[3px] shrink-0 rounded-full bg-[var(--wa-quote-bar,#00a884)]"
+            className="w-[4px] shrink-0 rounded-full bg-[var(--wa-quote-bar,#00a884)]"
             aria-hidden
           />
           {content}
