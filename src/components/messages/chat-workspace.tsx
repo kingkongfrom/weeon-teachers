@@ -283,7 +283,7 @@ export function ChatWorkspace({
                         >
                           <ChatAvatar
                             name={conversation.counterpartName}
-                            imageUrl={conversation.avatarUrl}
+                            imageUrls={[conversation.schoolLogoUrl, conversation.avatarUrl]}
                             className="h-[49px] w-[49px] text-[18px]"
                           />
                           <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -344,6 +344,7 @@ export function ChatWorkspace({
                 me={me}
                 counterpartName={selectedDetail.counterpartName}
                 counterpartAvatarUrl={selectedDetail.avatarUrl}
+                counterpartSchoolLogoUrl={selectedDetail.schoolLogoUrl}
                 classLabel={selectedDetail.classLabel}
                 studentName={selectedDetail.studentName}
                 initialMessages={selectedDetail.messages}

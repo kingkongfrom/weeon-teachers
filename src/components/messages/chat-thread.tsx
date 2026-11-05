@@ -67,6 +67,7 @@ export function ChatThread({
   me,
   counterpartName,
   counterpartAvatarUrl = null,
+  counterpartSchoolLogoUrl = null,
   classLabel = "",
   studentName = "",
   initialMessages,
@@ -79,6 +80,8 @@ export function ChatThread({
   me: string;
   counterpartName: string;
   counterpartAvatarUrl?: string | null;
+  /** School logo, shown ahead of the photo for school leadership. */
+  counterpartSchoolLogoUrl?: string | null;
   classLabel?: string;
   studentName?: string;
   initialMessages: ChatMessageItem[];
@@ -279,7 +282,7 @@ export function ChatThread({
         ) : null}
         <ChatAvatar
           name={counterpartName}
-          imageUrl={counterpartAvatarUrl}
+          imageUrls={[counterpartSchoolLogoUrl, counterpartAvatarUrl]}
           className="h-9 w-9 self-center text-sm"
         />
         <div className="min-w-0 flex-1">

@@ -4,17 +4,52 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { contactAvatarColor, contactInitial } from "@/lib/comms/chat-display";
 
+/**
+ * A circular avatar that walks a chain of candidate images and ends on initials.
+ *
+ * WHY A CHAIN
+ *
+ * School leadership is shown as the SCHOOL's logo, but the logo is optional -- a
+ * tenant may never have uploaded one, the storage object may be missing, or the URL
+ * may be malformed. `loadSchoolLogoUrl` returns null for the first two, but a URL
+ * that 404s only fails at render time.
+ *
+ * With a single `imageUrl`, a broken logo dropped straight to initials and skipped
+ * the administrator's own photo, which is the fallback the owner asked for. So the
+ * component now takes `imageUrls` and tries each in order:
+ *
+ *   school logo  ->  the person's avatar  ->  their initials
+ *
+ * `imageUrl` is kept for the many call sites that only ever have one picture.
+ */
 export function ChatAvatar({
   name,
   imageUrl,
+  imageUrls,
   className,
 }: {
   name: string;
+  /** Convenience for the common single-image case. */
   imageUrl?: string | null;
+  /** Ordered candidates; the first that loads wins. */
+  imageUrls?: Array<string | null | undefined>;
   className?: string;
 }) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const showPhoto = Boolean(imageUrl) && failedSrc !== imageUrl;
+  const chain = (imageUrls ?? [imageUrl]).filter(
+    (url): url is string => typeof url === "string" && url.length > 0,
+  );
+
+  // Index of the candidate currently displayed; 0 when the chain is empty.
+  const [index, setIndex] = useState(0);
+  const current = chain[index];
+  const showPhoto = Boolean(current);
+  /*
+   * The first candidate is the school logo when a chain has more than one entry --
+   * that is how the caller expresses "this person represents the institution". The
+   * logo gets a light circular backdrop and is contained rather than cropped;
+   * everyone else keeps the plain circular crop a face expects.
+   */
+  const showingLogo = showPhoto && chain.length > 1 && index === 0;
 
   return (
     <span
@@ -23,8 +58,10 @@ export function ChatAvatar({
         className,
       )}
       style={
-        showPhoto
-          ? undefined
+        showingLogo
+          ? { backgroundColor: "#ffffff" }
+          : showPhoto
+            ? undefined
           : {
               backgroundImage: `linear-gradient(140deg, ${contactAvatarColor(name)}, color-mix(in srgb, ${contactAvatarColor(name)} 62%, #000))`,
             }
@@ -32,12 +69,27 @@ export function ChatAvatar({
       aria-hidden
     >
       {showPhoto ? (
+        /*
+         * `object-contain`, not `cover`, plus a little inset.
+         *
+         * A school logo is usually a wide mark on a WHITE background. `object-cover`
+         * scaled it to fill the circle, so its white corners filled the box and the
+         * avatar read as a SQUARE inside a circle. Containing it and insetting the
+         * image keeps the mark whole and lets the circular frame show.
+         *
+         * People's photos are roughly square, so `cover` still suits them -- hence
+         * the two cases rather than one rule for both.
+         */
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={imageUrl ?? ""}
+          src={current}
           alt=""
-          className="h-full w-full object-cover"
-          onError={() => setFailedSrc(imageUrl ?? null)}
+          className={cn(
+            "h-full w-full",
+            showingLogo ? "rounded-full object-contain p-[3px]" : "object-cover",
+          )}
+          // Advance down the chain on failure; past the end, initials render.
+          onError={() => setIndex((i) => i + 1)}
         />
       ) : (
         contactInitial(name)

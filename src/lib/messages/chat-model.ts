@@ -14,6 +14,11 @@ export type ChatConversationSummary = {
   lastAt: string;
   unread: boolean;
   avatarUrl: string | null;
+  /**
+   * The school logo, for staff rows. `avatarUrl` stays the PERSON photo so the
+   * avatar can fall back logo -> person -> initials instead of logo -> initials.
+   */
+  schoolLogoUrl?: string | null;
 };
 
 export type ChatMessageReply = {
@@ -44,6 +49,11 @@ export type ChatConversationDetail = {
   messages: ChatMessageItem[];
   otherReadAt: string | null;
   avatarUrl: string | null;
+  /**
+   * The school logo, for staff rows. `avatarUrl` stays the PERSON photo so the
+   * avatar can fall back logo -> person -> initials instead of logo -> initials.
+   */
+  schoolLogoUrl?: string | null;
 };
 
 /** Someone the teacher may start a chat with. */

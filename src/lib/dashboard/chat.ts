@@ -353,6 +353,8 @@ export const loadChatConversation = cache(
       studentName,
       otherReadAt: otherReadAt ?? null,
       avatarUrl: headerAvatar,
+    // The logo, so the header avatar can style it as a mark rather than crop it.
+    schoolLogoUrl: headerLogo,
       messages: (
         (messages ?? []) as Array<{
           id: string;
