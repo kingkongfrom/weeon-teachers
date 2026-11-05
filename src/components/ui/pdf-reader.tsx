@@ -94,7 +94,7 @@ export function PdfReaderDialog({
   return createPortal(
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-[130] flex items-end justify-center sm:items-center sm:p-6">
+        <div className="wa-chat fixed inset-0 z-[130] flex items-end justify-center sm:items-center sm:p-6">
           <motion.button
             type="button"
             aria-label={t("common.close")}
