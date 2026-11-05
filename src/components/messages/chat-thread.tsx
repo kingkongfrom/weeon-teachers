@@ -270,7 +270,7 @@ export function ChatThread({
 
   return (
     <div className={shellClass}>
-      <div className="flex min-h-16 shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 py-3">
+      <div className="flex min-h-[4.5rem] shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 pb-3 pt-4">
         {embedded ? (
           <Link
             href="/comunicacion/chat"
