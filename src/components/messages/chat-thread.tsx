@@ -137,8 +137,6 @@ export function ChatThread({
   const bottomRef = useRef<HTMLDivElement | null>(null);
   /** The composer, so choosing "Responder" can put the caret straight in it. */
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
-  /** Pixels the keyboard is covering; the shell shrinks by this much. */
-  const keyboardInset = useKeyboardInset();
   const liveHandleRef = useRef<ChatLiveHandle | null>(null);
   const clearTypingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSentRef = useRef(0);
@@ -358,56 +356,12 @@ export function ChatThread({
     }
   }
 
-/**
- * How many pixels of the viewport the on-screen keyboard covers.
- *
- * iOS ignores `interactive-widget=resizes-content`, so `100dvh` and `innerHeight`
- * keep their full value while the keyboard sits on top -- which is why focusing the
- * composer opened the keyboard and left the field underneath it.
- * `visualViewport.height` is the part still visible, so the gap between the two IS
- * the keyboard. On Android the viewport meta shrinks the layout, so both agree and
- * this returns 0: the two mechanisms do not double-count.
- *
- * The threshold ignores the URL bar sliding during scroll, which otherwise reads as
- * a keyboard and jolts the thread.
- */
-function useKeyboardInset(): number {
-  const [inset, setInset] = useState(0);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const update = () => {
-      const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setInset(covered > 80 ? covered : 0);
-    };
-
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, []);
-
-  return inset;
-}
-
   const shellClass = embedded
     ? "wa-chat flex h-full min-h-0 flex-col overflow-hidden"
     : "wa-chat flex h-[min(512px,calc(100vh-13rem))] min-h-[288px] flex-col overflow-hidden rounded-2xl border border-[var(--wa-border)] shadow-[var(--wa-shadow)]";
 
   return (
-    /*
-     * Subtracting the keyboard keeps the composer above it on iOS, where the
-     * layout viewport does not shrink.
-     */
-    <div
-      className={shellClass}
-      style={keyboardInset > 0 ? { height: `calc(100% - ${keyboardInset}px)` } : undefined}
-    >
+    <div className={shellClass}>
       <div className="flex min-h-[4.5rem] shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 pb-3 pt-4">
         {embedded ? (
           <Link
