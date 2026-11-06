@@ -68,10 +68,10 @@
    * real phone screen and the tablet layout has no footer at all, so the two
    * must never share a number. Changing one must not move the other.
    *
-   * 15px clears the shell header on iPad (the chat header was being clipped
-   * underneath it). Adjust here only; the phone value is untouched.
+   * 20px is the value in place. Bigger = further DOWN. Adjust here only; the
+   * phone value is untouched.
    */
-  --tablet-pane-nudge: 15px;
+  --tablet-pane-nudge: 20px;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
   --background: #f8fafc;
