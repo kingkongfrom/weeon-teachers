@@ -83,6 +83,7 @@ let mode: "idle" | "pressing" | "swiping" | "scrolling" = "idle";
 let installed = false;
 let holdTimer: ReturnType<typeof setTimeout> | null = null;
 
+
 function setTransform(el: HTMLElement | null, px: number) {
   if (!el) return;
   if (px <= 0) {
@@ -268,21 +269,40 @@ export function useReplyMenu(enabled: boolean) {
         registry.set(el, { el, key, onReply, onReact });
       },
       onContextMenu: (event: React.MouseEvent) => {
-        event.preventDefault();
         /*
-         * A TOUCH hold raises contextmenu on Android. The pointer timer owns that
-         * gesture (it opens the reaction row), so a contextmenu that arrives while
-         * a touch press is in flight must not ALSO open the reply menu.
+         * RIGHT-CLICK NO LONGER REPLIES. ANYWHERE.
          *
-         * The guard is the live gesture state, not `pointerType`: a contextmenu
-         * event does not reliably carry it, and reading `mode` is the same signal
-         * the pointer path already uses.
+         * The owner asked for it removed, not gated: `(hover: none)` was not
+         * reliable — the device reported hover, the touch branch was skipped, and
+         * a right-click (or a long press raising contextmenu) still opened the
+         * reply menu.
+         *
+         * So this handler does exactly two things now:
+         *   1. suppresses the browser menu,
+         *   2. on a HOLD (a contextmenu that is not a deliberate right-click),
+         *      opens the reaction row.
+         * It can never open the reply menu. Reply is reached by swiping left;
+         * that is the only reply gesture on the web surfaces.
          */
-        if (mode !== "idle") return;
-        const r = event.currentTarget.getBoundingClientRect();
+        event.preventDefault();
+
+        const el = event.currentTarget as HTMLElement;
+        const target = registry.get(el);
+        if (!target?.onReact) return;
+
+        /*
+         * `contextmenu` arrives for two different reasons: a real right-click on a
+         * mouse, and a long press on touch (and on some trackpads). Only the
+         * HOLD case should react. `mode` tells us which: the pointer path sets it
+         * to "pressing" on pointerdown and nothing has moved or ended yet.
+         */
+        if (mode !== "pressing") return;
+        clearHold();
+        const r = el.getBoundingClientRect();
         setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
         setPosition({ x: event.clientX, y: event.clientY });
-        onReply(event.clientX, event.clientY);
+        target.onReact(event.clientX, event.clientY);
+        endGesture();
       },
     }),
   };
