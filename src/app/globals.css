@@ -30,17 +30,17 @@
   /*
    * Phone bottom bar height — THE single source of truth.
    *
-   * The composer used to sit above the footer with `mb-[67px] translate-y-[2px]`:
-   * a magic number plus a paint-only nudge. That is why it kept drifting — the
-   * 67 was an approximation of this bar's real height (py-2 + h-8 icon + gap-1 +
-   * the 10px label line), and any change to any of those parts silently moved it.
-   * Translate does not affect layout, so the nudge also dragged the composer's
-   * background over the footer's top edge.
+   * 4.5rem fits the current cells: py-2 (16) + icon well h-9 (36) + gap-1.5 (6)
+   * + an 11px label with leading-none (11) = 69px, plus the safe-area padding
+   * added on the same box.
    *
-   * The footer and every phone surface that has to sit on top of it now read this
-   * one value. Change it here, not at the call sites.
+   * The bar uses `min-h` with this value, not a fixed `h`, so the safe-area
+   * inset can never squeeze the labels — an earlier fixed height did exactly
+   * that and clipped the text.
+   *
+   * Surfaces that must clear the bar read this ONE number.
    */
-  --phone-nav-height: 4.25rem;
+  --phone-nav-height: 4.5rem;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
   --background: #f8fafc;

@@ -67,14 +67,20 @@ export function BottomNav({
     <nav
       aria-label={t.panel.title}
       /*
-       * `h-[var(--phone-nav-height)]` pins the bar to ONE known height.
+       * The bar SIZES TO ITS CONTENT, with a floor.
        *
-       * Without it the height was whatever the tallest cell worked out to
-       * (padding + 32px icon + gap + the label's line box), so anything above it
-       * that had to clear the footer was guessing. The composer guessed 67px and
-       * drifted every time a font or padding changed.
+       * A previous pass pinned it with `h-[var(--phone-nav-height)]`. That was
+       * wrong twice over: the height did not include `env(safe-area-inset-bottom)`,
+       * which is padding on the same box, so on a phone with a home indicator the
+       * content overflowed and the labels were clipped; and a fixed height fights
+       * the cells, which already use items-center.
+       *
+       * `min-h` keeps the token meaningful — anything that has to clear the bar can
+       * still read one number — without ever squeezing the content. The var is
+       * 4.5rem here because the icons and labels below are larger than they were
+       * when 4.25rem was chosen.
        */
-      className="fixed inset-x-0 bottom-0 z-30 flex h-[var(--phone-nav-height)] items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex min-h-[var(--phone-nav-height)] items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden"
     >
       {items.map((item) => {
         const active = item.match
@@ -88,7 +94,13 @@ export function BottomNav({
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors",
+              /*
+               * `leading-none` on the label matters: at 11px a default line-height
+               * adds ~4px the cell did not budget for, and `truncate` then clipped
+               * the descenders ("Agenda" losing its g). The label now has exactly
+               * its font size of vertical space.
+               */
+              "flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-1 py-2 text-[11px] leading-none font-semibold transition-colors",
               active
                 ? "text-brand-600 dark:text-brand-300"
                 : "text-foreground/55 hover:text-foreground",
@@ -96,11 +108,11 @@ export function BottomNav({
           >
             <span
               className={cn(
-                "relative flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
+                "relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
                 active && "bg-brand-50 dark:bg-brand-950/50",
               )}
             >
-              <Icon className="h-[18px] w-[18px]" aria-hidden />
+              <Icon className="h-[22px] w-[22px]" aria-hidden />
               {badge > 0 ? (
                 <UnreadCountBadge count={badge} absolute className="-right-1 -top-1" />
               ) : null}
@@ -114,7 +126,7 @@ export function BottomNav({
         type="button"
         onClick={onMenu}
         className={cn(
-          "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors",
+          "flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-1 py-2 text-[11px] leading-none font-semibold transition-colors",
           menuActive
             ? "text-brand-600 dark:text-brand-300"
             : "text-foreground/55 hover:text-foreground",
@@ -122,11 +134,11 @@ export function BottomNav({
       >
         <span
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
+            "flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
             menuActive && "bg-brand-50 dark:bg-brand-950/50",
           )}
         >
-          <Menu className="h-[18px] w-[18px]" aria-hidden />
+          <Menu className="h-[22px] w-[22px]" aria-hidden />
         </span>
         <span className="max-w-full truncate">{t.agenda.title}</span>
       </button>
