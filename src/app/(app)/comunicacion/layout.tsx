@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
  */
 export default function ComunicacionLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="-mx-4 -mb-16 -mt-6 h-[calc(100dvh-4rem-4.25rem-env(safe-area-inset-bottom,0px))] w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)] md:-mx-8 md:-mb-16 md:-mt-8 md:h-[calc(100dvh-4rem)] md:w-[calc(100%+4rem)]">
+    <div className="comms-fill -mx-4 -mt-[4px] h-[calc(100dvh-4rem)] w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)] md:-mx-8 md:-mt-8 md:h-[calc(100dvh-4rem)] md:w-[calc(100%+4rem)]">
       {children}
     </div>
   );

@@ -130,7 +130,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
 
       <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}>
         <AppHeader user={user} supabasePublic={supabasePublic} />
-        <main className="w-full px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] pt-6 sm:px-5 md:px-8 md:pb-16">
+        <main className="w-full px-4 pt-6 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] sm:px-5 md:px-8 md:pb-16 [&:has(.comms-fill)]:pt-0 [&:has(.comms-fill)]:pb-0 [&:has(.comms-fill)]:overflow-hidden">
           {children}
         </main>
       </div>

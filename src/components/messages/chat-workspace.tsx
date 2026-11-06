@@ -182,7 +182,7 @@ export function ChatWorkspace({
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,412px)_minmax(0,1fr)]">
           <aside
             className={cn(
-              "flex min-h-0 flex-col border-[var(--wa-border)] bg-[var(--wa-header)]",
+              "flex h-full min-h-0 flex-col border-[var(--wa-border)] bg-[var(--wa-header)]",
               showListOnMobile ? "flex" : "hidden lg:flex lg:border-r",
             )}
           >
@@ -333,7 +333,7 @@ export function ChatWorkspace({
 
           <section
             className={cn(
-              "flex min-h-0 min-w-0 flex-col",
+              "flex h-full min-h-0 min-w-0 flex-col",
               showThread ? "flex" : "hidden lg:flex",
             )}
           >
