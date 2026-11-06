@@ -449,6 +449,7 @@ export function ChatThread({
                           const rect = event.currentTarget.getBoundingClientRect();
                           replyMenu.openAt(rect.left, rect.top);
                           setReactFor(message);
+                          setMenuFor(null);
                         }}
                         className="order-first inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] opacity-0 transition-opacity hover:bg-[var(--wa-hover)] focus-visible:opacity-100 group-hover/row:opacity-100"
                       >
@@ -483,9 +484,32 @@ export function ChatThread({
                           <ChatReplyQuote reply={message.replyTo} compact />
                         </div>
                       ) : null}
-                      <p className="whitespace-pre-wrap break-words">
-                        {message.body}
-                        <span className="ml-2.5 inline-flex translate-y-1 items-center gap-1 align-bottom text-[11px] text-[var(--wa-time)]">
+                      <p
+                        className={cn(
+                          "whitespace-pre-wrap break-words",
+                          // Emoji-only: the glyphs are the message, so they carry the
+                          // space a line of text would -- 50% larger than body text.
+                          emojiOnly ? "text-[22px] leading-[28px]" : null,
+                        )}
+                      >
+                        {/*
+                         * Written flush against the body: `whitespace-pre-wrap` keeps
+                         * the newline and indentation a JSX line break would add, which
+                         * showed as a blank line above the time.
+                         */}
+                        {message.body}<span
+                          className={cn(
+                            "items-center gap-1 whitespace-nowrap text-[11px] text-[var(--wa-time)]",
+                            /*
+                             * Emoji-only: the time drops UNDER the glyphs. `flex` is
+                             * block-level, so it breaks the line; inline beside a bare
+                             * emoji reads as part of the message.
+                             */
+                            emojiOnly
+                              ? "mt-0.5 flex"
+                              : "ml-2.5 inline-flex translate-y-1 align-bottom",
+                          )}
+                        >
                           {timeLabel(message.createdAt)}
                           {message.mine ? (
                             otherReadAt &&
@@ -503,7 +527,7 @@ export function ChatThread({
                        * and the text layout are untouched.
                        */}
                       {message.reactions.length > 0 ? (
-                        <div className="absolute right-[3px] bottom-0 z-10 flex flex-wrap gap-1 translate-y-1/2">
+                        <div className="absolute right-[18px] bottom-0 z-10 flex flex-wrap gap-1 translate-y-1/2">
                           {message.reactions.map((reaction) => (
                             <button
                               key={reaction.emoji}
@@ -537,6 +561,7 @@ export function ChatThread({
                           const rect = event.currentTarget.getBoundingClientRect();
                           replyMenu.openAt(rect.left, rect.top);
                           setReactFor(message);
+                          setMenuFor(null);
                         }}
                         className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] opacity-0 transition-opacity hover:bg-[var(--wa-hover)] focus-visible:opacity-100 group-hover/row:opacity-100"
                       >
