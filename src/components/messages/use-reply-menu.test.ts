@@ -53,12 +53,13 @@ function firePointer(
 function setup(messageId = "m1") {
   const el = makeBubble(messageId);
   const onReply = vi.fn();
+  const onReact = vi.fn();
   const hook = renderHook(() => useReplyMenu(true));
-  const props = hook.result.current.bubbleProps(onReply, undefined, messageId);
+  const props = hook.result.current.bubbleProps(onReply, onReact, messageId);
   act(() => {
     (props.ref as (node: HTMLElement | null) => void)(el);
   });
-  return { el, onReply, hook, props };
+  return { el, onReply, onReact, hook, props };
 }
 
 describe("chat bubble gestures", () => {
@@ -105,19 +106,67 @@ describe("chat bubble gestures", () => {
     expect(onReply).not.toHaveBeenCalled();
   });
 
-  it("never opens anything on a long press", () => {
-    /*
-     * The gesture was removed on purpose. Holding must do nothing at all — not the
-     * reply menu, not a reaction row.
-     */
-    const { el, onReply } = setup();
+  it("opens REACTIONS on a touch hold with no movement", () => {
+    const { el, onReply, onReact } = setup();
 
     firePointer(el, "pointerdown", { x: 200, y: 220 });
     act(() => {
-      vi.advanceTimersByTime(1500);
+      vi.advanceTimersByTime(700);
     });
 
+    expect(onReact).toHaveBeenCalledTimes(1);
     expect(onReply).not.toHaveBeenCalled();
+  });
+
+  it("keeps the hold alive through a small finger drift", () => {
+    /* A resting finger always jitters; that must not cancel the hold. */
+    const { el, onReact } = setup();
+
+    firePointer(el, "pointerdown", { x: 200, y: 220 });
+    firePointer(window, "pointermove", { x: 195, y: 223 });
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(onReact).toHaveBeenCalledTimes(1);
+  });
+
+  it("never reacts when the finger swipes first", () => {
+    /* The mutual-exclusion guarantee: the swipe cancels the hold timer. */
+    const { el, onReply, onReact } = setup();
+
+    firePointer(el, "pointerdown", { x: 280, y: 220 });
+    firePointer(window, "pointermove", { x: 220, y: 220 });
+    act(() => {
+      vi.advanceTimersByTime(900);
+    });
+
+    expect(onReply).toHaveBeenCalledTimes(1);
+    expect(onReact).not.toHaveBeenCalled();
+  });
+
+  it("never reacts when the finger scrolls first", () => {
+    const { el, onReact } = setup();
+
+    firePointer(el, "pointerdown", { x: 200, y: 220 });
+    firePointer(window, "pointermove", { x: 200, y: 300 });
+    act(() => {
+      vi.advanceTimersByTime(900);
+    });
+
+    expect(onReact).not.toHaveBeenCalled();
+  });
+
+  it("does not react on a MOUSE hold", () => {
+    /* Desktop keeps the smile button; a mouse hold is not a reaction gesture. */
+    const { el, onReact } = setup();
+
+    firePointer(el, "pointerdown", { x: 200, y: 220, pointerType: "mouse" });
+    act(() => {
+      vi.advanceTimersByTime(900);
+    });
+
+    expect(onReact).not.toHaveBeenCalled();
   });
 
   it("lets a vertical drag scroll without replying", () => {

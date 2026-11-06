@@ -1,46 +1,64 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Swipe-to-reply on a chat bubble, for the WEB (docs/chat-replies.md §6).
+ * Gestures on a chat bubble, for the WEB (docs/chat-replies.md §6).
  *
- * ONE GESTURE, ONE ACTION.
+ * TOUCH (phone browser, phone + tablet):
+ *   swipe LEFT  -> reply to that message directly (quote strip, caret in composer)
+ *   long press  -> the six-emoji reaction row
  *
- *   Finger swipes LEFT on a bubble  -> reply to that message (the quote strip
- *                                      appears in the composer, caret focused)
- *   Mouse right-click on a bubble   -> the reply menu (the desktop affordance)
+ * MOUSE (desktop — unchanged):
+ *   right-click -> the reply menu
+ *   smile button -> the reaction row
  *
- * There is NO long-press gesture. It was removed deliberately: on a real phone
- * every attempt to distinguish a hold from a slow swipe either opened the reply
- * menu on a hold or the reaction row on a swipe, because a resting finger drifts
- * by design. Reactions are reached on mobile through the message itself once that
- * gesture is specced properly; until then the gesture simply does not exist,
- * rather than existing wrongly.
+ * HOW THE TWO TOUCH GESTURES SHARE ONE FINGER
  *
- * AND NO POPOVER ON SWIPE.
+ * They are separated by TIME and DIRECTION, never by a bare distance threshold —
+ * which is what failed before. A resting finger drifts, so "moved 12px" cannot
+ * mean swipe. The rules:
  *
- * Earlier versions opened a menu containing "Responder" and required a second tap.
- * The owner asked for the swipe to perform that action directly: swiping left IS
- * replying. So `onReply` is called with the message and the caller does the work —
- * quote strip, caret, done.
+ *   * A press starts a 500ms timer. Nothing has happened yet; the finger may
+ *     still be a hold or the start of a swipe.
+ *   * Movement LEFT past SWIPE_SLOP_PX CANCELS the timer and commits the swipe
+ *     immediately. This is the owner's rule: reply starts on the move.
+ *   * Movement UP/DOWN past SCROLL_SLOP_PX cancels the timer and hands the
+ *     gesture to the scroller.
+ *   * If neither happens and the timer survives to 500ms, it is a HOLD and opens
+ *     the reaction row.
+ *
+ * Because the swipe cancels the timer, a swipe can never also react; because the
+ * timer only fires when no qualifying movement happened, a hold can never also
+ * reply. The two are mutually exclusive by construction rather than by tuning.
+ *
+ * SWIPE_SLOP_PX is 36 rather than 12 for one reason: a finger resting on glass
+ * drifts 5–20px, and at 12 a hold became a swipe. The timer makes the exact value
+ * far less critical — it only decides how quickly a deliberate swipe responds.
  *
  * WHY A SINGLE DOCUMENT LISTENER
  *
- * Three earlier designs kept React state in the hot path (setState on every
- * pointermove, memoised handler factories per bubble, window listeners
- * re-registered by effects whose deps changed on each of those renders). A real
- * phone-viewport browser proved the gesture was being torn down by a re-render it
- * had itself caused. Here the gesture state lives in module variables and the
- * bubble is moved by writing `el.style.transform` — React never re-renders during
- * a drag, so it cannot interrupt one. React state is touched only when the
- * gesture ENDS, to open the desktop menu.
+ * Three earlier designs kept React state in the hot path (setState per
+ * pointermove, handler factories per bubble, effects re-registering listeners on
+ * each of those renders). A real phone-viewport browser showed the gesture being
+ * torn down by a re-render it had itself caused. Gesture state lives in module
+ * variables here, and the bubble is moved by writing `el.style.transform` — React
+ * never re-renders during a drag, so it cannot interrupt one. React state is
+ * touched only when a gesture ENDS.
  */
 
-/** Horizontal travel that commits a swipe to reply. */
+const LONG_PRESS_MS = 500;
+/** Horizontal travel that commits a swipe. */
 const SWIPE_SLOP_PX = 36;
-/** Vertical travel that hands the gesture to the scroller instead. */
+/** Vertical travel that hands the gesture to the scroller. */
 const SCROLL_SLOP_PX = 14;
 /** How far the bubble follows the finger before it stops. */
 const SWIPE_MAX_PX = 160;
+/**
+ * Movement under this does not cancel a hold.
+ *
+ * Deliberately small: it exists so a finger that jitters a pixel still counts as
+ * still, not to separate gestures (the timer does that).
+ */
+const HOLD_TOLERANCE_PX = 10;
 
 export type ReplyMenuPosition = { x: number; y: number };
 export type ReplyMenuAnchor = { left: number; top: number; right: number; bottom: number };
@@ -50,6 +68,8 @@ type Target = {
   key: string;
   /** Swipe-left / right-click: reply to this message. */
   onReply: (x: number, y: number) => void;
+  /** Long press on touch: open the reaction row. */
+  onReact?: (x: number, y: number) => void;
 };
 
 /* ----- module-level gesture state: outside React on purpose ----- */
@@ -61,6 +81,7 @@ let startY = 0;
 let pointerId = -1;
 let mode: "idle" | "pressing" | "swiping" | "scrolling" = "idle";
 let installed = false;
+let holdTimer: ReturnType<typeof setTimeout> | null = null;
 
 function setTransform(el: HTMLElement | null, px: number) {
   if (!el) return;
@@ -73,7 +94,15 @@ function setTransform(el: HTMLElement | null, px: number) {
   el.style.transform = `translateX(${-px}px)`;
 }
 
+function clearHold() {
+  if (holdTimer) {
+    clearTimeout(holdTimer);
+    holdTimer = null;
+  }
+}
+
 function endGesture() {
+  clearHold();
   setTransform(activeEl, 0);
   activeEl = null;
   activeTarget = null;
@@ -107,6 +136,26 @@ export function useReplyMenu(enabled: boolean) {
       startY = event.clientY;
       pointerId = event.pointerId;
       mode = "pressing";
+
+      /*
+       * THE HOLD CANDIDATE. Only a TOUCH press arms it — on desktop the smile
+       * button and right-click are the affordances, and a mouse hold on a bubble
+       * should keep meaning "reply menu" via contextmenu.
+       */
+      clearHold();
+      if (event.pointerType === "touch" && target.onReact) {
+        holdTimer = setTimeout(() => {
+          holdTimer = null;
+          /* Only a press that never turned into a swipe or a scroll. */
+          if (mode !== "pressing" || !activeTarget) return;
+          const t = activeTarget;
+          const r = t.el.getBoundingClientRect();
+          setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+          setPosition({ x: startX, y: startY });
+          t.onReact?.(startX, startY);
+          endGesture();
+        }, LONG_PRESS_MS);
+      }
     };
 
     const onMove = (event: PointerEvent) => {
@@ -123,18 +172,19 @@ export function useReplyMenu(enabled: boolean) {
       if (mode !== "pressing") return;
 
       /* Vertical intent wins: the thread keeps scrolling under a finger. */
-      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > SCROLL_SLOP_PX) {
+      if (Math.abs(dy) > SCROLL_SLOP_PX && Math.abs(dy) > Math.abs(dx)) {
         mode = "scrolling";
+        clearHold();
         return;
       }
 
       /*
-       * THE SWIPE. Performs the reply immediately — no menu, no second tap.
-       * 36px rather than 12: a resting finger drifts far more than 12, and that
-       * is what made the old long-press read as a swipe.
+       * THE SWIPE. Commits on the move and CANCELS the hold timer, so a swipe can
+       * never also open the reaction row.
        */
       if (dx < -SWIPE_SLOP_PX && Math.abs(dx) > Math.abs(dy)) {
         mode = "swiping";
+        clearHold();
         const el = activeEl;
         const t = activeTarget;
         setTransform(el, Math.min(Math.max(0, -dx), SWIPE_MAX_PX));
@@ -145,11 +195,18 @@ export function useReplyMenu(enabled: boolean) {
         mode = "idle";
         pointerId = -1;
         window.setTimeout(() => setTransform(el, 0), 140);
+        return;
+      }
+
+      /* A small drift keeps the hold alive; anything larger is not a hold. */
+      if (Math.abs(dx) > HOLD_TOLERANCE_PX || Math.abs(dy) > HOLD_TOLERANCE_PX) {
+        clearHold();
       }
     };
 
     const onUp = () => {
       if (activeTarget) endGesture();
+      else clearHold();
     };
     const onCancel = () => endGesture();
 
@@ -178,24 +235,36 @@ export function useReplyMenu(enabled: boolean) {
     bubble,
     close,
     openAt: (x: number, y: number) => setPosition({ x, y }),
-    cancelLongPress: () => {},
+    cancelLongPress: clearHold,
     /**
-     * Register one bubble. The returned props are for the DESKTOP path only —
-     * pointer handling belongs to the document listener.
+     * Register one bubble. Android raises `contextmenu` for a touch hold, and the
+     * popup it would open would sit under ours — so the native menu is always
+     * suppressed here.
      */
     bubbleProps: (
       onReply: (x: number, y: number) => void,
-      _onReact?: (x: number, y: number) => void,
+      onReact?: (x: number, y: number) => void,
       key = "default",
     ) => ({
       ref: (el: HTMLElement | null) => {
         if (!el) return;
         const existing = registry.get(el);
-        if (existing && existing.key === key && existing.onReply === onReply) return;
-        registry.set(el, { el, key, onReply });
+        const same =
+          existing && existing.key === key && existing.onReply === onReply && existing.onReact === onReact;
+        if (same) return;
+        registry.set(el, { el, key, onReply, onReact });
       },
       onContextMenu: (event: React.MouseEvent) => {
         event.preventDefault();
+        /*
+         * A TOUCH hold raises contextmenu on Android. The pointer timer owns that
+         * gesture (it opens the reaction row), so a contextmenu that arrives while
+         * a touch press is in flight must not ALSO open the reply menu.
+         *
+         * The guard is the live gesture state, not `pointerType`: a contextmenu
+         * event does not reliably carry it, and reading `mode` is the same signal
+         * the pointer path already uses.
+         */
         if (mode !== "idle") return;
         const r = event.currentTarget.getBoundingClientRect();
         setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
@@ -207,7 +276,7 @@ export function useReplyMenu(enabled: boolean) {
 }
 
 /**
- * Bubble element -> its reply opener.
+ * Bubble element -> its openers.
  *
  * Keyed by the DOM node rather than React refs: a bubble can re-render a hundred
  * times and the entry stays valid, because the element is the identity.

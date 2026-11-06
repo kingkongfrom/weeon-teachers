@@ -239,16 +239,21 @@ export function ChatThread({
   /**
    * Registration for one bubble.
    *
-   *   swipe LEFT (touch) -> beginReply, directly — no popover
+   *   swipe LEFT (touch)  -> beginReply, directly — no popover
+   *   long press (touch)  -> the six-emoji reaction row
    *   right-click (mouse) -> the reply menu, the desktop affordance
    *
-   * There is no long-press gesture: it was removed because a resting finger could
-   * never be told apart from a slow swipe.
+   * The two touch gestures are separated by timing, not by a distance guess: the
+   * swipe cancels the hold timer, and the hold only fires if no swipe or scroll
+   * happened first. They cannot both trigger.
    */
   function bubbleHandlers(message: ChatMessageItem) {
     return replyMenu.bubbleProps(
       () => beginReply(message),
-      undefined,
+      () => {
+        setMenuFor(null);
+        setReactFor(message);
+      },
       message.id,
     );
   }
