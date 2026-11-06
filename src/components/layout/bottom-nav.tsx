@@ -100,7 +100,7 @@ export function BottomNav({
        *
        * Tuned by the owner in 10px steps: 8px was too tight, 18px is the value.
        */
-      className="fixed inset-x-0 bottom-0 z-30 flex min-h-[3.5rem] items-stretch border-t border-border bg-surface pb-[min(env(safe-area-inset-bottom,0px),18px)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex min-h-[3.5rem] items-stretch border-t border-border bg-surface pb-[14px] md:hidden"
     >
       {items.map((item) => {
         const active = item.match

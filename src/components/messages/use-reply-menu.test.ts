@@ -54,17 +54,31 @@ function setup(messageId = "m1") {
   const el = makeBubble(messageId);
   const onReply = vi.fn();
   const onReact = vi.fn();
+  const onMenu = vi.fn();
   const hook = renderHook(() => useReplyMenu(true));
-  const props = hook.result.current.bubbleProps(onReply, onReact, messageId);
+  const props = hook.result.current.bubbleProps(onReply, onReact, onMenu, messageId);
   act(() => {
     (props.ref as (node: HTMLElement | null) => void)(el);
   });
-  return { el, onReply, onReact, hook, props };
+  return { el, onReply, onReact, onMenu, hook, props };
 }
 
 describe("chat bubble gestures", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    /*
+     * jsdom has no matchMedia, and the hook uses `(hover: hover)` to tell a
+     * desktop pointer from a touch one. Default to a DESKTOP device here; the
+     * touch tests override it.
+     */
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("hover: hover"),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }));
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -178,12 +192,17 @@ describe("chat bubble gestures", () => {
     expect(onReply).not.toHaveBeenCalled();
   });
 
-  it("right-click NEVER opens the reply menu", () => {
+  it("right-click opens the POPOVER on a desktop pointer", () => {
     /*
-     * The owner asked for right-click-to-reply to be removed entirely, not gated
-     * on a device check. onContextMenu can only react on a hold now.
+     * Final behaviour, after several revisions:
+     *
+     *   touch hold  -> reactions
+     *   desktop     -> the reply POPOVER; clicking Responder in it replies
+     *
+     * `onReply` must NOT be called directly by right-click: opening the menu and
+     * replying are separate actions.
      */
-    const { el, onReply, hook, props } = setup();
+    const { el, onReply, onMenu, hook, props } = setup();
 
     act(() => {
       (props.onContextMenu as (e: unknown) => void)({
@@ -194,9 +213,10 @@ describe("chat bubble gestures", () => {
       });
     });
 
+    expect(onMenu).toHaveBeenCalledTimes(1);
     expect(onReply).not.toHaveBeenCalled();
     hook.rerender();
-    expect(hook.result.current.position).toBeNull();
+    expect(hook.result.current.position).toEqual({ x: 150, y: 210 });
   });
 
   it("a hold that raises contextmenu opens reactions instead", () => {
@@ -204,6 +224,16 @@ describe("chat bubble gestures", () => {
      * Mobile browsers raise `contextmenu` for a long press. That path is the
      * reaction trigger; the reply menu must never appear from it.
      */
+    /* A touch device: `(hover: hover)` is false, so the desktop branch is skipped. */
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }));
+
     const { el, onReply, onReact, props } = setup();
 
     firePointer(el, "pointerdown", { x: 200, y: 220 });

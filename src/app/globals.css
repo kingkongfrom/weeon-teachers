@@ -65,7 +65,7 @@
    * the real offset on a device cannot be predicted from the other tokens. That
    * is why this number is empirical rather than calculated.
    */
-  --phone-pane-nudge: 120px;
+  --phone-pane-nudge: 0px;
   /*
    * iPad / tablet pane correction, in px. SUBTRACTED from the pane height, so
    * a BIGGER value moves the pane UP and a SMALLER one moves it DOWN.

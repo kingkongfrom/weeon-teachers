@@ -93,6 +93,12 @@ let holdTimer: ReturnType<typeof setTimeout> | null = null;
  * press", which raise the SAME event and must do different things.
  */
 let lastPointerWasMouse = false;
+/** When the current press began, and where — for the release-time hold check. */
+let holdStartedAt = 0;
+let holdStartX = 0;
+let holdStartY = 0;
+/** True when the 500ms timer already opened the reactions for this press. */
+let holdFired = false;
 
 
 function setTransform(el: HTMLElement | null, px: number) {
@@ -325,10 +331,16 @@ export function useReplyMenu(enabled: boolean) {
         }
 
         /*
-         * MOBILE: a long press raises contextmenu. Open the reaction row. This
-         * can never open the reply menu.
+         * MOBILE (phone and tablet): `contextmenu` NEVER opens the reply menu.
+         *
+         * The owner removed right-click on touch devices entirely. A hold raises
+         * `contextmenu` here, and the reaction row is owned by the hold path, so
+         * this branch opens reactions when a hold is in flight and otherwise does
+         * NOTHING. The browser menu is still suppressed above, so a long press
+         * cannot show "Copy / Share" either.
          */
         if (!target.onReact) return;
+        if (!holdFired && mode !== "pressing") return;
         clearHold();
         const r = el.getBoundingClientRect();
         setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
@@ -356,17 +368,34 @@ export function useReplyMenu(enabled: boolean) {
         lastPointerWasMouse = event.pointerType === "mouse";
 
         if (event.button === 2) return;
+        holdStartedAt = Date.now();
+        holdStartX = event.clientX;
+        holdStartY = event.clientY;
+        holdFired = false;
+
         const el = event.currentTarget as HTMLElement;
         const target = registry.get(el);
         if (!target?.onReact) return;
-        /* Desktop has the right-click affordance; no hold timer there. */
-        if (lastPointerWasMouse) return;
 
+        /*
+         * ARMED FOR EVERY POINTER — this is the ERP's implementation, copied
+         * because it is the one confirmed working on a real phone.
+         *
+         * Two guards that used to sit here are gone:
+         *   - `if (lastPointerWasMouse) return;`  — one wrong pointerType report
+         *     and the timer never armed, with no way to tell why;
+         *   - the `(hover: hover)` gate that some builds had.
+         *
+         * A mouse hold arming this timer is harmless: releasing before 500ms
+         * clears it, and on desktop the right-click popover is the affordance
+         * people actually use.
+         */
         clearHold();
         const x = event.clientX;
         const y = event.clientY;
         holdTimer = setTimeout(() => {
           holdTimer = null;
+          holdFired = true;
           const r = el.getBoundingClientRect();
           setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
           setPosition({ x, y });
@@ -374,8 +403,54 @@ export function useReplyMenu(enabled: boolean) {
           endGesture();
         }, LONG_PRESS_MS);
       },
-      onPointerUp: () => clearHold(),
-      onPointerLeave: () => clearHold(),
+      /*
+       * THE HOLD, RECOVERED ON RELEASE.
+       *
+       * On a real phone the 500ms timer is not dependable: browsers cancel or
+       * steal the pointer mid-hold, and every attempt to keep that timer alive
+       * failed on the owner's device while passing here.
+       *
+       * So the timer is no longer the only path. On pointerup, if the press
+       * lasted at least LONG_PRESS_MS and the pointer did not travel, it was a
+       * hold — open the reactions. Nothing the browser does to the pointer during
+       * the press can take this away, because it is judged at the end.
+       *
+       * `holdFired` stops a double open when the timer did get through.
+       */
+      onPointerUp: (event: React.PointerEvent) => {
+        clearHold();
+        if (holdFired) {
+          holdFired = false;
+          return;
+        }
+        if (lastPointerWasMouse) return;
+
+        const held = Date.now() - holdStartedAt;
+        const dx = Math.abs(event.clientX - holdStartX);
+        const dy = Math.abs(event.clientY - holdStartY);
+        if (held < LONG_PRESS_MS || dx > HOLD_TOLERANCE_PX || dy > HOLD_TOLERANCE_PX) return;
+
+        const el = event.currentTarget as HTMLElement;
+        const target = registry.get(el);
+        if (!target?.onReact) return;
+
+        const r = el.getBoundingClientRect();
+        setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+        setPosition({ x: event.clientX, y: event.clientY });
+        target.onReact(event.clientX, event.clientY);
+        endGesture();
+      },
+      /*
+       * NO `onPointerLeave` HERE, DELIBERATELY.
+       *
+       * It used to cancel the hold, and on a real phone that is fatal: a finger
+       * resting on a bubble fires `pointerleave` from the smallest drift (touch
+       * slop), which killed the timer before 500ms. The hold then did nothing —
+       * indistinguishable from the gesture not existing.
+       *
+       * `pointerup` already cancels a hold that never reached the timer, so the
+       * leave handler bought nothing and only broke the gesture.
+       */
     }),
   };
 }

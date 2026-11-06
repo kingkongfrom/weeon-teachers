@@ -408,7 +408,8 @@ export function ChatThread({
 
   return (
     <div className={shellClass}>
-      <div className="flex min-h-[4.5rem] shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 pb-3 pt-4">
+      <div className="relative z-10 flex min-h-[4.5rem] shrink-0 items-center gap-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)] px-3 pb-3 pt-4">
+        {/* Header is shrink-0 inside an overflow-hidden column: it cannot scroll. */}
         {embedded ? (
           <Link
             href="/comunicacion/chat"
@@ -720,7 +721,7 @@ export function ChatThread({
         Adding offset was compensating for a height that was already wrong, which
         is why every fix looked right once and drifted again.
       */}
-      <div className="flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5">
+      <div className="flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5 md:top-0">
         <div className="flex min-w-0 flex-1 items-end rounded-3xl bg-[var(--wa-input)] px-4 py-2 shadow-sm">
           <textarea
             ref={composerRef}
