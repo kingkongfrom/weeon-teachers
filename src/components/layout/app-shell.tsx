@@ -41,7 +41,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
   const [navOpen, setNavOpen] = useState(false);
   const collapsed = useSidebarCollapsed();
   return (
-    <div className="dashboard-shell min-h-screen bg-background">
+    <div className="dashboard-shell min-h-dvh bg-background">
       <TeacherAcademicRealtime realtime={supabasePublic} />
       <TeacherCommsNavRealtime realtime={supabasePublic} />
       <ProfilePresenceHeartbeat realtime={supabasePublic} enabled={Boolean(user)} />
