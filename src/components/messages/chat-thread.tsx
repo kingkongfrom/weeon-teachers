@@ -285,7 +285,13 @@ export function ChatThread({
       }),
     );
 
-    const res = await toggleTeacherChatReaction(conversationId, message.id, emoji, removing);
+    const res = await toggleTeacherChatReaction(
+      conversationId,
+      message.id,
+      emoji,
+      removing,
+      isAdminChat ? "admin" : "guardian",
+    );
     if (!res.ok) setError(res.error);
   }
   async function send() {
