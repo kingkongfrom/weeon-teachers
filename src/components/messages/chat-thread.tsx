@@ -460,6 +460,8 @@ export function ChatThread({
                       {...bubbleHandlers(message)}
                       className={cn(
                         "wa-bubble relative max-w-[min(78%,34rem)] px-2.5 py-1.5 text-[14.5px] leading-[20px] text-[var(--wa-bubble)]",
+                        // No native long-press callout: it appeared on top of our menu.
+                        "select-none [-webkit-touch-callout:none]",
                         // Emoji-only: no surface, no shadow, no tail.
                         emojiOnly
                           ? "bg-transparent shadow-none"
