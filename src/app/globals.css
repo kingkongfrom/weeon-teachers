@@ -56,10 +56,10 @@
    * above it; this is added back, on phones only (the `md:` rule drops it).
    *
    * Tuning history: 30px left the composer above the bar; 40px sat it too low.
-   * 20px is the value in place. Move in 5px steps and re-check on the phone —
+   * 15px is the value in place. Move in 5px steps and re-check on the phone —
    * this is the only knob. Do not reintroduce per-element margins.
    */
-  --phone-pane-nudge: 20px;
+  --phone-pane-nudge: 15px;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
   --background: #f8fafc;
