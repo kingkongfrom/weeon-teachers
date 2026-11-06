@@ -135,6 +135,8 @@ export function ChatThread({
   const replyMenu = useReplyMenu(true);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  /** The composer, so choosing "Responder" can put the caret straight in it. */
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const liveHandleRef = useRef<ChatLiveHandle | null>(null);
   const clearTypingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSentRef = useRef(0);
@@ -638,6 +640,13 @@ export function ChatThread({
             });
             setMenuFor(null);
             replyMenu.close();
+            /*
+             * Put the caret in the composer, which also raises the keyboard on a
+             * phone. This runs INSIDE the click handler on purpose: mobile browsers
+             * only open the keyboard for a focus() in the same user gesture, so
+             * deferring it to an effect leaves a quote and no way to type.
+             */
+            composerRef.current?.focus();
           }}
           onClose={() => {
             setMenuFor(null);
@@ -648,6 +657,7 @@ export function ChatThread({
       <div className="flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5">
         <div className="flex min-w-0 flex-1 items-end rounded-3xl bg-[var(--wa-input)] px-4 py-2 shadow-sm">
           <textarea
+            ref={composerRef}
             value={text}
             onChange={(event) => {
               setText(event.target.value);
