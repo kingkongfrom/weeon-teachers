@@ -36,6 +36,14 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  /*
+   * Let the on-screen keyboard SHRINK the layout rather than cover it.
+   *
+   * Android honours this; without it the chat composer stays behind the keyboard
+   * and you can type blind. iOS ignores it, so the thread also compensates from
+   * `visualViewport` -- two mechanisms, because the platforms differ.
+   */
+  interactiveWidget: "resizes-content",
 };
 
 export async function generateMetadata(): Promise<Metadata> {
