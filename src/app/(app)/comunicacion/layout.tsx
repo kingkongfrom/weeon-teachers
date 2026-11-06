@@ -15,13 +15,17 @@ import type { ReactNode } from "react";
  * do not reuse it here.
  *
  * TABLET / DESKTOP (`md:` and up): there is no footer (`md:hidden`), so the
- * phone maths does not apply at all. The pane keeps `100dvh - 4rem`, and
- * `--tablet-pane-nudge` shifts it DOWN to clear the shell header. The two
- * tokens are separate on purpose: tuning one must never move the other.
+ * phone maths does not apply at all. But `md:-mt-8` pulls the pane UP by 32px
+ * into the sticky `h-16` shell header, which clips the chat header underneath it
+ * — and no amount of height correction can fix an element that starts too high.
+ * `md:mt-[calc(var(--tablet-pane-nudge)-2rem)]` replaces that pull: a positive
+ * `--tablet-pane-nudge` pushes the pane DOWN instead.
+ *
+ * The two tokens are separate on purpose: tuning one must never move the other.
  */
 export default function ComunicacionLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="comms-fill -mx-4 -mt-[4px] h-[calc(100dvh-4rem-var(--phone-nav-height)+var(--phone-pane-nudge)-env(safe-area-inset-bottom,0px))] w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)] md:-mx-8 md:-mt-8 md:h-[calc(100dvh-4rem-var(--tablet-pane-nudge))] md:w-[calc(100%+4rem)]">
+    <div className="comms-fill -mx-4 -mt-[4px] h-[calc(100dvh-4rem-var(--phone-nav-height)+var(--phone-pane-nudge)-env(safe-area-inset-bottom,0px))] w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)] md:-mx-8 md:mt-[calc(var(--tablet-pane-nudge)-2rem)] md:h-[calc(100dvh-4rem)] md:w-[calc(100%+4rem)]">
       {children}
     </div>
   );
