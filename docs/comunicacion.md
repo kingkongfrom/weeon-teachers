@@ -7,6 +7,10 @@ messages in `weeon-mobile`.*
 > (`--phone-pane-nudge`) and the bottom bar's height/padding were tuned by the
 > owner one pixel at a time and signed off. **Do not change them.** Read
 > [`chat-layout-do-not-touch.md`](chat-layout-do-not-touch.md) first.
+>
+> **Gestures** (swipe left = reply, long press = reactions, right-click = reply
+> popover): read [`chat-gestures.md`](chat-gestures.md) before touching
+> `use-reply-menu.ts`. It documents three traps that each cost hours.
 
 ## One line
 

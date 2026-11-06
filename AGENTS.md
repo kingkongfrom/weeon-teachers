@@ -213,6 +213,7 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 | Doc | Where |
 | --- | ----- |
 | **⛔ Chat composer + footer — DO NOT TOUCH** | `docs/chat-layout-do-not-touch.md` |
+| **Chat gestures (swipe / hold / right-click)** | `docs/chat-gestures.md` |
 | **Deploy** (single canonical doc) | `docs/deploy.md` |
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
