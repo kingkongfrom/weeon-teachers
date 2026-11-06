@@ -212,21 +212,43 @@ export function ChatThread({
   }, [messages.length, otherTyping]);
 
   /**
+   * Start replying to a message: the quote strip above the composer, caret in it.
+   *
+   * One function, three callers — swipe-left, right-click, and the "Responder"
+   * button in the desktop menu — so they cannot drift apart. The swipe used to
+   * open the menu and wait for a second tap; the owner asked for it to do THIS
+   * directly instead.
+   */
+  function beginReply(message: ChatMessageItem) {
+    setReplyTo({
+      id: message.id,
+      senderName: message.authorName,
+      preview:
+        message.body.length > 140 ? message.body.slice(0, 140) + "\u2026" : message.body,
+      createdAt: message.createdAt,
+    });
+    setMenuFor(null);
+    replyMenu.close();
+    /*
+     * Focus inside the same user gesture: mobile browsers only raise the keyboard
+     * for a focus() in the gesture that caused it.
+     */
+    composerRef.current?.focus();
+  }
+
+  /**
    * Registration for one bubble.
    *
-   * The hook owns pointer handling through ONE document listener, so this only
-   * hands it the element (via `ref`) and the reply fallback for right-click. No
-   * per-render handler objects, no state writes during a drag — that is what kept
-   * tearing the gesture down.
+   *   swipe LEFT (touch) -> beginReply, directly — no popover
+   *   right-click (mouse) -> the reply menu, the desktop affordance
    *
-   *   right-click (mouse) -> reply menu
-   *   long press  (touch) -> reaction pill
-   *   swipe left  (touch) -> reply menu
+   * There is no long-press gesture: it was removed because a resting finger could
+   * never be told apart from a slow swipe.
    */
   function bubbleHandlers(message: ChatMessageItem) {
     return replyMenu.bubbleProps(
-      () => setMenuFor(message),
-      () => setReactFor(message),
+      () => beginReply(message),
+      undefined,
       message.id,
     );
   }
@@ -642,7 +664,7 @@ export function ChatThread({
       {reactFor && replyMenu.position ? (
         <ChatReactionBar
           position={replyMenu.position}
-          label={m.chatReply}
+          label={m.chatReact}
           onPick={(emoji) => void applyReaction(reactFor, emoji)}
           onClose={() => setReactFor(null)}
         />
@@ -662,26 +684,7 @@ export function ChatThread({
           position={replyMenu.position}
           bubble={replyMenu.bubble}
           label={m.chatReply}
-          onReply={() => {
-            setReplyTo({
-              id: menuFor.id,
-              senderName: menuFor.authorName,
-              preview:
-                menuFor.body.length > 140
-                  ? menuFor.body.slice(0, 140) + "\u2026"
-                  : menuFor.body,
-              createdAt: menuFor.createdAt,
-            });
-            setMenuFor(null);
-            replyMenu.close();
-            /*
-             * Put the caret in the composer, which also raises the keyboard on a
-             * phone. This runs INSIDE the click handler on purpose: mobile browsers
-             * only open the keyboard for a focus() in the same user gesture, so
-             * deferring it to an effect leaves a quote and no way to type.
-             */
-            composerRef.current?.focus();
-          }}
+          onReply={() => beginReply(menuFor)}
           onClose={() => {
             setMenuFor(null);
             replyMenu.close();

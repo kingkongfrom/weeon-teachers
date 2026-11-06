@@ -3,17 +3,22 @@ import { act, renderHook } from "@testing-library/react";
 import { useReplyMenu } from "@/components/messages/use-reply-menu";
 
 /**
- * Gesture behaviour for the chat thread.
+ * Swipe-to-reply on a chat bubble.
  *
- * These are deliberately written against the SAME event path the real browser
- * uses: a `pointerdown` on the bubble element (found by class), then pointermove /
- * pointerup dispatched on window, which is where the single document listener
- * lives.
+ * These follow the same event path the browser does: `pointerdown` on the bubble
+ * element, then `pointermove`/`pointerup` on window, where the single document
+ * listener lives.
  *
- * An earlier version of this file simulated the hook's internals and passed
- * against code that was broken on a real phone. The truth is the browser probe
- * (scripts/probe-real.mjs); these tests are the fast regression guard that should
- * agree with it.
+ * Two behaviours are locked in because the owner asked for them explicitly:
+ *
+ *   1. A swipe calls the reply opener DIRECTLY — it must not open a popover and
+ *      wait for a second tap.
+ *   2. There is NO long press. A resting finger drifts, and no threshold ever
+ *      separated a hold from a slow swipe, so the gesture was removed rather than
+ *      left ambiguous.
+ *
+ * The authoritative check is still scripts/probe-direct.mjs against a real
+ * phone-viewport browser; these are the fast regression guard.
  */
 
 function makeBubble(id: string) {
@@ -31,32 +36,29 @@ function firePointer(
   type: string,
   init: { x: number; y: number; pointerType?: string; pointerId?: number },
 ) {
-  const event = new PointerEvent(type, {
-    bubbles: true,
-    cancelable: true,
-    composed: true,
-    pointerId: init.pointerId ?? 1,
-    pointerType: init.pointerType ?? "touch",
-    clientX: init.x,
-    clientY: init.y,
-    buttons: type === "pointerup" ? 0 : 1,
-  } as PointerEventInit);
-  target.dispatchEvent(event);
+  target.dispatchEvent(
+    new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      pointerId: init.pointerId ?? 1,
+      pointerType: init.pointerType ?? "touch",
+      clientX: init.x,
+      clientY: init.y,
+      buttons: type === "pointerup" ? 0 : 1,
+    } as PointerEventInit),
+  );
 }
 
 function setup(messageId = "m1") {
   const el = makeBubble(messageId);
   const onReply = vi.fn();
-  const onReact = vi.fn();
   const hook = renderHook(() => useReplyMenu(true));
-
-  /* Register the bubble the way the component does: spread props onto it. */
-  const props = hook.result.current.bubbleProps(onReply, onReact, messageId);
+  const props = hook.result.current.bubbleProps(onReply, undefined, messageId);
   act(() => {
     (props.ref as (node: HTMLElement | null) => void)(el);
   });
-
-  return { el, onReply, onReact, hook, props };
+  return { el, onReply, hook, props };
 }
 
 describe("chat bubble gestures", () => {
@@ -77,76 +79,74 @@ describe("chat bubble gestures", () => {
     expect(el.style.transform).toBe("translateX(-80px)");
   });
 
-  it("opens the reply on the MOVE, without needing a release", () => {
+  it("performs the reply directly, with no popover", () => {
     const { el, onReply, hook } = setup();
 
     firePointer(el, "pointerdown", { x: 280, y: 220 });
-    firePointer(window, "pointermove", { x: 250, y: 220 });
+    firePointer(window, "pointermove", { x: 230, y: 220 });
 
     expect(onReply).toHaveBeenCalledTimes(1);
-    /*
-     * The menu component is guarded on `menuFor && replyMenu.position`, so the
-     * position MUST be set or the menu never renders — the exact defect that made
-     * the swipe look dead while the gesture was fine. The state update comes from
-     * a plain DOM listener, so it needs a flush before the hook report is current.
-     * (scripts/probe-confirm.mjs asserts the same thing in a real browser.)
-     */
+    /* No menu position is set: the swipe must not open a popover. */
     act(() => {
       vi.advanceTimersByTime(0);
     });
     hook.rerender();
-    expect(hook.result.current.position).not.toBeNull();
+    expect(hook.result.current.position).toBeNull();
   });
 
   it("ignores a brush under the slop", () => {
+    /* 36px, because a resting finger drifts further than 12. */
     const { el, onReply } = setup();
 
     firePointer(el, "pointerdown", { x: 280, y: 220 });
-    firePointer(window, "pointermove", { x: 274, y: 220 });
-    firePointer(window, "pointerup", { x: 274, y: 220 });
+    firePointer(window, "pointermove", { x: 260, y: 220 });
+    firePointer(window, "pointerup", { x: 260, y: 220 });
 
     expect(onReply).not.toHaveBeenCalled();
   });
 
-  it("lets a vertical drag scroll instead of reacting", () => {
-    const { el, onReply, onReact } = setup();
-
-    firePointer(el, "pointerdown", { x: 200, y: 220 });
-    firePointer(window, "pointermove", { x: 200, y: 300 });
-
-    act(() => {
-      vi.advanceTimersByTime(600);
-    });
-
-    expect(onReply).not.toHaveBeenCalled();
-    expect(onReact).not.toHaveBeenCalled();
-  });
-
-  it("opens REACTIONS on a touch hold with no movement", () => {
-    const { el, onReply, onReact } = setup();
+  it("never opens anything on a long press", () => {
+    /*
+     * The gesture was removed on purpose. Holding must do nothing at all — not the
+     * reply menu, not a reaction row.
+     */
+    const { el, onReply } = setup();
 
     firePointer(el, "pointerdown", { x: 200, y: 220 });
     act(() => {
-      vi.advanceTimersByTime(600);
+      vi.advanceTimersByTime(1500);
     });
 
-    expect(onReact).toHaveBeenCalledTimes(1);
     expect(onReply).not.toHaveBeenCalled();
   });
 
-  it("keeps a MOUSE hold on reply, not reactions", () => {
-    const { el, onReply, onReact } = setup();
+  it("lets a vertical drag scroll without replying", () => {
+    const { el, onReply } = setup();
 
-    firePointer(el, "pointerdown", { x: 200, y: 220, pointerType: "mouse" });
+    firePointer(el, "pointerdown", { x: 200, y: 220 });
+    firePointer(window, "pointermove", { x: 196, y: 300 });
+
+    expect(onReply).not.toHaveBeenCalled();
+  });
+
+  it("right-click still opens the desktop reply menu", () => {
+    const { el, onReply, hook, props } = setup();
+
     act(() => {
-      vi.advanceTimersByTime(600);
+      (props.onContextMenu as (e: unknown) => void)({
+        preventDefault: () => {},
+        clientX: 150,
+        clientY: 210,
+        currentTarget: el,
+      });
     });
 
     expect(onReply).toHaveBeenCalledTimes(1);
-    expect(onReact).not.toHaveBeenCalled();
+    hook.rerender();
+    expect(hook.result.current.position).toEqual({ x: 150, y: 210 });
   });
 
-  it("clears the transform after the menu opens", () => {
+  it("springs the bubble back after replying", () => {
     const { el } = setup();
 
     firePointer(el, "pointerdown", { x: 280, y: 220 });

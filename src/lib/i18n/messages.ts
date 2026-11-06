@@ -737,6 +737,10 @@ const es = {
     chatDeleteError: "No se pudo eliminar el chat.",
     chatReply: "Responder",
     chatReplyCancelled: "Respuesta cancelada",
+    /* The reaction row is a different popover from the reply menu; labelling it
+       "Responder" made a screen reader announce the wrong action — and made an
+       automated probe misreport which one had opened. */
+    chatReact: "Reaccionar",
   },
   assessments: {
     title: "Tareas y exámenes",
@@ -2288,6 +2292,7 @@ const en: Messages = {
     chatDeleteError: "Could not delete the chat.",
     chatReply: "Reply",
     chatReplyCancelled: "Reply cancelled",
+    chatReact: "React",
   },
   assessments: {
     title: "Assignments & exams",
