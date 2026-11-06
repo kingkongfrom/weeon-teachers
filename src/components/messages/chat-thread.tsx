@@ -465,6 +465,15 @@ export function ChatThread({
                     {/*
                      * Hover reveals the smile; clicking it opens the six emojis.
                      * On the INNER side, so it never sits over the bubble edge.
+                     *
+                     * TOUCH DEVICES GET NO SMILE BUTTON. It is revealed by
+                     * `group-hover`, and a finger cannot hover — so on a phone it
+                     * stayed at opacity 0 while remaining a live, invisible tap
+                     * target sitting beside the bubble. Reactions on touch are
+                     * reached by long-pressing the bubble itself (see
+                     * use-reply-menu.ts), which is the gesture a phone user
+                     * expects. Hiding it outright removes the dead target instead
+                     * of merely making it invisible.
                      */}
                     {message.mine ? (
                       <button
@@ -476,7 +485,7 @@ export function ChatThread({
                           setReactFor(message);
                           setMenuFor(null);
                         }}
-                        className="order-first inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] opacity-0 transition-opacity hover:bg-[var(--wa-hover)] focus-visible:opacity-100 group-hover/row:opacity-100"
+                        className="order-first inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] opacity-0 transition-opacity hover:bg-[var(--wa-hover)] focus-visible:opacity-100 group-hover/row:opacity-100 pointer-coarse:hidden"
                       >
                         <Smile className="h-[18px] w-[18px]" aria-hidden />
                       </button>
@@ -590,6 +599,7 @@ export function ChatThread({
                         </div>
                       ) : null}
                     </div>
+                    {/* Touch: no smile button. See the note on the own-message one above. */}
                     {message.mine ? null : (
                       <button
                         type="button"
@@ -600,7 +610,7 @@ export function ChatThread({
                           setReactFor(message);
                           setMenuFor(null);
                         }}
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] opacity-0 transition-opacity hover:bg-[var(--wa-hover)] focus-visible:opacity-100 group-hover/row:opacity-100"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] opacity-0 transition-opacity hover:bg-[var(--wa-hover)] focus-visible:opacity-100 group-hover/row:opacity-100 pointer-coarse:hidden"
                       >
                         <Smile className="h-[18px] w-[18px]" aria-hidden />
                       </button>
