@@ -67,6 +67,19 @@ export function BottomNav({
     <nav
       aria-label={t.panel.title}
       /*
+       * ───────────────────────────────────────────────────────────────────────
+       *  ⛔  DO NOT TOUCH THE COMPOSER POSITION OR THE FOOTER  ⛔
+       *
+       *  The height floor and the bottom-padding cap below were tuned BY EYE by
+       *  the owner on a real phone and signed off. Do not change them as part of
+       *  another task, and do not adjust them to compensate for a composer
+       *  position problem — that pair is coupled and was churned a dozen times
+       *  by agents editing it blind.
+       *
+       *  See docs/chat-layout-do-not-touch.md.
+       * ───────────────────────────────────────────────────────────────────────
+       */
+      /*
        * HEIGHT: the cells define it; the floor only prevents a squashed bar.
        *
        * `min-h` was 4.5rem (72px) while the cells need 59px, so the bar carried
@@ -77,7 +90,17 @@ export function BottomNav({
        * The safe-area inset stays as padding: on a device with a home indicator
        * the bar MUST reserve it, or the labels sit under the gesture area.
        */
-      className="fixed inset-x-0 bottom-0 z-30 flex min-h-[3.5rem] items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden"
+      /*
+       * BOTTOM PADDING: the safe-area inset, CAPPED at 18px.
+       *
+       * The full `env(safe-area-inset-bottom)` is the device's home-indicator
+       * reserve; uncapped it read as a slab of dead colour under the labels.
+       * `min()` takes whichever is smaller, the device inset or the cap, so the
+       * bar never carries more than the cap no matter what the device reports.
+       *
+       * Tuned by the owner in 10px steps: 8px was too tight, 18px is the value.
+       */
+      className="fixed inset-x-0 bottom-0 z-30 flex min-h-[3.5rem] items-stretch border-t border-border bg-surface pb-[min(env(safe-area-inset-bottom,0px),18px)] md:hidden"
     >
       {items.map((item) => {
         const active = item.match

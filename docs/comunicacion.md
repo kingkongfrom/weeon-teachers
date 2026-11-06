@@ -3,6 +3,11 @@
 *Teacher ↔ guardians/students. Schema owner: `weeon-tenants`. Families read
 messages in `weeon-mobile`.*
 
+> **⛔ Phone chat layout is frozen.** The composer offset
+> (`--phone-pane-nudge`) and the bottom bar's height/padding were tuned by the
+> owner one pixel at a time and signed off. **Do not change them.** Read
+> [`chat-layout-do-not-touch.md`](chat-layout-do-not-touch.md) first.
+
 ## One line
 
 Comunicación has **three** channels on `/comunicacion`:

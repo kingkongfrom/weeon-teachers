@@ -42,24 +42,30 @@
    */
   --phone-nav-height: 4.25rem;
   /*
+   * ─────────────────────────────────────────────────────────────────────────
+   *  ⛔  DO NOT TOUCH THE COMPOSER POSITION OR THE FOOTER  ⛔
+   *
+   *  The owner tuned this value BY EYE, one pixel at a time, on a real phone,
+   *  and signed it off. It is not derived from a formula and it will not match
+   *  any you compute. Do not "fix", "normalise", "tighten" or "clean up" it —
+   *  and do not adjust it to compensate for some other layout problem.
+   *
+   *  See docs/chat-layout-do-not-touch.md before changing ANYTHING here.
+   * ─────────────────────────────────────────────────────────────────────────
+   *
    * Phone pane correction, in px.
    *
-   * The pane's height is `100dvh - header - footer + this`. The sign is the
-   * whole point and it has already been got wrong once, so it is spelled out:
+   * The pane's height is `100dvh - header - footer + this`. The sign matters:
    *
-   *   BIGGER nudge  -> TALLER pane -> contents move DOWN
+   *   BIGGER nudge  -> TALLER pane  -> contents move DOWN
    *   SMALLER nudge -> SHORTER pane -> contents move UP
    *
    * `100dvh` is measured against the layout viewport, which is taller than the
-   * visible one once the browser's URL bar and the home indicator are in play.
-   * The pane therefore ends short of the fixed footer and the composer floats
-   * above it; this is added back, on phones only (the `md:` rule drops it).
-   *
-   * Tuning history: 30px left the composer above the bar; 40px sat it too low.
-   * 6px is the value in place. Re-check on the phone — this is the only knob.
-   * Do not reintroduce per-element margins.
+   * visible one once the browser's URL bar and home indicator are in play, so
+   * the real offset on a device cannot be predicted from the other tokens. That
+   * is why this number is empirical rather than calculated.
    */
-  --phone-pane-nudge: 14px;
+  --phone-pane-nudge: 120px;
   /*
    * iPad / tablet pane correction, in px. SUBTRACTED from the pane height, so
    * a BIGGER value moves the pane UP and a SMALLER one moves it DOWN.

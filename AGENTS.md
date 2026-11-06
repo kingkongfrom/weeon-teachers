@@ -199,8 +199,20 @@ Demo tenant: WEEON DEMO SCHOOL, SABER `999999-00`.
 
 ## Must-read before feature work
 
+> **⛔ DO NOT TOUCH THE COMPOSER POSITION OR THE FOOTER** in the Comunicación
+> chat. `--phone-pane-nudge` (`src/app/globals.css`) and the bottom bar's
+> `min-h` / bottom padding were tuned by eye, one pixel at a time, on a real
+> phone and signed off by the owner. Do not adjust them — not as cleanup, not to
+> compensate for another layout bug, not as a drive-by. See
+> [`docs/chat-layout-do-not-touch.md`](docs/chat-layout-do-not-touch.md).
+>
+> If a chat layout change seems to have no effect, the dev server is probably
+> serving **stale CSS** — restart it before concluding the code is wrong. That
+> trap cost a dozen wasted rounds.
+
 | Doc | Where |
 | --- | ----- |
+| **⛔ Chat composer + footer — DO NOT TOUCH** | `docs/chat-layout-do-not-touch.md` |
 | **Deploy** (single canonical doc) | `docs/deploy.md` |
 | Workspace map | `../AGENTS.md`, `../docs/repositories.md` |
 | **Aula virtual (Classroom model)** | `docs/aula-virtual.md` |
