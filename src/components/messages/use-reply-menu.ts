@@ -68,12 +68,21 @@ type ActiveGesture = {
   startY: number;
   isTouch: boolean;
   element: Element;
+  /** The bubble this gesture belongs to, so only IT follows the finger. */
+  key: string;
 };
 
 export function useReplyMenu(enabled: boolean) {
   const [position, setPosition] = useState<ReplyMenuPosition | null>(null);
   const [bubble, setBubble] = useState<ReplyMenuAnchor | null>(null);
-  const [dragX, setDragX] = useState(0);
+  /*
+   * WHICH bubble is being dragged, and by how much — reported together.
+   *
+   * A single `dragX` number on the hook was read by EVERY bubble, so a swipe
+   * translated the whole transcript instead of the one message under the finger.
+   * The key identifies the bubble so only that one reads a non-zero offset.
+   */
+  const [drag, setDrag] = useState<{ key: string | null; x: number }>({ key: null, x: 0 });
 
   /** The gesture currently in flight. Survives re-renders by design. */
   const active = useRef<ActiveGesture | null>(null);
@@ -105,7 +114,7 @@ export function useReplyMenu(enabled: boolean) {
     clearLongPress();
     active.current = null;
     state.current = "idle";
-    setDragX(0);
+    setDrag({ key: null, x: 0 });
   }, [clearLongPress]);
 
   /*
@@ -121,7 +130,7 @@ export function useReplyMenu(enabled: boolean) {
     const dy = event.clientY - g.startY;
 
     if (state.current === "swiping") {
-      setDragX(Math.min(Math.max(0, -dx), SWIPE_MAX_PX));
+      setDrag({ key: g.key, x: Math.min(Math.max(0, -dx), SWIPE_MAX_PX) });
       return;
     }
 
@@ -136,7 +145,7 @@ export function useReplyMenu(enabled: boolean) {
     if (dx < -SWIPE_SLOP_PX && Math.abs(dx) > Math.abs(dy)) {
       state.current = "swiping";
       clearLongPress();
-      setDragX(Math.min(Math.max(0, -dx), SWIPE_MAX_PX));
+      setDrag({ key: g.key, x: Math.min(Math.max(0, -dx), SWIPE_MAX_PX) });
     }
   }, [clearLongPress]);
 
@@ -194,9 +203,15 @@ export function useReplyMenu(enabled: boolean) {
    *
    * `onReply` — mouse right-click, mouse hold, touch swipe-left.
    * `onReact` — touch long-press.
+   * `key`     — this bubble's id, so the drag offset can be reported for ONE
+   *             message. Without it every bubble translated together.
    */
   const bubbleProps = useCallback(
-    (onReply: (x: number, y: number) => void, onReact?: (x: number, y: number) => void) => {
+    (
+      onReply: (x: number, y: number) => void,
+      onReact?: (x: number, y: number) => void,
+      key = "default",
+    ) => {
       if (!enabled) return {};
 
       /* Always current, even for a window handler created before the last render. */
@@ -229,6 +244,7 @@ export function useReplyMenu(enabled: boolean) {
             startY: event.clientY,
             isTouch,
             element: event.currentTarget,
+            key,
           };
           state.current = "pressing";
 
@@ -265,7 +281,7 @@ export function useReplyMenu(enabled: boolean) {
     openAt,
     cancelLongPress,
     bubbleProps,
-    /** Live leftward travel during a swipe, in px. 0 at rest. */
-    dragX,
+    /** Which bubble is being dragged, and by how many px. */
+    drag,
   };
 }

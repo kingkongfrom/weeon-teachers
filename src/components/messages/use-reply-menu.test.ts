@@ -33,7 +33,7 @@ function pointer(
   return event;
 }
 
-function setup() {
+function setup(messageKey = "msg-1") {
   const onReply = vi.fn();
   const onReact = vi.fn();
   const hook = renderHook(() => useReplyMenu(true));
@@ -44,7 +44,7 @@ function setup() {
     ({ left: 10, top: 20, right: 210, bottom: 60, width: 200, height: 40, x: 10, y: 20, toJSON: () => ({}) }) as DOMRect;
   document.body.appendChild(element);
 
-  const handlers = hook.result.current.bubbleProps(onReply, onReact);
+  const handlers = hook.result.current.bubbleProps(onReply, onReact, messageKey);
 
   const down = (x: number, y: number, pointerType = "touch") =>
     act(() => {
@@ -156,15 +156,36 @@ describe("useReplyMenu gestures", () => {
   });
 
   it("exposes the live drag distance while swiping and clears it on release", () => {
-    const { hook, down, move, up } = setup();
+    const { hook, down, move, up } = setup("msg-1");
 
     down(200, 40);
     move(180, 40);
     move(150, 40);
 
-    expect(hook.result.current.dragX).toBe(50);
+    expect(hook.result.current.drag).toEqual({ key: "msg-1", x: 50 });
 
     up(150, 40);
-    expect(hook.result.current.dragX).toBe(0);
+    expect(hook.result.current.drag).toEqual({ key: null, x: 0 });
+  });
+
+  it("keys the drag to the SWIPED bubble only", () => {
+    /*
+     * The bug that shipped: `dragX` was a single number on the hook, so every
+     * bubble read the same offset and the whole transcript slid sideways. The
+     * offset must carry the id of the message under the finger, so a bubble
+     * compares it against its own id before moving.
+     */
+    const a = setup("msg-A");
+    a.down(200, 40);
+    a.move(180, 40);
+    a.move(160, 40);
+
+    expect(a.hook.result.current.drag.key).toBe("msg-A");
+    expect(a.hook.result.current.drag.x).toBeGreaterThan(0);
+
+    /* Any other bubble sees a key that is not its own, so it stays put. */
+    expect(a.hook.result.current.drag.key).not.toBe("msg-B");
+
+    a.up(160, 40);
   });
 });

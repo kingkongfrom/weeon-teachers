@@ -243,6 +243,9 @@ export function ChatThread({
       () => setMenuFor(message),
       /* Touch long-press: reactions. */
       () => setReactFor(message),
+      /* This bubble's id — the drag offset is reported per message, so only the
+         bubble under the finger moves. */
+      message.id,
     );
   }
 
@@ -515,13 +518,18 @@ export function ChatThread({
                               : "",
                       )}
                       /*
-                       * Only during a touch swipe: the bubble follows the finger
-                       * leftward so the gesture is discoverable. At rest this is
-                       * translateX(0), i.e. no visual change whatsoever.
+                       * Only during a touch swipe, and only for THIS bubble: the
+                       * hook reports which message is being dragged alongside the
+                       * offset. Reading a bare offset translated every bubble on
+                       * the screen at once. At rest this is undefined — no
+                       * visual change whatsoever.
                        */
                       style={
-                        replyMenu.dragX > 0
-                          ? { transform: `translateX(${-replyMenu.dragX}px)`, transition: "none" }
+                        replyMenu.drag.key === message.id && replyMenu.drag.x > 0
+                          ? {
+                              transform: `translateX(${-replyMenu.drag.x}px)`,
+                              transition: "none",
+                            }
                           : undefined
                       }
                     >
