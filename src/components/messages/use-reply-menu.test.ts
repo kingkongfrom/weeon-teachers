@@ -178,7 +178,11 @@ describe("chat bubble gestures", () => {
     expect(onReply).not.toHaveBeenCalled();
   });
 
-  it("right-click still opens the desktop reply menu", () => {
+  it("right-click NEVER opens the reply menu", () => {
+    /*
+     * The owner asked for right-click-to-reply to be removed entirely, not gated
+     * on a device check. onContextMenu can only react on a hold now.
+     */
     const { el, onReply, hook, props } = setup();
 
     act(() => {
@@ -190,9 +194,30 @@ describe("chat bubble gestures", () => {
       });
     });
 
-    expect(onReply).toHaveBeenCalledTimes(1);
+    expect(onReply).not.toHaveBeenCalled();
     hook.rerender();
-    expect(hook.result.current.position).toEqual({ x: 150, y: 210 });
+    expect(hook.result.current.position).toBeNull();
+  });
+
+  it("a hold that raises contextmenu opens reactions instead", () => {
+    /*
+     * Mobile browsers raise `contextmenu` for a long press. That path is the
+     * reaction trigger; the reply menu must never appear from it.
+     */
+    const { el, onReply, onReact, props } = setup();
+
+    firePointer(el, "pointerdown", { x: 200, y: 220 });
+    act(() => {
+      (props.onContextMenu as (e: unknown) => void)({
+        preventDefault: () => {},
+        clientX: 200,
+        clientY: 220,
+        currentTarget: el,
+      });
+    });
+
+    expect(onReact).toHaveBeenCalledTimes(1);
+    expect(onReply).not.toHaveBeenCalled();
   });
 
   it("springs the bubble back after replying", () => {
