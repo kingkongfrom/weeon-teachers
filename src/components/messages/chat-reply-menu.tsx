@@ -103,7 +103,7 @@ export function ChatReplyMenu({
        * label like "Responder", which read as padding. */
       style={{ left, top }}
       className={cn(
-        "fixed z-[100011] flex w-max max-w-[min(90vw,16rem)] flex-col rounded-xl p-1",
+        "fixed z-[100011] flex w-max max-w-[min(90vw,16rem)] flex-col rounded-xl px-1 py-0.5",
         // No border: a border reads as a panel inside the page, and WhatsApp's menu
         // is a floating surface above it.
         "wa-chat bg-[var(--wa-panel)] ring-1 ring-[var(--wa-border)] shadow-[0_2px_6px_rgb(11_20_26/0.18),0_8px_20px_-6px_rgb(11_20_26/0.24)]",
@@ -113,7 +113,7 @@ export function ChatReplyMenu({
         type="button"
         role="menuitem"
         onClick={onReply}
-        className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-3 text-[13.5px] font-medium text-[var(--wa-text)] transition-colors hover:bg-[var(--wa-search)] focus-visible:bg-[var(--wa-search)] focus-visible:outline-none"
+        className="flex items-center gap-2 rounded-lg py-1 pl-2 pr-3 text-[13.5px] font-medium text-[var(--wa-text)] transition-colors hover:bg-[var(--wa-search)] focus-visible:bg-[var(--wa-search)] focus-visible:outline-none"
       >
         <Reply className="h-4 w-4 shrink-0 text-[var(--wa-icon)]" aria-hidden />
         {label}
