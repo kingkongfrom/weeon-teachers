@@ -421,7 +421,17 @@ export function ChatThread({
         </button>
       </div>
 
-      <div className="chat-wallpaper flex min-h-0 flex-1 flex-col overflow-y-auto px-[4%] py-3">
+      {/*
+        `touch-action: pan-y` reserves the HORIZONTAL axis for us.
+        Without it the browser claims a horizontal drag for overscroll /
+        history-back and cancels the pointer stream mid-gesture: the bubble moved
+        (so the swipe looked alive) but no pointerup ever arrived to commit the
+        reply. Vertical panning and scrolling are untouched.
+      */}
+      <div
+        className="chat-wallpaper flex min-h-0 flex-1 flex-col overflow-y-auto px-[4%] py-3 [touch-action:pan-y]"
+        style={{ overscrollBehaviorX: "contain" }}
+      >
         <div className="mt-auto flex flex-col">
           {messages.length === 0 ? (
             <div className="mx-auto flex max-w-[300px] flex-col items-center gap-3 rounded-2xl bg-[var(--wa-day)]/90 px-5 py-6 text-center shadow-sm backdrop-blur">

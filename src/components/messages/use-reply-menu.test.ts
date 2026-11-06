@@ -188,4 +188,35 @@ describe("useReplyMenu gestures", () => {
 
     a.up(160, 40);
   });
+
+  it("still replies when the browser CANCELS the gesture after the swipe", () => {
+    /*
+     * Mobile browsers fire pointercancel when they take a gesture for scrolling
+     * or the system back-swipe. The bubble had already moved, so the user thinks
+     * the swipe worked — dropping the commit there makes it look broken.
+     */
+    const { onReply, down, move } = setup();
+
+    down(200, 40);
+    move(180, 40);
+    move(120, 40);
+
+    act(() => {
+      window.dispatchEvent(pointer("pointercancel", { x: 120, y: 40 }));
+    });
+
+    expect(onReply).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT reply when a cancel arrives before the commit distance", () => {
+    const { onReply, down, move } = setup();
+
+    down(200, 40);
+    move(180, 40);
+    act(() => {
+      window.dispatchEvent(pointer("pointercancel", { x: 180, y: 40 }));
+    });
+
+    expect(onReply).not.toHaveBeenCalled();
+  });
 });

@@ -153,17 +153,51 @@ export function useReplyMenu(enabled: boolean) {
     (event: PointerEvent) => {
       const g = active.current;
       if (!g || event.pointerId !== g.pointerId) return;
+      /*
+       * Read everything BEFORE reset(), which nulls `active`.
+       *
+       * This was the bug behind "the bubble slides but the reply never opens":
+       * `reset()` ran first, clearing the gesture, and the values it needed were
+       * already gone by the time the commit check ran.
+       */
       const wasSwiping = state.current === "swiping";
       const travelled = g.startX - event.clientX;
+      const x = event.clientX;
+      const y = event.clientY;
       reset();
       if (wasSwiping && travelled >= SWIPE_COMMIT_PX) {
-        openers.current.onReply?.(event.clientX, event.clientY);
+        openers.current.onReply?.(x, y);
       }
     },
     [reset],
   );
 
-  const handleWindowCancel = useCallback(() => reset(), [reset]);
+  /**
+   * A cancel must not swallow a swipe the user already committed to.
+   *
+   * Mobile browsers fire `pointercancel` when they take a gesture for scrolling
+   * or for the system back-swipe. By then the finger may have travelled well
+   * past the commit distance — dropping it there makes the swipe feel like it
+   * silently failed, which is exactly how this reported.
+   */
+  const handleWindowCancel = useCallback(
+    (event: PointerEvent) => {
+      const g = active.current;
+      if (!g || (event.pointerId !== undefined && event.pointerId !== g.pointerId)) {
+        reset();
+        return;
+      }
+      const wasSwiping = state.current === "swiping";
+      const travelled = g.startX - event.clientX;
+      const x = event.clientX;
+      const y = event.clientY;
+      reset();
+      if (wasSwiping && travelled >= SWIPE_COMMIT_PX) {
+        openers.current.onReply?.(x, y);
+      }
+    },
+    [reset],
+  );
 
   /* Attach the window listeners for the lifetime of the hook, not per gesture. */
   useEffect(() => {
