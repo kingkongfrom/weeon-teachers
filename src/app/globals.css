@@ -52,8 +52,11 @@
    *
    * If a future phone shows the composer too low, lower THIS; too high, raise it.
    * Do not reintroduce per-element margins for it.
+   *
+   * Tuning history: 30px landed the composer just above the bar; 35px sits it
+   * flush. Adjust in 5px steps and check on the phone — this is the only knob.
    */
-  --phone-pane-nudge: 30px;
+  --phone-pane-nudge: 35px;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
   --background: #f8fafc;
