@@ -44,20 +44,22 @@
   /*
    * Phone pane correction, in px.
    *
+   * The pane's height is `100dvh - header - footer + this`. The sign is the
+   * whole point and it has already been got wrong once, so it is spelled out:
+   *
+   *   BIGGER nudge  -> TALLER pane -> contents move DOWN
+   *   SMALLER nudge -> SHORTER pane -> contents move UP
+   *
    * `100dvh` is measured against the layout viewport, which is taller than the
    * visible one once the browser's URL bar and the home indicator are in play.
-   * A pane sized from it therefore ends ~30px above the fixed footer, leaving the
-   * composer floating with a gap. This is added back — the one number that fixes
-   * it, isolated to phones (the pane's `md:` rule drops it).
+   * The pane therefore ends short of the fixed footer and the composer floats
+   * above it; this is added back, on phones only (the `md:` rule drops it).
    *
-   * If a future phone shows the composer too low, lower THIS; too high, raise it.
-   * Do not reintroduce per-element margins for it.
-   *
-   * Tuning history: 30px landed the composer just above the bar; 35px moved it
-   * 5px closer; 40px is the current value. Adjust in 5px steps and check on the
-   * phone — this is the only knob.
+   * Tuning history: 30px left the composer above the bar; 40px sat it too low.
+   * 35px is the value in place. Move in 5px steps and re-check on the phone —
+   * this is the only knob. Do not reintroduce per-element margins.
    */
-  --phone-pane-nudge: 40px;
+  --phone-pane-nudge: 35px;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
   --background: #f8fafc;
