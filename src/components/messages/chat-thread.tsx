@@ -60,6 +60,24 @@ function sameGroup(previous: ChatMessageItem | undefined, message: ChatMessageIt
   return Math.abs(gap) < 4 * 60 * 1000;
 }
 
+/**
+ * True when a message is nothing but emoji (docs/chat-reactions.md).
+ *
+ * `Extended_Pictographic` covers the pictographs; ZWJ (U+200D), the variation
+ * selector (U+FE0F) and the skin-tone modifiers (U+1F3FB–U+1F3FF) are the pieces
+ * that build one glyph from several codepoints -- 👨‍👩‍👧, ❤️, 👍🏽. Digits and `#`/`*`
+ * are excluded even though they carry the Emoji property: "123" is a number.
+ */
+const EMOJI_ONLY_PATTERN =
+  /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\u200d|\ufe0f|\s)+$/u;
+
+function isEmojiOnly(body: string): boolean {
+  const trimmed = body.trim();
+  if (!trimmed) return false;
+  if (!/\p{Extended_Pictographic}/u.test(trimmed)) return false;
+  return EMOJI_ONLY_PATTERN.test(trimmed);
+}
+
 /** iMessage-style 1:1 thread with grouped bubbles and a pinned composer. */
 export function ChatThread({
   conversationId,
@@ -328,6 +346,12 @@ export function ChatThread({
                 !next ||
                 !sameGroup(message, next) ||
                 dayKey(next.createdAt) !== dayKey(message.createdAt);
+              /*
+               * Emoji-only messages get NO bubble: the glyphs are the message, and a
+               * coloured pillow behind them is noise. Anything containing a letter,
+               * digit or punctuation is text and keeps its bubble.
+               */
+              const emojiOnly = isEmojiOnly(message.body);
 
               return (
                 <Fragment key={message.id}>
@@ -347,16 +371,24 @@ export function ChatThread({
                     <div
                       {...bubbleHandlers(message)}
                       className={cn(
-                        "wa-bubble relative max-w-[min(78%,34rem)] px-2.5 py-1.5 text-[14.5px] leading-[20px] text-[var(--wa-bubble)] shadow-[var(--wa-bubble-shadow)]",
-                        message.mine ? "bg-[var(--wa-out)]" : "bg-[var(--wa-in)]",
+                        "wa-bubble relative max-w-[min(78%,34rem)] px-2.5 py-1.5 text-[14.5px] leading-[20px] text-[var(--wa-bubble)]",
+                        // Emoji-only: no surface, no shadow, no tail.
+                        emojiOnly
+                          ? "bg-transparent shadow-none"
+                          : cn(
+                              "shadow-[var(--wa-bubble-shadow)]",
+                              message.mine ? "bg-[var(--wa-out)]" : "bg-[var(--wa-in)]",
+                            ),
                         "rounded-lg",
-                        message.mine
-                          ? endGroup
-                            ? "rounded-br-[3px] wa-bubble-tail-out"
-                            : ""
-                          : endGroup
-                            ? "rounded-bl-[3px] wa-bubble-tail-in"
-                            : "",
+                        emojiOnly
+                          ? ""
+                          : message.mine
+                            ? endGroup
+                              ? "rounded-br-[3px] wa-bubble-tail-out"
+                              : ""
+                            : endGroup
+                              ? "rounded-bl-[3px] wa-bubble-tail-in"
+                              : "",
                       )}
                     >
                       {message.replyTo ? (
