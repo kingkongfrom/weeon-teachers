@@ -66,10 +66,12 @@ export type ReplyMenuAnchor = { left: number; top: number; right: number; bottom
 type Target = {
   el: HTMLElement;
   key: string;
-  /** Swipe-left / right-click: reply to this message. */
+  /** Swipe-left (touch): reply to this message immediately. */
   onReply: (x: number, y: number) => void;
-  /** Long press on touch: open the reaction row. */
+  /** Long press (touch): open the reaction row. */
   onReact?: (x: number, y: number) => void;
+  /** Right-click (desktop): open the reply POPOVER for this message. */
+  onMenu?: (x: number, y: number) => void;
 };
 
 /* ----- module-level gesture state: outside React on purpose ----- */
@@ -82,6 +84,15 @@ let pointerId = -1;
 let mode: "idle" | "pressing" | "swiping" | "scrolling" = "idle";
 let installed = false;
 let holdTimer: ReturnType<typeof setTimeout> | null = null;
+/**
+ * True when the press immediately before the current event came from a mouse.
+ *
+ * A `contextmenu` event does not reliably carry `pointerType`, but it is always
+ * preceded by its own pointerdown — so the press that caused it is recorded here
+ * and read back. This is what separates "desktop right-click" from "mobile long
+ * press", which raise the SAME event and must do different things.
+ */
+let lastPointerWasMouse = false;
 
 
 function setTransform(el: HTMLElement | null, px: number) {
@@ -258,45 +269,66 @@ export function useReplyMenu(enabled: boolean) {
     bubbleProps: (
       onReply: (x: number, y: number) => void,
       onReact?: (x: number, y: number) => void,
+      onMenu?: (x: number, y: number) => void,
       key = "default",
     ) => ({
       ref: (el: HTMLElement | null) => {
         if (!el) return;
         const existing = registry.get(el);
         const same =
-          existing && existing.key === key && existing.onReply === onReply && existing.onReact === onReact;
+          existing &&
+          existing.key === key &&
+          existing.onReply === onReply &&
+          existing.onReact === onReact &&
+          existing.onMenu === onMenu;
         if (same) return;
-        registry.set(el, { el, key, onReply, onReact });
+        registry.set(el, { el, key, onReply, onReact, onMenu });
       },
       onContextMenu: (event: React.MouseEvent) => {
-        /*
-         * RIGHT-CLICK NO LONGER REPLIES. ANYWHERE.
-         *
-         * The owner asked for it removed, not gated: `(hover: none)` was not
-         * reliable — the device reported hover, the touch branch was skipped, and
-         * a right-click (or a long press raising contextmenu) still opened the
-         * reply menu.
-         *
-         * So this handler does exactly two things now:
-         *   1. suppresses the browser menu,
-         *   2. on a HOLD (a contextmenu that is not a deliberate right-click),
-         *      opens the reaction row.
-         * It can never open the reply menu. Reply is reached by swiping left;
-         * that is the only reply gesture on the web surfaces.
-         */
+        /* Always suppress the browser's own menu. */
         event.preventDefault();
 
         const el = event.currentTarget as HTMLElement;
         const target = registry.get(el);
-        if (!target?.onReact) return;
+        if (!target) return;
 
         /*
-         * `contextmenu` arrives for two different reasons: a real right-click on a
-         * mouse, and a long press on touch (and on some trackpads). Only the
-         * HOLD case should react. `mode` tells us which: the pointer path sets it
-         * to "pressing" on pointerdown and nothing has moved or ended yet.
+         * DESKTOP vs MOBILE — decided by the DEVICE, not by transient state.
+         *
+         * A real right-click always comes from a mouse; a hold on a phone never
+         * does. `matchMedia("(hover: hover)")` identifies a desktop-class device
+         * without depending on gesture state, which is gone by the time this
+         * event arrives (see below).
          */
-        if (mode !== "pressing") return;
+        const isDesktop =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(hover: hover)").matches;
+
+        if (isDesktop) {
+          /*
+           * DESKTOP: right-click opens the POPOVER, it does not reply.
+           *
+           * The menu renders on `menuFor && replyMenu.position`; setting position
+           * and letting the caller pick the message is what makes it appear.
+           * Clicking "Responder" in that popover is what replies.
+           *
+           * `contextmenu` fires AFTER pointerup, so the document listener has
+           * already reset `mode` by now — that is why an earlier version gated on
+           * `mode === "pressing"` and opened nothing at all on desktop.
+           */
+          const r = el.getBoundingClientRect();
+          setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+          setPosition({ x: event.clientX, y: event.clientY });
+          target.onMenu?.(event.clientX, event.clientY);
+          return;
+        }
+
+        /*
+         * MOBILE: a long press raises contextmenu. Open the reaction row. This
+         * can never open the reply menu.
+         */
+        if (!target.onReact) return;
         clearHold();
         const r = el.getBoundingClientRect();
         setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
@@ -304,6 +336,46 @@ export function useReplyMenu(enabled: boolean) {
         target.onReact(event.clientX, event.clientY);
         endGesture();
       },
+      /*
+       * THE HOLD TIMER, ON THE BUBBLE ITSELF.
+       *
+       * This is how the original implementation worked, before the rewrite moved
+       * everything to a document listener: a React handler ON the element, so the
+       * element is simply `event.currentTarget` — no hit-testing, no registry
+       * lookup, nothing that can lose which bubble was pressed.
+       *
+       * The document listener still owns moving the bubble during a swipe. This
+       * handler exists only to arm the hold, and it is the path that actually
+       * works on a real phone.
+       */
+      onPointerDown: (event: React.PointerEvent) => {
+        /*
+         * Record the input class BEFORE anything else: the `contextmenu` that a
+         * right-click or a hold produces reads it back to decide what to do.
+         */
+        lastPointerWasMouse = event.pointerType === "mouse";
+
+        if (event.button === 2) return;
+        const el = event.currentTarget as HTMLElement;
+        const target = registry.get(el);
+        if (!target?.onReact) return;
+        /* Desktop has the right-click affordance; no hold timer there. */
+        if (lastPointerWasMouse) return;
+
+        clearHold();
+        const x = event.clientX;
+        const y = event.clientY;
+        holdTimer = setTimeout(() => {
+          holdTimer = null;
+          const r = el.getBoundingClientRect();
+          setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+          setPosition({ x, y });
+          target.onReact?.(x, y);
+          endGesture();
+        }, LONG_PRESS_MS);
+      },
+      onPointerUp: () => clearHold(),
+      onPointerLeave: () => clearHold(),
     }),
   };
 }

@@ -249,10 +249,21 @@ export function ChatThread({
    */
   function bubbleHandlers(message: ChatMessageItem) {
     return replyMenu.bubbleProps(
+      /* Swipe left: reply immediately. */
       () => beginReply(message),
+      /* Long press (touch): the reaction row. */
       () => {
         setMenuFor(null);
         setReactFor(message);
+      },
+      /*
+       * Right-click (desktop): OPEN THE POPOVER for this message. It does not
+       * reply — clicking "Responder" inside the popover does. Three distinct
+       * actions, so they cannot be confused with each other.
+       */
+      () => {
+        setReactFor(null);
+        setMenuFor(message);
       },
       message.id,
     );
