@@ -404,7 +404,8 @@ export function ChatWorkspaceSkeleton() {
           </div>
         </div>
 
-        <Skeleton className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 h-14 w-14 rounded-full lg:bottom-8 lg:right-8" />
+        {/* Must match the real FAB in chat-workspace.tsx, or it jumps on load. */}
+        <Skeleton className="fixed bottom-[calc(var(--phone-nav-height)+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 h-14 w-14 rounded-full lg:bottom-8 lg:right-8" />
       </div>
     </div>
   );

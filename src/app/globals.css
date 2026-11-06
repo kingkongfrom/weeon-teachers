@@ -41,6 +41,19 @@
    * Surfaces that must clear the bar read this ONE number.
    */
   --phone-nav-height: 4.5rem;
+  /*
+   * Phone pane correction, in px.
+   *
+   * `100dvh` is measured against the layout viewport, which is taller than the
+   * visible one once the browser's URL bar and the home indicator are in play.
+   * A pane sized from it therefore ends ~30px above the fixed footer, leaving the
+   * composer floating with a gap. This is added back — the one number that fixes
+   * it, isolated to phones (the pane's `md:` rule drops it).
+   *
+   * If a future phone shows the composer too low, lower THIS; too high, raise it.
+   * Do not reintroduce per-element margins for it.
+   */
+  --phone-pane-nudge: 30px;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
   --background: #f8fafc;

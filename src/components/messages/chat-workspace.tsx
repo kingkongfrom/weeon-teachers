@@ -373,7 +373,13 @@ export function ChatWorkspace({
           type="button"
           onClick={() => setPickerOpen(true)}
           aria-label={m.chatNew}
-          className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-lg transition-all hover:bg-[#0e7490] active:scale-95 lg:bottom-8 lg:right-8"
+          /*
+           * The FAB clears the phone footer using the shared token. It used to
+           * carry its own `4.25rem`, a second copy of the bar's height that was
+           * not updated when the token changed — so a footer resize silently
+           * misaligned it.
+           */
+          className="fixed bottom-[calc(var(--phone-nav-height)+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-lg transition-all hover:bg-[#0e7490] active:scale-95 lg:bottom-8 lg:right-8"
         >
           <MessageSquarePlus className="h-6 w-6" aria-hidden />
         </button>
