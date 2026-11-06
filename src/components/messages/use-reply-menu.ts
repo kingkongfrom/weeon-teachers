@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Gestures on a chat bubble for the WEB (docs/chat-replies.md §6).
@@ -8,314 +8,261 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Mouse (desktop — MUST NOT CHANGE):
  *   right-click  -> reply menu
  *   press & hold -> reply menu
- *   smile button -> reaction pill   (hover affordance beside the bubble)
+ *   smile button -> reaction pill
  *
  * Touch (phone browser, phone + tablet):
- *   swipe LEFT   -> reply menu
+ *   swipe LEFT   -> reply menu (opens as soon as the bubble is pushed left)
  *   long press   -> reaction pill
  *
- * WHY THIS FILE WAS REWRITTEN
+ * WHY THIS IS A SINGLE LISTENER, NOT REACT HANDLERS
  *
- * The previous version opened a swipe by adding window listeners from inside a
- * memoised factory. Every `pointermove` called `setDragX`, which re-rendered the
- * thread, which produced NEW handler objects closing over a NEW `detach`
- * variable — while the live window listener still held the OLD one. The result
- * was a gesture that could start but never reliably finish: listeners leaked,
- * `gesture` got reset from a stale closure, and the reply menu never opened.
+ * Three previous designs put React state in the hot path: `setDrag` on every
+ * pointermove, memoised handler factories per bubble, and window listeners that
+ * were re-registered by an effect whose deps changed on each of those renders.
+ * Instrumenting a real phone-viewport browser showed the failure plainly:
  *
- * The fix is architectural rather than another patch: ALL gesture state lives in
- * refs that outlive renders, and the window listeners are attached and detached
- * by a single mechanism that reads those refs. Re-rendering can no longer
- * strand a gesture.
+ *   gesture:down   alreadyActive: false
+ *   gesture:move   hasActive: true,  dx: -18
+ *   gesture:move   hasActive: false, state: swiping   <-- gesture lost mid-drag
  *
- * THRESHOLDS
+ * The gesture was being torn down by a re-render it had itself caused, from a
+ * closure belonging to an earlier render. Every patch moved the breakage rather
+ * than removing it.
  *
- *   SWIPE_SLOP_PX     movement before the gesture type is decided at all, so
- *                     a tap is never ambiguous
- *   SWIPE_COMMIT_PX   how far left to travel for the release to open reply
- *   LONG_PRESS_MS     how long to hold for the reaction pill
+ * So: ONE set of DOM listeners on `document`, attached once, holding their state
+ * in module-level variables. No React state is written during a drag — the bubble
+ * is moved by writing `el.style.transform` directly. React never re-renders
+ * because of a gesture, so it can never interrupt one.
  *
- * A vertical drag is a SCROLL and cancels everything: the thread must keep
- * scrolling under a finger.
+ * React state is used for exactly two things, both at gesture ENDS: which popover
+ * is open, and where. Those are genuine UI state; the drag is not.
  */
 
 const LONG_PRESS_MS = 500;
+/** Horizontal travel before the gesture is classified at all. */
 const SWIPE_SLOP_PX = 12;
-const SWIPE_COMMIT_PX = 64;
-/** Past this the bubble stops following the finger. */
-const SWIPE_MAX_PX = 80;
+/** How far the bubble follows the finger before it stops. */
+const SWIPE_MAX_PX = 220;
 
 export type ReplyMenuPosition = { x: number; y: number };
+export type ReplyMenuAnchor = { left: number; top: number; right: number; bottom: number };
 
-/** The bubble's viewport rect, so the menu can anchor to its corner. */
-export type ReplyMenuAnchor = {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-};
-
-type GestureState =
-  | "idle"
-  | "pressing"
-  | "swiping"
-  | "scrolling";
-
-/** Everything one touch needs, kept in a ref so renders cannot lose it. */
-type ActiveGesture = {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  isTouch: boolean;
-  element: Element;
-  /** The bubble this gesture belongs to, so only IT follows the finger. */
+/** The element a gesture started on, and what it means. */
+type Target = {
+  el: HTMLElement;
   key: string;
+  onReply: (x: number, y: number) => void;
+  onReact?: (x: number, y: number) => void;
 };
+
+/* ----- module-level gesture state: outside React on purpose ----- */
+
+let activeEl: HTMLElement | null = null;
+let activeTarget: Target | null = null;
+let startX = 0;
+let startY = 0;
+let pointerId = -1;
+let mode: "idle" | "pressing" | "swiping" | "scrolling" = "idle";
+let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+let installed = false;
+
+function clearLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
+
+function setTransform(el: HTMLElement | null, px: number) {
+  if (!el) return;
+  if (px <= 0) {
+    el.style.transform = "";
+    el.style.transition = "";
+    return;
+  }
+  el.style.transition = "none";
+  el.style.transform = `translateX(${-px}px)`;
+}
+
+function endGesture() {
+  clearLongPress();
+  setTransform(activeEl, 0);
+  activeEl = null;
+  activeTarget = null;
+  mode = "idle";
+  pointerId = -1;
+  document.body.removeAttribute("data-gesture");
+}
 
 export function useReplyMenu(enabled: boolean) {
   const [position, setPosition] = useState<ReplyMenuPosition | null>(null);
   const [bubble, setBubble] = useState<ReplyMenuAnchor | null>(null);
-  /*
-   * WHICH bubble is being dragged, and by how much — reported together.
-   *
-   * A single `dragX` number on the hook was read by EVERY bubble, so a swipe
-   * translated the whole transcript instead of the one message under the finger.
-   * The key identifies the bubble so only that one reads a non-zero offset.
-   */
-  const [drag, setDrag] = useState<{ key: string | null; x: number }>({ key: null, x: 0 });
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
-  /** The gesture currently in flight. Survives re-renders by design. */
-  const active = useRef<ActiveGesture | null>(null);
-  const state = useRef<GestureState>("idle");
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Set while window listeners for the swipe are attached. */
-  const windowListeners = useRef(false);
+  /* ----- the one-time install ----- */
+  useEffect(() => {
+    if (typeof window === "undefined" || installed) return;
+    installed = true;
 
-  /** The openers must be readable from window handlers that outlive a render. */
-  const openers = useRef<{
-    onReply?: (x: number, y: number) => void;
-    onReact?: (x: number, y: number) => void;
-  }>({});
+    const onDown = (event: PointerEvent) => {
+      if (!enabledRef.current) return;
+      if (event.button === 2) return; // right-click is handled by onContextMenu
+      if (activeTarget) return;
 
-  const clearLongPress = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
+      const el = (event.target as HTMLElement | null)?.closest?.(".wa-bubble");
+      if (!el) return;
 
-  const remember = useCallback((el: Element) => {
-    const r = el.getBoundingClientRect();
-    setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
-  }, []);
+      const target = registry.get(el as HTMLElement);
+      if (!target) return;
 
-  /** Put the whole gesture machine back to rest. Safe to call repeatedly. */
-  const reset = useCallback(() => {
-    clearLongPress();
-    active.current = null;
-    state.current = "idle";
-    setDrag({ key: null, x: 0 });
-  }, [clearLongPress]);
+      activeEl = el as HTMLElement;
+      activeTarget = target;
+      startX = event.clientX;
+      startY = event.clientY;
+      pointerId = event.pointerId;
+      mode = "pressing";
 
-  /*
-   * THE WINDOW HANDLERS — one pair, attached once, reading refs.
-   *
-   * Defined with useCallback and registered in an effect, NOT created per
-   * render, so a re-render mid-swipe cannot strand them.
-   */
-  const handleWindowMove = useCallback((event: PointerEvent) => {
-    const g = active.current;
-    if (!g || event.pointerId !== g.pointerId) return;
-    const dx = event.clientX - g.startX;
-    const dy = event.clientY - g.startY;
-
-    if (state.current === "swiping") {
-      setDrag({ key: g.key, x: Math.min(Math.max(0, -dx), SWIPE_MAX_PX) });
-      return;
-    }
-
-    if (state.current !== "pressing") return;
-
-    /* Decide ONCE: scroll, or swipe. Otherwise it stays a possible long press. */
-    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > SWIPE_SLOP_PX) {
-      state.current = "scrolling";
       clearLongPress();
-      return;
-    }
-    if (dx < -SWIPE_SLOP_PX && Math.abs(dx) > Math.abs(dy)) {
-      state.current = "swiping";
-      clearLongPress();
-      setDrag({ key: g.key, x: Math.min(Math.max(0, -dx), SWIPE_MAX_PX) });
-    }
-  }, [clearLongPress]);
+      longPressTimer = setTimeout(() => {
+        longPressTimer = null;
+        if (mode !== "pressing" || !activeTarget) return;
+        const t = activeTarget;
+        const r = t.el.getBoundingClientRect();
+        setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+        setPosition({ x: startX, y: startY });
+        if (event.pointerType === "touch" && t.onReact) t.onReact(startX, startY);
+        else t.onReply(startX, startY);
+        endGesture();
+      }, LONG_PRESS_MS);
+    };
 
-  const handleWindowUp = useCallback(
-    (event: PointerEvent) => {
-      const g = active.current;
-      if (!g || event.pointerId !== g.pointerId) return;
-      /*
-       * Read everything BEFORE reset(), which nulls `active`.
-       *
-       * This was the bug behind "the bubble slides but the reply never opens":
-       * `reset()` ran first, clearing the gesture, and the values it needed were
-       * already gone by the time the commit check ran.
-       */
-      const wasSwiping = state.current === "swiping";
-      const travelled = g.startX - event.clientX;
-      const x = event.clientX;
-      const y = event.clientY;
-      reset();
-      if (wasSwiping && travelled >= SWIPE_COMMIT_PX) {
-        openers.current.onReply?.(x, y);
-      }
-    },
-    [reset],
-  );
+    const onMove = (event: PointerEvent) => {
+      if (!activeTarget) return;
+      if (event.pointerId !== pointerId) return;
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
 
-  /**
-   * A cancel must not swallow a swipe the user already committed to.
-   *
-   * Mobile browsers fire `pointercancel` when they take a gesture for scrolling
-   * or for the system back-swipe. By then the finger may have travelled well
-   * past the commit distance — dropping it there makes the swipe feel like it
-   * silently failed, which is exactly how this reported.
-   */
-  const handleWindowCancel = useCallback(
-    (event: PointerEvent) => {
-      const g = active.current;
-      if (!g || (event.pointerId !== undefined && event.pointerId !== g.pointerId)) {
-        reset();
+      if (mode === "swiping") {
+        setTransform(activeEl, Math.min(Math.max(0, -dx), SWIPE_MAX_PX));
         return;
       }
-      const wasSwiping = state.current === "swiping";
-      const travelled = g.startX - event.clientX;
-      const x = event.clientX;
-      const y = event.clientY;
-      reset();
-      if (wasSwiping && travelled >= SWIPE_COMMIT_PX) {
-        openers.current.onReply?.(x, y);
+      if (mode !== "pressing") return;
+
+      /* Vertical intent wins, so the thread keeps scrolling under a finger. */
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > SWIPE_SLOP_PX) {
+        mode = "scrolling";
+        clearLongPress();
+        return;
       }
-    },
-    [reset],
-  );
 
-  /* Attach the window listeners for the lifetime of the hook, not per gesture. */
-  useEffect(() => {
-    if (typeof window === "undefined" || !enabled) return;
-    if (windowListeners.current) return;
-    windowListeners.current = true;
-    window.addEventListener("pointermove", handleWindowMove);
-    window.addEventListener("pointerup", handleWindowUp);
-    window.addEventListener("pointercancel", handleWindowCancel);
-    return () => {
-      window.removeEventListener("pointermove", handleWindowMove);
-      window.removeEventListener("pointerup", handleWindowUp);
-      window.removeEventListener("pointercancel", handleWindowCancel);
-      windowListeners.current = false;
-      reset();
-    };
-  }, [enabled, handleWindowMove, handleWindowUp, handleWindowCancel, reset]);
-
-  const openAt = useCallback(
-    (x: number, y: number) => {
-      clearLongPress();
-      setPosition({ x, y });
-    },
-    [clearLongPress],
-  );
-
-  const close = useCallback(() => {
-    reset();
-    setPosition(null);
-    setBubble(null);
-  }, [reset]);
-
-  const cancelLongPress = useCallback(() => clearLongPress(), [clearLongPress]);
-
-  /**
-   * Handlers for one bubble.
-   *
-   * `onReply` — mouse right-click, mouse hold, touch swipe-left.
-   * `onReact` — touch long-press.
-   * `key`     — this bubble's id, so the drag offset can be reported for ONE
-   *             message. Without it every bubble translated together.
-   */
-  const bubbleProps = useCallback(
-    (
-      onReply: (x: number, y: number) => void,
-      onReact?: (x: number, y: number) => void,
-      key = "default",
-    ) => {
-      if (!enabled) return {};
-
-      /* Always current, even for a window handler created before the last render. */
-      openers.current = { onReply, onReact };
-
-      return {
-        onContextMenu: (event: React.MouseEvent) => {
-          /* Always stop the native menu; we draw our own. */
-          event.preventDefault();
-          /*
-           * On touch, a hold ALSO raises contextmenu in Android Chrome. The
-           * pointer path already decided what that hold means (the pill), so
-           * this must not open the reply menu on top of it.
-           */
-          if (state.current !== "idle") return;
-          /* Mouse/pen: right-click replies. */
-          remember(event.currentTarget);
-          openAt(event.clientX, event.clientY);
-          onReply(event.clientX, event.clientY);
-        },
-
-        onPointerDown: (event: React.PointerEvent) => {
-          if (event.button === 2) return; // right-click: onContextMenu handles it
-          if (active.current) return; // a gesture is already running
-
-          const isTouch = event.pointerType === "touch";
-          active.current = {
-            pointerId: event.pointerId,
-            startX: event.clientX,
-            startY: event.clientY,
-            isTouch,
-            element: event.currentTarget,
-            key,
-          };
-          state.current = "pressing";
-
-          const x = event.clientX;
-          const y = event.clientY;
-          const element = event.currentTarget;
-          clearLongPress();
-          longPressTimer.current = setTimeout(() => {
-            longPressTimer.current = null;
-            /* A long press only stands if nothing moved us elsewhere. */
-            if (state.current !== "pressing") return;
-            remember(element);
-            setPosition({ x, y });
-            if (isTouch && openers.current.onReact) openers.current.onReact(x, y);
-            else openers.current.onReply?.(x, y);
-            reset();
-          }, LONG_PRESS_MS);
-        },
+      /*
+       * THE SWIPE. Opens the reply the moment the bubble is pushed left — the
+       * owner's rule. No release, no distance threshold to miss: the one thing
+       * proven to work (the bubble following the finger) is the only thing this
+       * needs to detect.
+       */
+      if (dx < -SWIPE_SLOP_PX && Math.abs(dx) > Math.abs(dy)) {
+        mode = "swiping";
+        clearLongPress();
+        const el = activeEl;
+        const t = activeTarget;
+        setTransform(el, Math.min(Math.max(0, -dx), SWIPE_MAX_PX));
 
         /*
-         * `onPointerLeave` and `onPointerUp` are deliberately NOT used to finish
-         * a swipe: on touch the finger leaves the bubble almost immediately and
-         * the element stops receiving these. The window handlers own it.
+         * BOTH halves of the menu state.
+         *
+         * `onReply` sets which message (menuFor); `setPosition` is what makes the
+         * menu RENDER at all — the component is guarded on
+         * `menuFor && replyMenu.position`. Calling only onReply left position
+         * null, so the gesture ran, the bubble moved and sprang back, and nothing
+         * ever appeared. That is the bug the owner kept reporting.
          */
-      };
-    },
-    [enabled, openAt, remember, clearLongPress, reset],
-  );
+        const r = el?.getBoundingClientRect();
+        if (r) setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+        setPosition({ x: event.clientX, y: event.clientY });
+        t.onReply(event.clientX, event.clientY);
+
+        /* The menu is open; the gesture is finished. Let the bubble spring back. */
+        activeTarget = null;
+        activeEl = null;
+        mode = "idle";
+        pointerId = -1;
+        window.setTimeout(() => setTransform(el, 0), 140);
+      }
+    };
+
+    const onUp = () => {
+      if (!activeTarget) return;
+      endGesture();
+    };
+    const onCancel = () => endGesture();
+
+    window.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("pointermove", onMove, true);
+    window.addEventListener("pointerup", onUp, true);
+    window.addEventListener("pointercancel", onCancel, true);
+
+    return () => {
+      window.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("pointermove", onMove, true);
+      window.removeEventListener("pointerup", onUp, true);
+      window.removeEventListener("pointercancel", onCancel, true);
+      installed = false;
+      endGesture();
+    };
+  }, []);
+
+  const close = () => {
+    setPosition(null);
+    setBubble(null);
+  };
 
   return {
     position,
     bubble,
     close,
-    openAt,
-    cancelLongPress,
-    bubbleProps,
-    /** Which bubble is being dragged, and by how many px. */
-    drag,
+    openAt: (x: number, y: number) => setPosition({ x, y }),
+    cancelLongPress: clearLongPress,
+    /**
+     * Register one bubble. Returns the props to spread — deliberately only
+     * `onContextMenu`, because pointer handling is done by the document listener.
+     */
+    bubbleProps: (
+      onReply: (x: number, y: number) => void,
+      onReact?: (x: number, y: number) => void,
+      key = "default",
+    ) => {
+      const register = (el: HTMLElement | null) => {
+        if (!el) return;
+        if (registry.get(el)?.key === key) return;
+        registry.set(el, { el, key, onReply, onReact });
+        /* Keep the latest openers current even when the element is reused. */
+        registry.set(el, { el, key, onReply, onReact });
+        return () => registry.delete(el);
+      };
+      return {
+        ref: (el: HTMLElement | null) => {
+          if (el) register(el);
+        },
+        onContextMenu: (event: React.MouseEvent) => {
+          event.preventDefault();
+          if (mode !== "idle") return;
+          const r = event.currentTarget.getBoundingClientRect();
+          setBubble({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+          setPosition({ x: event.clientX, y: event.clientY });
+          onReply(event.clientX, event.clientY);
+        },
+      };
+    },
   };
 }
+
+/**
+ * Bubble element -> its openers.
+ *
+ * A WeakMap keyed by the DOM node, not React refs shared across renders: a bubble
+ * can re-render a hundred times and the entry stays valid, because the element is
+ * the identity.
+ */
+const registry = new WeakMap<HTMLElement, Target>();

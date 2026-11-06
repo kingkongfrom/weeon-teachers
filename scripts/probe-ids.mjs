@@ -1,0 +1,29 @@
+import { chromium, devices } from "playwright";
+const context = await chromium.launchPersistentContext(".probe-profile", {
+  ...devices["Pixel 5"], headless: true, hasTouch: true, isMobile: true,
+});
+const page = context.pages()[0] ?? await context.newPage();
+await page.goto("http://localhost:3001/comunicacion/chat/e9a71935-7e2b-4228-8eae-ee9cf3f550f5", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(9000);
+await page.evaluate(() => { const w = document.querySelector(".chat-wallpaper"); if (w) w.scrollTop = w.scrollHeight; });
+await page.waitForTimeout(400);
+
+/* What pointerId does the down event carry, and what does window see? */
+const ids = await page.evaluate(() => new Promise((resolve) => {
+  const b = document.querySelectorAll(".wa-bubble")[6];
+  const r = b.getBoundingClientRect();
+  const startX = Math.round(r.x + r.width - 8), startY = Math.round(r.y + r.height/2);
+  const seen = { down: [], move: [] };
+  const onMove = (e) => seen.move.push({ type: e.type, id: e.pointerId, pt: e.pointerType, x: Math.round(e.clientX) });
+  window.addEventListener("pointermove", onMove, true);
+  window.addEventListener("pointerup", onMove, true);
+  window.addEventListener("pointerdown", (e) => seen.down.push({ id: e.pointerId, pt: e.pointerType }), true);
+  const el = document.elementFromPoint(startX, startY);
+  const mk = (t,x,y) => new PointerEvent(t, { bubbles:true, cancelable:true, pointerId:1, pointerType:"touch", isPrimary:true, clientX:x, clientY:y, buttons: t==="pointerup"?0:1 });
+  el.dispatchEvent(mk("pointerdown", startX, startY));
+  for (const dx of [20, 50, 90]) window.dispatchEvent(mk("pointermove", startX-dx, startY));
+  window.dispatchEvent(mk("pointerup", startX-90, startY));
+  setTimeout(() => { window.removeEventListener("pointermove", onMove, true); window.removeEventListener("pointerup", onMove, true); resolve(seen); }, 300);
+}));
+console.log(JSON.stringify(ids, null, 2));
+await context.close();

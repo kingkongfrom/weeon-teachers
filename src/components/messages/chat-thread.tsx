@@ -212,39 +212,21 @@ export function ChatThread({
   }, [messages.length, otherTyping]);
 
   /**
-   * Reply affordance for one bubble.
+   * Registration for one bubble.
    *
-   * Right-click or press-and-hold opens the menu. Own messages are excluded (D4):
-   * quoting yourself has no use, and a menu that opens then does nothing is worse
-   * than one that never opens.
-   */
-  /**
-   * Gesture handlers for one bubble.
-   *
-   * The hook decides what the gesture MEANS from the pointer type:
+   * The hook owns pointer handling through ONE document listener, so this only
+   * hands it the element (via `ref`) and the reply fallback for right-click. No
+   * per-render handler objects, no state writes during a drag — that is what kept
+   * tearing the gesture down.
    *
    *   right-click (mouse) -> reply menu
-   *   long press  (touch) -> REACTION pill
+   *   long press  (touch) -> reaction pill
    *   swipe left  (touch) -> reply menu
-   *
-   * The hook only reports a point; it cannot know which of its two openers to
-   * call. So it runs the same timer for both and calls this one callback — and
-   * the callback has no pointer type. To keep the touch/mouse split honest
-   * without a second timer, the reaction opener is recorded separately by the
-   * pointer-down path: `onTouchLongPress` below is passed as the long-press
-   * action, while `onOpen` keeps the reply menu for the right-click path.
-   *
-   * Implemented as two callbacks over one shared position, because the pill and
-   * the reply menu are two different popovers at the same anchor.
    */
   function bubbleHandlers(message: ChatMessageItem) {
     return replyMenu.bubbleProps(
-      /* Swipe-left and mouse long-press: reply. */
       () => setMenuFor(message),
-      /* Touch long-press: reactions. */
       () => setReactFor(message),
-      /* This bubble's id — the drag offset is reported per message, so only the
-         bubble under the finger moves. */
       message.id,
     );
   }
@@ -528,20 +510,11 @@ export function ChatThread({
                               : "",
                       )}
                       /*
-                       * Only during a touch swipe, and only for THIS bubble: the
-                       * hook reports which message is being dragged alongside the
-                       * offset. Reading a bare offset translated every bubble on
-                       * the screen at once. At rest this is undefined — no
-                       * visual change whatsoever.
+                       * No inline transform here. The swipe writes
+                       * `el.style.transform` directly from the document listener,
+                       * so React never re-renders during a drag and can never
+                       * interrupt one. The element springs back on its own.
                        */
-                      style={
-                        replyMenu.drag.key === message.id && replyMenu.drag.x > 0
-                          ? {
-                              transform: `translateX(${-replyMenu.drag.x}px)`,
-                              transition: "none",
-                            }
-                          : undefined
-                      }
                     >
                       {message.replyTo ? (
                         <div className="mb-1">

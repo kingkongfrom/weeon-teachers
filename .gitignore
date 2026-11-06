@@ -54,3 +54,8 @@ next-env.d.ts
 /playwright/.cache/
 .vercel
 .env*
+
+# Browser probe artifacts (scripts/probe-*.mjs) — local only
+.probe-profile/
+probe-*.png
+probe-out*.png
