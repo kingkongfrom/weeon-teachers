@@ -93,10 +93,25 @@ export function useReplyMenu(enabled: boolean) {
    *
    * Both receive the point the popover should appear at. The hook tracks the
    * pointer type itself, so a caller never has to guess what a device is.
+   *
+   * SWIPES ARE TRACKED ON WINDOW, NOT ON THE ELEMENT.
+   *
+   * A leftward swipe leaves the bubble almost immediately, and without pointer
+   * capture the element stops receiving `pointerup` — so the release that should
+   * commit the reply landed on some other element and was never seen. Listening
+   * on `window` for the lifetime of one gesture fixes that and works for both
+   * mouse and touch.
    */
   const bubbleProps = useCallback(
     (onReply: (x: number, y: number) => void, onReact?: (x: number, y: number) => void) => {
       if (!enabled) return {};
+
+      /* Cleanup for the window listeners of the gesture in flight, if any. */
+      let detach: (() => void) | null = null;
+      const clearDetach = () => {
+        detach?.();
+        detach = null;
+      };
 
       const remember = (el: Element) => {
         const r = el.getBoundingClientRect();
@@ -156,15 +171,35 @@ export function useReplyMenu(enabled: boolean) {
             if (dx < -SWIPE_SLOP_PX && Math.abs(dx) > Math.abs(dy)) {
               gesture.current = "swipe";
               clearTimer();
+              /*
+               * From here the finger is outside the bubble, so finish the gesture
+               * on window: the release that commits the reply can land anywhere.
+               */
+              const finish = (upEvent: PointerEvent) => {
+                const travelled = start.x - upEvent.clientX;
+                if (travelled >= SWIPE_COMMIT_PX) onReply(upEvent.clientX, upEvent.clientY);
+                endSwipe();
+              };
+              const endSwipe = () => {
+                clearDetach();
+                gesture.current = "none";
+                setDragX(0);
+              };
+              const onMove = (moveEvent: PointerEvent) => {
+                setDragX(Math.min(Math.max(0, start.x - moveEvent.clientX), SWIPE_COMMIT_PX));
+              };
+              window.addEventListener("pointerup", finish);
+              window.addEventListener("pointermove", onMove);
+              window.addEventListener("pointercancel", endSwipe);
+              detach = () => {
+                window.removeEventListener("pointerup", finish);
+                window.removeEventListener("pointermove", onMove);
+                window.removeEventListener("pointercancel", endSwipe);
+              };
             }
           }
 
-          if (gesture.current === "swipe") {
-            /* Follow the finger leftward only; damped past the commit point. */
-            const travel = Math.max(0, -dx);
-            setDragX(Math.min(travel, SWIPE_COMMIT_PX));
-            return;
-          }
+          if (gesture.current === "swipe") return;
 
           if (
             Math.abs(dx) > MOVE_TOLERANCE_PX ||
@@ -183,6 +218,18 @@ export function useReplyMenu(enabled: boolean) {
           if (wasSwipe && travelled >= SWIPE_COMMIT_PX) onReply(event.clientX, event.clientY);
         },
         onPointerLeave: () => {
+          /*
+           * LEAVE MUST NOT KILL A SWIPE.
+           *
+           * On touch this fires the instant the finger drags beyond the element's
+           * box — which is exactly what a swipe does. Resetting `gesture` here set
+           * it to "none" mid-drag, so `onPointerUp` saw `wasSwipe === false` and
+           * the reply menu never opened: the swipe did nothing.
+           *
+           * A swipe is committed by the pointerup that ends it, wherever that
+           * lands. Everything else still clears on leave.
+           */
+          if (gesture.current === "swipe") return;
           clearTimer();
           gesture.current = "none";
           setDragX(0);
