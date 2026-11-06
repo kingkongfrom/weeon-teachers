@@ -82,6 +82,8 @@ let pointerId = -1;
 let mode: "idle" | "pressing" | "swiping" | "scrolling" = "idle";
 let installed = false;
 let holdTimer: ReturnType<typeof setTimeout> | null = null;
+/** When the current press began, for the temporary cancel diagnostic. */
+let pressStartAt = 0;
 
 function setTransform(el: HTMLElement | null, px: number) {
   if (!el) return;
@@ -130,23 +132,41 @@ export function useReplyMenu(enabled: boolean) {
       const target = registry.get(el as HTMLElement);
       if (!target) return;
 
+      /* eslint-disable-next-line no-console -- TEMPORARY: diagnosing long press on a real phone */
+      console.log("[gesture] down", {
+        pointerType: event.pointerType,
+        hasOnReact: !!target.onReact,
+        key: target.key,
+      });
+
       activeEl = el as HTMLElement;
       activeTarget = target;
       startX = event.clientX;
       startY = event.clientY;
       pointerId = event.pointerId;
       mode = "pressing";
+      pressStartAt = Date.now();
 
       /*
-       * THE HOLD CANDIDATE. Only a TOUCH press arms it — on desktop the smile
-       * button and right-click are the affordances, and a mouse hold on a bubble
-       * should keep meaning "reply menu" via contextmenu.
+       * THE HOLD CANDIDATE.
+       *
+       * Armed for anything that is not a mouse. This used to require
+       * `pointerType === "touch"` exactly, but some mobile browsers report the
+       * pointer type as an empty string (or "pen"), and the timer was then never
+       * armed at all — which is indistinguishable from "long press does nothing".
+       * A mouse is the one case we can identify reliably, so that is what we
+       * exclude.
        */
       clearHold();
-      if (event.pointerType === "touch" && target.onReact) {
+      const isMouse = event.pointerType === "mouse";
+      /* eslint-disable-next-line no-console -- TEMPORARY: diagnosing long press on a real phone */
+      console.log("[gesture] timer armed?", { isMouse, willArm: !isMouse && !!target.onReact });
+      if (!isMouse && target.onReact) {
         holdTimer = setTimeout(() => {
           holdTimer = null;
           /* Only a press that never turned into a swipe or a scroll. */
+          /* eslint-disable-next-line no-console -- TEMPORARY: diagnosing long press on a real phone */
+          console.log("[gesture] timer FIRED", { mode, hasTarget: !!activeTarget });
           if (mode !== "pressing" || !activeTarget) return;
           const t = activeTarget;
           const r = t.el.getBoundingClientRect();
@@ -208,7 +228,11 @@ export function useReplyMenu(enabled: boolean) {
       if (activeTarget) endGesture();
       else clearHold();
     };
-    const onCancel = () => endGesture();
+    const onCancel = () => {
+      /* eslint-disable-next-line no-console -- TEMPORARY: diagnosing long press on a real phone */
+      console.log("[gesture] CANCEL", { mode, heldMs: Date.now() - pressStartAt });
+      endGesture();
+    };
 
     window.addEventListener("pointerdown", onDown, true);
     window.addEventListener("pointermove", onMove, true);

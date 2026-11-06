@@ -67,20 +67,17 @@ export function BottomNav({
     <nav
       aria-label={t.panel.title}
       /*
-       * The bar SIZES TO ITS CONTENT, with a floor.
+       * HEIGHT: the cells define it; the floor only prevents a squashed bar.
        *
-       * A previous pass pinned it with `h-[var(--phone-nav-height)]`. That was
-       * wrong twice over: the height did not include `env(safe-area-inset-bottom)`,
-       * which is padding on the same box, so on a phone with a home indicator the
-       * content overflowed and the labels were clipped; and a fixed height fights
-       * the cells, which already use items-center.
+       * `min-h` was 4.5rem (72px) while the cells need 59px, so the bar carried
+       * ~13px of dead space under the labels — the "too much bottom padding" the
+       * owner reported. The floor is 3.5rem now, below the content height, so it
+       * never adds space; it only stops the bar collapsing if the cells change.
        *
-       * `min-h` keeps the token meaningful — anything that has to clear the bar can
-       * still read one number — without ever squeezing the content. The var is
-       * 4.5rem here because the icons and labels below are larger than they were
-       * when 4.25rem was chosen.
+       * The safe-area inset stays as padding: on a device with a home indicator
+       * the bar MUST reserve it, or the labels sit under the gesture area.
        */
-      className="fixed inset-x-0 bottom-0 z-30 flex min-h-[var(--phone-nav-height)] items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex min-h-[3.5rem] items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden"
     >
       {items.map((item) => {
         const active = item.match
@@ -100,7 +97,7 @@ export function BottomNav({
                * the descenders ("Agenda" losing its g). The label now has exactly
                * its font size of vertical space.
                */
-              "flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-1 py-2 text-[11px] leading-none font-semibold transition-colors",
+              "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 pt-1.5 pb-1 text-[11px] leading-none font-semibold transition-colors",
               active
                 ? "text-brand-600 dark:text-brand-300"
                 : "text-foreground/55 hover:text-foreground",
@@ -108,11 +105,11 @@ export function BottomNav({
           >
             <span
               className={cn(
-                "relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
+                "relative flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
                 active && "bg-brand-50 dark:bg-brand-950/50",
               )}
             >
-              <Icon className="h-[22px] w-[22px]" aria-hidden />
+              <Icon className="h-5 w-5" aria-hidden />
               {badge > 0 ? (
                 <UnreadCountBadge count={badge} absolute className="-right-1 -top-1" />
               ) : null}
@@ -126,7 +123,7 @@ export function BottomNav({
         type="button"
         onClick={onMenu}
         className={cn(
-          "flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-1 py-2 text-[11px] leading-none font-semibold transition-colors",
+          "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 pt-1.5 pb-1 text-[11px] leading-none font-semibold transition-colors",
           menuActive
             ? "text-brand-600 dark:text-brand-300"
             : "text-foreground/55 hover:text-foreground",
@@ -134,11 +131,11 @@ export function BottomNav({
       >
         <span
           className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
+            "flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
             menuActive && "bg-brand-50 dark:bg-brand-950/50",
           )}
         >
-          <Menu className="h-[22px] w-[22px]" aria-hidden />
+          <Menu className="h-5 w-5" aria-hidden />
         </span>
         <span className="max-w-full truncate">{t.agenda.title}</span>
       </button>

@@ -30,9 +30,9 @@
   /*
    * Phone bottom bar height — THE single source of truth.
    *
-   * 4.5rem fits the current cells: py-2 (16) + icon well h-9 (36) + gap-1.5 (6)
-   * + an 11px label with leading-none (11) = 69px, plus the safe-area padding
-   * added on the same box.
+   * 4.25rem fits the trimmed cells: py-1.5 (12) + icon well h-8 (32) + gap-1 (4)
+   * + an 11px label with leading-none (11) = 59px, plus the safe-area padding on
+   * the same box.
    *
    * The bar uses `min-h` with this value, not a fixed `h`, so the safe-area
    * inset can never squeeze the labels — an earlier fixed height did exactly
@@ -40,7 +40,7 @@
    *
    * Surfaces that must clear the bar read this ONE number.
    */
-  --phone-nav-height: 4.5rem;
+  --phone-nav-height: 4.25rem;
   /*
    * Phone pane correction, in px.
    *
@@ -59,7 +59,7 @@
    * 6px is the value in place. Re-check on the phone — this is the only knob.
    * Do not reintroduce per-element margins.
    */
-  --phone-pane-nudge: 6px;
+  --phone-pane-nudge: 14px;
   /*
    * iPad / tablet pane correction, in px. SUBTRACTED from the pane height, so
    * a BIGGER value moves the pane UP and a SMALLER one moves it DOWN.
