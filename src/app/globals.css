@@ -60,6 +60,18 @@
    * Do not reintroduce per-element margins.
    */
   --phone-pane-nudge: 6px;
+  /*
+   * iPad / tablet pane correction, in px. SUBTRACTED from the pane height, so
+   * a BIGGER value moves the pane UP and a SMALLER one moves it DOWN.
+   *
+   * Separate from --phone-pane-nudge on purpose: the phone value is tuned to a
+   * real phone screen and the tablet layout has no footer at all, so the two
+   * must never share a number. Changing one must not move the other.
+   *
+   * 15px clears the shell header on iPad (the chat header was being clipped
+   * underneath it). Adjust here only; the phone value is untouched.
+   */
+  --tablet-pane-nudge: 15px;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
   --background: #f8fafc;
