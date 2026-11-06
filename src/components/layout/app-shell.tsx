@@ -130,7 +130,13 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
 
       <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}>
         <AppHeader user={user} supabasePublic={supabasePublic} />
-        <main className="w-full px-4 pt-6 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] sm:px-5 md:px-8 md:pb-16 [&:has(.comms-fill)]:pt-0 [&:has(.comms-fill)]:pb-0 [&:has(.comms-fill)]:overflow-hidden">
+        {/*
+          The bottom padding clears the phone footer. It used to be a literal
+          4.75rem while the footer's real height was whatever its contents added
+          up to — two numbers that had to stay in sync by hand. Both now read
+          `--phone-nav-height`.
+        */}
+        <main className="w-full px-4 pt-6 pb-[calc(var(--phone-nav-height)+env(safe-area-inset-bottom,0px))] sm:px-5 md:px-8 md:pb-16 [&:has(.comms-fill)]:pt-0 [&:has(.comms-fill)]:pb-0 [&:has(.comms-fill)]:overflow-hidden">
           {children}
         </main>
       </div>

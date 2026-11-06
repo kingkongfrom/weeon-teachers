@@ -660,7 +660,22 @@ export function ChatThread({
           }}
         />
       ) : null}
-      <div className="flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5 mb-[67px] md:mb-0 translate-y-[2px] md:translate-y-0">
+      {/*
+        The composer sits directly ON the phone footer.
+
+        It used to be `mb-[67px] translate-y-[2px]`: a hand-tuned number plus a
+        paint-only nudge, both approximating the footer's height. That is why the
+        gap kept coming back — the number was only right until the footer's
+        padding, icon size or label line-height changed, and translate does not
+        move the layout box, so it also dragged this element's background over the
+        footer's top edge.
+
+        Now both read `--phone-nav-height`, the one place the bar's height is
+        defined. No translate: the element sits flush because its margin equals the
+        bar, not because it was nudged into place. `md:mb-0` keeps desktop
+        unchanged — the bar does not exist there.
+      */}
+      <div className="mb-[var(--phone-nav-height)] flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5 md:mb-0">
         <div className="flex min-w-0 flex-1 items-end rounded-3xl bg-[var(--wa-input)] px-4 py-2 shadow-sm">
           <textarea
             ref={composerRef}

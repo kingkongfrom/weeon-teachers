@@ -66,7 +66,15 @@ export function BottomNav({
   return (
     <nav
       aria-label={t.panel.title}
-      className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden"
+      /*
+       * `h-[var(--phone-nav-height)]` pins the bar to ONE known height.
+       *
+       * Without it the height was whatever the tallest cell worked out to
+       * (padding + 32px icon + gap + the label's line box), so anything above it
+       * that had to clear the footer was guessing. The composer guessed 67px and
+       * drifted every time a font or padding changed.
+       */
+      className="fixed inset-x-0 bottom-0 z-30 flex h-[var(--phone-nav-height)] items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom,0px)] md:hidden"
     >
       {items.map((item) => {
         const active = item.match
