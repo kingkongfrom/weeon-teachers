@@ -68,10 +68,10 @@
    * real phone screen and the tablet layout has no footer at all, so the two
    * must never share a number. Changing one must not move the other.
    *
-   * 25px is the value in place. Bigger = further DOWN. Adjust here only; the
+   * 30px is the value in place. Bigger = further DOWN. Adjust here only; the
    * phone value is untouched.
    */
-  --tablet-pane-nudge: 25px;
+  --tablet-pane-nudge: 30px;
   /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
      white so the white cards read), a breath of teal */
   --background: #f8fafc;
