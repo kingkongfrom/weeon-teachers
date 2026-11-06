@@ -219,14 +219,31 @@ export function ChatThread({
    * than one that never opens.
    */
   /**
-   * Reply affordance for one bubble: right-click or press-and-hold.
+   * Gesture handlers for one bubble.
    *
-   * Own messages are excluded (D4): a menu that opens and then does nothing is
-   * worse than one that never opens. The hook gives us the handlers; this closes
-   * over the message so the menu knows what it is quoting.
+   * The hook decides what the gesture MEANS from the pointer type:
+   *
+   *   right-click (mouse) -> reply menu
+   *   long press  (touch) -> REACTION pill
+   *   swipe left  (touch) -> reply menu
+   *
+   * The hook only reports a point; it cannot know which of its two openers to
+   * call. So it runs the same timer for both and calls this one callback — and
+   * the callback has no pointer type. To keep the touch/mouse split honest
+   * without a second timer, the reaction opener is recorded separately by the
+   * pointer-down path: `onTouchLongPress` below is passed as the long-press
+   * action, while `onOpen` keeps the reply menu for the right-click path.
+   *
+   * Implemented as two callbacks over one shared position, because the pill and
+   * the reply menu are two different popovers at the same anchor.
    */
   function bubbleHandlers(message: ChatMessageItem) {
-    return replyMenu.bubbleProps(() => setMenuFor(message));
+    return replyMenu.bubbleProps(
+      /* Swipe-left and mouse long-press: reply. */
+      () => setMenuFor(message),
+      /* Touch long-press: reactions. */
+      () => setReactFor(message),
+    );
   }
 
   /**
@@ -488,6 +505,16 @@ export function ChatThread({
                               ? "rounded-bl-[3px] wa-bubble-tail-in"
                               : "",
                       )}
+                      /*
+                       * Only during a touch swipe: the bubble follows the finger
+                       * leftward so the gesture is discoverable. At rest this is
+                       * translateX(0), i.e. no visual change whatsoever.
+                       */
+                      style={
+                        replyMenu.dragX > 0
+                          ? { transform: `translateX(${-replyMenu.dragX}px)`, transition: "none" }
+                          : undefined
+                      }
                     >
                       {message.replyTo ? (
                         <div className="mb-1">
