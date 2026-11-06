@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Loader2, MessageCircle, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Loader2, MessageCircle, Send, Smile, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatAvatar } from "@/components/comms/chat-avatar";
 import { mergeChatMessages } from "@/lib/comms/chat-live-messages";
@@ -26,10 +26,17 @@ import {
   markAdminTeacherChatRead,
   sendAdminTeacherChatMessage,
 } from "@/lib/teachers/admin-teacher-chat-actions";
-import type { ChatChannel, ChatMessageItem, ChatMessageReply } from "@/lib/messages/chat-model";
+import type {
+  ChatChannel,
+  ChatMessageItem,
+  ChatMessageReaction,
+  ChatMessageReply,
+} from "@/lib/messages/chat-model";
 import { ChatReplyQuote } from "@/components/messages/chat-reply-quote";
 import { ChatReplyMenu } from "@/components/messages/chat-reply-menu";
+import { ChatReactionBar } from "@/components/comms/chat-reaction-bar";
 import { useReplyMenu } from "@/components/messages/use-reply-menu";
+import { toggleTeacherChatReaction } from "@/lib/teachers/chat-reaction-actions";
 
 function dayKey(iso: string): string {
   const date = new Date(iso);
@@ -123,6 +130,8 @@ export function ChatThread({
   const [replyTo, setReplyTo] = useState<ChatMessageReply | null>(null);
   /** Right-click / long-press menu: which bubble, and where to draw it. */
   const [menuFor, setMenuFor] = useState<ChatMessageItem | null>(null);
+  /** The message the reaction bar is open for (docs/chat-reactions.md). */
+  const [reactFor, setReactFor] = useState<ChatMessageItem | null>(null);
   const replyMenu = useReplyMenu(true);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -216,6 +225,66 @@ export function ChatThread({
    */
   function bubbleHandlers(message: ChatMessageItem) {
     return replyMenu.bubbleProps(() => setMenuFor(message));
+  }
+
+  /**
+   * Apply a reaction, optimistically — same behaviour as the ERP.
+   *
+   * The pill updates before the server answers, and your PREVIOUS emoji is removed on
+   * the same frame: the server keeps one row per (message, reactor) and replaces it,
+   * but the local state only added the new emoji, so the old one lingered until the
+   * next refetch.
+   *
+   * `mine` drives the toggle: tapping the emoji you already chose removes it.
+   */
+  async function applyReaction(message: ChatMessageItem, emoji: string) {
+    setReactFor(null);
+    replyMenu.close();
+
+    const existing = message.reactions.find((r) => r.emoji === emoji);
+    const removing = Boolean(existing?.mine);
+
+    setMessages((prev) =>
+      prev.map((row) => {
+        if (row.id !== message.id) return row;
+
+        const cleared = row.reactions
+          .map((reaction) =>
+            reaction.mine && reaction.names.length > 1
+              ? {
+                  ...reaction,
+                  names: reaction.names.filter((name) => name !== me),
+                  count: reaction.count - 1,
+                  mine: false,
+                }
+              : reaction.mine
+                ? null
+                : reaction,
+          )
+          .filter((reaction): reaction is ChatMessageReaction => reaction !== null)
+          .filter((reaction) => reaction.emoji !== emoji);
+
+        if (removing) {
+          return { ...row, reactions: cleared };
+        }
+
+        return {
+          ...row,
+          reactions: [
+            ...cleared,
+            {
+              emoji,
+              count: (existing?.count ?? 0) + 1,
+              names: [...(existing?.names ?? []), me],
+              mine: true,
+            },
+          ],
+        };
+      }),
+    );
+
+    const res = await toggleTeacherChatReaction(conversationId, message.id, emoji, removing);
+    if (!res.ok) setError(res.error);
   }
   async function send() {
     const value = text.trim();
@@ -362,12 +431,30 @@ export function ChatThread({
                   ) : null}
                   <div
                     className={cn(
-                      "flex px-1",
+                      "group/row flex items-end gap-1 px-1",
                       message.mine ? "justify-end" : "justify-start",
                       startGroup ? "mt-2" : "mt-[3px]",
                       endGroup ? "mb-1" : "mb-0",
                     )}
                   >
+                    {/*
+                     * Hover reveals the smile; clicking it opens the six emojis.
+                     * On the INNER side, so it never sits over the bubble edge.
+                     */}
+                    {message.mine ? (
+                      <button
+                        type="button"
+                        aria-label={m.chatReply}
+                        onClick={(event) => {
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          replyMenu.openAt(rect.left, rect.top);
+                          setReactFor(message);
+                        }}
+                        className="order-first inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] opacity-0 transition-opacity hover:bg-[var(--wa-hover)] focus-visible:opacity-100 group-hover/row:opacity-100"
+                      >
+                        <Smile className="h-[18px] w-[18px]" aria-hidden />
+                      </button>
+                    ) : null}
                     <div
                       {...bubbleHandlers(message)}
                       className={cn(
@@ -410,7 +497,52 @@ export function ChatThread({
                           ) : null}
                         </span>
                       </p>
+                      {/*
+                       * Reactions: pill half on, half off the bubble's bottom edge,
+                       * the way WhatsApp stacks them. Absolute, so the bubble's size
+                       * and the text layout are untouched.
+                       */}
+                      {message.reactions.length > 0 ? (
+                        <div className="absolute right-[3px] bottom-0 z-10 flex flex-wrap gap-1 translate-y-1/2">
+                          {message.reactions.map((reaction) => (
+                            <button
+                              key={reaction.emoji}
+                              type="button"
+                              onClick={() => void applyReaction(message, reaction.emoji)}
+                              title={reaction.names.join(", ")}
+                              aria-label={`${reaction.emoji} ${reaction.count} - ${reaction.names.join(", ")}`}
+                              className={cn(
+                                "relative inline-flex h-[23px] w-[23px] items-center justify-center",
+                                "rounded-full bg-[var(--wa-panel)]/50 ring-2 ring-[var(--wa-border)]",
+                                reaction.mine ? "font-bold" : "font-semibold",
+                              )}
+                            >
+                              <span className="text-[17px] leading-none">{reaction.emoji}</span>
+                              {/* A count of one says nothing the emoji does not. */}
+                              {reaction.count > 1 ? (
+                                <span className="absolute bottom-0 right-[3px] text-[10px] font-bold leading-none text-[var(--wa-muted)]">
+                                  {reaction.count}
+                                </span>
+                              ) : null}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
+                    {message.mine ? null : (
+                      <button
+                        type="button"
+                        aria-label={m.chatReply}
+                        onClick={(event) => {
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          replyMenu.openAt(rect.left, rect.top);
+                          setReactFor(message);
+                        }}
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--wa-muted)] opacity-0 transition-opacity hover:bg-[var(--wa-hover)] focus-visible:opacity-100 group-hover/row:opacity-100"
+                      >
+                        <Smile className="h-[18px] w-[18px]" aria-hidden />
+                      </button>
+                    )}
                   </div>
                 </Fragment>
               );
@@ -442,6 +574,15 @@ export function ChatThread({
         <p className="shrink-0 bg-[var(--wa-composer)] px-4 py-2 text-xs font-medium text-[var(--wa-error)]">
           {error}
         </p>
+      ) : null}
+
+      {reactFor && replyMenu.position ? (
+        <ChatReactionBar
+          position={replyMenu.position}
+          label={m.chatReply}
+          onPick={(emoji) => void applyReaction(reactFor, emoji)}
+          onClose={() => setReactFor(null)}
+        />
       ) : null}
 
       {replyTo ? (

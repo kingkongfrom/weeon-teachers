@@ -9,12 +9,16 @@ import { getTeacherSession } from "@/lib/auth/teacher-session";
 /**
  * Emoji reactions for a teacher's own chat messages (docs/chat-reactions.md).
  *
- * Same contract as the ERP's action, on the guardian channel's table. One reaction
- * per person per message is enforced by the database, so this upserts rather than
- * checking first: switching emoji replaces, and tapping your own emoji again removes.
+ * THROUGH THE RPC, NOT A DIRECT WRITE.
  *
- * The RLS policy pins reactor_profile_id = auth.uid() and requires participation in
- * the conversation, so the ids passed in cannot be used to react for someone else.
+ * A direct insert needed the client to satisfy a nested `exists` against the message
+ * table, and Postgres answers a failed WITH CHECK with the same generic "violates
+ * row-level security policy" whatever the cause. `toggle_chat_reaction` checks
+ * participation in the open and raises a message that names the problem -- the same
+ * path the ERP uses.
+ *
+ * One reaction per person per message is enforced by the database: switching emoji
+ * is an upsert inside the function, and tapping your own emoji again removes it.
  */
 export type ChatReactionResult = { ok: true } | { ok: false; error: string };
 
@@ -38,26 +42,12 @@ export async function toggleTeacherChatReaction(
   if (!session) return { ok: false, error: "not_authorized" };
 
   const supabase = await createSessionClient();
-
-  if (remove) {
-    const { error } = await supabase
-      .from("chat_message_reactions")
-      .delete()
-      .eq("message_id", parsed.data.messageId)
-      .eq("reactor_profile_id", session.userId);
-    if (error) return { ok: false, error: error.message };
-  } else {
-    const { error } = await supabase.from("chat_message_reactions").upsert(
-      {
-        tenant_id: session.tenantId,
-        message_id: parsed.data.messageId,
-        reactor_profile_id: session.userId,
-        emoji: parsed.data.emoji,
-      },
-      { onConflict: "message_id,reactor_profile_id" },
-    );
-    if (error) return { ok: false, error: error.message };
-  }
+  const { error } = await supabase.rpc("toggle_chat_reaction", {
+    p_message_id: parsed.data.messageId,
+    p_emoji: parsed.data.emoji,
+    p_remove: remove,
+  });
+  if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/comunicacion/chat/${conversationId}`);
   return { ok: true };

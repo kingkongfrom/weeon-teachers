@@ -341,6 +341,72 @@ export const loadChatConversation = cache(
         .order("created_at", { ascending: true }),
     ]);
 
+    /*
+     * Reactions for every message in the thread, fetched once (docs/chat-reactions.md
+     * D6). A query per message would be N+1; a query after the messages would leave a
+     * window where the two disagree.
+     */
+    const messageIds = (messages ?? []).map((row) => row.id as string);
+    const { data: reactionRows } = messageIds.length
+      ? await supabase
+          .from("chat_message_reactions")
+          .select("message_id, emoji, reactor_profile_id")
+          .in("message_id", messageIds)
+      : { data: [] as Array<{ message_id: string; emoji: string; reactor_profile_id: string }> };
+
+    const reactions = (reactionRows ?? []) as Array<{
+      message_id: string;
+      emoji: string;
+      reactor_profile_id: string;
+    }>;
+
+    /* Resolve the reactors' display names once, for "who reacted". */
+    const reactorIds = [...new Set(reactions.map((row) => row.reactor_profile_id))];
+    const nameById = new Map<string, string>();
+    if (reactorIds.length > 0) {
+      const { data: reactors } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", reactorIds);
+      for (const row of (reactors ?? []) as Array<{ id: string; name: string | null }>) {
+        nameById.set(row.id, row.name?.trim() || "Participante");
+      }
+    }
+
+    /* Aggregate message -> emoji -> names, so every message gets an array. */
+    const groupedReactions = new Map<string, Map<string, string[]>>();
+    for (const row of reactions) {
+      const byEmoji = groupedReactions.get(row.message_id) ?? new Map<string, string[]>();
+      const names = byEmoji.get(row.emoji) ?? [];
+      names.push(
+        row.reactor_profile_id === session.userId
+          ? "Tú"
+          : (nameById.get(row.reactor_profile_id) ?? "Participante"),
+      );
+      byEmoji.set(row.emoji, names);
+      groupedReactions.set(row.message_id, byEmoji);
+    }
+    const reactionsByMessage = new Map<
+      string,
+      Array<{ emoji: string; count: number; names: string[]; mine: boolean }>
+    >();
+    for (const [messageId, byEmoji] of groupedReactions) {
+      reactionsByMessage.set(
+        messageId,
+        [...byEmoji.entries()].map(([emoji, names]) => ({
+          emoji,
+          count: names.length,
+          names,
+          mine: reactions.some(
+            (r) =>
+              r.message_id === messageId &&
+              r.emoji === emoji &&
+              r.reactor_profile_id === session.userId,
+          ),
+        })),
+      );
+    }
+
     // Dirección answers as the school, not as one person.
     const resolvedKind =
       (kinds as Array<{ counterpart_kind: string | null }> | null)?.[0]?.counterpart_kind ??
@@ -378,8 +444,7 @@ export const loadChatConversation = cache(
           createdAt: message.created_at,
           mine: isMine,
           authorName: isMine ? session.name : counterpartName,
-        // Reactions are fetched by the ERP-shaped loader; empty until then.
-        reactions: [],
+          reactions: reactionsByMessage.get(message.id) ?? [],
           /*
            * The quote is a snapshot stored with the reply (docs/chat-replies.md
            * D1), so no join is needed -- and it still renders if the original is
