@@ -661,21 +661,19 @@ export function ChatThread({
         />
       ) : null}
       {/*
-        The composer sits directly ON the phone footer.
+        No margin: the Comunicación pane this thread lives inside already ends
+        above the phone footer (see `app/(app)/comunicacion/layout.tsx`, which
+        subtracts `--phone-nav-height` from its 100dvh height). The composer is the
+        last flow element in that pane, so sitting flush means having NO bottom
+        offset at all.
 
-        It used to be `mb-[67px] translate-y-[2px]`: a hand-tuned number plus a
-        paint-only nudge, both approximating the footer's height. That is why the
-        gap kept coming back — the number was only right until the footer's
-        padding, icon size or label line-height changed, and translate does not
-        move the layout box, so it also dragged this element's background over the
-        footer's top edge.
-
-        Now both read `--phone-nav-height`, the one place the bar's height is
-        defined. No translate: the element sits flush because its margin equals the
-        bar, not because it was nudged into place. `md:mb-0` keeps desktop
-        unchanged — the bar does not exist there.
+        History worth keeping: this element has carried `mb-[67px]`,
+        `translate-y-[2px]` and then `mb-[var(--phone-nav-height)]`, each added to
+        close a gap whose real cause was the pane extending UNDER the fixed footer.
+        Adding offset was compensating for a height that was already wrong, which
+        is why every fix looked right once and drifted again.
       */}
-      <div className="mb-[var(--phone-nav-height)] flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5 md:mb-0">
+      <div className="flex shrink-0 items-end gap-2 border-t border-[var(--wa-border)] bg-[var(--wa-composer)] px-3 py-2.5">
         <div className="flex min-w-0 flex-1 items-end rounded-3xl bg-[var(--wa-input)] px-4 py-2 shadow-sm">
           <textarea
             ref={composerRef}

@@ -28,7 +28,15 @@ export function MessagesPageClient({
   realtime: RealtimeConfig;
 }) {
   return (
-    <div className="h-[calc(100dvh-4rem)] min-h-[28rem] md:h-[calc(100dvh-9rem)]">
+    /*
+     * Height is the viewport minus the header minus the phone footer.
+     *
+     * The footer is `fixed`, so it is not in the flow and a pane sized
+     * `100dvh - header` runs underneath it — the docked composer on Correo ended
+     * up hidden behind the bar exactly as the chat one did. `md:` restores the
+     * plain calculation because the footer is `md:hidden` above that breakpoint.
+     */
+    <div className="h-[calc(100dvh-4rem-var(--phone-nav-height)-env(safe-area-inset-bottom,0px))] min-h-[28rem] md:h-[calc(100dvh-9rem)]">
       <MessagesWorkspace
         folder={folder}
         labelId={labelId}
