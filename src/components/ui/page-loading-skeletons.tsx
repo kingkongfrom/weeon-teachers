@@ -111,55 +111,43 @@ export function WeekNavigatorSkeleton() {
   );
 }
 
-/** Aula virtual {@link ClassCard} — rounded-3xl hub tile. */
+/**
+ * Aula virtual {@link ClassCard} — compact on a phone, roomier from `sm:` up.
+ *
+ * It used to paint the old 246px card at every width: 11-unit avatar, a bordered
+ * footer strip, rounded-3xl. The real card is now 144px on a phone with no
+ * footer, so the skeleton was half again as tall and the page visibly collapsed
+ * when the data arrived. Both layouts are mirrored here, at the same breakpoints.
+ */
 export function ClassCardSkeleton() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-3xl border border-border bg-surface">
-      <div className="flex items-start gap-3 px-4 py-3">
-        <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
-        <div className="min-w-0 flex-1 space-y-2">
-          <Skeleton className="h-5 w-32" />
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface sm:rounded-3xl">
+      <div className="flex items-center gap-2.5 px-3 py-2.5 sm:items-start sm:gap-3 sm:px-4 sm:py-3">
+        <Skeleton className="h-8 w-8 shrink-0 rounded-full sm:h-11 sm:w-11" />
+        <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
+          <Skeleton className="h-4 w-24 sm:h-5 sm:w-32" />
           <Skeleton className="h-3 w-10" />
         </div>
       </div>
-      <div className="px-4">
-        <Skeleton className="h-3 w-40" />
+      <div className="px-3 pb-1 sm:px-4 sm:pt-2 sm:pb-0">
+        <Skeleton className="h-3 w-32 sm:w-40" />
       </div>
-      <div className="flex flex-col gap-2 px-4 pb-3 pt-3">
-        <div className="flex flex-wrap gap-1.5">
-          <Skeleton className="h-5 w-14 rounded-full" />
-          <Skeleton className="h-5 w-16 rounded-full" />
+      <div className="flex items-center justify-between gap-2 px-3 pb-2.5 pt-1 sm:block sm:px-4 sm:pb-3 sm:pt-2">
+        <div className="flex flex-1 flex-col gap-1 sm:gap-2">
+          <div className="flex gap-1.5">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-14 rounded-full" />
+            <Skeleton className="h-5 w-8 rounded-full" />
+          </div>
+          <Skeleton className="h-3 w-24" />
         </div>
-        <Skeleton className="h-3 w-24" />
-      </div>
-      <div className="flex justify-end gap-0.5 border-t border-border px-2 py-1.5">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-9 rounded-full" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Mis grupos {@link GrupoCard} — banner + chips + actions. */
-export function GrupoCardSkeleton() {
-  return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="space-y-2 bg-surface-muted/50 px-4 py-3">
-        <Skeleton className="h-5 w-36" />
-        <Skeleton className="h-3 w-10" />
-      </div>
-      <div className="px-4 pt-3">
-        <Skeleton className="h-3 w-44" />
-      </div>
-      <div className="flex flex-col gap-2 px-4 pb-3 pt-2">
-        <div className="flex flex-wrap gap-1.5">
-          <Skeleton className="h-5 w-14 rounded-full" />
-          <Skeleton className="h-5 w-20 rounded-full" />
+        {/* Phone shortcuts are inline; the desktop footer is its own strip. */}
+        <div className="flex gap-0.5 sm:hidden">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-full" />
         </div>
-        <Skeleton className="h-3 w-24" />
       </div>
-      <div className="flex justify-end gap-0.5 border-t border-border px-2 py-1.5">
+      <div className="hidden items-center justify-end gap-0.5 border-t border-border px-2 py-1.5 sm:flex">
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-9 w-9 rounded-full" />
         ))}

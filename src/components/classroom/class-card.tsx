@@ -50,11 +50,22 @@ export function ClassCard({
   return (
     <article
       className={cn(
-        "group flex flex-col overflow-hidden rounded-2xl border border-border sm:rounded-3xl",
+        /*
+         * `cursor-pointer`: the whole card opens the class through the
+         * stretched link below, but the pointer only became a hand over the
+         * title text.
+         */
+        /*
+         * `relative` + `cursor-pointer`: the stretched link on the title below
+         * covers the WHOLE card, so tapping the chips or the student count opens
+         * the class (it did nothing before — only the header was a link), and
+         * the pointer is a hand everywhere, not just over the title.
+         */
+        "group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border sm:rounded-3xl",
         AULA_TEAL.card,
       )}
     >
-      <Link href={base} className="block">
+      <div className="block">
         <div className="flex items-center gap-2.5 px-3 py-2.5 sm:items-start sm:gap-3 sm:px-4 sm:py-3">
           <span
             className={cn(
@@ -66,14 +77,20 @@ export function ClassCard({
             <Presentation className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.2} />
           </span>
           <div className="min-w-0 flex-1">
-            <p
+            {/*
+             * THE STRETCHED LINK. The label is the accessible name and the tab
+             * stop; `after:inset-0` makes it cover the card so the chips, the
+             * student count and the empty space all open the class.
+             */}
+            <Link
+              href={base}
               className={cn(
-                "truncate text-[15px] font-bold leading-snug sm:line-clamp-2 sm:text-lg",
+                "truncate text-[15px] font-bold leading-snug underline-offset-2 after:absolute after:inset-0 after:z-0 after:content-[''] hover:underline sm:line-clamp-2 sm:text-lg",
                 AULA_TEAL.label,
               )}
             >
               {grupo.name}
-            </p>
+            </Link>
             <p className="mt-0.5 text-[11px] font-semibold text-foreground/55 sm:text-xs">
               {year}
             </p>
@@ -85,7 +102,7 @@ export function ClassCard({
             {grupo.section ? ` · ${grupo.section}` : ""}
           </p>
         </div>
-      </Link>
+      </div>
 
       <div className="flex flex-1 items-center justify-between gap-2 px-3 pb-2.5 pt-1 sm:block sm:px-4 sm:pb-3 sm:pt-2">
         <div className="min-w-0 flex flex-1 flex-col gap-1 sm:gap-2">
@@ -114,7 +131,7 @@ export function ClassCard({
          * PHONE ONLY: the two shortcuts, inline. Same destinations as the
          * desktop footer, without spending a 49px strip on them.
          */}
-        <div className="flex shrink-0 items-center gap-0.5 self-end sm:hidden">
+        <div className="relative z-10 flex shrink-0 items-center gap-0.5 self-end sm:hidden">
           {actions.map(({ label, icon: Icon, href }) => (
             <Link
               key={label}
@@ -137,7 +154,7 @@ export function ClassCard({
       </div>
 
       {/* sm+: the roomier footer shortcut, unchanged. */}
-      <div className="hidden items-center justify-end gap-0.5 border-t border-border px-2 py-1.5 sm:flex">
+      <div className="relative z-10 hidden items-center justify-end gap-0.5 border-t border-border px-2 py-1.5 sm:flex">
         {actions.map(({ label, icon: Icon, href }) => (
           <Link
             key={label}

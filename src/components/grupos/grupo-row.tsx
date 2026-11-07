@@ -45,9 +45,27 @@ export function GrupoRow({
 
   return (
     <li className="group relative">
+      {/*
+       * `relative` + the stretched `after:` overlay on the NAME link makes the
+       * WHOLE ROW one click target.
+       *
+       * Without it only the words "1B" were clickable: the old card had a
+       * stretched link, and rewriting this as a row dropped it, so tapping the
+       * subject chips, the student count or the empty space did nothing —
+       * exactly the report "when I click on it nothing happens".
+       *
+       * The action buttons below carry `relative z-10` so they stay clickable
+       * on top of the overlay.
+       */}
       <div
         className={cn(
-          "flex items-stretch gap-3 py-3.5",
+          /*
+           * `cursor-pointer`: the row is one click target via the stretched
+           * link below, but the pointer only turned into a hand over the few
+           * letters of the title — the overlay does not set it, so everything
+           * else looked inert.
+           */
+          "relative flex cursor-pointer items-stretch gap-3 py-3.5",
           /*
            * Phone: a divider, not a box. `-mx-4 px-4` lets the divider span the
            * shell's gutter so the list reads as a table edge-to-edge, which is
@@ -69,7 +87,7 @@ export function GrupoRow({
           <div className="flex min-w-0 items-baseline gap-x-2">
             <Link
               href={base}
-              className="truncate text-[15px] font-bold leading-snug text-foreground decoration-foreground/25 underline-offset-2 hover:underline"
+              className="truncate text-[15px] font-bold leading-snug text-foreground decoration-foreground/25 underline-offset-2 after:absolute after:inset-0 after:z-0 after:cursor-pointer after:content-[''] hover:underline"
             >
               {grupo.name}
             </Link>
@@ -109,13 +127,13 @@ export function GrupoRow({
         <Link
           href={base}
           aria-label={`${t.grupos.openGroup} — ${grupo.name}`}
-          className="flex w-8 shrink-0 items-center justify-center rounded-lg text-foreground/30 transition-colors group-hover:text-foreground/60 sm:hidden"
+          className="relative z-10 flex w-8 shrink-0 items-center justify-center rounded-lg text-foreground/30 transition-colors group-hover:text-foreground/60 sm:hidden"
         >
           <ChevronRight className="h-4 w-4" aria-hidden />
         </Link>
 
         {/* sm+: the record actions, labelled once there is room for the text. */}
-        <div className="hidden shrink-0 items-center gap-0.5 self-center border-l border-border pl-3 sm:flex">
+        <div className="relative z-10 hidden shrink-0 items-center gap-0.5 self-center border-l border-border pl-3 sm:flex">
           {actions.map(({ label, icon: Icon, href }) => (
             <Link
               key={label}
