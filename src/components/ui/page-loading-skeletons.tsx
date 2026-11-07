@@ -490,6 +490,40 @@ export function CommsThreadDetailSkeleton() {
   );
 }
 
+/**
+ * Mensajes list — rows shaped like the REAL message rows.
+ *
+ * This exists for the in-flight folder switch, where the previous folder's rows
+ * are deliberately hidden and the next payload has not arrived. It MUST mirror
+ * the live row (avatar, name, subject + tag, one preview line) at the same
+ * heights; a card-shaped placeholder would shift the whole list when the data
+ * lands, which is the same jarring jump a spinner causes, only later.
+ *
+ * Measured live rows are 76-96px tall at phone width.
+ */
+export function MailboxListRowsSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <ul className="flex flex-col gap-0.5 p-0 md:p-2" aria-hidden>
+      {Array.from({ length: count }).map((_, i) => (
+        <li key={i} className="flex items-start gap-2.5 px-[10px] py-2 md:px-2.5">
+          <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <Skeleton className="h-3.5 w-32" />
+              <Skeleton className="ml-auto h-2.5 w-10 shrink-0" />
+            </div>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <Skeleton className="h-3.5 w-40" />
+              <Skeleton className="h-3 w-12 shrink-0 rounded-full" />
+            </div>
+            <Skeleton className="mt-1.5 h-3 w-3/4" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Mensajes mailbox — standalone thread cards. */
 export function MailboxThreadCardsSkeleton({ count = 5 }: { count?: number }) {
   return (

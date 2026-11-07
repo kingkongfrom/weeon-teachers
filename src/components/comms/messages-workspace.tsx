@@ -25,7 +25,6 @@ import {
   Paperclip,
   PenSquare,
   Plus,
-  Printer,
   RefreshCw,
   Search,
   Send,
@@ -34,6 +33,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MailboxListRowsSkeleton } from "@/components/ui/page-loading-skeletons";
 import { useLiveT } from "@/lib/i18n/use-i18n";
 import { COMMS_COMPOSE, COMMS_MESSAGES, COMMS_SETTINGS } from "@/lib/comms/paths";
 import { ChatAvatar } from "@/components/comms/chat-avatar";
@@ -82,7 +82,7 @@ const LABEL_REORDER_MIME = "application/x-weeon-label-reorder";
 
 /** Compact folder rail row — denser than the app-wide action nav link. */
 const MAIL_FOLDER_ROW =
-  "inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[13px] font-medium transition-colors";
+  "inline-flex h-10 items-center gap-2 rounded-lg px-2.5 text-[14.5px] font-medium transition-colors";
 
 /** List vs reading split beside folder sidebar (35% / 65% from `md`). */
 const MAIL_LIST_PANE =
@@ -194,7 +194,29 @@ export function MessagesWorkspace({
     [],
   );
 
+  /*
+   * SUPPRESS THE PREVIOUS FOLDER'S ROWS WHILE A FOLDER CHANGE IS IN FLIGHT.
+   *
+   * `threads` is a server prop, so switching folder is a navigation with a real
+   * round trip. Until the new payload lands React keeps the OLD folder's rows
+   * mounted: measured 10 Sent messages still on screen after clicking Inbox.
+   * The user reads that as flicker, or as data being lost.
+   *
+   * `useSearchParams` CANNOT detect this — it only updates once the navigation
+   * commits, so during the wait it still reports the old URL and both sides
+   * agree. The destination has to be captured AT CLICK TIME, from the link the
+   * user pressed, which is what `pendingFolder` records. It clears as soon as a
+   * render sees `folder` matching the request.
+   */
+  const [pendingFolder, setPendingFolder] = useState<string | null>(null);
+  const dataFolder = folder === "draft" ? "drafts" : folder;
+  useEffect(() => {
+    if (pendingFolder && pendingFolder === dataFolder) setPendingFolder(null);
+  }, [pendingFolder, dataFolder]);
+  const dataIsStale = pendingFolder !== null && pendingFolder !== dataFolder;
+
   const localThreads = useMemo(() => {
+    if (dataIsStale) return [];
     const term = query.trim().toLowerCase();
     return threads
       .filter((row) => !removedThreadIds.includes(row.id))
@@ -208,7 +230,7 @@ export function MessagesWorkspace({
           (row.authorName ?? "").toLowerCase().includes(term)
         );
       });
-  }, [threads, removedThreadIds, query, unreadOnly]);
+  }, [threads, removedThreadIds, query, unreadOnly, dataIsStale]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [readThreadIds, setReadThreadIds] = useState<Set<string>>(() => new Set());
@@ -538,14 +560,14 @@ export function MessagesWorkspace({
             phonePane === "open" && "hidden md:flex md:w-[11.5rem] lg:w-48 tablet-portrait:hidden",
           )}
         >
-          <div className="flex h-16 shrink-0 items-center border-b border-border px-2 pt-3">
+          <div className="flex h-16 shrink-0 items-center px-2 pt-3">
             <Link
               href={COMMS_COMPOSE}
               title={t("comms.composeMessage")}
               aria-label={t("comms.composeMessage")}
-              className="btn-ink inline-flex h-9 w-full items-center justify-center gap-2 rounded-full px-3 text-[13px] font-semibold shadow-sm transition-colors"
+              className="btn-ink inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg px-3 text-[14px] font-semibold shadow-sm transition-colors"
             >
-              <PenSquare className="h-4 w-4 shrink-0" />
+              <PenSquare className="h-[18px] w-[18px] shrink-0" />
               <span className="truncate">{t("comms.composeMessage")}</span>
             </Link>
           </div>
@@ -558,7 +580,7 @@ export function MessagesWorkspace({
               (item.id === "drafts" ? folder === "draft" : item.id === folder);
             const body = (
               <>
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-5 w-5 shrink-0" />
                 <span className="min-w-0 flex-1 truncate">{item.label}</span>
                 {item.id === "inbox" ? (
                   <UnreadCountBadge count={item.count ?? 0} />
@@ -592,6 +614,10 @@ export function MessagesWorkspace({
                 onClick={() => {
                   setPhonePane("list");
                   setSidebarOpen(false);
+                  /* Record the DESTINATION now — the URL still reports the old
+                   * folder until the navigation commits. No-op when re-clicking
+                   * the folder already shown. */
+                  if (item.id !== dataFolder) setPendingFolder(item.id);
                 }}
                 className={cn(
                   MAIL_FOLDER_ROW,
@@ -746,7 +772,7 @@ export function MessagesWorkspace({
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex h-16 shrink-0 items-center gap-1.5 border-b border-border bg-surface px-2 pt-3">
+          <div className="flex h-16 shrink-0 items-center gap-1.5 bg-surface px-2 pt-3 pb-3">
             <button
               type="button"
               onClick={() => setPhonePane(phonePane === "open" ? "list" : "folders")}
@@ -764,7 +790,7 @@ export function MessagesWorkspace({
             >
               <Menu className="h-3.5 w-3.5" />
             </button>
-            <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-surface-muted/70 px-2.5 py-1.5 md:w-[39.7%] md:flex-none tablet-portrait:w-auto tablet-portrait:flex-1">
+            <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-surface-muted/70 px-2.5 py-2 md:w-[39.7%] md:flex-none tablet-portrait:w-auto tablet-portrait:flex-1">
               <Search className="h-3.5 w-3.5 shrink-0 text-foreground/40" />
               <input
                 value={query}
@@ -785,7 +811,7 @@ export function MessagesWorkspace({
                   : "text-foreground/55 hover:bg-foreground/[0.05]",
               )}
             >
-              <Mail className="h-4 w-4" />
+              <Mail className="h-5 w-5" />
               <span className="hidden sm:inline">{t("comms.unreadOnly")}</span>
             </button>
             {/*
@@ -806,7 +832,7 @@ export function MessagesWorkspace({
               }}
               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05] disabled:opacity-60"
             >
-              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+              <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
             </button>
           </div>
           <div className="flex min-h-0 min-w-0 flex-1">
@@ -845,7 +871,25 @@ export function MessagesWorkspace({
             The pane's own formula must NOT be changed to compensate — it is
             frozen (docs/chat-layout-do-not-touch.md).
           */}
-          <div className="min-h-0 flex-1 overflow-y-auto pb-4 [scroll-padding-bottom:1rem] [padding-bottom:calc(1rem+env(safe-area-inset-bottom,0px))]">
+          {/*
+            BOTTOM CLEARANCE FOR THE FIXED FOOTER — MEASURED, NOT GUESSED.
+
+            The scroller does NOT need to reserve the footer's height. Measured
+            on a Pixel 5 viewport (727px):
+
+              footer top            655
+              footer height          72   (min-h 56 + pb 14 + 1px border)
+              scroller bottom       657   ← it already ends AT the bar
+              actual overlap          2   ← only the border
+
+            So the list is not hidden behind the whole bar; it overhangs by the
+            border and nothing else. An earlier value of `0.5rem + nav-height`
+            reserved 78px for a 2px overhang — that was the "too much margin".
+
+            A small pad covers the overhang plus breathing room. `env()` is kept
+            for a device whose home indicator really does sit under the scroller.
+          */}
+          <div className="min-h-0 flex-1 overflow-y-auto [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom,0px))]">
           {!labelId && folder === "inbox" && unreadInbox > 0 ? (
             <div className="border-b border-border px-2 py-2">
               <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", messagesTone.accentMuted)}>
@@ -913,6 +957,17 @@ export function MessagesWorkspace({
                 ))}
               </ul>
             )
+          ) : dataIsStale ? (
+            /*
+             * SKELETON, NOT "NO HAY MENSAJES".
+             *
+             * While the next folder is in flight `localThreads` is deliberately
+             * empty, so this used to fall through to the empty-state below and
+             * assert there are no messages — false, and it reads as data loss.
+             * Rows shaped like the real ones hold the layout steady, so the list
+             * does not jump when the data lands.
+             */
+            <MailboxListRowsSkeleton count={6} />
           ) : localThreads.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <p className="text-sm font-semibold text-foreground">
