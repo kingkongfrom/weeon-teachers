@@ -161,7 +161,7 @@ export function MessagesWorkspace({
   const [localLabels, setLocalLabels] = useState(labels);
   const [draggingLabelId, setDraggingLabelId] = useState<string | null>(null);
   const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+
   const [localDrafts, setLocalDrafts] = useState(drafts);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
   /**
@@ -213,7 +213,36 @@ export function MessagesWorkspace({
   useEffect(() => {
     if (pendingFolder && pendingFolder === dataFolder) setPendingFolder(null);
   }, [pendingFolder, dataFolder]);
-  const dataIsStale = pendingFolder !== null && pendingFolder !== dataFolder;
+
+  /*
+   * REFRESH. `router.refresh()` has no completion callback, so the only honest
+   * "data arrived" signal is the `threads` prop changing identity. The old code
+   * spun the icon for a fixed 800ms and stopped whether or not data had arrived,
+   * while the list kept showing old rows — the same false state the folder
+   * switch produced. Now one flag drives BOTH the icon and the skeleton, and it
+   * clears when `threads` is replaced.
+   *
+   * A timeout is kept only as a safety net: a failed refresh must not strand the
+   * skeleton forever.
+   */
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshGuard = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    // Only a refresh can be cleared here; a normal mount has nothing pending.
+    if (!isRefreshing) return;
+    setIsRefreshing(false);
+    if (refreshGuard.current) clearTimeout(refreshGuard.current);
+    // `threads` IS the signal, so it belongs in the list despite not being read.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threads]);
+  useEffect(
+    () => () => {
+      if (refreshGuard.current) clearTimeout(refreshGuard.current);
+    },
+    [],
+  );
+
+  const dataIsStale = (pendingFolder !== null && pendingFolder !== dataFolder) || isRefreshing;
 
   const localThreads = useMemo(() => {
     if (dataIsStale) return [];
@@ -823,16 +852,28 @@ export function MessagesWorkspace({
             */}
             <button
               type="button"
-              disabled={refreshing}
+              disabled={isRefreshing}
               aria-label={t("comms.refreshList")}
               onClick={() => {
-                setRefreshing(true);
+                /*
+                 * THE LIST MUST SHOW THE SKELETON TOO, NOT JUST THIS ICON.
+                 *
+                 * The icon spun for a fixed 800ms and stopped whether or not the
+                 * data had arrived, while the list below kept showing the OLD
+                 * rows — the same false state the folder switch produced. It now
+                 * goes through `isRefreshing`, which the list treats as stale, so
+                 * the skeleton stays until `refreshing` clears.
+                 */
+                setIsRefreshing(true);
                 router.refresh();
-                window.setTimeout(() => setRefreshing(false), 800);
+                /* Safety net only — the real clear is the `threads` change. A
+                 * failed refresh must not leave the skeleton up forever. */
+                if (refreshGuard.current) clearTimeout(refreshGuard.current);
+                refreshGuard.current = setTimeout(() => setIsRefreshing(false), 15000);
               }}
               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05] disabled:opacity-60"
             >
-              <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
+              <RefreshCw className={cn("h-5 w-5", isRefreshing && "animate-spin")} />
             </button>
           </div>
           <div className="flex min-h-0 min-w-0 flex-1">
