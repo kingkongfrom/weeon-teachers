@@ -166,23 +166,27 @@ export function BlooketSetsList({
       </div>
 
       {sets.length === 0 ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border px-4 py-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100 dark:bg-brand-950/40 dark:text-brand-300 dark:ring-brand-900">
-            <Gamepad2 className="h-4 w-4" />
+        /*
+         * ONE QUIET LINE when there is nothing stored.
+         *
+         * This used to be a dashed box with an icon, a title, a sentence of
+         * explanation and its own row height — nearly as tall as the assessment
+         * cards below it, so "you have no Blooket sets" outranked the work the
+         * teacher actually came for. The feature stays discoverable: the label
+         * and the action are still here, just not shouting.
+         */
+        <div className="flex flex-wrap items-center gap-2 py-1">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100 dark:bg-brand-950/40 dark:text-brand-300 dark:ring-brand-900">
+            <Gamepad2 className="h-3.5 w-3.5" />
           </span>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <p className="text-[13px] font-semibold text-foreground">{l.empty.title}</p>
-            <p className="text-[12px] leading-snug text-foreground/50">{l.empty.body}</p>
-          </div>
-          {variant === "manage" ? (
-            <Link
-              href="/aula-virtual/blooket"
-              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-[12.5px] font-semibold text-foreground/70 transition-colors hover:bg-surface-muted hover:text-foreground"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {t.library.blooketAction}
-            </Link>
-          ) : null}
+          <p className="min-w-0 flex-1 truncate text-[12.5px] text-foreground/50">{l.empty.title}</p>
+          <Link
+            href="/aula-virtual/blooket"
+            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold text-brand-700 transition-colors hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {l.empty.action ?? t.library.blooketAction}
+          </Link>
         </div>
       ) : (
         <ul

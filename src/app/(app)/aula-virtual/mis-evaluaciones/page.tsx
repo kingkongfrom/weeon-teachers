@@ -21,7 +21,13 @@ export default async function MisEvaluacionesPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
+    /*
+     * `pb-6 md:pb-0`: the app shell already reserves the phone bar's height, so
+     * this is breathing room, not clearance — the last card was landing flush
+     * against the bar on a phone. Desktop keeps its own `md:pb-16` from the
+     * shell, so the extra padding is explicitly phone-only.
+     */
+    <div className="flex flex-col gap-6 pb-6 md:pb-0">
       <PageHeader
         title={t.library.title}
         description={t.library.description}

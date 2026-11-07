@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -97,6 +97,44 @@ export function LibraryBrowser({
   const scoped = tab === "mine" ? mine : shared;
 
   const levels = useMemo(() => gradeLevelsIn(scoped), [scoped]);
+  /*
+   * Subjects that ACTUALLY HAVE ITEMS in the current tab.
+   *
+   * The `subjects` prop is the school's whole catalogue (`loadSubjectOptions`),
+   * so listing it offered filters that matched nothing. Derived from `scoped`
+   * instead, and filtered against `subjects` only to get display names — an
+   * item's own `subjectName` is the fallback when the catalogue has no entry.
+   */
+  const availableSubjects = useMemo(() => {
+    const byId = new Map(subjects.map((subject) => [subject.id, subject.name]));
+    const present = new Map<string, string>();
+    for (const item of scoped) {
+      if (!item.subjectId) continue;
+      if (present.has(item.subjectId)) continue;
+      present.set(item.subjectId, byId.get(item.subjectId) ?? item.subjectName ?? item.subjectId);
+    }
+    return [...present.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }));
+  }, [scoped, subjects]);
+  /*
+   * Collections that actually HOLD something, in the current tab.
+   *
+   * The counts must agree with each other. `items` excludes archived rows, but
+   * `collections` is every row in `exam_library_collections` — including empty
+   * ones. Counting those produced a strip that said "1 colección" while showing
+   * nothing inside it, so the number described the schema rather than the
+   * teacher's library.
+   *
+   * Same rule as `availableSubjects`: count what the teacher can actually see.
+   */
+  const filledCollections = useMemo(() => {
+    const ids = new Set<string>();
+    for (const item of scoped) {
+      if (item.collectionId) ids.add(item.collectionId);
+    }
+    return collections.filter((collection) => ids.has(collection.id));
+  }, [scoped, collections]);
   const visible = useMemo(
     () =>
       filterLibraryItems(scoped, query, {
@@ -155,10 +193,82 @@ export function LibraryBrowser({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Collection bar: one bordered toolbar for tabs, search, filters,
-             counts and the two secondary actions. Everything a teacher needs
-             to narrow the list stays in one visual band, so the cards below
-             start immediately. ──────────────────────────────────────────── */}
+      {/*
+       * ── HERO ──────────────────────────────────────────────────────────────
+       *
+       * The page had no identity: a page title, then six flat grey bands of
+       * equal weight stacked to the first card. The hero gives it one — the
+       * library's scale, against the brand gradient, with the create actions
+       * living inside it. The toolbar below keeps only what NARROWS the list.
+       *
+       * `.brand-gradient` rather than a Tailwind from/to colour chain: brand
+       * colours are CSS custom properties, and an opacity modifier on a var()
+       * colour (`from-brand-start/95`) produces NO background at all — the hero
+       * then renders white text on the white surface, which reads as a blank box.
+       */}
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-surface">
+        <div aria-hidden className="brand-gradient pointer-events-none absolute inset-0" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-2xl"
+        />
+        <div className="relative flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/60">
+              {l.hero.eyebrow}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="text-3xl font-bold leading-none tracking-tight text-white tabular-nums">
+                {counts.mine + counts.shared}
+              </p>
+              <p className="text-[13.5px] font-medium text-white/75">
+                {l.hero.total(counts.mine + counts.shared)}
+              </p>
+            </div>
+            {/*
+             * THE BREAKDOWN LIVES IN THE TOOLBAR, NOT HERE.
+             *
+             * It used to sit in both places, so the page printed the same four
+             * numbers twice — and the copy here disagreed with the one below
+             * (empty collections, and a "0 exámenes" the toolbar hid). The hero
+             * keeps the headline; the toolbar keeps the detail, from the same
+             * `filledCollections` / `scoped` in this one component.
+             */}
+          </div>
+
+          {tab === "mine" ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {/* Entry point for /aula-virtual/blooket: the builder is a separate
+                  page, and this repo has no sidebar to link it from.
+                  No `backdrop-blur`: `backdrop-filter` inside an element with
+                  absolutely-positioned siblings is a known iOS Safari rendering
+                  hazard, and the frost was decoration. */}
+              <Link
+                href="/aula-virtual/blooket"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-[12.5px] font-semibold text-white ring-1 ring-inset ring-white/30 transition-colors hover:bg-white/25"
+              >
+                <Gamepad2 className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="hidden md:inline">{l.blooketAction}</span>
+                <span className="md:hidden">{l.blooketShort}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setCollectionName("");
+                  setCollectionDialog({ mode: "create" });
+                }}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-[12.5px] font-bold text-brand-700 shadow-sm transition-transform hover:-translate-y-px"
+              >
+                <FolderPlus className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="hidden md:inline">{l.newCollection}</span>
+                <span className="md:hidden">{l.newCollectionShort}</span>
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {/* ── Toolbar: only the controls that NARROW the list. ─────────────── */}
       <div className="flex flex-col rounded-2xl border border-border bg-surface">
         <div className="flex flex-col gap-3 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -204,32 +314,8 @@ export function LibraryBrowser({
               })}
             </div>
 
-            {tab === "mine" ? (
-              <div className="flex items-center gap-2">
-                {/* Entry point for /aula-virtual/blooket: the builder is a separate
-                    page, and this repo has no sidebar to link it from. */}
-                <Link
-                  href="/aula-virtual/blooket"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-[12.5px] font-semibold text-foreground/65 transition-colors hover:border-border-strong hover:text-foreground"
-                >
-                  <Gamepad2 className="h-4 w-4 shrink-0" />
-                  <span className="hidden md:inline">{l.blooketAction}</span>
-                  <span className="md:hidden">{l.blooketShort}</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCollectionName("");
-                    setCollectionDialog({ mode: "create" });
-                  }}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3.5 text-[12.5px] font-semibold text-foreground/65 transition-colors hover:border-border-strong hover:text-foreground"
-                >
-                  <FolderPlus className="h-4 w-4 shrink-0" />
-                  <span className="hidden md:inline">{l.newCollection}</span>
-                  <span className="md:hidden">{l.newCollectionShort}</span>
-                </button>
-              </div>
-            ) : null}
+            {/* The two create actions live in the hero now, not here: this band
+                is for narrowing. */}
           </div>
 
           {scoped.length > 0 ? (
@@ -256,7 +342,20 @@ export function LibraryBrowser({
               </label>
 
               <div className="flex items-center gap-2">
-                {subjects.length > 1 ? (
+                {/*
+                 * THE SUBJECT FILTER, WITH TWO GUARDS.
+                 *
+                 * 1. It only renders when there is something to CHOOSE between —
+                 *    two or more distinct subjects among the items the teacher
+                 *    actually has. With one subject it could only narrow to the
+                 *    single result already on screen, so it disappears and the
+                 *    search field takes the whole row.
+                 *
+                 * 2. It lists only subjects that HAVE ITEMS. `loadSubjectOptions()`
+                 *    returns the whole school catalogue, so the old menu offered
+                 *    filters that matched nothing — a dead end dressed as a choice.
+                 */}
+                {availableSubjects.length > 1 ? (
                   <SelectMenu
                     label={l.subject}
                     value={subjectId}
@@ -264,7 +363,7 @@ export function LibraryBrowser({
                     align="right"
                     options={[
                       { value: "", label: l.allSubjects },
-                      ...subjects.map((subject) => ({
+                      ...availableSubjects.map((subject) => ({
                         value: subject.id,
                         label: subject.name,
                       })),
@@ -300,25 +399,36 @@ export function LibraryBrowser({
           ) : null}
 
           {scoped.length > 0 ? (
+            /*
+             * THE ONE PLACE THE BREAKDOWN LIVES.
+             *
+             * Every number comes from the same `scoped` array the cards render,
+             * and zero counts are omitted: "0 Exámenes" is not information, it
+             * is a category that does not apply to this teacher yet.
+             */
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/70 pt-2.5 text-[11.5px] font-semibold text-foreground/45">
               <CountChip
                 icon={<Layers className="h-3.5 w-3.5" />}
                 label={l.summary.assessments(scoped.length)}
               />
-              <CountChip
-                icon={<ClipboardCheck className="h-3.5 w-3.5" />}
-                label={l.summary.exams}
-                value={scoped.filter((item) => item.kind === "exam").length}
-              />
-              <CountChip
-                icon={<FileText className="h-3.5 w-3.5" />}
-                label={l.summary.homework}
-                value={scoped.filter((item) => item.kind !== "exam").length}
-              />
-              {tab === "mine" && collections.length > 0 ? (
+              {scoped.filter((item) => item.kind === "exam").length > 0 ? (
+                <CountChip
+                  icon={<ClipboardCheck className="h-3.5 w-3.5" />}
+                  label={l.summary.exams}
+                  value={scoped.filter((item) => item.kind === "exam").length}
+                />
+              ) : null}
+              {scoped.filter((item) => item.kind !== "exam").length > 0 ? (
+                <CountChip
+                  icon={<FileText className="h-3.5 w-3.5" />}
+                  label={l.summary.homework}
+                  value={scoped.filter((item) => item.kind !== "exam").length}
+                />
+              ) : null}
+              {tab === "mine" && filledCollections.length > 0 ? (
                 <CountChip
                   icon={<Folder className="h-3.5 w-3.5" />}
-                  label={l.summary.collections(collections.length)}
+                  label={l.summary.collections(filledCollections.length)}
                 />
               ) : null}
             </div>

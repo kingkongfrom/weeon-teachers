@@ -1,15 +1,16 @@
 import {
-  GrupoCardSkeleton,
+  GrupoRowSkeleton,
   PageHeaderSkeleton,
 } from "@/components/ui/page-loading-skeletons";
 
 export default function GruposLoading() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageHeaderSkeleton />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <GrupoCardSkeleton key={i} />
+      {/* Rows, matching `GrupoRow` — not the old card grid. */}
+      <div className="flex flex-col gap-2.5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <GrupoRowSkeleton key={i} />
         ))}
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
   Clock,
   GraduationCap,
   Home,
+  Layers,
   Mail,
   MapPin,
   MessageCircle,
@@ -28,6 +29,15 @@ type NavLink = {
   label: string;
   icon: NavIcon;
   badgeCount?: number;
+  /**
+   * Rendered as a CHILD of the entry above it: indented, smaller, no icon well.
+   *
+   * Mis evaluaciones is a page inside Aula virtual, not a peer of it, so it is
+   * nested rather than promoted to the top level — the indentation is what says
+   * so. It is never collapsed behind a chevron, because a hidden child is the
+   * one way nesting loses to a flat entry on discoverability.
+   */
+  child?: boolean;
 };
 
 /** Tenant-parity megaphone glyph for Circulares (the admin sidebar's icon). */
@@ -63,6 +73,19 @@ export function AppSidebar({
   const primary: NavLink[] = [
     { href: "/inicio", label: t.panel.title, icon: Home },
     { href: "/aula-virtual", label: t.panel.classroom.label, icon: Presentation },
+    /*
+     * The reusable assessment library, nested under Aula virtual.
+     *
+     * `Layers` on purpose: a folder or book would collide with the collection
+     * and material icons used inside the page, and the defining property of a
+     * library item is that it gets COPIED into groups.
+     */
+    {
+      href: "/aula-virtual/mis-evaluaciones",
+      label: t.library.title,
+      icon: Layers,
+      child: true,
+    },
     { href: "/grupos", label: t.panel.grades.label, icon: GraduationCap },
     { href: "/reportes", label: t.reportes.title, icon: FileBarChart },
   ];
@@ -112,6 +135,7 @@ export function AppSidebar({
           pathname={pathname}
           collapsed={collapsed}
           onNavigate={onNavigate}
+          childHrefs={primary.filter((other) => other.child).map((other) => other.href)}
         />
       ))}
       {collapsed ? <div className="my-2 hidden h-px w-6 bg-border md:block" /> : null}
@@ -158,16 +182,34 @@ function NavItem({
   pathname,
   collapsed,
   onNavigate,
+  childHrefs = [],
 }: {
   item: NavLink;
   pathname: string;
   collapsed: boolean;
+  /** hrefs of every nested entry, so a parent never claims to be current too. */
+  childHrefs?: string[];
   onNavigate: () => void;
 }) {
-  const active =
-    item.href === "/inicio"
-      ? pathname === "/inicio"
-      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+  /*
+   * A parent is NOT current when one of its CHILDREN is the page you are on.
+   *
+   * Both links matched `/aula-virtual` by prefix, so the sidebar claimed two
+   * current pages at once — wrong for `aria-current`, confusing on screen.
+   *
+   * Derived from the nav list rather than hardcoding a path, so adding another
+   * child entry cannot silently reintroduce the double-current bug.
+   */
+  const exact =
+    item.href === "/inicio" ? pathname === "/inicio" : pathname === item.href;
+  const under = pathname.startsWith(`${item.href}/`);
+  const aChildOwnsThis =
+    under &&
+    item.href.split("/").filter(Boolean).length < 2 &&
+    childHrefs.some(
+      (href) => pathname === href || pathname.startsWith(`${href}/`),
+    );
+  const active = exact || (under && !aChildOwnsThis);
   const Icon = item.icon;
   const badge = item.badgeCount ?? 0;
   const collapsedLabel =
@@ -182,6 +224,14 @@ function NavItem({
       className={cn(
         "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all",
         collapsed && "md:h-10 md:w-10 md:justify-center md:gap-0 md:px-0 md:py-0",
+        /*
+         * A CHILD ENTRY: indented under its parent, smaller, and without the
+         * icon well. The well is what makes a row read as a top-level section;
+         * dropping it plus the indent is the whole hierarchy signal.
+         */
+        item.child && !collapsed
+          ? "ml-4 gap-2.5 py-2 pl-3 text-[13px] font-medium"
+          : null,
         active
           ? "bg-brand-50/80 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300"
           : "text-foreground/70 hover:bg-surface-muted hover:text-foreground",
@@ -196,17 +246,28 @@ function NavItem({
           )}
         />
       ) : null}
-      <span
-        className={cn(
-          "relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-          active
-            ? "bg-brand-100 text-brand-600 shadow-[inset_0_0_0_1px] shadow-brand-200/60 dark:bg-brand-900/50 dark:text-brand-300"
-            : "bg-surface-muted text-foreground/80 group-hover:bg-surface-elevated group-hover:text-foreground",
-        )}
-      >
-        <Icon className="h-4 w-4" strokeWidth={2.2} />
-        {badge > 0 ? <UnreadCountBadge count={badge} absolute /> : null}
-      </span>
+      {item.child && !collapsed ? (
+        <Icon
+          className={cn(
+            "h-4 w-4 shrink-0",
+            active ? "text-brand-600 dark:text-brand-300" : "text-foreground/45",
+          )}
+          strokeWidth={2.1}
+          aria-hidden
+        />
+      ) : (
+        <span
+          className={cn(
+            "relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+            active
+              ? "bg-brand-100 text-brand-600 shadow-[inset_0_0_0_1px] shadow-brand-200/60 dark:bg-brand-900/50 dark:text-brand-300"
+              : "bg-surface-muted text-foreground/80 group-hover:bg-surface-elevated group-hover:text-foreground",
+          )}
+        >
+          <Icon className="h-4 w-4" strokeWidth={2.2} />
+          {badge > 0 ? <UnreadCountBadge count={badge} absolute /> : null}
+        </span>
+      )}
       <span className={cn("min-w-0 flex-1 truncate", collapsed && "md:hidden")}>{item.label}</span>
       {!collapsed && badge > 0 ? (
         <UnreadCountBadge count={badge} className="shrink-0" />

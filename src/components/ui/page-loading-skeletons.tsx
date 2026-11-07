@@ -168,8 +168,38 @@ export function GrupoCardSkeleton() {
   );
 }
 
-/** `/aula-virtual/[classId]` hero banner. */
-export function AulaClassHeroSkeleton() {
+/**
+ * Mis grupos {@link GrupoRow} — a full-width record row.
+ *
+ * Not the card skeleton: `/grupos` renders rows, so painting six cards there
+ * made the page jump from a 3-column grid to a list on every load. The skeleton
+ * has to have the shape of what replaces it.
+ */
+export function GrupoRowSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:gap-5">
+      <div className="flex min-w-0 flex-1 items-center gap-3.5">
+        <Skeleton className="h-10 w-1 rounded-full" />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-44" />
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            <Skeleton className="h-5 w-14 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-9 w-20 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** `/aula-virtual/[classId]` hero banner. */export function AulaClassHeroSkeleton() {
   return (
     <div className="rounded-3xl border border-border bg-surface p-6">
       <div className="flex items-start gap-4">

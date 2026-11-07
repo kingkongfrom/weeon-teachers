@@ -253,6 +253,18 @@ const es = {
       "Evaluaciones que puede reutilizar en cualquier grupo. Se copian al usarlas: cada grupo conserva su propia versión.",
     back: "Mis evaluaciones",
     titleLabel: "Título",
+    /**
+     * Library hero: the page's identity. The count is the headline because the
+     * first thing a teacher wants to know about a personal library is how much
+     * of it there is.
+     */
+    hero: {
+      eyebrow: "Tu biblioteca",
+      total: (n: number): string => (n === 1 ? "evaluación guardada" : "evaluaciones guardadas"),
+      exams: (n: number) => `${n} ${n === 1 ? "examen" : "exámenes"}`,
+      homework: (n: number) => `${n} ${n === 1 ? "tarea" : "tareas"}`,
+      collections: (n: number) => `${n} ${n === 1 ? "colección" : "colecciones"}`,
+    },
     tabs: {
       aria: "Sección de la biblioteca",
       mine: "Mías",
@@ -364,6 +376,7 @@ const es = {
       empty: {
         title: "Todavía no hay sets de Blooket guardados.",
         body: "Cree un set desde «Crear set de Blooket», ábralo en Blooket y guárdelo aquí para volver a descargarlo cuando quiera.",
+        action: "Crear uno",
       },
       allLevels: "Todos los niveles",
       filterByLevel: "Filtrar por nivel",
@@ -392,6 +405,8 @@ const es = {
     empty:
       "Todavía no tiene grupos asignados. Pida a la administración que lo asigne a un grupo.",
     studentsCount: (n: number) => `${n} ${n === 1 ? "estudiante" : "estudiantes"}`,
+    pendingGrading: (n: number) => `${n} por calificar`,
+    openGroup: "Abrir grupo",
     tabs: {
       aria: "Sección del grupo",
       grades: "Calificaciones",
@@ -1810,6 +1825,13 @@ const en: Messages = {
       "Assessments you can reuse in any group. They are copied when used, so each group keeps its own version.",
     back: "My assessments",
     titleLabel: "Title",
+    hero: {
+      eyebrow: "Your library",
+      total: (n: number): string => (n === 1 ? "saved assessment" : "saved assessments"),
+      exams: (n: number) => `${n} ${n === 1 ? "exam" : "exams"}`,
+      homework: (n: number) => `${n} ${n === 1 ? "assignment" : "assignments"}`,
+      collections: (n: number) => `${n} ${n === 1 ? "collection" : "collections"}`,
+    },
     tabs: {
       aria: "Library section",
       mine: "Mine",
@@ -1921,6 +1943,7 @@ const en: Messages = {
       empty: {
         title: "No Blooket sets saved yet.",
         body: "Create a set with «Create a Blooket set», open it in Blooket, and save it here to download it again later.",
+        action: "Create one",
       },
       allLevels: "All levels",
       filterByLevel: "Filter by level",
@@ -1949,6 +1972,8 @@ const en: Messages = {
     empty:
       "You have no groups assigned yet. Ask the administration to assign you to a group.",
     studentsCount: (n: number) => `${n} ${n === 1 ? "student" : "students"}`,
+    pendingGrading: (n: number) => `${n} to grade`,
+    openGroup: "Open group",
     tabs: {
       aria: "Group section",
       grades: "Grades",
