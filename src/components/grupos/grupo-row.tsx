@@ -10,14 +10,19 @@ import type { TeacherGrupo } from "@/lib/dashboard/grupos";
 /**
  * One group, as a RECORD rather than a tile.
  *
- * Mis grupos used to render the same card as Aula virtual — same banner, same
- * chips, same icon footer — so the two pages were indistinguishable. They are
- * different tasks: Aula virtual is where you TEACH (post work, grade
- * submissions), Mis grupos is where you RECORD (grades, attendance, conduct).
+ * MOBILE FIRST — this was designed on desktop and the distinction collapsed on
+ * a phone. At 393px both pages were "a rounded card with 1B, subject chips and
+ * 7 estudiantes", because the differences were `sm:`/`lg:` only: the labelled
+ * actions hid below `lg`, and the card border applied at every width.
  *
- * So this is a row you scan down, not a tile you browse. The name anchors the
- * left, the three record actions sit right where the eye lands, and the whole
- * row is one link to Calificaciones — the reason someone opens this page.
+ * So on a phone this is a FLAT ROW: no card, no rounding, no shadow — a
+ * divider-separated list you scan, which is what a gradebook list should feel
+ * like. Aula virtual keeps its avatar-led cards, so the two stop sharing a
+ * silhouette at the width where it matters most.
+ *
+ * From `sm:` up it becomes a bordered row (there is width for the labelled
+ * actions), and the structure stays a row — it never becomes Aula virtual's
+ * card.
  */
 export function GrupoRow({
   grupo,
@@ -40,59 +45,77 @@ export function GrupoRow({
 
   return (
     <li className="group relative">
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 transition-colors hover:border-brand-300 hover:bg-surface-muted/40 sm:flex-row sm:items-center sm:gap-5">
-        {/*
-         * A short accent bar instead of a banner. It marks the row as a RECORD
-         * without competing with the avatar-led cards in Aula virtual.
-         */}
-        <div className="flex min-w-0 flex-1 items-center gap-3.5">
-          <span
-            aria-hidden
-            className="h-10 w-1 shrink-0 rounded-full bg-gradient-to-b from-brand-500 to-brand-700"
-          />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <Link
-                href={base}
-                className="truncate text-base font-bold leading-snug text-foreground hover:underline"
-              >
-                {grupo.name}
-              </Link>
-              <span className="text-xs font-semibold text-foreground/45">{year}</span>
-              {grupo.section ? (
-                <span className="text-xs font-medium text-foreground/45">· {grupo.section}</span>
-              ) : null}
-            </div>
-            <p className="mt-0.5 truncate text-xs font-medium text-foreground/50">
-              {schoolName ?? t.common.fallbackSchool}
-            </p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              {grupo.subjects.length > 0 ? <SubjectChips subjects={grupo.subjects} /> : null}
-              <span className="flex items-center gap-1 text-xs font-medium text-foreground/50">
-                <Users className="h-3.5 w-3.5" aria-hidden />
-                {t.grupos.studentsCount(grupo.studentCount)}
+      <div
+        className={cn(
+          "flex items-stretch gap-3 py-3.5",
+          /*
+           * Phone: a divider, not a box. `-mx-4 px-4` lets the divider span the
+           * shell's gutter so the list reads as a table edge-to-edge, which is
+           * the opposite silhouette from Aula virtual's floating card.
+           */
+          "-mx-4 border-b border-border px-4",
+          /* sm+: a bordered row. Still a row, never a card. */
+          "sm:mx-0 sm:rounded-xl sm:border sm:border-b sm:px-4",
+          "transition-colors sm:hover:border-brand-300 sm:hover:bg-surface-muted/40",
+        )}
+      >
+        {/* The accent bar: a record marker, not a banner. */}
+        <span
+          aria-hidden
+          className="w-1 shrink-0 self-stretch rounded-full bg-gradient-to-b from-brand-500 to-brand-700"
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div className="flex min-w-0 items-baseline gap-x-2">
+            <Link
+              href={base}
+              className="truncate text-[15px] font-bold leading-snug text-foreground decoration-foreground/25 underline-offset-2 hover:underline"
+            >
+              {grupo.name}
+            </Link>
+            <span className="shrink-0 text-[11px] font-semibold text-foreground/45">{year}</span>
+            {grupo.section ? (
+              <span className="shrink-0 text-[11px] font-medium text-foreground/45">
+                · {grupo.section}
               </span>
-            </div>
+            ) : null}
+            {/* Outstanding grading rides the title line on a phone: it is the
+                single number that explains why you would open this page. */}
+            {pendingGrading > 0 ? (
+              <span className="ml-auto shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-bold text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                {pendingGrading}
+              </span>
+            ) : null}
+          </div>
+
+          {grupo.subjects.length > 0 ? <SubjectChips subjects={grupo.subjects} /> : null}
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] font-medium text-foreground/50">
+            <span className="flex items-center gap-1">
+              <Users className="h-3 w-3" aria-hidden />
+              {t.grupos.studentsCount(grupo.studentCount)}
+            </span>
+            <span className="truncate">{schoolName ?? t.common.fallbackSchool}</span>
           </div>
         </div>
 
         {/*
-         * THE REASON TO OPEN THIS PAGE: outstanding grading. Shown only when
-         * there is something to do, so a zero never competes with a real task.
+         * PHONE: one tap target, the whole row.
+         *
+         * Three labelled buttons cannot fit at 393px, and three unlabelled
+         * icons are unguessable — which is what made this look like Aula
+         * virtual's icon footer. One chevron is honest about the gesture.
          */}
-        {pendingGrading > 0 ? (
-          <Link
-            href="/aula-virtual/por-evaluar"
-            className="flex w-fit items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 transition-colors hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900"
-          >
-            <span className="relative flex h-1.5 w-1.5" aria-hidden>
-              <span className="absolute inline-flex h-full w-full rounded-full bg-amber-500" />
-            </span>
-            {t.grupos.pendingGrading(pendingGrading)}
-          </Link>
-        ) : null}
+        <Link
+          href={base}
+          aria-label={`${t.grupos.openGroup} — ${grupo.name}`}
+          className="flex w-8 shrink-0 items-center justify-center rounded-lg text-foreground/30 transition-colors group-hover:text-foreground/60 sm:hidden"
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </Link>
 
-        <div className="flex shrink-0 items-center gap-1 sm:border-l sm:border-border sm:pl-4">
+        {/* sm+: the record actions, labelled once there is room for the text. */}
+        <div className="hidden shrink-0 items-center gap-0.5 self-center border-l border-border pl-3 sm:flex">
           {actions.map(({ label, icon: Icon, href }) => (
             <Link
               key={label}
@@ -108,7 +131,7 @@ export function GrupoRow({
           <Link
             href={base}
             aria-label={`${t.grupos.openGroup} — ${grupo.name}`}
-            className="flex h-9 w-8 items-center justify-center rounded-lg text-foreground/35 transition-colors group-hover:text-foreground/70"
+            className="flex h-9 w-7 items-center justify-center rounded-lg text-foreground/35 transition-colors group-hover:text-foreground/70"
           >
             <ChevronRight className="h-4 w-4" aria-hidden />
           </Link>

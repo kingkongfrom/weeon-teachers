@@ -12,9 +12,9 @@ import type { TeacherGrupo } from "@/lib/dashboard/grupos";
  * are different tasks: Aula virtual is where you TEACH (post work, grade
  * submissions); this is where you RECORD grades, attendance and conduct.
  *
- * So this is a list of rows you scan down, not tiles you browse — and the one
- * number worth surfacing is outstanding grading, which is what brings a teacher
- * to this page.
+ * On a phone the rows carry their own divider and the list has no gap, so it
+ * reads as one continuous table rather than a stack of floating cards — the
+ * silhouette that separates it from Aula virtual at 393px.
  */
 export function GruposPageView({
   grupos,
@@ -41,7 +41,7 @@ export function GruposPageView({
           <p className="text-sm font-medium text-foreground/60">{t.grupos.empty}</p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-2.5">
+        <ul className="flex flex-col sm:gap-2.5">
           {grupos.map((grupo) => (
             <GrupoRow
               key={grupo.id}

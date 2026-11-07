@@ -19,6 +19,7 @@ import {
   type SavedBlooketSet,
 } from "@/lib/teachers/blooket-actions";
 import { BlooketShareDialog } from "@/components/blooket/blooket-share-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BlooketActionBar } from "@/components/blooket/blooket-action-bar";
 import { cn } from "@/lib/utils";
 import {
@@ -125,19 +126,48 @@ function toggleCorrect(question: DraftQuestion, index: number): number[] {
   return [index];
 }
 
-export function BlooketBuilder() {
+export function BlooketBuilder({
+  gradeLevels = [],
+}: {
+  /**
+   * The teacher's own niveles, from their groups. Nivel is a closed list
+   * instead of free text: a typo there ("8" vs "8°") made the saved set
+   * unfilterable in Mis evaluaciones.
+   */
+  gradeLevels?: string[];
+}) {
   const [title, setTitle] = useState("");
   const [questions, setQuestions] = useState<DraftQuestion[]>([
     blankQuestion("multiple_choice"),
   ]);
   const [exporting, setExporting] = useState(false);
   const [gradeLevel, setGradeLevel] = useState("");
+  /*
+   * THE OPTIONS ALWAYS INCLUDE THE CURRENTLY SAVED LEVEL.
+   *
+   * `gradeLevels` comes from the teacher's groups, which change. A set saved
+   * with "1" then reopened after the teacher was moved to "8°" would have a
+   * value matching no option — `SelectMenu` renders that as the placeholder
+   * (`current?.label ?? placeholder ?? ""`), so the level appeared BLANK and
+   * saving again silently dropped it.
+   *
+   * The saved value is therefore a member of its own list. A level the teacher
+   * no longer teaches is still a valid Nivel for a set that already carries it.
+   */
+  const gradeLevelOptions = useMemo(() => {
+    const base = [...gradeLevels];
+    if (gradeLevel && !base.includes(gradeLevel)) base.push(gradeLevel);
+    base.sort((a, b) => a.localeCompare(b, "es", { numeric: true, sensitivity: "base" }));
+    return base;
+  }, [gradeLevels, gradeLevel]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [sets, setSets] = useState<SavedBlooketSet[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<SavedBlooketSet | null>(null);
+  /** Set awaiting delete confirmation — replaces a raw `window.confirm`. */
+  const [deleteTarget, setDeleteTarget] = useState<SavedBlooketSet | null>(null);
   const [currentSetId, setCurrentSetId] = useState<string | null>(null);
   const [gradeFilter, setGradeFilter] = useState("");
   /** A write happened since the last save — drives "Cambios sin guardar". */
@@ -254,13 +284,13 @@ export function BlooketBuilder() {
   }
 
   async function removeSet(saved: SavedBlooketSet) {
-    if (!window.confirm(`¿Eliminar «${saved.title}»?`)) return;
     const res = await deleteBlooketSet(saved.id);
     if (!res.ok) {
       setSaveError(res.error);
       return;
     }
     if (currentSetId === saved.id) setCurrentSetId(null);
+    setDeleteTarget(null);
     refreshSets();
   }
 
@@ -313,18 +343,20 @@ export function BlooketBuilder() {
             Nivel
           </label>
           {/* Grade is what the library filters by, so a saved set carries it.
-              Free text, matching how grade_level is stored elsewhere. */}
-          <input
-            id="blooket-grade"
+              A CLOSED LIST: free text let "8" and "8°" both exist, and the
+              library filter then matched only one of them. */}
+          <SelectMenu
+            label="Nivel"
             value={gradeLevel}
-            onChange={(event) => {
-              setGradeLevel(event.target.value);
+            onChange={(next) => {
+              setGradeLevel(next);
               setMutatedFromSet(true);
               setSavedRecently(false);
             }}
-            placeholder="8°"
-            maxLength={40}
-            className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
+            options={[
+              { value: "", label: "Sin nivel" },
+              ...gradeLevelOptions.map((level) => ({ value: level, label: level })),
+            ]}
           />
         </div>
 
@@ -411,7 +443,7 @@ export function BlooketBuilder() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void removeSet(saved)}
+                      onClick={() => setDeleteTarget(saved)}
                       aria-label={`Eliminar ${saved.title}`}
                       title="Eliminar"
                       className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/35 hover:bg-error/10 hover:text-error"
@@ -598,10 +630,16 @@ export function BlooketBuilder() {
         </Card>
       ) : null}
 
+      {/*
+       * A SHORT REMINDER, next to the download button it refers to.
+       *
+       * It used to be three lines: the how-to plus format limits the teacher
+       * only needs once. The how-to was already repeated in the page header, so
+       * this keeps just the action and the limits moved up to the header, where
+       * they are read before writing rather than after.
+       */}
       <p className="text-xs leading-relaxed text-foreground/50">
-        Descargue el CSV y súbalo en Blooket con <strong>Create → CSV Import</strong>.
-        Blooket acepta hasta 4 respuestas por pregunta y solo opción múltiple,
-        verdadero/falso o respuesta escrita.
+        Descargue el CSV y súbalo en Blooket.
       </p>
 
       {/* Repeated next to the button that caused it: the header copy of the
@@ -637,6 +675,22 @@ export function BlooketBuilder() {
           setShareTarget(null);
           refreshSets();
         }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Eliminar set de Blooket"
+        description={
+          deleteTarget
+            ? `Se eliminará «${deleteTarget.title}» de forma permanente. Esta acción no se puede deshacer.`
+            : undefined
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={() => {
+          if (deleteTarget) void removeSet(deleteTarget);
+        }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

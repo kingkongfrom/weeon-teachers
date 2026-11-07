@@ -15,6 +15,7 @@ import { useLiveT } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { BlooketShareDialog } from "@/components/blooket/blooket-share-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   deleteBlooketSet,
   loadBlooketSet,
@@ -57,6 +58,16 @@ export function BlooketSetsList({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<SavedBlooketSet | null>(null);
+  /**
+   * The set awaiting deletion confirmation.
+   *
+   * This used to be `window.confirm`, which is a browser-drawn dialog: it
+   * ignores the app's styling, cannot be themed or translated the same way, and
+   * looks like a system error rather than an app action. `ConfirmDialog` is the
+   * house component for exactly this, and its own docblock says it exists to
+   * replace `window.confirm`.
+   */
+  const [deleteTarget, setDeleteTarget] = useState<SavedBlooketSet | null>(null);
 
   const grades = useMemo(() => {
     const seen = new Set<string>();
@@ -73,7 +84,6 @@ export function BlooketSetsList({
   );
 
   async function remove(saved: SavedBlooketSet) {
-    if (!window.confirm(l.deleteConfirm(saved.title))) return;
     setBusyId(saved.id);
     setError(null);
     const res = await deleteBlooketSet(saved.id);
@@ -82,6 +92,7 @@ export function BlooketSetsList({
       setError(res.error);
       return;
     }
+    setDeleteTarget(null);
     onChanged?.();
   }
 
@@ -263,7 +274,7 @@ export function BlooketSetsList({
                   </button>
                   <button
                     type="button"
-                    onClick={() => void remove(saved)}
+                    onClick={() => setDeleteTarget(saved)}
                     disabled={busyId === saved.id}
                     aria-label={l.delete(saved.title)}
                     title={l.deleteTitle}
@@ -288,6 +299,19 @@ export function BlooketSetsList({
           setShareTarget(null);
           onChanged?.();
         }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={l.deleteTitle}
+        description={deleteTarget ? l.deleteConfirm(deleteTarget.title) : undefined}
+        confirmLabel={t.gradebook.confirmYes}
+        cancelLabel={t.common.cancel}
+        pending={busyId !== null && deleteTarget !== null && busyId === deleteTarget.id}
+        onConfirm={() => {
+          if (deleteTarget) void remove(deleteTarget);
+        }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );
