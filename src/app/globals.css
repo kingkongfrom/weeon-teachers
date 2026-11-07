@@ -40,7 +40,7 @@
    *
    * Surfaces that must clear the bar read this ONE number.
    */
-  --phone-nav-height: 4.25rem;
+  --phone-nav-height: 70px;
   /*
    * ─────────────────────────────────────────────────────────────────────────
    *  ⛔  DO NOT TOUCH THE COMPOSER POSITION OR THE FOOTER  ⛔

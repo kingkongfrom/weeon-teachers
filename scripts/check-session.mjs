@@ -1,0 +1,10 @@
+import { chromium, devices } from "playwright";
+const context = await chromium.launchPersistentContext(".probe-profile", { ...devices["Pixel 5"], headless: true, hasTouch: true, isMobile: true });
+const cookies = await context.cookies("http://localhost:3001");
+console.log("cookies:", cookies.length);
+for (const c of cookies) console.log(`  ${c.name}  expires=${c.expires === -1 ? "SESSION" : new Date(c.expires*1000).toISOString()}`);
+const page = context.pages()[0] ?? await context.newPage();
+await page.goto("http://localhost:3001/comunicacion/mensajes", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(5000);
+console.log("landed:", page.url());
+await context.close();

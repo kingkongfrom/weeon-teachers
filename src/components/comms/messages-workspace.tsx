@@ -543,7 +543,7 @@ export function MessagesWorkspace({
               href={COMMS_COMPOSE}
               title={t("comms.composeMessage")}
               aria-label={t("comms.composeMessage")}
-              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full bg-[#0891B2] px-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#0e7490]"
+              className="btn-ink inline-flex h-9 w-full items-center justify-center gap-2 rounded-full px-3 text-[13px] font-semibold shadow-sm transition-colors"
             >
               <PenSquare className="h-4 w-4 shrink-0" />
               <span className="truncate">{t("comms.composeMessage")}</span>
@@ -595,7 +595,7 @@ export function MessagesWorkspace({
                 }}
                 className={cn(
                   MAIL_FOLDER_ROW,
-                  active ? "bg-[#0891B2]/10 text-[#0e7490] dark:text-[#99f6e4]" : "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground",
+                  active ? "bg-accent/10 text-accent" : "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground",
                   dropTarget === item.id &&
                     item.id === "trash" &&
                     "ring-2 ring-error/40 bg-error/5",
@@ -675,7 +675,7 @@ export function MessagesWorkspace({
                       href={`${COMMS_MESSAGES}?label=${label.id}`}
                       className={cn(
                         "inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold transition-colors",
-                        active ? "bg-[#0891B2]/10 text-foreground" : "text-foreground/70 hover:bg-foreground/[0.04]",
+                        active ? "bg-accent/10 text-foreground" : "text-foreground/70 hover:bg-foreground/[0.04]",
                       )}
                     >
                       <span
@@ -781,21 +781,20 @@ export function MessagesWorkspace({
               className={cn(
                 "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-semibold",
                 unreadOnly
-                  ? "bg-[#0891B2]/10 text-[#0e7490]"
+                  ? "bg-accent/10 text-accent"
                   : "text-foreground/55 hover:bg-foreground/[0.05]",
               )}
             >
               <Mail className="h-4 w-4" />
               <span className="hidden sm:inline">{t("comms.unreadOnly")}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              aria-label={t("comms.printThread")}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05]"
-            >
-              <Printer className="h-4 w-4" />
-            </button>
+            {/*
+              NO PRINT BUTTON HERE. It called `window.print()` on the MESSAGE
+              LIST, which has no meaningful print output — it belongs on an open
+              message, if anywhere. Removing it gives the search field room back,
+              which is what made this row cramped: search plus four controls did
+              not fit on a phone.
+            */}
             <button
               type="button"
               disabled={refreshing}
@@ -813,14 +812,40 @@ export function MessagesWorkspace({
           <div className="flex min-h-0 min-w-0 flex-1">
         <section
           className={cn(
-            "flex min-h-0 flex-col overflow-hidden border-r border-border",
+            /*
+             * `bg-surface` IS THE FIX FOR THE GAP AT THE BOTTOM.
+             *
+             * The section had no background, so whatever the page canvas paints
+             * showed through. Where the comms pane ends a few pixels above the
+             * fixed bottom nav — which happens on a device whose safe-area inset
+             * makes `100dvh` smaller than the nav's real height — those pixels
+             * appeared as an empty strip under the last message.
+             *
+             * Painting the list's own surface means the list always reads as
+             * reaching the bottom, independent of the pane arithmetic. It does
+             * NOT change the pane formula, which is frozen.
+             */
+            "flex min-h-0 flex-col overflow-hidden border-r border-border bg-surface",
             MAIL_LIST_PANE,
             phonePane === "open"
               ? "hidden md:flex tablet-portrait:hidden"
               : "flex",
           )}
         >
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          {/*
+            BOTTOM PADDING ON THE SCROLL CONTENT, not on the container.
+            The list already reaches the bottom bar (measured: scroller bottom
+            655, nav top 655), but with no padding the final row was clipped
+            flush against it — the last message looked cut off. `scroll-pb`
+            keeps the padding INSIDE the scroll area so the last row can be
+            scrolled clear of the bar instead of underneath it.
+
+            `env(safe-area-inset-bottom)` is added because a device with a home
+            indicator reserves extra space the emulated viewport does not have.
+            The pane's own formula must NOT be changed to compensate — it is
+            frozen (docs/chat-layout-do-not-touch.md).
+          */}
+          <div className="min-h-0 flex-1 overflow-y-auto pb-4 [scroll-padding-bottom:1rem] [padding-bottom:calc(1rem+env(safe-area-inset-bottom,0px))]">
           {!labelId && folder === "inbox" && unreadInbox > 0 ? (
             <div className="border-b border-border px-2 py-2">
               <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", messagesTone.accentMuted)}>
@@ -838,7 +863,7 @@ export function MessagesWorkspace({
                 </p>
               </div>
             ) : (
-              <ul className="flex flex-col gap-0.5 p-0 md:p-2">
+              <ul className="flex min-h-full flex-col content-start gap-0.5 p-0 md:p-2">
                 {localDrafts.map((draft) => (
                   <li key={draft.id} className="group relative">
                     <div
@@ -858,7 +883,7 @@ export function MessagesWorkspace({
                       }}
                       className={cn(
                         "relative w-full cursor-pointer rounded-none px-[10px] py-2 pr-12 text-left hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
-                        openDraftId === draft.id && "bg-[#0891B2]/10",
+                        openDraftId === draft.id && "bg-accent/10",
                       )}
                     >
                       <span className="absolute right-1.5 top-2 text-[11px] tabular-nums text-foreground/45">
@@ -900,7 +925,23 @@ export function MessagesWorkspace({
               </p>
             </div>
           ) : (
-            <motion.ul layout className="flex flex-col gap-0.5 p-0 md:p-2">
+            /*
+             * `min-h-full` SO THE LIST FILLS ITS CONTAINER.
+             *
+             * With few messages the list was content-height, so it ended at the
+             * last row and the empty space below belonged to the scroll area —
+             * not to the list. Visually the list appeared to stop short of the
+             * bottom nav, which is what the owner kept reporting.
+             *
+             * `min-h-full` makes the list at least as tall as the scroller, so
+             * its own surface reaches the bottom whether it holds two messages
+             * or twenty. `content-start` keeps the rows packed to the top
+             * instead of stretching them apart.
+             */
+            <motion.ul
+              layout
+              className="flex min-h-full flex-col content-start gap-0.5 p-0 md:p-2"
+            >
               <AnimatePresence mode="popLayout" initial={false}>
                 {displayThreads.map((thread) => (
                   <motion.li
@@ -937,11 +978,28 @@ export function MessagesWorkspace({
                       }}
                       className={cn(
                         "relative w-full cursor-pointer rounded-none px-[10px] py-2 text-left transition-colors hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
-                        openId === thread.id && "bg-[#0891B2]/10",
+                        openId === thread.id && "bg-accent/10",
+                        /*
+                         * UNREAD: a left accent rail plus a bolder name. The row
+                         * previously looked identical whether read or unread, even
+                         * though the sidebar carried an unread badge — the list
+                         * gave no way to tell which message was new.
+                         */
+                        thread.unread && "before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-r-full before:bg-accent",
                       )}
                     >
                       {folder !== "trash" ? (
-                        <div className="absolute bottom-0.5 right-1 z-10 flex items-center gap-0.5 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
+                        <div
+                          className={cn(
+                            // Reserve room for the hover actions so the preview
+                            // text never runs underneath them. The buttons are
+                            // absolutely placed, so without this padding the
+                            // preview's last line collided with them (visible as
+                            // text running through the star and trash icons).
+                            "absolute bottom-0.5 right-1 z-10 flex items-center gap-0.5",
+                            "md:opacity-0 md:transition-opacity md:group-hover:opacity-100",
+                          )}
+                        >
                           <button
                             type="button"
                             aria-label={
@@ -975,7 +1033,7 @@ export function MessagesWorkspace({
                           </button>
                         </div>
                       ) : null}
-                      <div className="flex items-start gap-2.5">
+                      <div className="flex min-w-0 flex-1 items-start gap-2.5">
                         <PersonAvatar
                           name={
                             thread.mine
@@ -997,31 +1055,50 @@ export function MessagesWorkspace({
                         <span className="shrink-0 pt-0.5 text-[11px] tabular-nums leading-none text-foreground/45 group-hover:opacity-0">
                           {formatListTime(thread.lastMessageAt)}
                         </span>
-                        {thread.listTags.length > 0 ? (
-                          <span className="col-span-2 flex flex-wrap gap-1">
-                            {thread.listTags.map((tag) => (
-                              <span
-                                key={tag.id}
-                                className={cn(
-                                  "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase",
-                                  TAG_TONE[tag.tone] ?? TAG_TONE.slate,
-                                )}
-                              >
-                                {tag.label}
-                              </span>
-                            ))}
-                          </span>
-                        ) : null}
-                        <p
-                          className={cn(
-                            "col-span-2 min-w-0 line-clamp-2 text-sm leading-snug",
-                            thread.unread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
-                          )}
-                        >
-                          {thread.subject}
-                        </p>
+                        {/*
+                          TAGS INLINE WITH THE SUBJECT, not on their own grid row.
+
+                          The tag span was `col-span-2`, so every tagged message
+                          spent a whole line on a small pill — three "Circular"
+                          rows each wasted ~18px. It now sits beside the subject,
+                          where it reads as a label on that message rather than a
+                          band of its own.
+                        */}
+                        <div className="col-span-2 flex min-w-0 items-center gap-1.5">
+                          <p
+                            className={cn(
+                              "min-w-0 line-clamp-1 text-sm leading-snug",
+                              thread.unread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
+                            )}
+                          >
+                            {thread.subject}
+                          </p>
+                          {thread.listTags.length > 0 ? (
+                            <span className="flex shrink-0 flex-wrap gap-1">
+                              {thread.listTags.map((tag) => (
+                                <span
+                                  key={tag.id}
+                                  className={cn(
+                                    "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                                    TAG_TONE[tag.tone] ?? TAG_TONE.slate,
+                                  )}
+                                >
+                                  {tag.label}
+                                </span>
+                              ))}
+                            </span>
+                          ) : null}
+                        </div>
+                        {/*
+                          PREVIEW: back to TWO lines.
+                          It was clipped to one to make rows shorter, but the
+                          owner did not ask for a denser list — the real problem
+                          was the container not reaching the nav. Density is left
+                          as it was; only the right padding stays, so the hover
+                          actions never cover the text.
+                        */}
                         {thread.preview ? (
-                          <p className="col-span-2 min-w-0 line-clamp-2 text-xs leading-relaxed text-foreground/45">
+                          <p className="col-span-2 min-w-0 line-clamp-2 pr-[4.5rem] text-xs leading-relaxed text-foreground/45 md:pr-0">
                             {thread.preview}
                           </p>
                         ) : null}

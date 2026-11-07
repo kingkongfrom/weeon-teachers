@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type {ReactNode} from "react";
 
 /**
  * Comunicación runs edge to edge: it cancels the shell gutters on every side
@@ -23,10 +23,10 @@ import type { ReactNode } from "react";
  *
  * The two tokens are separate on purpose: tuning one must never move the other.
  */
-export default function ComunicacionLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="comms-fill -mx-4 -mt-[4px] h-[calc(100dvh-4rem-var(--phone-nav-height)+var(--phone-pane-nudge)-env(safe-area-inset-bottom,0px))] w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)] md:-mx-8 md:mt-[calc(var(--tablet-pane-nudge)-2rem)] md:h-[calc(100dvh-4rem)] md:w-[calc(100%+4rem)]">
-      {children}
-    </div>
-  );
+export default function ComunicacionLayout({children}: { children: ReactNode }) {
+    return (
+        <div className="comms-fill -mx-4 h-[calc(100dvh-4rem-var(--phone-nav-height)+var(--phone-pane-nudge)-env(safe-area-inset-bottom,0px))] w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)] md:-mx-8 md:mt-[calc(var(--tablet-pane-nudge)-2rem)] md:h-[calc(100dvh-4rem)] md:w-[calc(100%+4rem)]">
+            {children}
+        </div>
+    );
 }

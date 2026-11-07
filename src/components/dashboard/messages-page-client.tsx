@@ -29,14 +29,24 @@ export function MessagesPageClient({
 }) {
   return (
     /*
-     * Height is the viewport minus the header minus the phone footer.
+     * THIS WRAPPER MUST NOT SET A HEIGHT.
      *
-     * The footer is `fixed`, so it is not in the flow and a pane sized
-     * `100dvh - header` runs underneath it — the docked composer on Correo ended
-     * up hidden behind the bar exactly as the chat one did. `md:` restores the
-     * plain calculation because the footer is `md:hidden` above that breakpoint.
+     * It used to duplicate the pane maths: a phone height that omitted the nudge,
+     * plus a separate desktop height of `100dvh - 9rem`. The `.comms-fill` pane
+     * in `comunicacion/layout.tsx` ALREADY sizes the section from the header down
+     * to the bottom bar, with the phone nudge. A second height here overrode it:
+     * at 846px tall the desktop value resolved to 702px, leaving the message list
+     * 80px short of the pane's bottom — measured identically at 1024, 1280, 1440
+     * and 1560 wide, which is the white band under the list on a laptop.
+     *
+     * Inheriting the pane's height instead of recomputing it means there is one
+     * source of truth, and the list fills to the bottom at every size.
+     *
+     * (Do not write a Tailwind class into this comment: the scanner compiles
+     * arbitrary values found in comments too, and a placeholder inside one is
+     * enough to fail the CSS build.)
      */
-    <div className="h-[calc(100dvh-4rem-var(--phone-nav-height)-env(safe-area-inset-bottom,0px))] min-h-[28rem] md:h-[calc(100dvh-9rem)]">
+    <div className="h-full min-h-0">
       <MessagesWorkspace
         folder={folder}
         labelId={labelId}

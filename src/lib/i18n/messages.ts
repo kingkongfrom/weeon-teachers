@@ -691,7 +691,7 @@ const es = {
     hubTitle: "Comunicación",
     comunicacionSection: "Comunicación",
     hubDescription: "Mensajes escolares y chat con encargados y dirección.",
-    hubMessagesTitle: "Email",
+    hubMessagesTitle: "Mensajes",
     hubMessagesDescription:
       "Correo con asunto, contenido enriquecido y adjuntos; respuestas opcionales.",
     hubMessagesRailHint: "Bandeja, carpetas, adjuntos y respuestas.",
@@ -2258,7 +2258,7 @@ const en: Messages = {
     hubTitle: "Communication",
     comunicacionSection: "Communication",
     hubDescription: "School messages and chat with guardians and school leadership.",
-    hubMessagesTitle: "Email",
+    hubMessagesTitle: "Mensajes",
     hubMessagesDescription: "Mail with subject, rich content, attachments; optional replies.",
     hubMessagesRailHint: "Inbox, folders, attachments, and replies.",
     hubChatRailHint: "Guardians, students, and school leadership in realtime.",
