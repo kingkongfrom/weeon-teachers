@@ -59,7 +59,9 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
       <aside
         className={cn(
           "fixed z-50 hidden flex-col border-border bg-surface md:inset-y-0 md:left-0 md:z-40 md:flex md:translate-x-0 md:translate-y-0 md:border-r",
-          collapsed ? "md:w-[4.5rem]" : "md:w-72",
+          /* lg = iPad landscape and wider: 40px more than md (288 -> 328px). The
+             content offset below must move with it or the rail overlaps the page. */
+          collapsed ? "md:w-[4.5rem]" : "md:w-72 lg:w-82",
         )}
       >
         <div
@@ -128,7 +130,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
         ) : null}
       </AnimatePresence>
 
-      <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}>
+      <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72 lg:pl-82"}>
         <AppHeader user={user} supabasePublic={supabasePublic} />
         {/*
           The bottom padding clears the phone footer. It used to be a literal
