@@ -45,7 +45,7 @@ export function MessagesComposeClient({
        * `--phone-nav-height` is this repo's token; weeon-tenants calls it
        * `--phone-bottom-bar`. Referencing the wrong one silently voids the calc().
        */
-      <div className="h-[calc(100dvh-4rem-var(--phone-nav-height)-env(safe-area-inset-bottom,0px))] overflow-y-auto bg-surface px-[10px] pb-4 md:h-auto md:min-h-[calc(100vh-8rem)] md:overflow-visible md:pb-0">
+      <div className="h-[calc(100dvh-4rem-var(--phone-nav-height)-env(safe-area-inset-bottom,0px))] overflow-y-auto bg-surface px-[10px] pb-0 md:h-auto md:min-h-[calc(100vh-8rem)] md:overflow-visible md:pb-0">
       <div className="mx-auto w-full max-w-6xl">
         <UnifiedMessageComposer
           contacts={contacts}
