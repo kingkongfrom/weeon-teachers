@@ -686,7 +686,7 @@ function ComposeEmailFields({
           <button
             type="button"
             onClick={onPickTo}
-            className="rounded-md p-1 text-foreground/45 hover:bg-surface-muted hover:text-foreground"
+            className="rounded-md p-1 text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-300"
             aria-label={toLabel}
           >
             <UserPlus className="h-4 w-4" />
