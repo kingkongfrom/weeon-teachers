@@ -679,8 +679,22 @@ function ComposeEmailFields({
       {fromLabel ? (
         <div className={cn(rowClass, "items-center py-2 max-sm:py-1")}>
           <span className={cn(fieldLabel, "pt-0")}>{fromFieldLabel}</span>
-          <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground/85">
-            {fromLabel}
+          {/*
+            NAME ONLY, NOT THE WHOLE MAIL HEADER.
+            `fromLabel` is `Eduardo Varela Da Silva · Saint Paul School
+            <johncabron@gmail.com>` - three facts on one row, which wrapped and
+            dwarfed the To: line beneath it. The school is already named in the
+            app header and the address tells a sender nothing before they type.
+            The full header is still what gets sent; this row stops shouting it,
+            and `title` keeps it available on hover.
+            The `·` separator only ever sits between name and school, so splitting
+            on it cannot cut a person's name.
+          */}
+          <span
+            className="min-w-0 flex-1 truncate text-sm font-medium text-foreground/85"
+            title={fromLabel}
+          >
+            {fromLabel.split("·")[0]?.replace(/\s*<[^>]*>\s*$/, "").trim() || fromLabel}
           </span>
         </div>
       ) : null}
