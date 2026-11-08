@@ -660,12 +660,17 @@ function ComposeEmailFields({
   showSubjectRow?: boolean;
 }) {
   const fieldLabel = "w-[3.25rem] shrink-0 pt-0.5 text-xs font-semibold text-foreground/45 sm:w-14";
-  const rowClass = "flex min-h-[2.25rem] items-start gap-2 border-b border-border/45 py-1.5";
+  /* PHONES: less dead space per recipient row. `items-start` left ~20px of blank
+       * below a 26px chip, and the 2.25rem floor plus py-1.5 reserved 48px for it.
+       * Below sm the row centres its content and drops the floor; the desktop row
+       * keeps the original so chips with two lines still have room. */
+      const rowClass =
+        "flex items-start gap-2 border-b border-border/45 py-1.5 max-sm:min-h-0 max-sm:items-center max-sm:py-1";
 
   return (
     <div className="mb-1">
       {fromLabel ? (
-        <div className={cn(rowClass, "items-center py-2")}>
+        <div className={cn(rowClass, "items-center py-2 max-sm:py-1")}>
           <span className={cn(fieldLabel, "pt-0")}>{fromFieldLabel}</span>
           <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground/85">
             {fromLabel}
@@ -700,7 +705,7 @@ function ComposeEmailFields({
         </div>
       ) : null}
       {showSubjectRow ? (
-        <label className={cn(rowClass, "items-center py-2")}>
+        <label className={cn(rowClass, "items-center py-2 max-sm:py-1")}>
           <span className={cn(fieldLabel, "pt-0")}>{subjectLabel}</span>
           <input
             value={subject}
