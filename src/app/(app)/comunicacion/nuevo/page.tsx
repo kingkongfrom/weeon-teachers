@@ -5,6 +5,7 @@ import { loadMessageDraft } from "@/lib/dashboard/message-drafts";
 import { loadThreadComposeSeed } from "@/lib/dashboard/thread-compose-load";
 import { loadMessageContacts } from "@/lib/dashboard/messages";
 import { getCommsActor } from "@/lib/dashboard/comms-session";
+import { loadBrowserRealtimeConfig } from "@/lib/supabase/realtime-session";
 import { resolveAuthorEmailIdentity } from "@/lib/email/resolve-tenant-email-identity";
 import { formatComposeFromDisplay } from "@/lib/email/tenant-from";
 import { getLocale } from "@/lib/i18n/server";
@@ -26,7 +27,16 @@ export default async function NewMessagePage({
   const { draft, thread } = await searchParams;
   const threadId = thread && /^[0-9a-f-]{36}$/i.test(thread) ? thread : null;
   const session = await getCommsActor();
-  const [contacts, groups, initialDraft, threadSeed, senderIdentity] = await Promise.all([
+  /*
+   * `realtime` IS REQUIRED FOR THE RECIPIENT CHIP'S PRESENCE DOT.
+   *
+   * The chip, the Para field and useProfilePresence were all wired correctly, but
+   * this page never supplied the realtime config, so the hook had no client to
+   * subscribe with and every status came back empty — a grey dot for everyone,
+   * while the same chip in weeon-tenants turned green. The mailbox page already
+   * loads it this way.
+   */
+  const [contacts, groups, initialDraft, threadSeed, senderIdentity, realtime] = await Promise.all([
     loadMessageContacts(),
     loadCommsGroups(),
     draft ? loadMessageDraft(draft) : Promise.resolve(null),
@@ -37,6 +47,7 @@ export default async function NewMessagePage({
           authorProfileId: session.userId,
         })
       : Promise.resolve(null),
+    loadBrowserRealtimeConfig(),
   ]);
   const fromLabel = senderIdentity ? formatComposeFromDisplay(senderIdentity) : "";
 
@@ -48,6 +59,7 @@ export default async function NewMessagePage({
       initialDraft={seed}
       persistDraft
       fromLabel={fromLabel}
+      realtime={realtime}
     />
   );
 }
