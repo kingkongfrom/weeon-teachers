@@ -341,7 +341,7 @@ export function MessagesWorkspaceSkeleton() {
       aria-busy="true"
     >
       <div className="flex min-h-0 flex-1 overflow-hidden bg-surface">
-        <aside className="hidden w-[11.5rem] shrink-0 flex-col lg:flex lg:w-48">
+        <aside className="hidden w-[11.5rem] shrink-0 flex-col lg:flex lg:w-56">
           <div className="flex h-16 shrink-0 items-center border-b border-border px-2 pt-3">
             <Skeleton className="h-9 w-full rounded-full" />
           </div>
