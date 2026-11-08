@@ -404,6 +404,19 @@ export function MessagesWorkspace({
     if (current === favorite) return;
 
     setFavoriteOverrides((currentOverrides) => ({ ...currentOverrides, [threadId]: favorite }));
+    /*
+     * FEEDBACK FIRST, ROUND TRIP SECOND.
+     *
+     * This awaited the server, then showed the notice, then refreshed the whole
+     * mailbox — so a one-tap toggle felt like a page load. The override above
+     * already applied the change, so the star is correct immediately and the
+     * notice belongs beside it. The request still runs; a failure rolls back.
+     */
+    showNotice(favorite ? t("comms.addedToFavorites") : t("comms.removedFromFavorites"));
+    if (folder === "favorite" && !favorite) {
+      setRemovedThreadIds((current) => [...current, threadId]);
+    }
+
     setBusyId(threadId);
     const res = await toggleThreadFavorite(threadId, favorite);
     setBusyId(null);
@@ -415,10 +428,8 @@ export function MessagesWorkspace({
       });
       return;
     }
-    showNotice(favorite ? t("comms.addedToFavorites") : t("comms.removedFromFavorites"));
-    if (folder === "favorite" && !favorite) {
-      setRemovedThreadIds((current) => [...current, threadId]);
-    }
+    /* Deferred: the optimistic state is already right, so this refetch is only for
+     * counts and folders and must not gate what the user sees. */
     router.refresh();
   }
 
@@ -590,7 +601,7 @@ export function MessagesWorkspace({
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="pointer-events-none fixed left-1/2 top-20 z-50 -translate-x-1/2 rounded-full border border-error/25 bg-error px-4 py-2.5 text-sm font-semibold text-white shadow-lg"
+            className="pointer-events-none fixed left-1/2 top-20 z-50 -translate-x-1/2 rounded-full border border-border bg-foreground/90 px-4 py-2 text-sm font-semibold text-background shadow-lg"
           >
             {notice}
           </motion.div>
