@@ -34,7 +34,18 @@ export function MessagesComposeClient({
        * it. `--phone-nav-height` is the same token the comms pane subtracts, so
        * they agree instead of double-counting.
        */
-      <div className="min-h-[calc(100vh-8rem)] bg-surface px-[10px] pb-[calc(var(--phone-nav-height)+env(safe-area-inset-bottom,0px))] md:pb-0">
+      /*
+       * A BOUNDED, SCROLLING PAGE ON A PHONE.
+       *
+       * `min-h` let the page grow with the composer, so nothing ever scrolled: the
+       * inner `overflow-y-auto` had no height to overflow and the fixed footer covered
+       * the tail of the message. A fixed viewport height minus the header makes the
+       * page itself the scroll container, so every row is reachable.
+       *
+       * `--phone-nav-height` is this repo's token; weeon-tenants calls it
+       * `--phone-bottom-bar`. Referencing the wrong one silently voids the calc().
+       */
+      <div className="h-[calc(100dvh-4rem-var(--phone-nav-height)-env(safe-area-inset-bottom,0px))] overflow-y-auto bg-surface px-[10px] pb-4 md:h-auto md:min-h-[calc(100vh-8rem)] md:overflow-visible md:pb-0">
       <div className="mx-auto w-full max-w-6xl">
         <UnifiedMessageComposer
           contacts={contacts}
