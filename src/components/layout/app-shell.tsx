@@ -130,15 +130,27 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
         ) : null}
       </AnimatePresence>
 
-      <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72 lg:pl-82"}>
+      <div className={`flex flex-col ${collapsed ? "md:pl-[4.5rem]" : "md:pl-72 lg:pl-82"} md:h-dvh`}>
         <AppHeader user={user} supabasePublic={supabasePublic} />
         {/*
-          The bottom padding clears the phone footer. It used to be a literal
-          4.75rem while the footer's real height was whatever its contents added
-          up to — two numbers that had to stay in sync by hand. Both now read
-          `--phone-nav-height`.
+          ONE SCROLL OWNER, EVERY VIEWPORT.
+
+          The bug this replaces: `main` had no bounded height, so it grew with its
+          content and `overflow-y-auto` on it could never scroll — the DOCUMENT
+          scrolled instead. That worked by accident on tall screens and broke on a
+          13" laptop, where the Comunicación pane (`h-[100dvh-4rem]`) is taller
+          than the visible viewport once browser chrome is subtracted: the pane was
+          clipped and could not be scrolled to.
+
+          The column is now a bounded flex column (`min-h-dvh` root, `flex-col`),
+          and `main` is `min-h-0 flex-1 overflow-y-auto`. `min-h-0` is what lets a
+          flex child shrink below its content size — without it a flex item refuses
+          to shrink and the overflow never triggers. Every viewport, every pane,
+          same behaviour: the content column scrolls, the header and rail do not.
+
+          This mirrors weeon-tenants' shell, which was already correct.
         */}
-        <main className="w-full px-4 pt-6 pb-[calc(var(--phone-nav-height)+env(safe-area-inset-bottom,0px))] sm:px-5 md:px-8 md:pb-16 [&:has(.comms-fill)]:pt-0 [&:has(.comms-fill)]:pb-0 [&:has(.comms-fill)]:overflow-hidden">
+        <main className="w-full min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-6 pb-[calc(var(--phone-nav-height)+env(safe-area-inset-bottom,0px))] sm:px-5 md:px-8 md:pb-16 [&:has(.comms-fill)]:pt-0 [&:has(.comms-fill)]:pb-0">
           {children}
         </main>
       </div>

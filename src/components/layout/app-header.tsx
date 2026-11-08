@@ -16,7 +16,7 @@ export function AppHeader({
   supabasePublic: RealtimeConfig;
 }) {
   return (
-    <header className="header-hairline sticky top-0 z-30 flex h-16 items-center gap-2 bg-surface/75 px-3 backdrop-blur-xl sm:px-6 lg:px-8">
+    <header className="header-hairline sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 bg-surface/75 px-3 backdrop-blur-xl sm:px-6 lg:px-8">
       <Link
         href="/inicio"
         className="shrink-0 transition-opacity hover:opacity-85 md:hidden"

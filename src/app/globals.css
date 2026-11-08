@@ -446,9 +446,19 @@ a.btn-ink:hover {
 }
 
 /* Top bar: the separator is a soft brand-gradient hairline, not a flat border. */
-.header-hairline {
-  position: relative;
-}
+/*
+ * THE HEADER'S POSITION COMES FROM THE ELEMENT, NOT FROM HERE.
+ *
+ * This rule used to set position: relative so the ::after hairline had an
+ * anchor. The header element also carries a positioning utility from Tailwind,
+ * and both write the SAME property -- this stylesheet loads after the utility
+ * layer, so relative won and the header never pinned: it scrolled away with
+ * the page and let the content slide up under the top edge.
+ *
+ * A positioned header anchors the ::after hairline on its own, so this rule
+ * deliberately sets nothing and leaves the element in charge.
+ */
+
 
 .header-hairline::after {
   content: "";

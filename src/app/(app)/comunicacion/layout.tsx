@@ -25,7 +25,7 @@ import type {ReactNode} from "react";
  */
 export default function ComunicacionLayout({children}: { children: ReactNode }) {
     return (
-        <div className="comms-fill -mx-4 h-[calc(100dvh-4rem-var(--phone-nav-height)+var(--phone-pane-nudge)-env(safe-area-inset-bottom,0px))] w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)] md:-mx-8 md:mt-[calc(var(--tablet-pane-nudge)-2rem)] md:h-[calc(100dvh-4rem)] md:w-[calc(100%+4rem)]">
+        <div className="comms-fill -mx-4 h-[calc(100dvh-4rem-var(--phone-nav-height)+var(--phone-pane-nudge)-env(safe-area-inset-bottom,0px))] w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)] md:-mx-8 md:h-full md:min-h-0 md:mt-0 md:w-[calc(100%+4rem)]">
             {children}
         </div>
     );
