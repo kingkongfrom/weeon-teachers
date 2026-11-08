@@ -66,6 +66,7 @@ export default async function MensajesPage({
       favoriteCount={favoriteCount}
       mailboxSettings={mailboxSettings}
       realtime={realtime}
+      openThreadId={openThreadId}
     />
   );
 }

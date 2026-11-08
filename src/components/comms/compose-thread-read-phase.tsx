@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { RichTextView } from "@/components/comms/rich-text";
 import {
   formatComposeHeaderTime,
-  formatComposeLongSent,
   parseFromLabel,
 } from "@/lib/comms/compose-display-utils";
 import type { ComposeThreadHistoryMessage } from "@/lib/comms/message-draft";
@@ -51,7 +50,15 @@ function MessageMetaBlock({
     */}
     <MetaRow label={t("comms.historyFrom")} value={shortSenderName(message.fromLabel)} />
       <MetaRow label={t("comms.toLabel")} value={message.toLabel} />
-      <MetaRow label={t("comms.historySent")} value={formatComposeLongSent(message.sentAt)} />
+        {/* Short form: "7 nov 2026, 9:25 a. m." instead of "Sábado, 7 de noviembre
+          7 nov 2026, 9:25 a. m. instead of Sabado, 7 de noviembre de 2026,
+          9:25 a. m. The weekday and full month name added ~25 characters to a
+          metadata row and told the reader nothing they act on; day, month, year
+          and time all survive. */}
+        <MetaRow
+          label={t("comms.historySent")}
+          value={formatComposeHeaderTime(message.sentAt)}
+        />
       <MetaRow label={t("comms.subject")} value={message.subject || subjectLine} />
     </div>
   );
