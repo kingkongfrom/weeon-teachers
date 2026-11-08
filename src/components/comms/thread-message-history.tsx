@@ -1,6 +1,7 @@
 "use client";
 
 import { Paperclip } from "lucide-react";
+import { PdfFileButton } from "@/components/ui/pdf-reader";
 import { RichTextView } from "@/components/comms/rich-text";
 import type {
   MessageAttachment,
@@ -58,17 +59,24 @@ export function ThreadMessageHistory({
           <span className="w-full text-xs font-semibold text-foreground/50">
             {t("comms.attachments")}
           </span>
+          {/*
+            IN-APP PREVIEW, not a link to the browser.
+            These used to be plain <a target="_blank">, so every attachment — PDFs
+            included — was handed to the browser to open in a tab or download.
+            PdfFileButton renders PDFs and images inside the app; only formats with
+            no viewer (office, zip) still open externally, and they say so.
+          */}
           {attachments.map((attachment) => (
-            <a
+            <PdfFileButton
               key={attachment.id}
-              href={attachment.url}
-              target="_blank"
-              rel="noopener noreferrer"
+              url={attachment.url}
+              name={attachment.name}
+              mimeType={attachment.mimeType}
               className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground/80 transition-colors hover:bg-surface-muted"
             >
               <Paperclip className="h-3.5 w-3.5 shrink-0 text-foreground/45" />
               <span className="truncate">{attachment.name}</span>
-            </a>
+            </PdfFileButton>
           ))}
         </div>
       ) : null}
