@@ -628,11 +628,11 @@ export function MessagesWorkspace({
           className={cn(
             "flex shrink-0 flex-col overflow-y-auto border-border",
             phonePane === "folders" &&
-              "w-full border-r-0 md:w-[11.5rem] md:border-r lg:w-48",
+              "w-full border-r-0 md:w-[11.5rem] md:border-r lg:w-56",
             phonePane === "list" &&
-              "hidden border-r md:flex md:w-[11.5rem] lg:w-48",
+              "hidden border-r md:flex md:w-[11.5rem] lg:w-56",
             // iPad portrait: rail rides with the list, leaves for the reader.
-            phonePane === "open" && "hidden md:flex md:w-[11.5rem] lg:w-48 tablet-portrait:hidden",
+            phonePane === "open" && "hidden md:flex md:w-[11.5rem] lg:w-56 tablet-portrait:hidden",
           )}
         >
           <div className="flex h-16 shrink-0 items-center px-2 pt-3">
