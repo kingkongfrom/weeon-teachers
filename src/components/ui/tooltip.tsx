@@ -24,62 +24,19 @@ const placementBubble: Record<TooltipPlacement, string> = {
   right: "left-full top-1/2 ml-2 -translate-y-1/2",
 };
 
-function TooltipCaret({ placement }: { placement: TooltipPlacement }) {
-  if (placement === "bottom") {
-    return (
-      <>
-        <span
-          aria-hidden="true"
-          className="absolute bottom-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-b-border/80"
-        />
-        <span
-          aria-hidden="true"
-          className="absolute bottom-[calc(100%-1px)] left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-surface"
-        />
-      </>
-    );
-  }
-  if (placement === "top") {
-    return (
-      <>
-        <span
-          aria-hidden="true"
-          className="absolute left-1/2 top-full -translate-x-1/2 border-[6px] border-transparent border-t-border/80"
-        />
-        <span
-          aria-hidden="true"
-          className="absolute left-1/2 top-[calc(100%-1px)] -translate-x-1/2 border-[5px] border-transparent border-t-surface"
-        />
-      </>
-    );
-  }
-  if (placement === "right") {
-    return (
-      <>
-        <span
-          aria-hidden="true"
-          className="absolute right-full top-1/2 -translate-y-1/2 border-[6px] border-transparent border-r-border/80"
-        />
-        <span
-          aria-hidden="true"
-          className="absolute right-[calc(100%-1px)] top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-surface"
-        />
-      </>
-    );
-  }
-  return (
-    <>
-      <span
-        aria-hidden="true"
-        className="absolute left-full top-1/2 -translate-y-1/2 border-[6px] border-transparent border-l-border/80"
-      />
-      <span
-        aria-hidden="true"
-        className="absolute left-[calc(100%-1px)] top-1/2 -translate-y-1/2 border-[5px] border-transparent border-l-surface"
-      />
-    </>
-  );
-}
+/*
+ * NO CARET.
+ *
+ * The caret was a two-triangle CSS trick: an outer triangle in the border colour
+ * and an inner one in `border-*-surface`, i.e. WHITE, to fake a filled arrow.
+ * That only worked while the bubble was a white panel. Now that the bubble is a
+ * dark chip the inner triangle stayed white and read as a stray blob pointing at
+ * the icon.
+ *
+ * Repainting it would mean a second colour that has to track the chip's opacity
+ * in both themes — a maintenance trap for a decoration that carries no meaning.
+ * The bubble already sits next to the control it describes.
+ */
 
 /**
  * Hover / focus / LONG-PRESS tooltip — use instead of native `title` on icon
@@ -134,7 +91,6 @@ export function Tooltip({ content, children, className, placement = "top" }: Too
       {children}
       <span role="tooltip" className={cn(bubbleBase, placementBubble[placement])}>
         <span className="relative z-[1] block whitespace-normal">{content}</span>
-        <TooltipCaret placement={placement} />
       </span>
     </span>
   );
