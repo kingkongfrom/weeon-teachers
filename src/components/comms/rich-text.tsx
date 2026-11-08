@@ -167,7 +167,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
         </ToolbarButton>
       </ToolbarGroup>
 
-      <ToolbarGroup>
+      <ToolbarGroup hideOnPhone>
         <ToolbarButton
           active={editor.isActive("paragraph")}
           label={t("comms.rte.paragraph")}
@@ -268,10 +268,14 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
         >
           <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
+        {/* Quote, inline code, code block and divider: hidden on PHONES.
+            None of them belong in a parent-facing reply, and together they cost
+            half a row. Kept from `sm` up and still in the DOM. */}
         <ToolbarButton
           active={editor.isActive("blockquote")}
           label={t("comms.rte.blockquote")}
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          hideOnPhone
         >
           <Quote className="h-4 w-4" />
         </ToolbarButton>
@@ -279,6 +283,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
           active={editor.isActive("code")}
           label={t("comms.rte.inlineCode")}
           onClick={() => editor.chain().focus().toggleCode().run()}
+          hideOnPhone
         >
           <Code className="h-4 w-4" />
         </ToolbarButton>
@@ -286,18 +291,20 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
           active={editor.isActive("codeBlock")}
           label={t("comms.rte.codeBlock")}
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          hideOnPhone
         >
           <CodeSquare className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           label={t("comms.rte.horizontalRule")}
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          hideOnPhone
         >
           <Minus className="h-4 w-4" />
         </ToolbarButton>
       </ToolbarGroup>
 
-      <ToolbarGroup>
+      <ToolbarGroup hideOnPhone>
         <ToolbarButton
           active={editor.isActive({ textAlign: "left" })}
           label={t("comms.rte.alignLeft")}
@@ -328,7 +335,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
         </ToolbarButton>
       </ToolbarGroup>
 
-      <ToolbarGroup>
+      <ToolbarGroup hideOnPhone>
         <ToolbarButton
           label={t("comms.rte.clearFormatting")}
           onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
@@ -340,9 +347,27 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
   );
 }
 
-function ToolbarGroup({ children }: { children: ReactNode }) {
+/*
+ * PHONE TRIMMING AT THE GROUP LEVEL.
+ *
+ * The toolbar rendered seven groups (~20 controls) as a four-row block on a
+ * phone, eating most of the composer before a line was typed. Whole groups are
+ * hidden below `sm` rather than individual buttons: the grouping is already the
+ * natural unit, and hiding by group leaves every button in the DOM for desktop
+ * and for keyboard users.
+ *
+ * Kept on a phone: undo/redo, bold/italic, link, lists, clear-format.
+ * Hidden: headings and the four alignments — the least-used blocks for a
+ * parent-facing reply.
+ */
+function ToolbarGroup({ children, hideOnPhone }: { children: ReactNode; hideOnPhone?: boolean }) {
   return (
-    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/80 bg-background/80 p-0.5 shadow-sm">
+    <div
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-lg border border-border/80 bg-background/80 p-0.5 shadow-sm",
+        hideOnPhone && "max-sm:hidden",
+      )}
+    >
       {children}
     </div>
   );
@@ -354,12 +379,19 @@ function ToolbarButton({
   onClick,
   label,
   children,
+  hideOnPhone,
 }: {
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
   label: string;
   children: ReactNode;
+  /*
+   * Hidden below `sm`, kept from `sm` up. Group-level hiding was not granular
+   * enough: the list group also holds quote/code/block/divider, and only those
+   * four should go. Stays in the DOM for desktop and keyboard users.
+   */
+  hideOnPhone?: boolean;
 }) {
   return (
     <button
@@ -371,6 +403,7 @@ function ToolbarButton({
       className={cn(
         "flex h-8 w-8 items-center justify-center rounded-md text-foreground/60 transition-colors hover:bg-surface-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35",
         active && "bg-brand-50 text-brand-700 shadow-sm dark:bg-brand-950/40 dark:text-brand-300",
+        hideOnPhone && "max-sm:hidden",
       )}
     >
       {children}
