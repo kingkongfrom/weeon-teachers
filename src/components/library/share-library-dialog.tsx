@@ -20,7 +20,7 @@ type Teacher = { id: string; name: string; email: string | null; shared: boolean
  *
  * The list is loaded on open (not at page load): it is a profile scan, and most
  * visits to the library never share anything. Toggling a teacher is optimistic
- * and reversible — the row swaps between "Compartir" and "Quitar acceso"
+ * and reversible — the row swaps between "Compartir" and "Eliminar acceso"
  * without a modal or a confirm, because granting and revoking are both cheap.
  */
 export function ShareLibraryDialog({
