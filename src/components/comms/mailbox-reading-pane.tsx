@@ -22,8 +22,19 @@ import type { RealtimeConfig } from "@/lib/supabase/browser";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useLiveT } from "@/lib/i18n/use-i18n";
 
+/*
+ * PHONES: THE SUBJECT GETS ITS OWN ROW.
+ *
+ * Title and actions shared one flex row, so every icon (reply, star, delete,
+ * menu) took width from the subject — on a phone it was squeezed to whatever was
+ * left, often one or two words. Adding Forward later would squeeze it further.
+ *
+ * Below `sm` the title claims a full line (`basis-full`), pushing the actions
+ * onto their own right-aligned row. From `sm` up there is room for both, so
+ * `sm:basis-auto` restores the single-line layout.
+ */
 const readPaneHeaderClass =
-  "sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-surface/95 px-4 pt-2 pb-0 backdrop-blur-sm sm:flex-nowrap sm:px-5";
+  "sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-surface px-4 pt-2 pb-0 sm:flex-nowrap sm:px-5";
 
 export function MailboxReadingPane({
   threadId,
@@ -147,16 +158,20 @@ export function MailboxReadingPane({
       );
     }
     return (
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
         <header className={readPaneHeaderClass}>
-          <h2 className="min-w-0 w-full flex-1 text-lg font-semibold text-foreground sm:w-auto">{headerSubject}</h2>
+          <h2 className="min-w-0 w-full text-lg font-semibold text-foreground sm:w-auto sm:flex-1">{headerSubject}</h2>
           {toolbar ? (
-            <MailboxThreadToolbar
-              {...toolbar}
-              threadId={threadId}
-              allowReplies={listSummary.allowReplies ?? false}
-              fullThreadHref={fullThreadHref}
-            />
+            /* Same phone ordering as the loaded header below: actions above the
+             * subject, inline again from `sm` up. */
+            <div className="max-sm:order-first max-sm:w-full sm:order-none">
+              <MailboxThreadToolbar
+                {...toolbar}
+                threadId={threadId}
+                allowReplies={listSummary.allowReplies ?? false}
+                fullThreadHref={fullThreadHref}
+              />
+            </div>
           ) : null}
         </header>
         <article className="flex-1 overflow-y-auto px-4 pt-0 pb-5 sm:px-5">
@@ -182,18 +197,28 @@ export function MailboxReadingPane({
   const toLabel = formatThreadRecipientsLine(toNames, detail.summary.counterpart);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
       <header className={readPaneHeaderClass}>
-        <h2 className="min-w-0 w-full flex-1 text-base font-semibold leading-snug text-foreground sm:w-auto sm:text-lg">
+        {/*
+          THE ACTIONS SIT ABOVE THE SUBJECT ON PHONES.
+
+          DOM order stays title-first (the heading should be read first by a
+          screen reader); `max-sm:order-first` moves only the actions up visually,
+          and `sm:order-none` restores their inline position from `sm` up where
+          title and icons share one row.
+        */}
+        <h2 className="min-w-0 w-full text-base font-semibold leading-snug text-foreground sm:w-auto sm:flex-1 sm:text-lg">
           {detail.summary.subject}
         </h2>
         {toolbar ? (
-          <MailboxThreadToolbar
-            {...toolbar}
-            threadId={threadId}
-            allowReplies={detail.summary.allowReplies}
-            fullThreadHref={fullThreadHref}
-          />
+          <div className="max-sm:order-first max-sm:w-full sm:order-none">
+            <MailboxThreadToolbar
+              {...toolbar}
+              threadId={threadId}
+              allowReplies={detail.summary.allowReplies}
+              fullThreadHref={fullThreadHref}
+            />
+          </div>
         ) : null}
       </header>
 
@@ -203,7 +228,7 @@ export function MailboxReadingPane({
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         <article
-          className="block w-full flex-1 cursor-pointer overflow-y-auto px-4 pt-0 pb-5 sm:px-5 hover:bg-surface-muted/20"
+          className="block w-full flex-1 cursor-pointer overflow-y-auto px-4 pt-0 pb-5 sm:px-5"
           onClick={bodyActivate}
         >
           <ThreadMessageHistory

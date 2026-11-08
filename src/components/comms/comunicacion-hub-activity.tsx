@@ -119,7 +119,7 @@ export async function ComunicacionHubActivity({
               {inboxRows.map((thread) => (
                 <li key={thread.id}>
                   <Link
-                    href={`${COMMS_MESSAGES}/${thread.id}`}
+                    href={`${COMMS_MESSAGES}?folder=inbox&thread=${thread.id}`}
                     className="ui-hover flex items-start gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-surface-muted/60"
                   >
                     <span

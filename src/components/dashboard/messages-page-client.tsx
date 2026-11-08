@@ -17,6 +17,7 @@ export function MessagesPageClient({
   favoriteCount,
   mailboxSettings,
   realtime,
+  openThreadId = null,
 }: {
   folder: MessageFolder | "draft";
   labelId: string | null;
@@ -25,6 +26,7 @@ export function MessagesPageClient({
   drafts?: MessageDraftSummary[];
   unreadInbox: number;
   favoriteCount: number;
+  openThreadId?: string | null;
   mailboxSettings: MessageMailboxSettings;
   realtime: RealtimeConfig;
 }) {
@@ -58,6 +60,9 @@ export function MessagesPageClient({
         favoriteCount={favoriteCount}
         mailboxSettings={mailboxSettings}
         realtime={realtime}
+        /* Deep link from the Comunicación hub: `?thread=<id>` opens that thread
+         * in the reading pane instead of the removed detail page. */
+        openThreadId={openThreadId}
       />
     </div>
   );

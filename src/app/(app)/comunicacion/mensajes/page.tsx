@@ -35,9 +35,12 @@ function parseLabelId(value: string | undefined): string | null {
 export default async function MensajesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ folder?: string; label?: string }>;
+  searchParams: Promise<{ folder?: string; label?: string; thread?: string }>;
 }) {
-  const { folder: folderParam, label: labelParam } = await searchParams;
+  const { folder: folderParam, label: labelParam, thread: threadParam } = await searchParams;
+  /* `?thread=<id>` deep-links a thread into the reading pane. This replaces the
+   * removed detail page: the Comunicación hub's inbox preview links here. */
+  const openThreadId = parseLabelId(threadParam);
   const labelId = parseLabelId(labelParam);
   const folder = labelId ? "sent" : parseFolder(folderParam);
 

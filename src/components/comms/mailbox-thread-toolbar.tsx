@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
-  ExternalLink,
   Loader2,
   Printer,
   Reply,
@@ -85,7 +84,7 @@ export function MailboxThreadToolbar({
   }, [menuOpen]);
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 max-sm:w-full">
       {onBack ? (
         <button
           type="button"
@@ -201,15 +200,16 @@ export function MailboxThreadToolbar({
             role="menu"
             className="absolute right-0 top-full z-50 mt-1.5 min-w-[12rem] overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-lg"
           >
-            <Link
-              role="menuitem"
-              href={fullThreadHref}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground/80 hover:bg-surface-muted"
-              onClick={() => setMenuOpen(false)}
-            >
-              <ExternalLink className="h-4 w-4 shrink-0" />
-              {t("comms.openFullThread")}
-            </Link>
+            {/*
+              NO "OPEN FULL CONVERSATION" ITEM.
+
+              It linked to `/comunicacion/mensajes/[threadId]`, which renders the
+              SAME thread with the SAME controls — a second screen saying nothing
+              the pane does not already say. Replying works from this pane, so the
+              duplicate had no job. The route itself is left in place: the hub's
+              activity list still links to it, and removing a reachable page is a
+              bigger change than dropping the menu entry.
+            */}
             <button
               type="button"
               role="menuitem"

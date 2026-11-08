@@ -1,7 +1,6 @@
 "use client";
 
 import { Paperclip } from "lucide-react";
-import { RecipientReadList } from "@/components/comms/recipient-read-list";
 import { RichTextView } from "@/components/comms/rich-text";
 import type {
   MessageAttachment,
@@ -65,7 +64,7 @@ export function ThreadMessageHistory({
               href={attachment.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground/80 transition-colors hover:bg-surface-muted"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground/80 transition-colors hover:bg-surface-muted"
             >
               <Paperclip className="h-3.5 w-3.5 shrink-0 text-foreground/45" />
               <span className="truncate">{attachment.name}</span>
@@ -115,9 +114,18 @@ export function ThreadMessageHistory({
         })}
       </div>
 
-      {showReadReceipts && recipients.length > 0 ? (
-        <RecipientReadList recipients={recipients} />
-      ) : null}
+      {/*
+        NO "WHO READ IT" LIST ON A MESSAGE.
+
+        The owner finds per-message read tracking invasive — a recipient seeing
+        that the sender knows the instant they opened it — and the list itself was
+        never acted on. Hidden here only: `read_at` is still recorded, because it
+        drives the unread state and the inbox counts, so removing the write would
+        break those.
+
+        CIRCULARS ARE UNCHANGED. `circular-detail-view.tsx` keeps its list: who
+        opened an official circular is an audit record, not a receipt.
+      */}
     </div>
   );
 }

@@ -127,6 +127,7 @@ export function MessagesWorkspace({
   favoriteCount,
   mailboxSettings,
   realtime = null,
+  openThreadId = null,
 }: {
   folder: MessageFolder | "draft";
   labelId: string | null;
@@ -137,6 +138,8 @@ export function MessagesWorkspace({
   favoriteCount: number;
   mailboxSettings: MessageMailboxSettings;
   realtime?: RealtimeConfig | null;
+  /** Thread to open on load, from `?thread=`. */
+  openThreadId?: string | null;
 }) {
   const t = useLiveT();
   const router = useRouter();
@@ -261,7 +264,15 @@ export function MessagesWorkspace({
       });
   }, [threads, removedThreadIds, query, unreadOnly, dataIsStale]);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  /*
+   * INITIAL SELECTION FROM `?thread=`.
+   *
+   * Seeded here rather than in an effect so the thread is open on the FIRST
+   * render — an effect would paint the list with no selection, then flip, which
+   * is the flash this workspace already fought elsewhere. A deep link from the
+   * Comunicación hub arrives this way now that the detail page is gone.
+   */
+  const [selectedId, setSelectedId] = useState<string | null>(openThreadId);
   const [readThreadIds, setReadThreadIds] = useState<Set<string>>(() => new Set());
   const openId = localThreads.some((row) => row.id === selectedId)
     ? selectedId
