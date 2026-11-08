@@ -598,10 +598,25 @@ export function MessagesWorkspace({
         {notice ? (
           <motion.div
             role="status"
-            initial={{ opacity: 0, y: -12 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="pointer-events-none fixed left-1/2 top-20 z-50 -translate-x-1/2 rounded-full border border-border bg-foreground/90 px-4 py-2 text-sm font-semibold text-background shadow-lg"
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            /*
+             * RISES FROM THE BOTTOM ON A PHONE.
+             *
+             * `top-20` sat under the header, where the eye is not: a thumb-driven
+             * interface should give feedback near the thumb, and the bottom is
+             * where the platform's own transient bars live. Below `sm` it sits just
+             * above the fixed nav; from `sm` up the original placement is kept.
+             *
+             * Translucent with a blur rather than solid: a transient confirmation,
+             * and letting the list read through keeps it from feeling like a
+             * modal. `--phone-nav-height` is THIS repo's token; weeon-tenants calls
+             * it `--phone-bottom-bar`, and naming the wrong one silently voids the
+             * whole calc().
+             */
+            className="pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-foreground/80 px-3.5 py-2 text-[13px] font-semibold text-background shadow-lg backdrop-blur-md max-sm:bottom-0 max-sm:top-auto max-sm:mb-[calc(var(--phone-nav-height)+0.75rem+env(safe-area-inset-bottom,0px))] sm:top-20 sm:text-sm"
           >
             {notice}
           </motion.div>
