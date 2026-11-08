@@ -865,7 +865,15 @@ export function MessagesWorkspace({
             >
               <Menu className="h-3.5 w-3.5" />
             </button>
-            <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-surface-muted/70 px-2.5 py-2 md:w-[39.7%] md:flex-none tablet-portrait:w-auto tablet-portrait:flex-1">
+            {/*
+              The search bar spans exactly the mail LIST column, not a guess at
+              it. It carried `md:w-[39.7%]` — a hand-measured number that never
+              matched MAIL_LIST_PANE's 35%, so the rounded field and the card
+              column beneath it ended at different x positions. It now uses the
+              same declarations as the pane (width, max-width, basis), so the two
+              cannot drift apart when either one changes.
+            */}
+            <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-surface-muted/70 px-2.5 py-2 md:w-[35%] md:max-w-[35%] md:basis-[35%] md:grow-0 md:flex-none tablet-portrait:w-auto tablet-portrait:flex-1">
               <Search className="h-3.5 w-3.5 shrink-0 text-foreground/40" />
               <input
                 value={query}
