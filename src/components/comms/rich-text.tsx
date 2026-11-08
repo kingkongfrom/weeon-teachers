@@ -138,8 +138,8 @@ export function RichTextEditor({
    */
   if (!editor) {
     return (
-      <div className={cn("overflow-hidden sm:rounded-xl sm:border sm:border-border sm:bg-surface", className)}>
-        <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted/40 px-2 py-1.5 max-sm:border-b-0 max-sm:bg-transparent">
+      <div className={cn("overflow-hidden", className)}>
+        <div className="flex flex-wrap items-center gap-3 border-b border-border/60 px-1 py-1.5">
           <div className="min-h-8 flex-1" aria-hidden />
           {trailing ? <div className="ml-auto flex items-center">{trailing}</div> : null}
         </div>
@@ -149,7 +149,18 @@ export function RichTextEditor({
   }
 
   return (
-    <div className={cn("overflow-hidden sm:rounded-xl sm:border sm:border-border sm:bg-background", className)}>
+    /*
+     * NO BOX AROUND THE EDITOR.
+     *
+     * This was `sm:rounded-xl sm:border sm:border-border sm:bg-background`: a
+     * card drawn around a card. The composer already sits on a surface, the
+     * toolbar already has a rule under it, and the writing area needs no frame to
+     * be understood as a writing area - the box only added two more borders to a
+     * screen that already had borders on the subject field, the recipient field
+     * and the send row. The toolbar's own bottom rule is the single structural
+     * line that stays.
+     */
+    <div className={cn("overflow-hidden", className)}>
       <RichTextToolbar editor={editor} trailing={trailing} compact={compact} />
       <EditorContent editor={editor} />
     </div>
@@ -193,7 +204,7 @@ function RichTextToolbar({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted/40 px-2 py-1.5 max-sm:border-b-0 max-sm:bg-transparent",
+        "flex flex-wrap items-center gap-3 border-b border-border/60 px-1 py-1.5",
         /* Marker for the `toolbar-compact` variant: groups tagged hideOnCompact
          * collapse when this class is present. */
         compact && "toolbar-compact",
