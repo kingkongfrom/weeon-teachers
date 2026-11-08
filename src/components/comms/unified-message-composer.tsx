@@ -486,7 +486,7 @@ export function UnifiedMessageComposer({
                     disabled={sending}
                     inlineEmbeds={false}
                     trailing={
-                      <div className="sm:hidden">
+                      <div>
                         <ComposeAttachMenu
                           onPickDevice={() => fileInputRef.current?.click()}
                           onAddFiles={addFiles}
@@ -545,7 +545,7 @@ export function UnifiedMessageComposer({
               disabled={sending}
               inlineEmbeds={false}
               trailing={
-                <div className="sm:hidden">
+                <div>
                   <ComposeAttachMenu
                     onPickDevice={() => fileInputRef.current?.click()}
                     onAddFiles={addFiles}
@@ -570,7 +570,6 @@ export function UnifiedMessageComposer({
           sending={sending}
           remainingAttachmentSlots={remainingAttachmentSlots}
           cloudError={cloudError}
-          onCloudError={setCloudError}
           fileInputRef={fileInputRef}
         />
 

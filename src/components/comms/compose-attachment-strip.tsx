@@ -1,8 +1,7 @@
 "use client";
 
 import { type RefObject } from "react";
-import { FolderOpen, Paperclip, X } from "lucide-react";
-import { CloudImportSources } from "@/components/comms/cloud-import-sources";
+import { Paperclip, X } from "lucide-react";
 import { MESSAGE_ATTACHMENT_ACCEPT } from "@/lib/comms/attachment-mime";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import { cn } from "@/lib/utils";
@@ -18,7 +17,6 @@ export function ComposeAttachmentStrip({
   sending,
   remainingAttachmentSlots,
   cloudError,
-  onCloudError,
   fileInputRef,
 }: {
   allowReplies: boolean;
@@ -29,7 +27,6 @@ export function ComposeAttachmentStrip({
   sending: boolean;
   remainingAttachmentSlots: number;
   cloudError: string | null;
-  onCloudError: (message: string | null) => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
 }) {
   const t = useLiveT();
@@ -47,33 +44,15 @@ export function ComposeAttachmentStrip({
       }}
     >
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-1.5">
-          <button
-            type="button"
-            disabled={attachmentsDisabled}
-            onClick={() => {
-              onCloudError(null);
-              fileInputRef.current?.click();
-            }}
-            className="ui-hover inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold max-sm:hidden text-foreground/70 hover:bg-surface-muted/80 hover:text-foreground disabled:opacity-50"
-            title={dropHint}
-          >
-            <FolderOpen className="h-4 w-4 shrink-0" />
-            {t("comms.myDevice")}
-          </button>
-          {/* PHONES: no cloud-drive import. It is a second attachments row, and the
-              phone composer needs the height for the message being replied to.
-              Attaching from the device still works, right above. */}
-          <div className="max-sm:hidden">
-            <CloudImportSources
-              compact
-              remainingSlots={remainingAttachmentSlots}
-              disabled={sending}
-              onLocalFiles={(next) => onAddFiles(next)}
-              onError={(message) => onCloudError(message)}
-            />
-          </div>
-        </div>
+        {/*
+          THE DRIVE ROW IS GONE.
+          "Mi dispositivo / Google Drive / Dropbox" sat here as a permanent strip
+          under the message. It is the same three actions the paperclip in the
+          editor toolbar offers as a dropdown, so the row was a second entry point
+          to identical options - and it cost height above everything the user
+          actually types. The paperclip is now the ONLY attach affordance, at every
+          width, and it opens the same sources.
+        */}
 
             {/*
               PHONES: no "Permitir respuesta" switch. It is a per-message policy
