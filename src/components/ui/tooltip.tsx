@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { ReactElement, ReactNode } from "react";
 
@@ -14,7 +15,7 @@ type TooltipProps = {
 };
 
 const bubbleBase =
-  "pointer-events-none absolute z-[60] w-max max-w-[16rem] rounded-xl border border-border/80 bg-surface px-4 py-2.5 text-sm font-semibold leading-snug text-foreground shadow-[0_8px_24px_-4px_rgba(15,23,42,0.18)] opacity-0 transition-opacity duration-150 group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100 dark:shadow-[0_8px_28px_-4px_rgba(0,0,0,0.45)]";
+  "pointer-events-none absolute z-[60] w-max max-w-[14rem] rounded-md bg-foreground/85 px-2 py-1 text-[11px] font-medium leading-tight text-background opacity-0 transition-opacity duration-150 group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100 [.tooltip-touch-open_&]:opacity-100 dark:bg-foreground/90";
 
 const placementBubble: Record<TooltipPlacement, string> = {
   top: "bottom-full left-1/2 mb-2 -translate-x-1/2",
@@ -80,20 +81,62 @@ function TooltipCaret({ placement }: { placement: TooltipPlacement }) {
   );
 }
 
-/** Hover/focus tooltip — use instead of native `title` on icon controls. */
-export function Tooltip({
-  content,
-  children,
-  className,
-  placement = "top",
-}: TooltipProps) {
+/**
+ * Hover / focus / LONG-PRESS tooltip — use instead of native `title` on icon
+ * controls.
+ *
+ * TOUCH IS A FIRST-CLASS CASE, NOT AN AFTERTHOUGHT.
+ *
+ * This was hover and focus only, so on a phone NOTHING happened: there is no
+ * pointer to hover with, and the icon buttons are not focusable-by-default in a
+ * way a finger can reach. Every tooltip in Comunicación was invisible on the
+ * device where the labels matter most.
+ *
+ * A long press (450ms, no movement) now shows it, which is the platform
+ * convention users already expect. `onContextMenu` is prevented while pressed so
+ * iOS' text-selection callout and Android's context menu do not fight it.
+ */
+export function Tooltip({ content, children, className, placement = "top" }: TooltipProps) {
+  const [touchedOpen, setTouchedOpen] = useState(false);
+  const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHold = useCallback(() => {
+    if (holdRef.current) {
+      clearTimeout(holdRef.current);
+      holdRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearHold, [clearHold]);
+
   return (
-    <span className={cn("group/tooltip relative inline-flex", className)}>
+    <span
+      className={cn(
+        "group/tooltip relative inline-flex",
+        touchedOpen && "tooltip-touch-open",
+        className,
+      )}
+      onPointerDown={(event) => {
+        if (event.pointerType === "mouse") return;
+        clearHold();
+        holdRef.current = setTimeout(() => setTouchedOpen(true), 450);
+      }}
+      onPointerUp={clearHold}
+      onPointerCancel={clearHold}
+      onPointerLeave={clearHold}
+      /* Swallow the platform callout while a long press is in progress; the
+       * bubble itself is informational, so the native menu adds nothing. */
+      onContextMenu={(event) => {
+        if (touchedOpen) event.preventDefault();
+      }}
+      onBlur={() => setTouchedOpen(false)}
+    >
       {children}
       <span role="tooltip" className={cn(bubbleBase, placementBubble[placement])}>
-        <span className="relative z-[1] block whitespace-nowrap">{content}</span>
+        <span className="relative z-[1] block whitespace-normal">{content}</span>
         <TooltipCaret placement={placement} />
       </span>
     </span>
   );
 }
+
