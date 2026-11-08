@@ -114,7 +114,7 @@ export function ComposeThreadQuotedSection({
   return (
     <div
       className={cn(
-        "border-t border-border/60 pt-6 max-sm:order-first max-sm:mt-0 max-sm:border-t-0 max-sm:pt-0 max-sm:pb-4",
+        "border-t border-border/60 pt-6 max-sm:order-first max-sm:mt-0 max-sm:max-h-[40vh] max-sm:overflow-y-auto max-sm:border-t-0 max-sm:pt-0 max-sm:pb-4 max-sm:pr-1",
         replying ? "mt-6 space-y-5" : "mt-10 space-y-10 pt-8",
       )}
     >
