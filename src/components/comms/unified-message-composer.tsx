@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { ComposeActionBar } from "@/components/comms/compose-action-bar";
 import { ComposeAttachmentStrip } from "@/components/comms/compose-attachment-strip";
+import { ComposeAttachMenu } from "@/components/comms/compose-attach-menu";
 import { MessageBodyEditor } from "@/components/comms/message-body-editor";
 import { ComposeParaRecipientField } from "@/components/comms/compose-para-recipient-field";
 import {
@@ -371,6 +372,21 @@ export function UnifiedMessageComposer({
       <div className="sticky top-0 z-20 -mx-1 overflow-visible border-b border-border/60 bg-surface/95 px-1 py-2.5 backdrop-blur-sm sm:-mx-2 sm:px-2">
         <div className="flex flex-wrap items-center gap-2 gap-y-2">
           <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
+          {/*
+            PHONE ONLY. The attachment strip is hidden below sm, which left no way
+            to attach a file at all; this one paperclip holds both sources behind
+            a popover. `sm:hidden` because from sm up the full strip is visible and
+            a second control for the same thing would be duplicate.
+          */}
+          <div className="sm:hidden">
+            <ComposeAttachMenu
+              onPickDevice={() => fileInputRef.current?.click()}
+              onAddFiles={addFiles}
+              onCloudError={setCloudError}
+              remainingAttachmentSlots={remainingAttachmentSlots}
+              disabled={sending || remainingAttachmentSlots <= 0}
+            />
+          </div>
             {mailbox ? null : (
               <Link
                 href={COMMS_MESSAGES}
