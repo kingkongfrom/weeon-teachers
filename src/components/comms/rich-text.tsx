@@ -224,6 +224,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
           active={editor.isActive("strike")}
           label={t("comms.rte.strike")}
           onClick={() => editor.chain().focus().toggleStrike().run()}
+          hideOnPhone
         >
           <Strikethrough className="h-4 w-4" />
         </ToolbarButton>
@@ -231,6 +232,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
           active={editor.isActive("highlight")}
           label={t("comms.rte.highlight")}
           onClick={() => editor.chain().focus().toggleHighlight().run()}
+          hideOnPhone
         >
           <Highlighter className="h-4 w-4" />
         </ToolbarButton>
@@ -241,6 +243,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
           active={editor.isActive("link")}
           label={t("comms.rte.link")}
           onClick={setLink}
+          hideOnPhone
         >
           <Link2 className="h-4 w-4" />
         </ToolbarButton>
@@ -248,6 +251,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
           label={t("comms.rte.unlink")}
           disabled={!editor.isActive("link")}
           onClick={() => editor.chain().focus().unsetLink().run()}
+          hideOnPhone
         >
           <Unlink2 className="h-4 w-4" />
         </ToolbarButton>
