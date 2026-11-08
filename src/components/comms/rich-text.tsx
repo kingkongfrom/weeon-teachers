@@ -111,11 +111,11 @@ export function RichTextEditor({
   }, [editor, value]);
 
   if (!editor) {
-    return <div className="min-h-[4.5rem] rounded-xl border border-border bg-background" />;
+    return <div className="min-h-[4.5rem] sm:rounded-xl sm:border sm:border-border sm:bg-background" />;
   }
 
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-border bg-background", className)}>
+    <div className={cn("overflow-hidden sm:rounded-xl sm:border sm:border-border sm:bg-background", className)}>
       <RichTextToolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>
@@ -149,7 +149,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted/40 px-2 py-1.5">
+    <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted/40 px-2 py-1.5 max-sm:border-b-0 max-sm:bg-transparent">
       <ToolbarGroup>
         <ToolbarButton
           label={t("comms.rte.undo")}
