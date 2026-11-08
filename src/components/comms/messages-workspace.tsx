@@ -534,7 +534,16 @@ export function MessagesWorkspace({
             folder === "trash" && openThreadSummary.mine
               ? () => setDeleteTarget(openThreadSummary)
               : undefined,
-          onBack: () => setPhonePane("list"),
+          /*
+           * NO `onBack` IN THE THREAD TOOLBAR.
+           *
+           * It rendered a caret immediately left of the star — visually adjacent
+           * to it rather than to the edge, so it read as a stray control beside
+           * the star instead of "go back". The phone pane already has its own
+           * back affordance in the list header, and the reading pane's own back
+           * control covers tablet portrait, so this one duplicated both while
+           * sitting in the wrong place.
+           */
         }
       : null;
 

@@ -102,7 +102,19 @@ export function MailboxThreadToolbar({
         </span>
       ) : null}
 
-      {allowReplies && !inTrash ? (
+      {/*
+        REPLIABLE WHENEVER THE THREAD IS NOT IN TRASH.
+
+        This used to require `allowReplies` — the flag the SENDER sets to let
+        recipients reply. On your OWN sent message that flag is false, so Reply
+        vanished; but replying to your own message is exactly how a thread
+        continues, and `thread-compose-initial.ts` already pre-fills recipients
+        for a `mine` thread. The compose side was ready; only this gate hid it.
+
+        Trash stays excluded: a trashed thread must be restored before it can be
+        continued, the same rule its star and delete controls follow.
+      */}
+      {!inTrash ? (
         <IconTooltip label={t("comms.replySection")}>
           <Link
             href={`${COMMS_COMPOSE}?thread=${threadId}`}

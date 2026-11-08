@@ -50,8 +50,6 @@ export function ThreadMessageHistory({
       <p className="text-sm text-foreground/50">{t("comms.emptyMessagesBody")}</p>
     );
   }
-
-  const subjectLine = subject?.trim() || t("comms.draftNoSubject");
   const ordered = [...messages].reverse();
 
   return (
@@ -102,7 +100,12 @@ export function ThreadMessageHistory({
                   label={t("comms.historySent")}
                   value={formatComposeLongSent(message.createdAt)}
                 />
-                <MetaRow label={t("comms.subject")} value={subjectLine} />
+                {/*
+                  NO "Asunto:" ROW. It repeated the subject already shown as the
+                  reading pane's title directly above, so on a phone it spent a
+                  whole line of a four-line block restating what was visible
+                  inches higher. From/To/Sent are the facts not shown elsewhere.
+                */}
               </header>
               <div className="mt-3 border-t border-border pt-3 text-sm leading-relaxed text-foreground/90">
                 <RichTextView doc={message.body} />
