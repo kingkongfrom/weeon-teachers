@@ -44,8 +44,13 @@ export function MessagesComposeClient({
        *
        * `--phone-nav-height` is this repo's token; weeon-tenants calls it
        * `--phone-bottom-bar`. Referencing the wrong one silently voids the calc().
+       * The white has to reach the bottom of the shell, not just the content: the
+       * shell paints bg-background (#f8fafc) and main carries no background of its
+       * own, so this wrapper is the only thing making the compose screen white. A
+       * `min-h` grew to the content and stopped, leaving the grey shell showing as
+       * a band under the reply; `h-full` fills main instead.
        */
-      <div className="h-[calc(100dvh-4rem-var(--phone-nav-height)-env(safe-area-inset-bottom,0px))] overflow-y-auto bg-surface px-[10px] pb-0 md:h-auto md:min-h-[calc(100vh-8rem)] md:overflow-visible md:pb-0">
+      <div className="h-[calc(100dvh-4rem-var(--phone-nav-height)-env(safe-area-inset-bottom,0px))] overflow-y-auto bg-surface px-[10px] pb-0 md:h-full md:min-h-[calc(100vh-8rem)] md:overflow-visible md:pb-0">
       <div className="mx-auto w-full max-w-6xl">
         <UnifiedMessageComposer
           contacts={contacts}
