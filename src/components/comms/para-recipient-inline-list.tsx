@@ -56,7 +56,7 @@ export function ParaRecipientInlineList({
         return (
           <span
             key={entry.key}
-            className="inline-flex max-w-full items-center gap-1 rounded-md bg-surface py-0.5 pl-1.5 pr-0.5 ring-1 ring-border/60"
+            className="inline-flex max-w-full items-center gap-1 rounded-md bg-brand-50 py-0.5 pl-1.5 pr-0.5 text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:text-brand-200 dark:ring-brand-900"
           >
             <Tooltip content={presenceTitle(status, t)} placement="top">
               <span
@@ -64,14 +64,14 @@ export function ParaRecipientInlineList({
                 aria-label={presenceTitle(status, t)}
               />
             </Tooltip>
-            <span className="max-w-[12rem] truncate text-xs font-medium text-foreground/85 sm:max-w-[16rem]">
+            <span className="max-w-[12rem] truncate text-xs font-semibold text-brand-700 dark:text-brand-200 sm:max-w-[16rem]">
               {entry.name}
             </span>
             {onRemoveKey ? (
               <button
                 type="button"
                 onClick={() => onRemoveKey(entry.key)}
-                className="rounded p-0.5 text-foreground/40 hover:bg-error/10 hover:text-error"
+                className="rounded p-0.5 opacity-60 hover:bg-error/10 hover:text-error"
                 aria-label={t("comms.removeRecipient")}
               >
                 <X className="h-3.5 w-3.5" />
