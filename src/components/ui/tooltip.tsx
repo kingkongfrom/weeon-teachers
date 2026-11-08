@@ -15,7 +15,7 @@ type TooltipProps = {
 };
 
 const bubbleBase =
-  "pointer-events-none absolute z-[60] w-max max-w-[14rem] rounded-md bg-foreground/85 px-2 py-1 text-[11px] font-medium leading-tight text-background opacity-0 transition-opacity duration-150 group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100 [.tooltip-touch-open_&]:opacity-100 dark:bg-foreground/90";
+  "pointer-events-none absolute z-[60] w-max max-w-[14rem] rounded-md bg-foreground/85 px-2 py-1 text-[11px] font-medium leading-tight text-background opacity-0 transition-opacity duration-150 dark:bg-foreground/90";
 
 const placementBubble: Record<TooltipPlacement, string> = {
   top: "bottom-full left-1/2 mb-2 -translate-x-1/2",
@@ -53,43 +53,82 @@ const placementBubble: Record<TooltipPlacement, string> = {
  * convention users already expect. `onContextMenu` is prevented while pressed so
  * iOS' text-selection callout and Android's context menu do not fight it.
  */
-export function Tooltip({ content, children, className, placement = "top" }: TooltipProps) {
-  const [touchedOpen, setTouchedOpen] = useState(false);
-  const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+/** How long the pointer must REST on the control before the label appears. */
+const HOVER_DELAY_MS = 600;
+/** Long press before the label appears on touch. */
+const TOUCH_HOLD_MS = 450;
 
-  const clearHold = useCallback(() => {
-    if (holdRef.current) {
-      clearTimeout(holdRef.current);
-      holdRef.current = null;
+export function Tooltip({ content, children, className, placement = "top" }: TooltipProps) {
+  const [open, setOpen] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
   }, []);
 
-  useEffect(() => clearHold, [clearHold]);
+  useEffect(() => clearTimer, [clearTimer]);
+
+  /* A mouse that merely crosses the control must not flash a label. */
+  const armFor = useCallback(
+    (ms: number) => {
+      clearTimer();
+      timerRef.current = setTimeout(() => setOpen(true), ms);
+    },
+    [clearTimer],
+  );
+
+  const dismiss = useCallback(() => {
+    clearTimer();
+    setOpen(false);
+  }, [clearTimer]);
 
   return (
     <span
-      className={cn(
-        "group/tooltip relative inline-flex",
-        touchedOpen && "tooltip-touch-open",
-        className,
-      )}
+      className={cn("relative inline-flex", className)}
+      /*
+       * VISIBILITY IS STATE, NOT CSS HOVER.
+       *
+       * The bubble used to open on `group-hover`, which fires the instant the
+       * pointer touches the control — so a mouse crossing a toolbar flashed a
+       * label for every icon it passed. A timer gives the pointer time to arrive
+       * and settle first.
+       *
+       * `onPointerLeave` and `onBlur` both dismiss, so it never lingers after the
+       * mouse moves away or focus moves on. Pointer type decides the wait: a mouse
+       * rests, a finger holds.
+       */
+      onPointerEnter={(event) => {
+        if (event.pointerType !== "mouse") return;
+        armFor(HOVER_DELAY_MS);
+      }}
       onPointerDown={(event) => {
         if (event.pointerType === "mouse") return;
-        clearHold();
-        holdRef.current = setTimeout(() => setTouchedOpen(true), 450);
+        armFor(TOUCH_HOLD_MS);
       }}
-      onPointerUp={clearHold}
-      onPointerCancel={clearHold}
-      onPointerLeave={clearHold}
+      onPointerUp={dismiss}
+      onPointerCancel={dismiss}
+      onPointerLeave={dismiss}
       /* Swallow the platform callout while a long press is in progress; the
        * bubble itself is informational, so the native menu adds nothing. */
       onContextMenu={(event) => {
-        if (touchedOpen) event.preventDefault();
+        if (open) event.preventDefault();
       }}
-      onBlur={() => setTouchedOpen(false)}
+      onFocus={() => armFor(0)}
+      onBlur={dismiss}
     >
       {children}
-      <span role="tooltip" className={cn(bubbleBase, placementBubble[placement])}>
+      <span
+        role="tooltip"
+        aria-hidden={!open}
+        className={cn(
+          bubbleBase,
+          placementBubble[placement],
+          open ? "opacity-100" : "opacity-0",
+        )}
+      >
         <span className="relative z-[1] block whitespace-normal">{content}</span>
       </span>
     </span>

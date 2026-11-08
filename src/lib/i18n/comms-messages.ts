@@ -375,7 +375,8 @@ export const commsEs = {
   "comms.chatSearchPlaceholder": "Buscar docente…",
   "comms.chatTeachersOnly": "Solo docentes — no encargados ni estudiantes.",
   "common.cancel": "Cancelar",
-  "common.save": "Guardar"
+  "common.save": "Guardar",
+  "common.moreActions": "Más acciones"
 } as const;
 
 export const commsEn: Record<CommsMessageKey, string> = {
@@ -752,5 +753,6 @@ export const commsEn: Record<CommsMessageKey, string> = {
   "comms.chatSearchPlaceholder": "Search teacher…",
   "comms.chatTeachersOnly": "Teachers only — not guardians or students.",
   "common.cancel": "Cancel",
-  "common.save": "Save"
+  "common.save": "Save",
+  "common.moreActions": "More actions"
 };
