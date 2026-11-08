@@ -15,7 +15,7 @@ type TooltipProps = {
 };
 
 const bubbleBase =
-  "pointer-events-none absolute z-[60] w-max max-w-[14rem] rounded-md bg-foreground/85 px-2 py-1 text-[11px] font-medium leading-tight text-background opacity-0 transition-opacity duration-150 dark:bg-foreground/90";
+  "pointer-events-none absolute z-[60] w-max max-w-[min(18rem,calc(100vw-1.5rem))] rounded-lg bg-foreground/90 px-3 py-1.5 text-[13px] font-medium leading-snug tracking-normal text-background opacity-0 shadow-sm transition-opacity duration-150 dark:bg-foreground/92";
 
 const placementBubble: Record<TooltipPlacement, string> = {
   top: "bottom-full left-1/2 mb-2 -translate-x-1/2",

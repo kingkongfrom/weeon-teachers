@@ -63,7 +63,18 @@ export function MailboxThreadToolbar({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const inTrash = folder === "trash";
-  const favoriteLabel = isFavorite ? t("comms.removedFromFavorites") : t("comms.addedToFavorites");
+  /*
+   * ACTION, NOT RESULT.
+   *
+   * The tooltip used to name the state this button would LEAVE you in — "Agregado
+   * a favoritos" on a star that is not yet filled. As a label for a control the
+   * user has not pressed, that describes something that has not happened. Every
+   * other button in this row is verb-first ("Mover a papelera", "Responder"), so
+   * the star now says what pressing it will do.
+   */
+  const favoriteLabel = isFavorite
+    ? t("comms.removeFromFavorites")
+    : t("comms.addToFavorites");
 
   useEffect(() => {
     if (!menuOpen) return;
