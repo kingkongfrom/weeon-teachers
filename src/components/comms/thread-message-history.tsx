@@ -114,7 +114,7 @@ export function ThreadMessageHistory({
                   inches higher. From/To/Sent are the facts not shown elsewhere.
                 */}
               </header>
-              <div className="mt-3 text-sm leading-relaxed text-foreground/90">
+              <div className="mt-3 border-t border-border/70 pt-3 text-sm leading-relaxed text-foreground/90">
                 <RichTextView doc={message.body} />
               </div>
             </article>
