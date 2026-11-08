@@ -56,6 +56,7 @@ export function RichTextEditor({
   editorClassName,
   enableInlineEmbeds = false,
   onEditorReady,
+  trailing,
 }: {
   value: RichTextDoc;
   onChange: (doc: RichTextDoc) => void;
@@ -65,6 +66,8 @@ export function RichTextEditor({
   /** When true, supports inline images and document cards in the body. */
   enableInlineEmbeds?: boolean;
   onEditorReady?: (editor: Editor) => void;
+  /** Extra controls appended to the toolbar row, e.g. the phone attach button. */
+  trailing?: ReactNode;
 }) {
   const editor = useEditor({
     extensions: [
@@ -110,19 +113,39 @@ export function RichTextEditor({
     }
   }, [editor, value]);
 
+  /*
+   * THE FALLBACK MUST LOOK LIKE THE EDITOR, NOT A BLANK BOX.
+   *
+   * `immediatelyRender: false` is deliberate — TipTap warns that server-rendering
+   * it in Next.js causes hydration mismatches. The cost is that `editor` is null
+   * until hydration finishes, and this used to return an EMPTY div with no
+   * toolbar: the user saw a blank strip, then the whole editor appeared at once.
+   *
+   * Rendering the placeholder text here means the box already reads as an editor
+   * and holds its height, so the swap is invisible. `trailing` is included too, so
+   * the attach button does not pop in a frame late.
+   */
   if (!editor) {
-    return <div className="min-h-[4.5rem] sm:rounded-xl sm:border sm:border-border sm:bg-background" />;
+    return (
+      <div className={cn("overflow-hidden sm:rounded-xl sm:border sm:border-border sm:bg-surface", className)}>
+        <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted/40 px-2 py-1.5 max-sm:border-b-0 max-sm:bg-transparent">
+          <div className="min-h-8 flex-1" aria-hidden />
+          {trailing ? <div className="ml-auto flex items-center">{trailing}</div> : null}
+        </div>
+        <div className="px-3 py-2 text-sm text-foreground/35">{placeholder ?? ""}</div>
+      </div>
+    );
   }
 
   return (
     <div className={cn("overflow-hidden sm:rounded-xl sm:border sm:border-border sm:bg-background", className)}>
-      <RichTextToolbar editor={editor} />
+      <RichTextToolbar editor={editor} trailing={trailing} />
       <EditorContent editor={editor} />
     </div>
   );
 }
 
-function RichTextToolbar({ editor }: { editor: Editor }) {
+function RichTextToolbar({ editor, trailing }: { editor: Editor; trailing?: ReactNode }) {
   const t = useLiveT();
   const [, rerenderToolbar] = useReducer((version: number) => version + 1, 0);
 
@@ -347,6 +370,10 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
           <RemoveFormatting className="h-4 w-4" />
         </ToolbarButton>
       </ToolbarGroup>
+
+      {/* Extra controls (the phone attach button). ml-auto pushes them to the far
+          end so they sit NEXT TO the formatting groups without being inside one. */}
+      {trailing ? <div className="ml-auto flex items-center">{trailing}</div> : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState, type ReactNode } from "react";
 import type { Editor } from "@tiptap/react";
 import { Loader2, Paperclip } from "lucide-react";
 import { RichTextEditor } from "@/components/comms/rich-text";
@@ -40,6 +40,7 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
     disabled = false,
     label,
     inlineEmbeds = true,
+    trailing,
   }: {
     value: RichTextDoc;
     onChange: (doc: RichTextDoc) => void;
@@ -50,6 +51,8 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
     disabled?: boolean;
     label?: string;
     inlineEmbeds?: boolean;
+    /** Extra controls appended to the formatting toolbar row. */
+    trailing?: ReactNode;
   },
   ref: React.Ref<MessageBodyEditorHandle>,
 ) {
@@ -203,6 +206,7 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
           placeholder={placeholder}
           editorClassName={editorClassName}
           enableInlineEmbeds={inlineEmbeds}
+          trailing={trailing}
           onEditorReady={(editor) => {
             editorRef.current = editor;
           }}
@@ -219,3 +223,4 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
     </div>
   );
 });
+
