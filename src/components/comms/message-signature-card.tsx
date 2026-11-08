@@ -47,6 +47,7 @@ export function MessageSignatureCard({
           placeholder={t("comms.signaturePlaceholder")}
           editorClassName="min-h-[10rem] rte-content-signature"
           inlineEmbeds={false}
+          compact
         />
         <p className="mt-2 text-xs font-medium text-foreground/50">{t("comms.signatureHint")}</p>
       </div>

@@ -149,6 +149,7 @@ export function AutoReplyDialog({
           placeholder={t("comms.autoReplyPlaceholder")}
           editorClassName="min-h-[10rem]"
           inlineEmbeds={false}
+          compact
         />
 
         {error ? (

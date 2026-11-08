@@ -86,6 +86,7 @@ export function SignatureDialog({
           placeholder={t("comms.signaturePlaceholder")}
           editorClassName="min-h-[12rem] rte-content-signature"
           inlineEmbeds={false}
+          compact
         />
         <p className="text-xs font-medium text-foreground/50">{t("comms.signatureHint")}</p>
         {error ? (

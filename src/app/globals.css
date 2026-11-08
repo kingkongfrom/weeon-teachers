@@ -25,6 +25,14 @@
 @custom-variant phone (@media (max-width: 767.98px));
 @custom-variant tablet-landscape (@media (min-width: 768px) and (max-width: 1023.98px) and (orientation: landscape));
 
+/*
+ * `toolbar-compact` has no media query of its own. It matches when an ancestor
+ * carries the `toolbar-compact` class, which RichTextToolbar sets for editors
+ * opened in compact mode (signature, auto-reply). Using a variant rather than a
+ * prop on every button keeps ToolbarGroup's signature unchanged for the rest.
+ */
+@custom-variant toolbar-compact (&:where(.toolbar-compact *));
+
 :root {
   color-scheme: light;
   /*

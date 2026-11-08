@@ -57,6 +57,7 @@ export function RichTextEditor({
   enableInlineEmbeds = false,
   onEditorReady,
   trailing,
+  compact = false,
 }: {
   value: RichTextDoc;
   onChange: (doc: RichTextDoc) => void;
@@ -68,6 +69,16 @@ export function RichTextEditor({
   onEditorReady?: (editor: Editor) => void;
   /** Extra controls appended to the toolbar row, e.g. the phone attach button. */
   trailing?: ReactNode;
+  /**
+   * Basic formatting only.
+   *
+   * A signature and an auto-reply are two or three lines of plain text that might
+   * want bold. They were getting the full composer toolbar — headings, links,
+   * highlight, quote, code blocks, alignment — which is twenty controls for a
+   * field nobody formats. This keeps bold/italic/underline, lists, undo/redo and
+   * clear-format; everything else is dropped.
+   */
+  compact?: boolean;
 }) {
   const editor = useEditor({
     extensions: [
@@ -139,13 +150,21 @@ export function RichTextEditor({
 
   return (
     <div className={cn("overflow-hidden sm:rounded-xl sm:border sm:border-border sm:bg-background", className)}>
-      <RichTextToolbar editor={editor} trailing={trailing} />
+      <RichTextToolbar editor={editor} trailing={trailing} compact={compact} />
       <EditorContent editor={editor} />
     </div>
   );
 }
 
-function RichTextToolbar({ editor, trailing }: { editor: Editor; trailing?: ReactNode }) {
+function RichTextToolbar({
+  editor,
+  trailing,
+  compact,
+}: {
+  editor: Editor;
+  trailing?: ReactNode;
+  compact?: boolean;
+}) {
   const t = useLiveT();
   const [, rerenderToolbar] = useReducer((version: number) => version + 1, 0);
 
@@ -172,7 +191,14 @@ function RichTextToolbar({ editor, trailing }: { editor: Editor; trailing?: Reac
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted/40 px-2 py-1.5 max-sm:border-b-0 max-sm:bg-transparent">
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted/40 px-2 py-1.5 max-sm:border-b-0 max-sm:bg-transparent",
+        /* Marker for the `toolbar-compact` variant: groups tagged hideOnCompact
+         * collapse when this class is present. */
+        compact && "toolbar-compact",
+      )}
+    >
       <ToolbarGroup>
         <ToolbarButton
           label={t("comms.rte.undo")}
@@ -190,7 +216,7 @@ function RichTextToolbar({ editor, trailing }: { editor: Editor; trailing?: Reac
         </ToolbarButton>
       </ToolbarGroup>
 
-      <ToolbarGroup hideOnPhone>
+      <ToolbarGroup hideOnPhone hideOnCompact>
         <ToolbarButton
           active={editor.isActive("paragraph")}
           label={t("comms.rte.paragraph")}
@@ -261,7 +287,7 @@ function RichTextToolbar({ editor, trailing }: { editor: Editor; trailing?: Reac
         </ToolbarButton>
       </ToolbarGroup>
 
-      <ToolbarGroup>
+      <ToolbarGroup hideOnCompact>
         <ToolbarButton
           active={editor.isActive("link")}
           label={t("comms.rte.link")}
@@ -331,7 +357,7 @@ function RichTextToolbar({ editor, trailing }: { editor: Editor; trailing?: Reac
         </ToolbarButton>
       </ToolbarGroup>
 
-      <ToolbarGroup hideOnPhone>
+      <ToolbarGroup hideOnPhone hideOnCompact>
         <ToolbarButton
           active={editor.isActive({ textAlign: "left" })}
           label={t("comms.rte.alignLeft")}
@@ -391,12 +417,21 @@ function RichTextToolbar({ editor, trailing }: { editor: Editor; trailing?: Reac
  * Hidden: headings and the four alignments — the least-used blocks for a
  * parent-facing reply.
  */
-function ToolbarGroup({ children, hideOnPhone }: { children: ReactNode; hideOnPhone?: boolean }) {
+function ToolbarGroup({
+  children,
+  hideOnPhone,
+  hideOnCompact,
+}: {
+  children: ReactNode;
+  hideOnPhone?: boolean;
+  hideOnCompact?: boolean;
+}) {
   return (
     <div
       className={cn(
         "inline-flex items-center gap-0.5",
         hideOnPhone && "max-sm:hidden",
+        hideOnCompact && "toolbar-compact:hidden",
       )}
     >
       {children}

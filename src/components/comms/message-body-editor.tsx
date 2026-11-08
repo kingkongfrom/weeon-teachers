@@ -41,6 +41,7 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
     label,
     inlineEmbeds = true,
     trailing,
+    compact = false,
   }: {
     value: RichTextDoc;
     onChange: (doc: RichTextDoc) => void;
@@ -53,6 +54,8 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
     inlineEmbeds?: boolean;
     /** Extra controls appended to the formatting toolbar row. */
     trailing?: ReactNode;
+    /** Basic formatting only - for short fields like a signature. */
+    compact?: boolean;
   },
   ref: React.Ref<MessageBodyEditorHandle>,
 ) {
@@ -207,6 +210,7 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
           editorClassName={editorClassName}
           enableInlineEmbeds={inlineEmbeds}
           trailing={trailing}
+        compact={compact}
           onEditorReady={(editor) => {
             editorRef.current = editor;
           }}
