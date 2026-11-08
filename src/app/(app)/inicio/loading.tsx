@@ -10,7 +10,7 @@ export default function InicioLoading() {
   return (
     <div className="flex w-full max-w-none flex-col gap-6">
       <div
-        className="relative flex w-full flex-col gap-10 py-2 morning-tablet:grid morning-tablet:grid-cols-[auto_1fr] morning-tablet:items-start morning-tablet:gap-x-6 morning-compact:-mt-5 morning-compact:grid morning-compact:grid-cols-[auto_minmax(0,1fr)] morning-compact:items-start morning-compact:gap-x-6 morning-compact:gap-y-6 morning-desktop:block morning-desktop:min-h-[70vh] morning-desktop:py-4"
+        className="relative flex w-full flex-col gap-10 py-2 morning-tablet:grid morning-tablet:grid-cols-[auto_1fr] morning-tablet:items-start morning-tablet:gap-x-6 morning-compact:grid morning-compact:grid-cols-[auto_minmax(0,1fr)] morning-compact:items-start morning-compact:gap-x-6 morning-compact:gap-y-6 morning-desktop:block morning-desktop:min-h-[70vh] morning-desktop:py-4"
         role="status"
         aria-live="polite"
         aria-busy="true"
@@ -20,14 +20,29 @@ export default function InicioLoading() {
           <Skeleton className="h-12 w-full max-w-[26rem] rounded-2xl" />
         </div>
 
-        <header className="max-sm:-mt-[60px] morning-tablet:col-start-1 morning-tablet:row-start-1 morning-tablet:self-start morning-compact:col-start-1 morning-compact:row-start-1 morning-compact:-mt-[50px] morning-desktop:-mt-[10px]">
+        <header className="max-sm:-mt-[60px] morning-tablet:col-start-1 morning-tablet:row-start-1 morning-tablet:self-start morning-compact:col-start-1 morning-compact:row-start-1 morning-desktop:-mt-[10px]">
           <div className="flex flex-col">
+            {/* weekday */}
             <Skeleton className="h-4 w-24" />
             <div className="flex items-center gap-3">
-              <Skeleton className="mt-2 h-[4rem] w-20 rounded-2xl morning-tablet:h-[5.5rem] morning-tablet:w-24 morning-compact:h-[4.43rem] morning-compact:w-20 morning-desktop:h-[7.5rem] morning-desktop:w-32" />
-              <Skeleton className="mt-2 h-12 w-28 rounded-xl" />
+              {/*
+                The big date numeral is a plain 4rem-7.5rem type glyph, not a
+                card: a narrow tall bar reads as the number, a wide rounded box
+                reads as a panel and the swap to the real page visibly jumps.
+              */}
+              <Skeleton className="h-[4rem] w-[4.5rem] rounded-lg morning-tablet:h-[5.5rem] morning-tablet:w-[5rem] morning-compact:h-[4.43rem] morning-compact:w-[4rem] morning-desktop:h-[7.5rem] morning-desktop:w-[6.5rem]" />
+              {/* weather: icon beside two stacked lines, like ResumenWeather */}
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex flex-col gap-1">
+                  <Skeleton className="h-5 w-12" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
             </div>
-            <Skeleton className="mt-2 h-6 w-40" />
+            {/* month + year */}
+            <Skeleton className="mt-1 h-6 w-40" />
+            {/* live clock */}
             <Skeleton className="mt-1 h-4 w-24" />
           </div>
         </header>
@@ -72,8 +87,14 @@ export default function InicioLoading() {
             <Skeleton className="h-6 w-20" />
             <Skeleton className="h-3 w-24" />
           </div>
+          {/*
+            TWO ROWS, NOT THREE. Most days have a couple of lessons, and the
+            real sheet renders a single line of text on a weekend. Reserving
+            three 68px cards promised ~220px that often never arrives, so the
+            page visibly shrank when the data landed.
+          */}
           <div className="flex flex-col gap-2">
-            {Array.from({ length: 3 }, (_, index) => (
+            {Array.from({ length: 2 }, (_, index) => (
               <Skeleton key={`lesson-${index}`} className="h-[68px] w-full rounded-xl" />
             ))}
           </div>
