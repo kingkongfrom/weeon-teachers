@@ -900,7 +900,7 @@ a.btn-ink:hover {
    * too big" while composing. 1.45 keeps the text readable and still separates
    * wrapped lines from new paragraphs.
    */
-  line-height: 1.45;
+  line-height: 1.35;
   color: var(--foreground);
   /*
    * The caret is the only "you can type here" signal the composer body has now
@@ -914,7 +914,7 @@ a.btn-ink:hover {
 /* Signature editor + appended signature blocks — tighter than message body */
 .rte-content.rte-content-signature,
 .rte-content .rte-signature {
-  line-height: 1.35;
+  line-height: 1.25;
 }
 .rte-content.rte-content-signature p,
 .rte-content p.rte-signature {
@@ -942,7 +942,7 @@ a.btn-ink:hover {
 /* One paragraph gap, sized to read as "new paragraph" rather than "blank line".
    0.5rem on top of a 1.6 line box was the other half of the airiness complaint. */
 .rte-content p {
-  margin: 0 0 0.375rem;
+  margin: 0 0 0.25rem;
 }
 .rte-content > :last-child {
   margin-bottom: 0;
