@@ -149,7 +149,7 @@ function RichTextToolbar({ editor }: { editor: Editor }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 border-b border-border bg-surface-muted/40 p-1.5">
+    <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted/40 px-2 py-1.5">
       <ToolbarGroup>
         <ToolbarButton
           label={t("comms.rte.undo")}
@@ -368,7 +368,7 @@ function ToolbarGroup({ children, hideOnPhone }: { children: ReactNode; hideOnPh
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg border border-border/80 bg-background/80 p-0.5 shadow-sm",
+        "inline-flex items-center gap-0.5",
         hideOnPhone && "max-sm:hidden",
       )}
     >
