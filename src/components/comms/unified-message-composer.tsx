@@ -90,7 +90,10 @@ export function UnifiedMessageComposer({
   const [subject, setSubject] = useState(initialDraft?.subject ?? "");
   const [body, setBody] = useState<RichTextDoc>(() => initialDraft?.body ?? emptyDoc());
   const [files, setFiles] = useState<File[]>([]);
-  const [allowReplies, setAllowReplies] = useState(initialDraft?.allowReplies ?? false);
+  /* The switch that changed this is gone from the UI, but the VALUE is still sent
+   * with every message and still seeds from the draft. Nothing is left to flip it
+   * at runtime, so the setter is removed rather than left dangling. */
+  const [allowReplies] = useState(initialDraft?.allowReplies ?? false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cloudError, setCloudError] = useState<string | null>(null);
@@ -562,8 +565,6 @@ export function UnifiedMessageComposer({
         {replyExpanded ? (
           <>
         <ComposeAttachmentStrip
-          allowReplies={allowReplies}
-          onAllowRepliesChange={setAllowReplies}
           files={files}
           onRemoveFile={(index) => setFiles((current) => current.filter((_, i) => i !== index))}
           onAddFiles={addFiles}
