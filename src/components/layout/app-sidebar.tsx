@@ -269,9 +269,13 @@ function NavItem({
         </span>
       )}
       <span className={cn("min-w-0 flex-1 truncate", collapsed && "md:hidden")}>{item.label}</span>
-      {!collapsed && badge > 0 ? (
-        <UnreadCountBadge count={badge} className="shrink-0" />
-      ) : null}
+      {/*
+        ONE BADGE, ON THE ICON. There used to be a second one here at the end of
+        the row, so the same count was printed twice per item - once as a dot on
+        the glyph and again as a pill beside the label. The icon badge is kept
+        because it survives collapse (the label does not), and because it stays
+        next to the thing it describes.
+      */}
     </Link>
   );
 }
