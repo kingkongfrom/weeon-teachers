@@ -55,7 +55,7 @@ export function ThreadMessageHistory({
   return (
     <div className={cn("pb-4", !readOnly && "pb-4")}>
       {attachments.length > 0 ? (
-        <div className="mb-5 flex flex-wrap gap-2 pb-4">
+        <div className="mb-2 flex flex-wrap gap-2">
           <span className="w-full text-xs font-semibold text-foreground/50">
             {t("comms.attachments")}
           </span>
