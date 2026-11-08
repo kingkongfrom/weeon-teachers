@@ -86,9 +86,17 @@
    * phone value is untouched.
    */
   --tablet-pane-nudge: 30px;
-  /* Light palette — "Noche" day mode: a soft mist canvas (slightly deeper than
-     white so the white cards read), a breath of teal */
-  --background: #f8fafc;
+  /*
+   * Light palette: the app's warm paper canvas, #EFEAE2 — the same value the
+   * mobile app uses for every page.
+   *
+   * Surfaces and borders moved with it. The old family was a cool mist (#f8fafc
+   * canvas, white cards, teal-grey borders); a warm canvas under cold white cards
+   * reads as a rendering mistake rather than a theme. Surfaces are a warm
+   * near-white and the borders a warm grey, so the page sits on one paper. Ink
+   * stays dark neutral so contrast is unchanged.
+   */
+  --background: #EFEAE2;
   --foreground: #10201d;
 
   /* Brand palette: refined indigo with teal accent */
@@ -109,11 +117,16 @@
   --brand-mid: #4f46e5;
   --brand-end: #2b59ff;
 
-  --surface: #ffffff;
-  --surface-elevated: #ffffff;
-  --surface-muted: #e5edeb;
-  --border: #dde7e4;
-  --border-strong: #c3d2ce;
+  /*
+   * Warm surfaces for the warm canvas. A card slightly lighter than the paper, an
+   * elevated one lighter still, and borders that are warm greys rather than the
+   * cool teal-greys the mist palette used.
+   */
+  --surface: #F7F3EC;
+  --surface-elevated: #FFFDF9;
+  --surface-muted: #E7E0D5;
+  --border: #DDD5C7;
+  --border-strong: #C8BEAC;
   --ring: #0891b2;
 
   --accent: #0891b2;
