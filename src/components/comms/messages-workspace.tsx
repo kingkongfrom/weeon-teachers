@@ -156,6 +156,7 @@ export function MessagesWorkspace({
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [autoReplyOpen, setAutoReplyOpen] = useState(false);
   const [signatureOpen, setSignatureOpen] = useState(false);
+  const [mailSettingsOpen, setMailSettingsOpen] = useState(false);
   const [localMailboxSettings, setLocalMailboxSettings] = useState(mailboxSettings);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -939,6 +940,62 @@ export function MessagesWorkspace({
             >
               <RefreshCw className={cn("h-5 w-5", isRefreshing && "animate-spin")} />
             </button>
+
+            {/*
+              MAIL SETTINGS LIVE WITH THE MAIL.
+              The signature and the auto-reply were reachable only by expanding
+              Configuración inside the folder sidebar — a settings drawer nested in
+              a navigation drawer. They belong to the mail being read, so they are
+              also here, one tap from the list toolbar, opening the same two
+              dialogs. The sidebar rows are kept: removing a path people already
+              use is a separate decision from adding a nearer one.
+            */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                aria-label={t("comms.settingsSection")}
+                aria-haspopup="menu"
+                aria-expanded={mailSettingsOpen}
+                onClick={() => setMailSettingsOpen((current) => !current)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/[0.05]"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
+              {mailSettingsOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-9 z-50 w-56 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-lg"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMailSettingsOpen(false);
+                      setSignatureOpen(true);
+                    }}
+                    className="inline-flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-foreground/70 hover:bg-surface-muted/60 hover:text-foreground"
+                  >
+                    <PenSquare className="h-4 w-4" />
+                    <span className="flex-1 text-left">{t("comms.mailboxSignatureLink")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMailSettingsOpen(false);
+                      setAutoReplyOpen(true);
+                    }}
+                    className="inline-flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-foreground/70 hover:bg-surface-muted/60 hover:text-foreground"
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    <span className="flex-1 text-left">{t("comms.autoReplyTitle")}</span>
+                    {localMailboxSettings.autoReplyEnabled ? (
+                      <span className={cn("h-2 w-2 rounded-full", messagesTone.unreadDot)} />
+                    ) : null}
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
           <div className="flex min-h-0 min-w-0 flex-1">
         <section
