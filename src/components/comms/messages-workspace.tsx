@@ -978,7 +978,6 @@ export function MessagesWorkspace({
                         setSelectedDraftId(draft.id);
                         setPhonePane("open");
                       }}
-                      onDoubleClick={() => router.push(`${COMMS_COMPOSE}?draft=${draft.id}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
@@ -1084,7 +1083,6 @@ export function MessagesWorkspace({
                         setSelectedId(thread.id);
                         setPhonePane("open");
                       }}
-                      onDoubleClick={() => router.push(`${COMMS_COMPOSE}?thread=${thread.id}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
