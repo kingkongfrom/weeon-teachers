@@ -160,7 +160,7 @@ export function TeacherMorning({
     : "";
 
   return (
-    <section className="relative flex w-full flex-col gap-10 py-2 morning-tablet:grid morning-tablet:grid-cols-[auto_1fr] morning-tablet:items-start morning-tablet:gap-x-6 morning-compact:-mt-5 morning-compact:grid morning-compact:grid-cols-[auto_minmax(0,1fr)] morning-compact:items-start morning-compact:gap-x-6 morning-compact:gap-y-6 morning-desktop:block morning-desktop:min-h-[70vh] morning-desktop:py-4">
+    <section className="relative flex w-full flex-col gap-10 py-2 morning-tablet:grid morning-tablet:grid-cols-[auto_1fr] morning-tablet:items-start morning-tablet:gap-x-6 morning-compact:grid morning-compact:grid-cols-[auto_minmax(0,1fr)] morning-compact:items-start morning-compact:gap-x-6 morning-compact:gap-y-6 morning-desktop:block morning-desktop:min-h-[70vh] morning-desktop:py-4">
       <div className="max-sm:-mt-[15px] flex flex-col gap-2 morning-tablet:col-start-2 morning-tablet:row-start-1 morning-tablet:self-start morning-tablet:justify-self-end morning-compact:col-start-2 morning-compact:row-start-1 morning-compact:self-start morning-compact:justify-self-end morning-desktop:absolute morning-desktop:right-0 morning-desktop:top-0 morning-desktop:w-[26rem]">
         <p className="self-end inline-flex items-center rounded-full bg-[#5e25cc]/10 px-3 py-1 text-xs font-semibold text-[#5e25cc] dark:bg-[#2b59ff]/20 dark:text-[#c4b5fd]">
           {periodLabel}
@@ -168,7 +168,7 @@ export function TeacherMorning({
         {attention}
       </div>
 
-      <header className="max-sm:-mt-[60px] morning-tablet:col-start-1 morning-tablet:row-start-1 morning-tablet:self-start morning-compact:col-start-1 morning-compact:row-start-1 morning-compact:-mt-[50px] morning-desktop:-mt-[10px]">
+      <header className="max-sm:-mt-[60px] morning-tablet:col-start-1 morning-tablet:row-start-1 morning-tablet:self-start morning-compact:col-start-1 morning-compact:row-start-1 morning-desktop:-mt-[10px]">
         <div className="flex flex-col">
           <p className="text-sm font-medium capitalize tracking-wide text-foreground/60 dark:text-foreground/45">
             {today.toLocaleDateString(lang, { weekday: "long" })}
