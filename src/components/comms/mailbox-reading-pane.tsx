@@ -116,12 +116,6 @@ export function MailboxReadingPane({
     void loadDetail(threadId, true);
   }, [reloadToken, threadId, loadDetail]);
 
-  function bodyActivate(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) {
-    const target = event.target as HTMLElement;
-    if (target.closest("a, button, input, textarea, [role='switch']")) return;
-    openRedactar();
-  }
-
   if (!threadId) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center bg-surface-muted/30 px-6 text-center">
@@ -179,13 +173,12 @@ export function MailboxReadingPane({
             <Loader2 className="h-5 w-5 animate-spin text-foreground/35" />
           ) : (
             <Tooltip content={openHint} placement="bottom" className="w-full">
-              <button
-                type="button"
-                onClick={bodyActivate}
-                className="w-full cursor-pointer rounded-xl px-2 py-3 text-left text-sm text-foreground/70 transition-colors hover:bg-surface-muted/50"
-              >
+              {/* A plain paragraph, not a button: tapping the message text used
+                  to open the composer screen, which is the second screen the
+                  owner asked to remove. Replying is the toolbar's job. */}
+              <p className="w-full px-2 py-3 text-left text-sm text-foreground/70">
                 {listSummary.preview}
-              </button>
+              </p>
             </Tooltip>
           )}
         </article>
@@ -227,10 +220,9 @@ export function MailboxReadingPane({
         placement="bottom"
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        <article
-          className="block w-full flex-1 cursor-pointer overflow-y-auto px-4 pt-0 pb-5 sm:px-5"
-          onClick={bodyActivate}
-        >
+        {/* No onClick and no `cursor-pointer`: the article is now just content.
+            A stray tap while reading must not navigate anywhere. */}
+        <article className="block w-full flex-1 overflow-y-auto px-4 pt-0 pb-5 sm:px-5">
           <ThreadMessageHistory
             messages={detail.messages}
             subject={detail.summary.subject}
