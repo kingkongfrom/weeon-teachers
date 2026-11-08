@@ -55,7 +55,7 @@ export function ComposeAttachmentStrip({
               onCloudError(null);
               fileInputRef.current?.click();
             }}
-            className="ui-hover inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold text-foreground/70 hover:bg-surface-muted/80 hover:text-foreground disabled:opacity-50"
+            className="ui-hover inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold max-sm:hidden text-foreground/70 hover:bg-surface-muted/80 hover:text-foreground disabled:opacity-50"
             title={dropHint}
           >
             <FolderOpen className="h-4 w-4 shrink-0" />
