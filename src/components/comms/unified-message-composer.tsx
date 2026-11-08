@@ -729,12 +729,12 @@ function ComposeEmailFields({
 
 function RecipientChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-surface px-2 py-0.5 ring-1 ring-border/60">
-      <span className="truncate text-xs font-medium text-foreground/85">{label}</span>
+    <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:text-brand-200 dark:ring-brand-900">
+      <span className="truncate text-xs font-semibold">{label}</span>
       <button
         type="button"
         onClick={onRemove}
-        className="flex h-5 w-5 items-center justify-center rounded-full text-foreground/40 hover:bg-error/10 hover:text-error"
+        className="flex h-5 w-5 items-center justify-center rounded-full opacity-60 hover:bg-error/10 hover:text-error"
       >
         <X className="h-3.5 w-3.5" />
       </button>
