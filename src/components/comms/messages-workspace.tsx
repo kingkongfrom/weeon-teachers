@@ -1135,7 +1135,16 @@ export function MessagesWorkspace({
                         }
                       }}
                       className={cn(
-                        "relative w-full cursor-pointer rounded-none px-[10px] py-2 text-left transition-colors hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5",
+                        /*
+                         * `pr-12` ON THE ROW ITSELF.
+                         *
+                         * The star and trash are absolutely pinned to the row's
+                         * bottom-right, so any child without its own right padding
+                         * (the author name, the subject line) runs under them. The
+                         * drafts row already reserved this; the thread row did not,
+                         * which is why the icons landed on top of the name.
+                         */
+                        "relative w-full cursor-pointer rounded-none px-[10px] py-2 pr-12 text-left transition-colors hover:bg-foreground/[0.04] md:rounded-xl md:px-2.5 md:pr-12",
                         openId === thread.id && "bg-accent/10",
                         /*
                          * UNREAD: a left accent rail plus a bolder name. The row
@@ -1256,7 +1265,21 @@ export function MessagesWorkspace({
                           actions never cover the text.
                         */}
                         {thread.preview ? (
-                          <p className="col-span-2 min-w-0 line-clamp-2 pr-[4.5rem] text-xs leading-relaxed text-foreground/45 md:pr-0">
+                          /*
+                           * THE PADDING MUST MATCH WHERE THE ICONS ACTUALLY ARE.
+                           *
+                           * This was `pr-[4.5rem] md:pr-0`: room was reserved on
+                           * phones and then REMOVED at `md` — which is exactly the
+                           * breakpoint where the hover actions appear
+                           * (`md:group-hover:opacity-100`). On desktop the preview
+                           * therefore ran underneath the star and trash, and the
+                           * icons drew straight through the words.
+                           *
+                           * The actions are two 32px buttons pinned at `right-1`,
+                           * so they claim roughly 72px of the row's right edge. The
+                           * reservation is constant now, not conditional.
+                           */
+                          <p className="col-span-2 min-w-0 line-clamp-2 pr-[4.75rem] text-xs leading-relaxed text-foreground/45">
                             {thread.preview}
                           </p>
                         ) : null}
