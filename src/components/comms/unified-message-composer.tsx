@@ -102,7 +102,20 @@ export function UnifiedMessageComposer({
     to: (initialDraft?.toSelected ?? []) as PickerSelection[],
     cc: initialDraft?.ccSelected ?? [],
   });
-  const [replyExpanded, setReplyExpanded] = useState(!hasThreadReadPhase);
+  /*
+   * THE READ PHASE IS ALWAYS SKIPPED.
+   *
+   * Opening the composer from a message used to land on a "read the thread"
+   * screen that re-rendered the whole conversation, and only then reveal the
+   * reply box. The user has ALREADY read the thread in the reading pane — that
+   * is where they clicked Reply — so the screen repeated an email body they were
+   * looking at a moment ago and cost a tap to dismiss.
+   *
+   * Starting at `true` skips it while leaving the phase machinery intact; the
+   * history still renders inside the composer below (line ~425), so context is
+   * not lost, only the extra screen.
+   */
+  const [replyExpanded, setReplyExpanded] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function expandReply(mode: "reply" | "reply-all") {
