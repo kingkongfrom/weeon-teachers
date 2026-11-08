@@ -61,7 +61,7 @@ export function SignatureDialog({
             onClick={onClose}
             className="h-10 rounded-xl border border-border px-4 text-sm font-semibold text-foreground/70"
           >
-            {t("comms.back")}
+            {t("common.cancel")}
           </button>
           <button
             type="button"

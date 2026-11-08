@@ -35,7 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { MailboxListRowsSkeleton } from "@/components/ui/page-loading-skeletons";
 import { useLiveT } from "@/lib/i18n/use-i18n";
-import { COMMS_COMPOSE, COMMS_MESSAGES, COMMS_SETTINGS } from "@/lib/comms/paths";
+import { COMMS_COMPOSE, COMMS_MESSAGES } from "@/lib/comms/paths";
 import { ChatAvatar } from "@/components/comms/chat-avatar";
 import { messagesTone } from "@/lib/comms/messages-tone";
 import {
@@ -44,6 +44,7 @@ import {
   messageTrashTransition,
 } from "@/components/comms/message-trash-motion";
 import { AutoReplyDialog } from "@/components/comms/auto-reply-dialog";
+import { SignatureDialog } from "@/components/comms/signature-dialog";
 import { MailboxDraftReadingPane } from "@/components/comms/mailbox-draft-reading-pane";
 import { MailboxReadingPane } from "@/components/comms/mailbox-reading-pane";
 import { UnreadCountBadge } from "@/components/comms/unread-count-badge";
@@ -154,6 +155,7 @@ export function MessagesWorkspace({
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [autoReplyOpen, setAutoReplyOpen] = useState(false);
+  const [signatureOpen, setSignatureOpen] = useState(false);
   const [localMailboxSettings, setLocalMailboxSettings] = useState(mailboxSettings);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -823,13 +825,21 @@ export function MessagesWorkspace({
 
           {settingsExpanded ? (
             <div className="ml-2 flex flex-col gap-0.5 border-l border-border pl-2">
-              <Link
-                href={COMMS_SETTINGS}
+              {/*
+                A button, not a Link. The signature is one rich-text field and a
+                Save button; sending the user to /comunicacion/configuracion and
+                losing the mailbox for that is more navigation than the task has.
+                It now opens a dialog, exactly like the auto-reply row beneath it.
+                The route stays for deep links and renders the same editor.
+              */}
+              <button
+                type="button"
+                onClick={() => setSignatureOpen(true)}
                 className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-muted/60 hover:text-foreground"
               >
                 <PenSquare className="h-4 w-4" />
                 <span className="flex-1 text-left">{t("comms.mailboxSignatureLink")}</span>
-              </Link>
+              </button>
               <button
                 type="button"
                 onClick={() => setAutoReplyOpen(true)}
@@ -1305,6 +1315,16 @@ export function MessagesWorkspace({
         open={newFolderOpen}
         onClose={() => setNewFolderOpen(false)}
         onCreated={() => router.refresh()}
+      />
+
+      <SignatureDialog
+        open={signatureOpen}
+        settings={localMailboxSettings}
+        onClose={() => setSignatureOpen(false)}
+        onSaved={() => {
+          setSignatureOpen(false);
+          router.refresh();
+        }}
       />
 
       <AutoReplyDialog
