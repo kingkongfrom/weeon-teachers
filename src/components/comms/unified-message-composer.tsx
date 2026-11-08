@@ -484,10 +484,10 @@ export function UnifiedMessageComposer({
                   <MessageBodyEditor
                     value={body}
                     onChange={setBody}
-                    placeholder={t("comms.bodyPlaceholderMessage")}
                     editorClassName="min-h-[14rem] border-0"
                     disabled={sending}
                     inlineEmbeds={false}
+                    autoFocus
                     trailing={
                       <div>
                         <ComposeAttachMenu
@@ -543,10 +543,10 @@ export function UnifiedMessageComposer({
             <MessageBodyEditor
               value={body}
               onChange={setBody}
-              placeholder={t("comms.bodyPlaceholderMessage")}
               editorClassName="min-h-[16rem] border-0"
               disabled={sending}
               inlineEmbeds={false}
+              autoFocus
               trailing={
                 <div>
                   <ComposeAttachMenu

@@ -58,6 +58,7 @@ export function RichTextEditor({
   onEditorReady,
   trailing,
   compact = false,
+  autoFocus = false,
 }: {
   value: RichTextDoc;
   onChange: (doc: RichTextDoc) => void;
@@ -79,6 +80,18 @@ export function RichTextEditor({
    * clear-format; everything else is dropped.
    */
   compact?: boolean;
+  /**
+   * Put the caret at the start when the editor mounts.
+   *
+   * The composer's body no longer carries a placeholder, so an empty field would
+   * otherwise read as an inert blank rectangle. A blinking caret states "type
+   * here" without a sentence that has to be written in two languages and then
+   * vanishes on the first keystroke.
+   *
+   * Off by default on purpose: the signature and auto-reply dialogs open over a
+   * page, and stealing focus there would scroll the page and fight the dialog.
+   */
+  autoFocus?: boolean;
 }) {
   const editor = useEditor({
     extensions: [
@@ -123,6 +136,19 @@ export function RichTextEditor({
       editor.commands.setContent(value, { emitUpdate: false });
     }
   }, [editor, value]);
+
+  /*
+   * CARET ON MOUNT, for editors that have no placeholder.
+   *
+   * Runs once, after the instance exists, and only when asked. `end` is used
+   * rather than `start` so a seeded draft (a quoted reply) puts the caret after
+   * the existing text instead of before it.
+   */
+  useEffect(() => {
+    if (!editor || !autoFocus) return;
+    const frame = requestAnimationFrame(() => editor.commands.focus("end"));
+    return () => cancelAnimationFrame(frame);
+  }, [editor, autoFocus]);
 
   /*
    * THE FALLBACK MUST LOOK LIKE THE EDITOR, NOT A BLANK BOX.

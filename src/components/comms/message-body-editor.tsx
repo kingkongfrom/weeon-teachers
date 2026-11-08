@@ -42,6 +42,7 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
     inlineEmbeds = true,
     trailing,
     compact = false,
+    autoFocus = false,
   }: {
     value: RichTextDoc;
     onChange: (doc: RichTextDoc) => void;
@@ -56,6 +57,8 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
     trailing?: ReactNode;
     /** Basic formatting only - for short fields like a signature. */
     compact?: boolean;
+    /** Put the caret in the body on mount (composer only). */
+    autoFocus?: boolean;
   },
   ref: React.Ref<MessageBodyEditorHandle>,
 ) {
@@ -211,6 +214,7 @@ export const MessageBodyEditor = forwardRef(function MessageBodyEditor(
           enableInlineEmbeds={inlineEmbeds}
           trailing={trailing}
         compact={compact}
+        autoFocus={autoFocus}
           onEditorReady={(editor) => {
             editorRef.current = editor;
           }}
