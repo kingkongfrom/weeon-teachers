@@ -20,6 +20,20 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * The person's name, without the school or the address.
+ *
+ * `fromLabel` is the full mail header — `Eduardo Varela Da Silva · Saint Paul
+ * School <eduardo@weeon.school>` — because senderIdentityForAuthor() composes it
+ * that way. In a metadata row that is three facts in two words: it wrapped and
+ * dwarfed every other row. The separator is `·`, which only appears between name
+ * and school; an address with no name falls back to the address.
+ */
+function shortSenderName(label: string): string {
+  const { name, email } = parseFromLabel(label);
+  const head = name.split("·")[0]?.trim() ?? "";
+  return head || email || name || label;
+}
 function MessageMetaBlock({
   message,
   subjectLine,
@@ -30,7 +44,12 @@ function MessageMetaBlock({
   const t = useLiveT();
   return (
     <div className="space-y-2">
-      <MetaRow label={t("comms.historyFrom")} value={message.fromLabel} />
+      {/*
+      NAME ONLY, not "Name · School <email>". senderIdentityForAuthor() builds the
+      label as `${authorName} · ${school}`, because it doubles as the From: header;
+      in a two-word row that wrapped and dwarfed every other line.
+    */}
+    <MetaRow label={t("comms.historyFrom")} value={shortSenderName(message.fromLabel)} />
       <MetaRow label={t("comms.toLabel")} value={message.toLabel} />
       <MetaRow label={t("comms.historySent")} value={formatComposeLongSent(message.sentAt)} />
       <MetaRow label={t("comms.subject")} value={message.subject || subjectLine} />
