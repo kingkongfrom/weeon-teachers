@@ -72,7 +72,7 @@ export function ThreadMessageHistory({
               url={attachment.url}
               name={attachment.name}
               mimeType={attachment.mimeType}
-              className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground/80 transition-colors hover:bg-surface-muted"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-brand-200/70 bg-surface px-3 py-1.5 text-xs font-semibold text-foreground/80 transition-colors hover:bg-surface-muted"
             >
               <Paperclip className="h-3.5 w-3.5 shrink-0 text-foreground/45" />
               <span className="truncate">{attachment.name}</span>
