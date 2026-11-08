@@ -70,7 +70,13 @@ export function ComposeAttachmentStrip({
           />
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+            {/*
+              PHONES: no "Permitir respuesta" switch. It is a per-message policy
+              control, set once and rarely changed, and it cost a full row on a
+              phone. The value stays whatever the composer seeds, so behaviour is
+              unchanged - only the control is hidden.
+            */}
+            <div className="ml-auto flex shrink-0 items-center gap-2 max-sm:hidden">
           <span className="text-xs font-semibold text-foreground/55">{t("comms.allowReplies")}</span>
           <button
             type="button"
