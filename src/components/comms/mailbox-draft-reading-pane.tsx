@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, PenSquare, Trash2 } from "lucide-react";
+import { PenSquare, Trash2 } from "lucide-react";
 import { RichTextView } from "@/components/comms/rich-text";
+import { Skeleton } from "@/components/ui/skeleton";
 import { COMMS_COMPOSE } from "@/lib/comms/paths";
 import type { MessageDraftSummary } from "@/lib/comms/message-draft";
 import type { MessageDraftRecord } from "@/lib/comms/message-draft";
@@ -105,8 +106,12 @@ export function MailboxDraftReadingPane({
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <p className="text-xs text-foreground/45">{formatDate(summary.updatedAt)}</p>
           {showSpinner ? (
-            <div className="mt-8 flex justify-center text-foreground/40">
-              <Loader2 className="h-5 w-5 animate-spin" />
+            /* The date is already rendered above, so only the body is missing:
+               lines where the text will go, not a spinner in the middle of it. */
+            <div className="mt-4 flex flex-col gap-2" role="status" aria-busy="true">
+              <Skeleton className="h-4 w-full max-w-lg" />
+              <Skeleton className="h-4 w-5/6 max-w-md" />
+              <Skeleton className="h-4 w-2/3 max-w-sm" />
             </div>
           ) : record ? (
             <div className="mt-4 text-sm leading-relaxed text-foreground/90">

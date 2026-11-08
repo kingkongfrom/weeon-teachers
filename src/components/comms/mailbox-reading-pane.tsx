@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { ThreadMessageHistory } from "@/components/comms/thread-message-history";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatThreadRecipientsLine } from "@/lib/comms/recipient-display-summary";
 import { COMMS_COMPOSE, COMMS_MESSAGES } from "@/lib/comms/paths";
 import {
@@ -135,21 +136,55 @@ export function MailboxReadingPane({
   const fullThreadHref = `${COMMS_MESSAGES}/${threadId}`;
   const openHint = t("comms.openMessageInComposer");
 
-  if (waitingForDetail && !listSummary) {
-    return (
-      <div className="flex min-w-0 flex-1 items-center justify-center text-foreground/40">
-        <Loader2 className="h-6 w-6 animate-spin" />
+  /*
+   * LOADING A THREAD SHOWS ITS OWN SHAPE, NOT A SPINNER.
+   *
+   * A centred spinner says "wait" but not "what for", and it collapses the pane
+   * to one dot so the whole column jumps when the message lands. This mirrors the
+   * real reading pane — toolbar row, subject, attachment chip, the De/Para/Enviado
+   * block and two body lines — so the content fills in where it was already
+   * expected instead of arriving somewhere else.
+   */
+  const threadSkeleton = (
+    <div
+      className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface px-4 pt-4 sm:px-6"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      {/* toolbar row: back, star, trash, overflow */}
+      <div className="flex items-center justify-end gap-2 pb-4">
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <Skeleton className="h-8 w-8 rounded-full" />
       </div>
-    );
+      {/* subject */}
+      <Skeleton className="mb-4 h-7 w-2/3 max-w-md" />
+      {/* attachments: the label plus one chip */}
+      <Skeleton className="mb-2 h-3 w-16" />
+      <Skeleton className="mb-5 h-9 w-40 max-w-full rounded-full" />
+      {/* De / Para / Enviado */}
+      <div className="mb-5 flex flex-col gap-2">
+        <Skeleton className="h-4 w-64 max-w-full" />
+        <Skeleton className="h-4 w-56 max-w-full" />
+        <Skeleton className="h-4 w-72 max-w-full" />
+      </div>
+      {/* body */}
+      <div className="flex flex-col gap-2 border-t border-border/70 pt-4">
+        <Skeleton className="h-4 w-full max-w-lg" />
+        <Skeleton className="h-4 w-3/4 max-w-md" />
+      </div>
+    </div>
+  );
+
+  if (waitingForDetail && !listSummary) {
+    return threadSkeleton;
   }
 
   if (!detail || detail.summary.id !== threadId) {
     if (!listSummary) {
-      return (
-        <div className="flex min-w-0 flex-1 items-center justify-center text-foreground/40">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      );
+      return threadSkeleton;
     }
     return (
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
@@ -170,7 +205,13 @@ export function MailboxReadingPane({
         </header>
         <article className="flex-1 overflow-y-auto px-4 pt-0 pb-5 sm:px-5">
           {waitingForDetail ? (
-            <Loader2 className="h-5 w-5 animate-spin text-foreground/35" />
+            /* Swapping to another thread: the header outside is already the new
+               subject, so only the message block is pending. Skeleton lines hold
+               its place instead of dropping a spinner into a full-width column. */
+            <div className="flex flex-col gap-2 pt-4" role="status" aria-busy="true">
+              <Skeleton className="h-4 w-full max-w-lg" />
+              <Skeleton className="h-4 w-3/4 max-w-md" />
+            </div>
           ) : (
             <Tooltip content={openHint} placement="bottom" className="w-full">
               {/* A plain paragraph, not a button: tapping the message text used
