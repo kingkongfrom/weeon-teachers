@@ -61,13 +61,18 @@ export function ComposeAttachmentStrip({
             <FolderOpen className="h-4 w-4 shrink-0" />
             {t("comms.myDevice")}
           </button>
-          <CloudImportSources
-            compact
-            remainingSlots={remainingAttachmentSlots}
-            disabled={sending}
-            onLocalFiles={(next) => onAddFiles(next)}
-            onError={(message) => onCloudError(message)}
-          />
+          {/* PHONES: no cloud-drive import. It is a second attachments row, and the
+              phone composer needs the height for the message being replied to.
+              Attaching from the device still works, right above. */}
+          <div className="max-sm:hidden">
+            <CloudImportSources
+              compact
+              remainingSlots={remainingAttachmentSlots}
+              disabled={sending}
+              onLocalFiles={(next) => onAddFiles(next)}
+              onError={(message) => onCloudError(message)}
+            />
+          </div>
         </div>
 
             {/*

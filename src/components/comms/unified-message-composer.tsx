@@ -434,7 +434,7 @@ export function UnifiedMessageComposer({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto pt-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto pt-4 [&>*]:max-sm:order-2">
         {hasThreadReadPhase && sourceThreadHistory ? (
           <ComposeThreadReadPhase
             subject={subject}
