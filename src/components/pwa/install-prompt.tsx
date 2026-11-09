@@ -137,6 +137,30 @@ export function InstallPrompt() {
     };
   }, [surface]);
 
+  /*
+   * Publish the banner's real height so the shell can reserve it. Measured from the
+   * rendered card rather than assumed: the copy wraps differently per width and per
+   * locale, and a fixed guess would be wrong exactly where it matters.
+   */
+  const [cardEl, setCardEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!cardEl) {
+      root.style.removeProperty('--install-prompt-height');
+      return;
+    }
+    const sync = () => {
+      root.style.setProperty('--install-prompt-height', `${cardEl.getBoundingClientRect().height + 24}px`);
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(cardEl);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--install-prompt-height');
+    };
+  }, [cardEl]);
+
   if (!visible) return null;
 
   const showIos = surface === "ios";
@@ -155,9 +179,24 @@ export function InstallPrompt() {
     setDeferred(null);
   }
 
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[90] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] print-hide">
+    /*
+      RESERVES ITS OWN HEIGHT, so it can never be the thing that hides a control.
+
+      This banner is `fixed` and sits above the bottom bar, which on its own made it a
+      floating overlay on top of the last row of every page - in Aula virtual it landed
+      squarely on "Ver 8 más", so the button existed, was reachable by keyboard, and
+      could not be seen or tapped.
+
+      `--install-prompt-height` is published while the banner is on screen and folded
+      into the shell's bottom padding, so the scrollable area grows to clear both the
+      bar and this card. When the banner is dismissed the variable goes away and the
+      space collapses with it.
+    */
+    <div className="install-prompt-fixed fixed inset-x-0 bottom-[calc(var(--phone-nav-height)+env(safe-area-inset-bottom,0px))] z-[90] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] print-hide md:bottom-0">
       <div
+        ref={setCardEl}
         className={cn(
           "mx-auto flex max-w-lg items-start gap-3 rounded-2xl border border-border bg-surface-elevated p-3.5",
           "shadow-[0_16px_40px_-16px_rgb(16_32_29/0.35)]",
