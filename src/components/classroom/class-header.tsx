@@ -56,7 +56,7 @@ export function ClassHeader({
   const measureTab = useNavMeasure("tab");
 
   return (
-    <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-background/90 px-4 backdrop-blur-md sm:-mx-5 sm:px-5 md:mx-0 md:rounded-2xl md:border md:px-4">
+    <div className="class-page-header sticky top-0 z-30 -mx-4 border-b border-border bg-background/90 px-4 backdrop-blur-md sm:-mx-5 sm:px-5 md:mx-0 md:rounded-2xl md:border md:px-4">
       {/* Row 1 — the class. Deliberately dominant: bigger type, its own tinted
           block, and a taller row. This is the answer to "where am I", and the
           navigation below should read as subordinate to it. */}

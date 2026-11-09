@@ -53,6 +53,8 @@
    * box; the bar describes its parts.
    */
   --phone-nav-height: 72px;
+  /* Breathing room under the last element, on top of the bar's own clearance. */
+  --app-bottom-gap: 20px;
   /* Set by the install banner while it is on screen; 0px once dismissed. */
   --install-prompt-height: 0px;
   /*

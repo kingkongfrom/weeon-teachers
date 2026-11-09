@@ -170,7 +170,7 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
 
           This mirrors weeon-tenants' shell, which was already correct.
         */}
-        <main className="w-full min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-6 pb-[calc(var(--phone-nav-height)+var(--install-prompt-height)+env(safe-area-inset-bottom,0px))] sm:px-5 md:px-8 md:pb-16 [&:has(.comms-fill)]:pt-0 [&:has(.comms-fill)]:pb-0">
+        <main className="w-full min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-6 pb-[calc(var(--phone-nav-height)+var(--install-prompt-height)+var(--app-bottom-gap)+env(safe-area-inset-bottom,0px))] sm:px-5 md:px-8 md:pb-16 [&:has(.comms-fill)]:pt-0 [&:has(.comms-fill)]:pb-0 max-md:[&:has(.class-page-header)]:pt-0">
           {children}
         </main>
       </div>
