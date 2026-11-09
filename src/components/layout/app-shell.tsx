@@ -41,7 +41,22 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
   const [navOpen, setNavOpen] = useState(false);
   const collapsed = useSidebarCollapsed();
   return (
-    <div className="dashboard-shell min-h-dvh bg-background">
+    /*
+      THE ROOT IS BOUNDED AT EVERY BREAKPOINT.
+      `min-h-dvh` alone lets the document grow with its content, which is what the
+      PHONE layout was doing: the only height bound sat on the inner column, and that
+      one is `md:h-dvh`, so below `md` nothing bounded anything. `main`'s
+      `overflow-y-auto` therefore never had an overflow to scroll - the document
+      scrolled instead - and the fixed BottomNav drew on top of the content that ran
+      under it. A wheel over the page moved nothing because there was no scrollable
+      element under the pointer, only a taller document.
+
+      The ERP shell already looked like this (`h-dvh ... overflow-hidden` on the root),
+      and the comment on `main` below claims the teacher shell mirrors it. It did not.
+      `h-dvh` bounds the column so `main` is the one scroll owner, and `overflow-hidden`
+      stops the document from scrolling a second time on top of it.
+    */
+    <div className="dashboard-shell flex h-dvh flex-col overflow-hidden bg-background">
       <TeacherAcademicRealtime realtime={supabasePublic} />
       <TeacherCommsNavRealtime realtime={supabasePublic} />
       <ProfilePresenceHeartbeat realtime={supabasePublic} enabled={Boolean(user)} />
@@ -130,7 +145,12 @@ export function AppShell({ children, user, supabasePublic, commsNavAttention }: 
         ) : null}
       </AnimatePresence>
 
-      <div className={`flex flex-col ${collapsed ? "md:pl-[4.5rem]" : "md:pl-72 lg:pl-82"} md:h-dvh`}>
+      {/*
+        No height class here any more. The root bounds the column at `h-dvh`; a second
+        bound on this element was the reason the phone layout had none - it was
+        `md:h-dvh`, so below `md` the column was free to grow.
+      */}
+      <div className={`flex min-h-0 flex-1 flex-col ${collapsed ? "md:pl-[4.5rem]" : "md:pl-72 lg:pl-82"}`}>
         <AppHeader user={user} supabasePublic={supabasePublic} />
         {/*
           ONE SCROLL OWNER, EVERY VIEWPORT.

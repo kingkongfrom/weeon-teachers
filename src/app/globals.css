@@ -38,17 +38,21 @@
   /*
    * Phone bottom bar height — THE single source of truth.
    *
-   * 4.25rem fits the trimmed cells: py-1.5 (12) + icon well h-8 (32) + gap-1 (4)
-   * + an 11px label with leading-none (11) = 59px, plus the safe-area padding on
-   * the same box.
+   * THE WHOLE BOX, not its content. The bar renders min-h-[3.5rem] (56) PLUS its own
+   * pb-[14px] PLUS the 1px top border = 71px before any safe-area inset, and the safe
+   * area is added again by whichever surface clears it.
    *
-   * The bar uses `min-h` with this value, not a fixed `h`, so the safe-area
-   * inset can never squeeze the labels — an earlier fixed height did exactly
-   * that and clipped the text.
+   * This said 70 while the bar was 71, so surfaces reserving `--phone-nav-height` left
+   * the last 1px of content under the bar. It did not read as 1px: `main` scrolled to
+   * its end, the footer is `fixed` and painted over that last sliver, and the result
+   * was a control clipped along its bottom edge — "Ver 8 más" in Aula virtual.
    *
-   * Surfaces that must clear the bar read this ONE number.
+   * The bar keeps its content height hardcoded (`min-h-[3.5rem]`) deliberately. If the
+   * bar read this token for its own min-height, raising the token would raise the bar
+   * by the same amount and the gap would never close. The token describes the finished
+   * box; the bar describes its parts.
    */
-  --phone-nav-height: 70px;
+  --phone-nav-height: 71px;
   /*
    * ─────────────────────────────────────────────────────────────────────────
    *  ⛔  DO NOT TOUCH THE COMPOSER POSITION OR THE FOOTER  ⛔
