@@ -64,7 +64,22 @@ export function AppShellSkeletonChrome({
   };
 
   return (
-    <div className="dashboard-shell min-h-screen bg-background">
+    /*
+      SAME LAYOUT CONTRACT AS AppShell.
+
+      This is the Suspense fallback, and it wraps `{children}` - the real page. When
+      it rendered `min-h-screen` with a plain `main` and no bottom bar, the fallback
+      was a SECOND, competing shell: the document scrolled instead of `main`, nothing
+      bounded the height, `main`'s overflow never engaged, and controls at the end of
+      a long page were drawn under the fixed footer. It also pushed the header down
+      because the page had no scroll owner of its own.
+
+      The two shells must stay identical here: root bounded, column as a flex child,
+      `main` the single scroll owner with the token's bottom padding. Otherwise the
+      layout visibly changes the moment the Suspense boundary resolves, and any page
+      that stays in the fallback is simply broken.
+    */
+    <div className="dashboard-shell flex h-dvh flex-col overflow-hidden bg-background">
       <TeacherAcademicRealtime realtime={supabasePublic} />
       <TeacherCommsNavRealtime realtime={supabasePublic} />
       <ProfilePresenceHeartbeat realtime={supabasePublic} enabled />
@@ -125,8 +140,8 @@ export function AppShellSkeletonChrome({
         />
       </aside>
 
-      <div className={collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}>
-        <header className="header-hairline sticky top-0 z-30 flex h-16 items-center gap-2 bg-surface/75 px-3 backdrop-blur-xl sm:px-6 lg:px-8">
+      <div className={`flex min-h-0 flex-1 flex-col ${collapsed ? "md:pl-[4.5rem]" : "md:pl-72"}`}>
+        <header className="header-hairline relative z-30 flex h-16 shrink-0 items-center gap-2 bg-surface/75 px-3 backdrop-blur-xl sm:px-6 lg:px-8">
           <button
             type="button"
             onClick={() => setNavOpen(true)}
@@ -150,7 +165,7 @@ export function AppShellSkeletonChrome({
             <SettingsDrawer user={user} supabasePublic={supabasePublic} />
           </div>
         </header>
-        <main className="w-full px-4 pb-16 pt-6 sm:px-5 md:px-8">{children}</main>
+        <main className="w-full min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-6 pb-[calc(var(--phone-nav-height)+env(safe-area-inset-bottom,0px))] sm:px-5 md:px-8 md:pb-16 [&:has(.comms-fill)]:pt-0 [&:has(.comms-fill)]:pb-0">{children}</main>
       </div>
     </div>
   );
