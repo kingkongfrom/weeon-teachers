@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { BackLink } from "@/components/layout/page-header";
 import { ReportComposerSubmit } from "@/components/reports/report-composer-submit";
 import { ReportPreviewPanels } from "@/components/reports/report-preview-panels";
-import { loadReportComposer } from "@/lib/reports/composer";
+import { loadReportComposer, loadReportStudentNotes } from "@/lib/reports/composer";
 import { getT } from "@/lib/i18n/server";
 
 export default async function ReportComposerPage({
@@ -32,6 +32,7 @@ export default async function ReportComposerPage({
   }
 
   const { draft, backHref } = ctx;
+  const studentNotes = await loadReportStudentNotes(draft.classId, draft.subjectId);
 
   return (
     <div className="flex flex-col gap-5">
@@ -55,7 +56,15 @@ export default async function ReportComposerPage({
       </header>
 
       <ReportPreviewPanels draft={draft} variant="composer" />
-      <ReportComposerSubmit classId={draft.classId} subjectId={draft.subjectId} />
+      <ReportComposerSubmit
+        classId={draft.classId}
+        subjectId={draft.subjectId}
+        students={draft.studentIds.map((studentId) => ({
+          id: studentId,
+          name: draft.studentNames[studentId] ?? studentId,
+        }))}
+        initialStudentNotes={studentNotes}
+      />
     </div>
   );
 }

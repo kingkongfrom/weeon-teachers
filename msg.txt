@@ -1,0 +1,32 @@
+Reports: per-student observations in the composer
+
+Step 1b of closing the MEP expediente gaps. The report already snapshots grades,
+conduct and attendance for a class, and summary.teacherNotes is ONE note for the whole
+group - there was nowhere to say anything about an individual child.
+
+TEACHER SURFACE
+A collapsed panel above the submit button lists every student in the report with two
+rows of text each. It starts closed showing how many notes are already written, so the
+composer looks unchanged for teachers who do not need it. Option B from the review:
+a separate list rather than an editable field woven through the read-only preview,
+which would have restructured a shipped surface for no gain.
+
+Submit saves the report first, then the notes, because the notes hang off the report
+row. If the report fails nothing is written; if the notes fail the teacher sees the
+error and the report stays saved.
+
+SERVER
+saveClassReportStudentNotes resolves the report from (class, subject, teacher, period,
+tenant) rather than accepting an id from the client - a client-supplied id would let a
+teacher write onto a colleague's report. Notes are upserted on (report_id, student_id)
+and a note cleared to whitespace is deleted, so a teacher can remove their own line.
+Students not in the current report are skipped, so a stale form cannot create orphans.
+submitClassReport itself is untouched.
+
+A matching loader reads existing notes for the page, same lookup, no client id.
+
+Verified against the hosted database with real rows: insert accepted, duplicate blocked
+by the unique key (23505), and the exact upsert on (report_id, student_id) succeeds.
+tsc, eslint and routes /inicio + /reportes all pass.
+
+NOT YET DONE: the ERP student-file section that displays these notes (step 1c).

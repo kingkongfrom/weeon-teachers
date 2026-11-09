@@ -4,18 +4,29 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
-import { submitClassReport } from "@/lib/teachers/reports-actions";
+import { saveClassReportStudentNotes, submitClassReport } from "@/lib/teachers/reports-actions";
+import { ReportStudentNotes } from "@/components/reports/report-student-notes";
 import { useLiveT } from "@/lib/i18n/client";
 
 type ReportComposerSubmitProps = {
   classId: string;
   subjectId: string | null;
+  /** Students in this report, sorted for display; drives the per-student note list. */
+  students: { id: string; name: string }[];
+  /** Notes already saved for this report. */
+  initialStudentNotes: Record<string, string>;
 };
 
-export function ReportComposerSubmit({ classId, subjectId }: ReportComposerSubmitProps) {
+export function ReportComposerSubmit({
+  classId,
+  subjectId,
+  students,
+  initialStudentNotes,
+}: ReportComposerSubmitProps) {
   const t = useLiveT();
   const router = useRouter();
   const [notes, setNotes] = useState("");
+  const [studentNotes, setStudentNotes] = useState<Record<string, string>>(initialStudentNotes);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,37 +34,65 @@ export function ReportComposerSubmit({ classId, subjectId }: ReportComposerSubmi
     if (busy) return;
     setBusy(true);
     setError(null);
+
+    /*
+     * REPORT FIRST, THEN NOTES. The notes hang off the report row, so the report must
+     * exist before they can be attached. If the report fails, nothing is written; if it
+     * succeeds and the notes fail, the teacher sees an error and the report is still
+     * saved - which is why the message says so rather than implying the whole submit
+     * failed.
+     */
     const result = await submitClassReport({
       classId,
       subjectId,
       teacherNotes: notes.trim() || undefined,
     });
-    setBusy(false);
+
     if (!result.ok) {
+      setBusy(false);
       setError(result.error);
       return;
     }
+
+    const hasStudentNotes = Object.values(studentNotes).some((value) => value.trim().length > 0);
+    if (hasStudentNotes) {
+      const notesResult = await saveClassReportStudentNotes({ classId, subjectId, notes: studentNotes });
+      if (!notesResult.ok) {
+        setBusy(false);
+        setError(notesResult.error);
+        return;
+      }
+    }
+
+    setBusy(false);
     router.push("/reportes");
     router.refresh();
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-5">
-      <label htmlFor="report-notes" className="block text-sm font-semibold text-foreground">
-        {t.composer.notesLabel}
-      </label>
-      <p className="mt-1 text-xs font-medium text-foreground/50">{t.composer.notesHint}</p>
-      <textarea
-        id="report-notes"
-        value={notes}
-        onChange={(event) => setNotes(event.target.value)}
-        maxLength={2000}
-        rows={4}
-        placeholder={t.composer.notesPlaceholder}
-        className="mt-3 w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+    <div className="flex flex-col gap-5">
+      <ReportStudentNotes
+        students={students}
+        initialNotes={initialStudentNotes}
+        onChange={setStudentNotes}
       />
 
-      {error ? <p className="mt-3 text-xs font-medium text-error">{error}</p> : null}
+      <section className="rounded-2xl border border-border bg-surface p-5">
+        <label htmlFor="report-notes" className="block text-sm font-semibold text-foreground">
+          {t.composer.notesLabel}
+        </label>
+        <p className="mt-1 text-xs font-medium text-foreground/50">{t.composer.notesHint}</p>
+        <textarea
+          id="report-notes"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          maxLength={2000}
+          rows={4}
+          placeholder={t.composer.notesPlaceholder}
+          className="mt-3 w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+        />
+
+        {error ? <p className="mt-3 text-xs font-medium text-error">{error}</p> : null}
 
       <div className="mt-4 flex flex-wrap justify-end gap-2">
         <Link
@@ -72,6 +111,7 @@ export function ReportComposerSubmit({ classId, subjectId }: ReportComposerSubmi
           {busy ? t.composer.submitting : t.composer.submit}
         </button>
       </div>
-    </section>
+      </section>
+    </div>
   );
 }

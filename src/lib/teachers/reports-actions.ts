@@ -112,3 +112,107 @@ export async function submitClassReport(input: {
   revalidatePath(`/grupos/${parsed.data.classId}/reporte`);
   return { ok: true };
 }
+
+/**
+ * Per-student observations, saved alongside the class report.
+ *
+ * WHY THIS IS A SECOND ACTION
+ *   `submitClassReport` upserts on (class, subject, teacher, period) and returns no id,
+ *   so the notes need the report's identity before they can be attached. Splitting them
+ *   keeps that upsert untouched - it is a shipped, load-bearing path - and lets the
+ *   composer save notes and report in one user action while staying two clear steps
+ *   server-side.
+ *
+ * WHY IT LOOKS THE REPORT UP
+ *   The client never learns the report id (the upsert does not return it), and it should
+ *   not: a client-supplied id would let a teacher attach notes to someone else's report.
+ *   The row is resolved from the same columns the upsert keys on, so it can only ever be
+ *   the caller's own report. RLS enforces the same thing again at write time.
+ */
+const studentNotesSchema = z.object({
+  classId: z.string().uuid(),
+  subjectId: z.string().uuid().nullable().optional(),
+  /* studentId -> note. An empty or whitespace-only note means "remove my note". */
+  notes: z.record(z.string().uuid(), z.string().max(1000)),
+});
+
+export async function saveClassReportStudentNotes(input: {
+  classId: string;
+  subjectId?: string | null;
+  notes: Record<string, string>;
+}): Promise<SubmitReportResult> {
+  const parsed = studentNotesSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Parámetros inválidos." };
+
+  const session = await getTeacherSession();
+  if (!session) return { ok: false, error: "Sesión inválida." };
+
+  const subjectId = parsed.data.subjectId ?? null;
+  const built = await buildReportDraft({
+    classId: parsed.data.classId,
+    subjectId,
+    groupName: "",
+    subjectName: null,
+  });
+  if ("error" in built) return { ok: false, error: built.error };
+
+  const supabase = await createSessionClient();
+
+  /*
+   * Only write notes for students who are actually in this report. A stale form (a
+   * student removed from the grupo while it was open) must not create orphan rows.
+   */
+  const validStudentIds = new Set(built.studentIds);
+
+  const reportQuery = supabase
+    .from("class_reports")
+    .select("id")
+    .eq("class_id", parsed.data.classId)
+    .eq("teacher_profile_id", session.userId)
+    .eq("period", built.period)
+    .eq("tenant_id", session.tenantId);
+  const { data: report, error: reportError } = await (
+    subjectId ? reportQuery.eq("subject_id", subjectId) : reportQuery.is("subject_id", null)
+  )
+    .limit(1)
+    .maybeSingle();
+
+  if (reportError) return { ok: false, error: "No se pudieron guardar las observaciones." };
+  if (!report) {
+    return { ok: false, error: "Envíe el reporte antes de guardar las observaciones." };
+  }
+
+  const rows = Object.entries(parsed.data.notes)
+    .map(([studentId, note]) => ({ studentId, note: note.trim() }))
+    .filter((entry) => validStudentIds.has(entry.studentId));
+
+  const toUpsert = rows.filter((entry) => entry.note.length > 0);
+  const toDelete = rows.filter((entry) => entry.note.length === 0).map((entry) => entry.studentId);
+
+  if (toUpsert.length > 0) {
+    const { error } = await supabase.from("class_report_student_notes").upsert(
+      toUpsert.map((entry) => ({
+        tenant_id: session.tenantId,
+        report_id: report.id,
+        student_id: entry.studentId,
+        note: entry.note,
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: "report_id,student_id" },
+    );
+    if (error) return { ok: false, error: "No se pudieron guardar las observaciones." };
+  }
+
+  if (toDelete.length > 0) {
+    const { error } = await supabase
+      .from("class_report_student_notes")
+      .delete()
+      .eq("report_id", report.id)
+      .in("student_id", toDelete);
+    if (error) return { ok: false, error: "No se pudieron guardar las observaciones." };
+  }
+
+  revalidatePath("/reportes");
+  revalidatePath(`/grupos/${parsed.data.classId}`);
+  return { ok: true };
+}

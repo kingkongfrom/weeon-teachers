@@ -6,6 +6,8 @@ import { loadGradebookContext } from "@/lib/dashboard/gradebook";
 import { buildReportDraft } from "@/lib/reports/build-snapshot";
 import type { ReportDraft } from "@/lib/reports/model";
 import { getLocale } from "@/lib/i18n/server";
+import { getTeacherSession } from "@/lib/auth/teacher-session";
+import { createSessionClient } from "@/lib/supabase/session";
 
 export type ReportComposerContext =
   | { ok: true; draft: ReportDraft; backHref: string }
@@ -62,5 +64,53 @@ export const loadReportComposer = cache(
     }
 
     return { ok: true, draft: built, backHref };
+  },
+);
+
+/**
+ * The per-student observations already saved for this report, keyed by student id.
+ *
+ * Resolved from the same columns the submit upsert keys on rather than from an id passed
+ * in: the composer never learns the report id, and a client-supplied one would let a
+ * teacher read someone else's notes. A missing report (first submit) is simply no notes.
+ */
+export const loadReportStudentNotes = cache(
+  async (classId: string, subjectId: string | null): Promise<Record<string, string>> => {
+    const session = await getTeacherSession();
+    if (!session) return {};
+
+    const built = await buildReportDraft({
+      classId,
+      subjectId,
+      groupName: "",
+      subjectName: null,
+    });
+    if ("error" in built) return {};
+
+    const supabase = await createSessionClient();
+    const reportQuery = supabase
+      .from("class_reports")
+      .select("id")
+      .eq("class_id", classId)
+      .eq("teacher_profile_id", session.userId)
+      .eq("period", built.period)
+      .eq("tenant_id", session.tenantId);
+    const { data: report } = await (
+      subjectId ? reportQuery.eq("subject_id", subjectId) : reportQuery.is("subject_id", null)
+    )
+      .limit(1)
+      .maybeSingle();
+    if (!report) return {};
+
+    const { data: notes } = await supabase
+      .from("class_report_student_notes")
+      .select("student_id, note")
+      .eq("report_id", report.id);
+
+    const byStudent: Record<string, string> = {};
+    for (const row of notes ?? []) {
+      if (row.student_id) byStudent[row.student_id] = row.note ?? "";
+    }
+    return byStudent;
   },
 );
