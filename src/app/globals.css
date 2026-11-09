@@ -385,26 +385,6 @@ a.btn-ink:hover {
   font-weight: 650;
   letter-spacing: -0.02em;
 }
-/*
- * Pull the whole app up under the top edge.
- *
- * The owner reports the page sitting ~20px too low on a real device. That gap does
- * NOT exist in a headless 500x922 window - header top, shell top, and 100dvh/vh/svh
- * all measured 0 / 922 / 922 there - so it cannot be reproduced from automation. On a
- * real phone the shell is sized from `dvh` while the visible viewport is the `svh`
- * one, and the two disagree by roughly the browser toolbar; the content then starts
- * below the edge the owner is looking at.
- *
- * ONE offset, on the shell, rather than nudges scattered across pages: every screen
- * using AppShell moves by the same amount, so the header cannot drift away from the
- * content again. `margin-top` pulls the box up and the matching `padding-top` keeps
- * the header where it belongs inside it, so this is a shift of the whole page, not a
- * collapse of the first row.
- */
-.dashboard-shell {
-  --app-top-offset: 20px;
-  margin-top: calc(var(--app-top-offset) * -1);
-}
 /* Dashboard canvas: cool mist with a faint teal/violet breath by day; the dark
    theme stays a flat deep field — no wash, the jewel cards carry the colour. */
 .dashboard-shell {
