@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils";
 /**
  * The WhatsApp reaction bar (docs/chat-reactions.md, R1).
  *
- * Six quick emojis plus a `+`, in a floating pill above the message being reacted
- * to. It is deliberately NOT the six-only picker: R1 ships six because they cover
- * almost every real case, and the `+` is where the full picker arrives later without
- * touching this component's call sites.
+ * Six quick emojis in a floating pill above the message being reacted to.
+ *
+ * There is NO `+` button. The bar used to render one, disabled, as a placeholder for a
+ * future full picker - a control that never works, occupying a slot, which reads as a
+ * broken button rather than a promise. The mobile app made the same call earlier (its
+ * bar is six-only for that reason), so the two surfaces now match.
  *
  * The pill carries `wa-chat` on itself. It is rendered inside the thread, but the
  * reply menu taught us that a floating child can end up outside the token scope --
@@ -73,21 +75,6 @@ export function ChatReactionBar({
           {emoji}
         </button>
       ))}
-      {/*
-       * The `+` is present and disabled on purpose (R1): it is the shape the full
-       * picker will take, and the owner's reference shows it. Disabled rather than
-       * hidden so the bar does not visibly change width when the picker ships.
-       */}
-      <button
-        type="button"
-        role="menuitem"
-        disabled
-        title={label}
-        aria-label={label}
-        className="inline-flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-full text-[20px] leading-none text-[var(--wa-muted)] opacity-50"
-      >
-        +
-      </button>
       {/* Invisible backdrop so a tap anywhere else dismisses the bar. */}
       <span
         className="fixed inset-0 -z-10"
